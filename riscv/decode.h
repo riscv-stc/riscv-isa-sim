@@ -26,6 +26,7 @@ typedef uint64_t reg_t;
 
 const int NXPR = 32;
 const int NFPR = 32;
+const int NVPR = 32;
 const int NCSR = 4096;
 
 #define X_RA 1
@@ -130,6 +131,7 @@ private:
 #define STATE (*p->get_state())
 #define READ_REG(reg) STATE.XPR[reg]
 #define READ_FREG(reg) STATE.FPR[reg]
+#define READ_VREG(reg) STATE.VPR[reg]
 #define RS1 READ_REG(insn.rs1())
 #define RS2 READ_REG(insn.rs2())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
@@ -137,6 +139,8 @@ private:
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
 # define WRITE_FREG(reg, value) DO_WRITE_FREG(reg, freg(value))
+//# define WRITE_VREG(reg, value) DO_WRITE_VREG(reg, vreg(value))
+# define WRITE_VREG(reg, value) STATE.VPR.write(reg, value)
 #else
 # define WRITE_REG(reg, value) ({ \
     reg_t wdata = (value); /* value may have side effects */ \
@@ -147,6 +151,11 @@ private:
     freg_t wdata = freg(value); /* value may have side effects */ \
     STATE.log_reg_write = (commit_log_reg_t){((reg) << 1) | 1, wdata}; \
     DO_WRITE_FREG(reg, wdata); \
+  })
+# define WRITE_VREG(reg, value) ({ \
+    freg_t wdata = freg(value); /* value may have side effects */ \
+    STATE.log_reg_write = (commit_log_reg_t){(reg) << 1, {wdata, 0}}; \
+    DO_WRITE_VREG(reg, wdata); \
   })
 #endif
 
@@ -170,7 +179,13 @@ private:
 #define dirty_ext_state (STATE.mstatus |= MSTATUS_XS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define DO_WRITE_FREG(reg, value) (STATE.FPR.write(reg, value), dirty_fp_state)
 #define WRITE_FRD(value) WRITE_FREG(insn.rd(), value)
- 
+
+// VPU macros
+#define VRS1 READ_VREG(insn.rs1())
+#define VRS2 READ_VREG(insn.rs2())
+#define VRS3 READ_VREG(insn.rs3())
+#define WRITE_VRD(value) WRITE_VREG(insn.rd(), value)
+
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
 #define JUMP_TARGET (pc + insn.uj_imm())
@@ -200,6 +215,7 @@ private:
 #define zext32(x) ((reg_t)(uint32_t)(x))
 #define sext_xlen(x) (((sreg_t)(x) << (64-xlen)) >> (64-xlen))
 #define zext_xlen(x) (((reg_t)(x) << (64-xlen)) >> (64-xlen))
+#define vext_xlen(x) (((vreg_t)(x) << (64-xlen)) >> (64-xlen))
 
 #define set_pc(x) \
   do { p->check_pc_alignment(x); \
@@ -280,5 +296,10 @@ inline freg_t f128_negate(freg_t a)
 // Seems that 0x0 doesn't work.
 #define DEBUG_START             0x100
 #define DEBUG_END                 (0x1000 - 1)
+
+/*Vector instruction support*/
+//typedef struct{ unsigned char vx[32];}vreg_t; //vector reg length 256bit
+typedef int64_t vreg_t; //vector reg length 256bit
+
 
 #endif

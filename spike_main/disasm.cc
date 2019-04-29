@@ -69,6 +69,31 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+    return vpr_name[insn.rd()];
+  }
+} vrd;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return vpr_name[insn.rs1()];
+  }
+} vrs1;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return vpr_name[insn.rs2()];
+  }
+} vrs2;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return vpr_name[insn.rs3()];
+  }
+} vrs3;
+
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
     switch (insn.csr())
     {
       #define DECLARE_CSR(name, num) case num: return #name;
@@ -312,6 +337,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_FLOAD(code) DISASM_INSN(#code, code, 0, {&frd, &load_address})
   #define DEFINE_FSTORE(code) DISASM_INSN(#code, code, 0, {&frs2, &store_address})
   #define DEFINE_FRTYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1, &frs2})
+  #define DEFINE_VRTYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs1, &vrs2})
   #define DEFINE_FR1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1})
   #define DEFINE_FR3TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1, &frs2, &frs3})
   #define DEFINE_FXTYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &frs1})
@@ -422,6 +448,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(sra);
   DEFINE_RTYPE(or);
   DEFINE_RTYPE(and);
+  DEFINE_VRTYPE(vadd_vv);
   DEFINE_RTYPE(mul);
   DEFINE_RTYPE(mulh);
   DEFINE_RTYPE(mulhu);
@@ -561,6 +588,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FX2TYPE(feq_q);
   DEFINE_FX2TYPE(flt_q);
   DEFINE_FX2TYPE(fle_q);
+  DEFINE_VRTYPE(vadd_vv);
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

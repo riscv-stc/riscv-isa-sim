@@ -93,6 +93,7 @@ struct state_t
   reg_t pc;
   regfile_t<reg_t, NXPR, true> XPR;
   regfile_t<freg_t, NFPR, false> FPR;
+  regfile_t<vreg_t, NVPR, false> VPR;
 
   // control and status registers
   reg_t prv;    // TODO: Can this be an enum instead?

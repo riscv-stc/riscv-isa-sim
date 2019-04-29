@@ -65,7 +65,7 @@ void processor_t::parse_isa_string(const char* str)
     lowercase += std::tolower(*r);
 
   const char* p = lowercase.c_str();
-  const char* all_subsets = "imafdqc";
+  const char* all_subsets = "imafdqcv";
 
   max_xlen = 64;
   state.misa = reg_t(2) << 62;

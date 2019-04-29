@@ -70,6 +70,7 @@ void sim_t::interactive()
   funcs["freg"] = &sim_t::interactive_freg;
   funcs["fregs"] = &sim_t::interactive_fregs;
   funcs["fregd"] = &sim_t::interactive_fregd;
+  funcs["vreg"] = &sim_t::interactive_vreg;
   funcs["pc"] = &sim_t::interactive_pc;
   funcs["mem"] = &sim_t::interactive_mem;
   funcs["str"] = &sim_t::interactive_str;
@@ -119,6 +120,7 @@ void sim_t::interactive_help(const std::string& cmd, const std::vector<std::stri
     "reg <core> [reg]                # Display [reg] (all if omitted) in <core>\n"
     "fregs <core> <reg>              # Display single precision <reg> in <core>\n"
     "fregd <core> <reg>              # Display double precision <reg> in <core>\n"
+    "vregd <core> <reg>              # Display double precision <reg> in <core>\n"
     "pc <core>                       # Show current PC in <core>\n"
     "mem <hex addr>                  # Show contents of physical memory\n"
     "str <hex addr>                  # Show NUL-terminated C string\n"
@@ -218,6 +220,22 @@ freg_t sim_t::get_freg(const std::vector<std::string>& args)
   return p->get_state()->FPR[r];
 }
 
+vreg_t sim_t::get_vreg(const std::vector<std::string>& args)
+{
+  if(args.size() != 2)
+    throw trap_interactive();
+
+  processor_t *p = get_core(args[0]);
+  int r = std::find(vpr_name, fpr_name + NVPR, args[1]) - vpr_name;
+  if (r == NVPR)
+    r = atoi(args[1].c_str());
+  if (r >= NVPR)
+    throw trap_interactive();
+
+  return p->get_state()->VPR[r];
+}
+
+
 void sim_t::interactive_reg(const std::string& cmd, const std::vector<std::string>& args)
 {
   if (args.size() == 1) {
@@ -258,6 +276,12 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
   fpr f;
   f.r = get_freg(args);
   fprintf(stderr, "%g\n", isBoxedF64(f.r) ? f.d : NAN);
+}
+
+void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::string>& args)
+{
+  vreg_t r = get_vreg(args);
+  fprintf(stderr, "0x%016" PRIx64 "\n", get_reg(args));
 }
 
 reg_t sim_t::get_mem(const std::vector<std::string>& args)
