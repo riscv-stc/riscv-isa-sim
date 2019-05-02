@@ -375,6 +375,18 @@ void processor_t::set_csr(int which, reg_t val)
       state.fflags = (val & FSR_AEXC) >> FSR_AEXC_SHIFT;
       state.frm = (val & FSR_RD) >> FSR_RD_SHIFT;
       break;
+	case CSR_SHAPE1:
+	  state.shape1 = val;
+	  break;
+	case CSR_SHAPE2:
+	  state.shape2 = val;
+	  break;
+	case CSR_STRIDE1:
+	  state.stride1 = val;
+	  break;
+	case CSR_STRIDE2:
+	  state.stride2 = val;
+	  break;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
           (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR))
@@ -615,6 +627,22 @@ reg_t processor_t::get_csr(int which)
       if (!supports_extension('F'))
         break;
       return (state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT);
+	case CSR_SHAPE1:
+	  if(!supports_extension('V'))
+		  break;
+	  return state.shape1;
+	case CSR_SHAPE2:
+	  if(!supports_extension('V'))
+		  break;
+	  return state.shape2;
+	case CSR_STRIDE1:
+	  if(!supports_extension('V'))
+		  break;
+	  return state.stride1;
+	case CSR_STRIDE2:
+	  if(!supports_extension('V'))
+		  break;
+	  return state.stride2;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)

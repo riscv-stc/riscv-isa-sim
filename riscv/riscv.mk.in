@@ -288,6 +288,14 @@ riscv_insn_list = \
 	subw \
 	sw \
 	vadd_vv \
+	veadd_mf \
+	veemul_mf \
+	vecvt_hf_xu8_m \
+	vemul_mm \
+	vemul_mv \
+	veacc_m \
+	vemax_m \
+	velut_m \
 	wfi \
 	xor \
 	xori \

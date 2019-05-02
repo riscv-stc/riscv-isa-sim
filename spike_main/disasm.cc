@@ -321,6 +321,9 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_NOARG(code) \
     add_insn(new disasm_insn_t(#code, match_##code, mask_##code, {}));
   #define DEFINE_RTYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2})
+  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+  #define DEFINE_SV1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
+  #define DEFINE_SV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -448,7 +451,6 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(sra);
   DEFINE_RTYPE(or);
   DEFINE_RTYPE(and);
-  DEFINE_VRTYPE(vadd_vv);
   DEFINE_RTYPE(mul);
   DEFINE_RTYPE(mulh);
   DEFINE_RTYPE(mulhu);
@@ -589,6 +591,15 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FX2TYPE(flt_q);
   DEFINE_FX2TYPE(fle_q);
   DEFINE_VRTYPE(vadd_vv);
+
+  DEFINE_SV2TYPE(veadd_mf);
+  DEFINE_SV2TYPE(veemul_mf);
+  DEFINE_R1TYPE(vecvt_hf_xu8_m);
+  DEFINE_RTYPE(vemul_mm);
+  DEFINE_RTYPE(vemul_mv);
+  DEFINE_SV1TYPE(veacc_m);
+  DEFINE_R1TYPE(vemax_m);
+  DEFINE_RTYPE(velut_m);
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

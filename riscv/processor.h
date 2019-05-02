@@ -130,6 +130,10 @@ struct state_t
 
   uint32_t fflags;
   uint32_t frm;
+  uint32_t shape1;
+  uint32_t shape2;
+  uint32_t stride1;
+  uint32_t stride2;
   bool serialized; // whether timer CSRs are in a well-defined state
 
   // When true, execute a single instruction and then enter debug mode.  This
