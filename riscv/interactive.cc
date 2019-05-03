@@ -226,7 +226,7 @@ vreg_t sim_t::get_vreg(const std::vector<std::string>& args)
     throw trap_interactive();
 
   processor_t *p = get_core(args[0]);
-  int r = std::find(vpr_name, fpr_name + NVPR, args[1]) - vpr_name;
+  int r = std::find(vpr_name, vpr_name + NVPR, args[1]) - vpr_name;
   if (r == NVPR)
     r = atoi(args[1].c_str());
   if (r >= NVPR)

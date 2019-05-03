@@ -287,15 +287,36 @@ riscv_insn_list = \
 	sub \
 	subw \
 	sw \
-	vadd_vv \
+	veacc_m \
 	veadd_mf \
-	veemul_mf \
+	veadd_mm \
+	veadd_mv \
+	vecvt_hf_x16_m \
+	vecvt_hf_x8_m \
+	vecvt_hf_xu16_m \
 	vecvt_hf_xu8_m \
+	veemacc_mm \
+	veemacc_mv \
+	veemul_mf \
+	veemul_mm \
+	veemul_mv \
+	velkrelu_mf \
+	velkrelu_mv \
+	velut_m \
+	vemax_mf \
+	vemax_m \
+	vemax_mm \
+	vemax_mv \
+	vemin_mf \
+	vemin_m \
+	vemin_mm \
+	vemin_mv \
 	vemul_mm \
 	vemul_mv \
-	veacc_m \
-	vemax_m \
-	velut_m \
+	vemv_m \
+	vesub_mf \
+	vesub_mm \
+	vesub_mv \
 	wfi \
 	xor \
 	xori \

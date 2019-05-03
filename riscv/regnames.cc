@@ -23,6 +23,14 @@ const char* vpr_name[] = {
   "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"
 };
 
+const char* rm_name[]={
+  "rne", "rtz", "rdn", "rup", "rmm", 0, 0, "dyn"
+};
+
+const char* dim_name[]={
+    " "," ","dim0", "dim1"
+};
+
 const char* csr_name(int which) {
   switch (which) {
     #define DECLARE_CSR(name, number)  case number: return #name;
