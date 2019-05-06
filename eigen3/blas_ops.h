@@ -1,6 +1,12 @@
 #ifndef __BLAS_OPS_H__
 #define __BLAS_OPS_H__
 
+#include <iostream>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+
+using namespace Eigen;
+
 struct shape_stride
 {
     /* CSR shape1 */

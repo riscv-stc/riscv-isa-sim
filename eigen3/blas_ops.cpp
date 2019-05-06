@@ -1,8 +1,5 @@
-#include <iostream>
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
+#include "blas_ops.h"
 
-using namespace Eigen;
 using namespace std;
 
 typedef Stride<Dynamic, Dynamic> dStride_t;
