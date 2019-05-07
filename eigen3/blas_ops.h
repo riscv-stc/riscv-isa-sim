@@ -1,7 +1,6 @@
 #ifndef __BLAS_OPS_H__
 #define __BLAS_OPS_H__
 
-#include <iostream>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
