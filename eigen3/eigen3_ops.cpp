@@ -1,7 +1,24 @@
+/**
+ * @file eigen3_ops.cpp
+ * @brief The Source Code About Eigen3 To Spike Interface
+ *
+ * Class CustomInsns 包含了所有的custom定制指令，但不包含vector指令，
+ * custom指令具有数据类型明确的特点，不需要模板类就能轻松实现，所以这些都放在
+ * 一个类里面（实际上没有任何抽象的意义）。vector指令更多的没有指定被操作数的数据
+ * 类型，所以为了使代码简洁，使用了大量的模板类，同时，因为无法统一每一个vector指令
+ * 的模板参数，所以基本上一类vector指令的实现封装在一个类中（实际上也没有经过抽象，纯粹是
+ * 按照不同的vector指令去区分该不该放在一个类里面）
+ *
+ * @author chenhao
+ * 
+ */
+
 #include "eigen3_ops.h"
 
+/* dynamic stride for map */
 typedef Stride<Dynamic, Dynamic> DynStride;
 
+/* a method to define Matrix and Map */
 #define MY_MATRIX_DEFINE(Type)                                                \
 typedef Matrix<Type, Dynamic, Dynamic, RowMajor> Matrix_##Type;               \
 typedef Map<Matrix_##Type, Unaligned, Stride<Dynamic, Dynamic> > Map_##Type;
@@ -15,18 +32,25 @@ MY_MATRIX_DEFINE(uint16_t)
 
 #undef MY_MATRIX_DEFINE
 
-CustomInsns::CustomInsns()
+/**
+ * CustomInsns() 构造函数
+ * CustomInsns() 默认不开启debug
+ */
+CustomInsns::CustomInsns(): debug(0)
 {
-    debug = 0;
-    //cout << "Object is being created" << endl;
 }
 
 CustomInsns::~CustomInsns()
 {
-    //cout << "Object is being deleted" << endl;
 }
 
-void CustomInsns::ShapeStride_debug(struct ShapeStride *ss)
+/**
+ * shapestride_dbg() 打印ShapeStride信息
+ * shapestride_dbg() 用于调试
+ * @param ss shapeStride 参数指针
+ * @return 无返回值
+ */
+void CustomInsns::shapestride_dbg(struct ShapeStride *ss)
 {
     if (!debug)
         return;
@@ -39,18 +63,35 @@ void CustomInsns::ShapeStride_debug(struct ShapeStride *ss)
     printf("stride rd : %d\n\n", ss->stride_rd);
 }
 
+/**
+ * vecvt_hf_xu8_m() vecvt.hf.xu8.m
+ * vecvt_hf_xu8_m() 将矩阵中的元素由 uint8 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
-    ShapeStride_debug(ss);
+    shapestride_dbg(ss);
     rd_matrix = rs1_matrix.cast<half>();
 
     return 0;
 }
 
-int CustomInsns::veemul_mf(half *rs1, half *rd, half f, struct ShapeStride *ss)
+/**
+ * veemul_mf() veemul.mf
+ * veemul_mf() 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
     /* param check */
     if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
@@ -58,16 +99,26 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half f, struct ShapeStride *ss)
         return -BR_EPARAM;
     }
 
-    ShapeStride_debug(ss);
+    shapestride_dbg(ss);
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    rd_matrix = rs1_matrix * f;
+    rd_matrix = rs1_matrix * rs2;
 
     return 0;
 }
 
-int CustomInsns::veadd_mf(half *rs1, half *rd, half f, struct ShapeStride *ss)
+/**
+ * veadd_mf() veadd.mf
+ * veadd_mf() 标量和矩阵元素广播加 M = M1 + f
+ * 如果要在原地进行，则rd的stride必须和rs1的stride相同
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
     /* param check */
     if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
@@ -78,18 +129,28 @@ int CustomInsns::veadd_mf(half *rs1, half *rd, half f, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    ShapeStride_debug(ss);
+    shapestride_dbg(ss);
 
     /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
      * convert this operation to matrix + matrix
      */
     Matrix_half const_matrix(ss->shape1_row, ss->shape1_column);
-    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, f);
+    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
     rd_matrix = rs1_matrix + const_matrix;
 
     return 0;
 }
 
+/**
+ * vemul_mm() vemul.mm
+ * vemul_mm() 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
+ * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 M2,源操作矩阵二基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
 {
     /* param check */
@@ -102,13 +163,22 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
-    ShapeStride_debug(ss);
+    shapestride_dbg(ss);
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     rd_matrix = rs1_matrix * rs2_matrix;
     return 0;
 }
 
+/**
+ * vemul_mv() vemul.mv
+ * vemul_mv() 向量和矩阵算数乘 V = V1.M1
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param rs2 V1,源操作向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
 {
     /* param check */
@@ -121,13 +191,22 @@ int CustomInsns::vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_vector(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_vector(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
-    ShapeStride_debug(ss);
+    shapestride_dbg(ss);
     
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     rd_vector = rs1_matrix * rs2_vector;
     return 0;
 }
 
+/**
+ * veacc_m() veacc.m
+ * veacc_m() 矩阵列元素(行向量)求和s=sum(M1i)， 矩阵行元素(列向量)求和 s=sum(M1j)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @param dim 方向 dim = 0 列向量求和， dim = 1 行向量求和
+ * @return 执行结果
+ */
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -148,6 +227,14 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     return 0;
 }
 
+/**
+ * veacc_m() veacc.m
+ * veacc_m() 矩阵所有元素求和
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -156,6 +243,15 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     return 0;
 }
 
+/**
+ * vemax_m() vemax.m
+ * vemax_m() 矩阵列元素(行向量)求最大值s=max(M1i)， 矩阵行元素(列向量)求最大值s=max(M1j)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @param dim 方向 dim = 0 列向量求和， dim = 1 行向量求和
+ * @return 执行结果
+ */
 int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -176,6 +272,15 @@ int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     return 0;
 }
 
+/**
+ * velkrelu_mf() velkrelu.mf
+ * velkrelu_mf() 矩阵元素与0比较，小于标量则乘一常数系数
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rs2 k, 源标量浮点操作数
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -185,6 +290,15 @@ int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *
     return 0;
 }
 
+/**
+ * velut_m() velut.m
+ * velut_m() 以矩阵中所有元素为索引(二进制),查找表中对应的值 M=LUT(M1ij)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rs2 A_base, LUT基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int CustomInsns::velut_m(uint16_t *rs1, uint64_t rs2, half *rd, struct ShapeStride *ss)
 {
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -198,6 +312,14 @@ int CustomInsns::velut_m(uint16_t *rs1, uint64_t rs2, half *rd, struct ShapeStri
     return 0;
 }
 
+/**
+ * vfwcvt_f_xu_v() vfwcvt.f.xu.v
+ * vfwcvt_f_xu_v() convert uinsigned integer to fp16 (uint8 -> fp16)
+ * @param vs2 源操作向量基地址
+ * @param vd 目的向量基地址
+ * @param num 向量长度(准确的说应该是个数)
+ * @return 执行结果
+ */
 int Vfwcvt::vfwcvt_f_xu_v(uint8_t *vs2, half *vd, int num)
 {
     typedef Map<Matrix<uint8_t, 1, Dynamic>> Uint8VecMap;
@@ -209,3 +331,17 @@ int Vfwcvt::vfwcvt_f_xu_v(uint8_t *vs2, half *vd, int num)
     vector_vd = vector_vs2.cast<half>();
     return 0;
 }
+
+/**
+ * vfwcvt_f_x_v() vfwcvt.f.x.v
+ * vfwcvt_f_x_v() convert signed integer to fp16 (int8 -> fp16)
+ * @param vs2 源操作向量基地址
+ * @param vd 目的向量基地址
+ * @param num 向量长度(准确的说应该是个数)
+ * @return 执行结果
+ */
+int vfwcvt_f_x_v(int8_t *vs2, half *vd, int num)
+{
+    return 0;
+}
+
