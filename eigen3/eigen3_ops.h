@@ -73,16 +73,28 @@ public:
 
     int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
     
-    int veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
-    
+    int veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+
+    int vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+    int vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+
+    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
 
     int vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
 
-    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
-    
+    int veemul_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+    int veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+
+    int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+    int veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+
     int vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
     
     int velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss);
