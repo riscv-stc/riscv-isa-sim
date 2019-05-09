@@ -260,6 +260,8 @@ public:
   void flush_tlb();
   void flush_icache();
 
+  size_t get_phy_addr(reg_t paddr);
+
   void register_memtracer(memtracer_t*);
 
   int is_dirty_enabled()

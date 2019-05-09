@@ -6,4 +6,5 @@
 #include "internals.h"
 #include "specialize.h"
 #include "tracer.h"
+#include "eigen3_ops.h"
 #include <assert.h>

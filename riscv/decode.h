@@ -19,6 +19,7 @@
 #include "common.h"
 #include "softfloat_types.h"
 #include "specialize.h"
+#include "eigen3_ops.h"
 #include <cinttypes>
 
 typedef int64_t sreg_t;
@@ -137,6 +138,7 @@ private:
 #define READ_VREG(reg) STATE.VPR[reg]
 #define RS1 READ_REG(insn.rs1())
 #define RS2 READ_REG(insn.rs2())
+#define RD READ_REG(insn.rd())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
 
 #ifndef RISCV_ENABLE_COMMITLOG
@@ -188,6 +190,22 @@ private:
 #define VRS2 READ_VREG(insn.rs2())
 #define VRS3 READ_VREG(insn.rs3())
 #define WRITE_VRD(value) WRITE_VREG(insn.rd(), value)
+
+#define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride1 & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
+
+#define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \
+					 (x).shape1_row = SHAPE1_ROW; \
+					 (x).shape2_column = SHAPE2_COLUMN; \
+					 (x).shape2_row = SHAPE2_ROW; \
+					 (x).stride_rd = STRIDE_RD; \
+					 (x).stride_rs1 = STRIDE_RS1; \
+					 (x).stride_rs2 = STRIDE_RS2;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())

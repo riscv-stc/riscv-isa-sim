@@ -3,10 +3,9 @@ exec_prefix=@prefix@
 libdir=${prefix}/@libdir@
 includedir=${prefix}/@includedir@
 
-Name: riscv-spike_main
-Description: RISC-V ISA simulator library
+Name: riscv-eigen3
+Description: RISC-V eigen3 library
 Version: git
-Depends: riscv-riscv riscv-softfloat riscv-eigen3
-Libs: -Wl,-rpath,${libdir} -L${libdir} -lspike_main -leigen3
+Libs: -Wl,-rpath,${libdir} -L${libdir} -leigen3
 Cflags: -I${includedir}
 URL: http://riscv.org/download.html#tab_spike

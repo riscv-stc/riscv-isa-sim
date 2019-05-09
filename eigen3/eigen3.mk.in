@@ -1,0 +1,12 @@
+eigen3_subproject_deps =
+
+eigen3_install_lib = yes
+
+eigen3_hdrs = \
+  blas_ops.h \
+
+#eigen3_srcs = \
+#  blas_ops.cc \
+
+eigen3_install_porg_srcs = \
+  blas_ops.cc \

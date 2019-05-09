@@ -30,6 +30,7 @@ MY_MATRIX_DEFINE(uint8_t)
 /* Matrix_uint16_t     Map_uint16_t */
 MY_MATRIX_DEFINE(uint16_t)
 
+
 #undef MY_MATRIX_DEFINE
 
 /**

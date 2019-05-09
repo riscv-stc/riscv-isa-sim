@@ -9,6 +9,9 @@ softfloat_hdrs = \
   softfloat_types.h \
   specialize.h \
 
+softfloat_srcs= \
+	eigen3_ops.cc \
+
 softfloat_c_srcs = \
 	f128_add.c \
 	f128_classify.c \

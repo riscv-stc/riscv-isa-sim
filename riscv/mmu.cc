@@ -145,6 +145,11 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes)
   }
 }
 
+size_t mmu_t::get_phy_addr(reg_t paddr)
+{
+  return (size_t)sim->addr_to_mem(paddr);
+}
+
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)
 {
   reg_t idx = (vaddr >> PGSHIFT) % TLB_ENTRIES;
