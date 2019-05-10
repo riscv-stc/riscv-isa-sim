@@ -38,7 +38,7 @@ MY_MATRIX_DEFINE(uint16_t)
  * 
  * 默认不开启debug
  */
-CustomInsns::CustomInsns(): debug(1)
+CustomInsns::CustomInsns(): debug(0)
 {
 }
 

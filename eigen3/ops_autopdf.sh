@@ -3,5 +3,7 @@
 doxygen doxygen_eigen3ops.cfg
 sed -i -e 's,begin{document},usepackage{CJKutf8}\n\\begin{document}\n\\begin{CJK}{UTF8}{gbsn},' ./latex/refman.tex
 sed -i -e 's,end{document},end{CJK}\n\\end{document},' ./latex/refman.tex
-#cd ./latex/; make
+cd ./latex/; make
+cp refman.pdf ../eigen3_ops.pdf
+
 
