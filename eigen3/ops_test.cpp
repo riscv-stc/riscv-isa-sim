@@ -167,19 +167,19 @@ static void test_veemacc(void)
     }
 
     PRINT_SUB_FUNC("veemacc_mm");
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
     ci.veemacc_mm(rs1, rd, rs2, &ss);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemacc_mm dim = 0");
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
     ci.veemacc_mm(rs1, rd, rs2, &ss, 0);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemacc_mm dim = 1");
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
     ci.veemacc_mm(rs1, rd, rs2, &ss, 1);
@@ -339,74 +339,138 @@ int test_veacc_m(void)
     printf("\n\n");
 }
 
-int test_vemax_m(void)
+static void test_vemax(void)
 {
     class CustomInsns ci;
-    half rs1[32];
-    half rd[32];
-    int i;
     struct ShapeStride ss;
-
-    ci.debug = 1;
-    cout << endl << endl << ">>>>test_vemax_m<<<<" << endl;
-
-    for (i = 0; i < 32; i++) {
-        rs1[i] = (half)i;
+    half rs1[32];
+    half rs2[32];
+    half rd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        rs1[i] = (half)(32 - i);
+        rs2[i] = (half)(i + 2);
         rd[i] = (half)0;
     }
 
-    ss.shape1_row = 5;
-    ss.shape1_column = 6;
-    ss.stride_rs1 = 6;
+    PRINT_SUB_FUNC("vemax_mm");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    ci.vemax_mm(rs1, rd, rs2, &ss);
+    printf_half(rd, 32);
 
-    /* max with dim0 */
-    cout << "max with dim0" << endl;
-    ci.vemax_m(rs1, rd, &ss, 0);
-
-    cout << "result is:" << endl;
-    for (i = 0; i < 32; i++)
-        printf("%f  ", (float)rd[i]);
-    printf("\n\n");
-
-    /* sum with dim1 */
-    for (i = 0; i < 32; i++)
+    PRINT_SUB_FUNC("vemax_m dim = 0");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    cout << "max with dim1" << endl;
-    ci.vemax_m(rs1, rd, &ss, 1);
+    ci.vemax_m(rs1, rd, &ss, 0);
+    printf_half(rd, 32);
 
-    cout << "result is:" << endl;
-    for (i = 0; i < 32; i++)
-        printf("%f  ", (float)rd[i]);
-    printf("\n\n");
+    PRINT_SUB_FUNC("vemax_m dim = 1");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.vemax_m(rs1, rd, &ss, 1);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("vemax_mv dim = 0");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    ci.vemax_mv(rs1, rd, rs2, &ss, 0);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("vemax_mv dim = 1");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    ci.vemax_mv(rs1, rd, rs2, &ss, 1);
+    printf_half(rd, 32);
 }
 
-int test_velkrelu_mf(void)
+
+static void test_vemin(void)
 {
     class CustomInsns ci;
-    half rs1[32];
-    half rd[32];
-    int i;
     struct ShapeStride ss;
-
-    ci.debug = 1;
-    cout << endl << endl << ">>>>test_velkrelu_mf<<<<" << endl;
-
-    for (i = 0; i < 32; i++) {
-        rs1[i] = (half)i + (half)-10;
+    half rs1[32];
+    half rs2[32];
+    half rd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        rs1[i] = (half)(32 - i);
+        rs2[i] = (half)(i + 2);
         rd[i] = (half)0;
     }
 
-    ss.shape1_row = 5;
-    ss.shape1_column = 6;
-    ss.stride_rs1 = 6;
-    ss.stride_rd = 6;
+    PRINT_SUB_FUNC("vemin_mm");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    ci.vemin_mm(rs1, rd, rs2, &ss);
+    printf_half(rd, 32);
 
-    ci.velkrelu_mf(rs1, (half)2, rd, &ss);
+    PRINT_SUB_FUNC("vemin_m dim = 0");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.vemin_m(rs1, rd, &ss, 0);
+    printf_half(rd, 32);
 
-    cout << "result is:" << endl;
-    for (i = 0; i < 32; i++)
-        printf("%f  ", (float)rd[i]);
-    printf("\n\n");
+    PRINT_SUB_FUNC("vemin_m dim = 1");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.vemin_m(rs1, rd, &ss, 1);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("vemin_mv dim = 0");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    ci.vemin_mv(rs1, rd, rs2, &ss, 0);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("vemin_mv dim = 1");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    ci.vemin_mv(rs1, rd, rs2, &ss, 1);
+    printf_half(rd, 32);
+}
+
+static void test_velkrelu(void)
+{
+    class CustomInsns ci;
+    struct ShapeStride ss;
+    half rs1[32];
+    half rs2[32];
+    half rd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        rs1[i] = (half)(i - 15);
+        rs2[i] = (half)(i + 2);
+        rd[i] = (half)0;
+    }
+
+    PRINT_SUB_FUNC("velkrelu_mf");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    ci.velkrelu_mf(rs1, rs2[0], rd, &ss);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("velkrelu_mv dim = 0");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.velkrelu_mv(rs1, rd, rs2, &ss, 0);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("velkrelu_mv dim = 1");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.velkrelu_mv(rs1, rd, rs2, &ss, 1);
+    printf_half(rd, 32);
 }
 
 int test_velut_m(void)
@@ -569,14 +633,18 @@ int main(void)
     test_vesub();
     test_veemul();
     test_veemacc();
+    test_vemax();
+    test_vemin();
+    test_velkrelu();
+
 
     test_vecvt_hf_xu8_m();
     test_vemul_mm();
     test_vemul_mv();
     test_veacc_m();
-    test_vemax_m();
-    test_velkrelu_mf();
     test_velut_m();
+
+    /* vector insns */
     test_vfwcvt_f_xu_v();
     test_vfmul_vf();
     test_vfmerge_vf();

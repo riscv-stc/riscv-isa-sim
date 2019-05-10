@@ -95,11 +95,22 @@ public:
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
 
+    int vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
-    
+    int vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+    int vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+
+    int vemin_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
+    int vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+    int vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+
     int velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss);
+    int velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     
     int velut_m(uint16_t *rs1, uint64_t rs2, half *rd, struct ShapeStride *ss);
+
+    int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
 };
 
 /**
