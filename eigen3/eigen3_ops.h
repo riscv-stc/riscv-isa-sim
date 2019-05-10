@@ -108,7 +108,7 @@ public:
     int velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss);
     int velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     
-    int velut_m(uint16_t *rs1, uint64_t rs2, half *rd, struct ShapeStride *ss);
+    int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
     int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
 };

@@ -496,7 +496,7 @@ int test_velut_m(void)
     ss.stride_rs1 = 6;
     ss.stride_rd = 6;
 
-    ci.velut_m(rs1, (uint64_t)base, rd, &ss);
+    ci.velut_m(rs1, (unsigned long)base, rd, &ss);
 
     cout << "result is:" << endl;
     for (i = 0; i < 32; i++)

@@ -1068,7 +1068,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::velut_m(uint16_t *rs1, uint64_t rs2, half *rd, struct ShapeStride *ss)
+int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss)
 {
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
