@@ -15,6 +15,18 @@ static void printf_half(half *h, int num)
     printf("\n\n");
 }
 
+static void printf_uint16(uint16_t *h, int num)
+{
+    printf("result:\n");
+    
+    for (int i = 0; i < num; i++) {
+        if (i > 0 && !(i % 4))
+            printf("\n");
+        printf("0x%04x    ", h[i]);
+    }
+    printf("\n\n");
+}
+
 #define SET_SHAPESTRIDE(ss, r1, c1, r2, c2, s1, s2, sd)   \
     ss.shape1_row = r1; \
     ss.shape1_column = c1; \
@@ -359,6 +371,13 @@ static void test_vemax(void)
     ci.vemax_mm(rs1, rd, rs2, &ss);
     printf_half(rd, 32);
 
+    PRINT_SUB_FUNC("vemax_m");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.vemax_m(rs1, rd, &ss);
+    printf_half(rd, 32);
+
     PRINT_SUB_FUNC("vemax_m dim = 0");
     SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
     for (int i = 0; i < 32; i++)
@@ -407,6 +426,13 @@ static void test_vemin(void)
     PRINT_SUB_FUNC("vemin_mm");
     SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
     ci.vemin_mm(rs1, rd, rs2, &ss);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("vemin_m");
+    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.vemin_m(rs1, rd, &ss);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("vemin_m dim = 0");
@@ -600,7 +626,7 @@ int test_vfmax(void)
     half vs2[32];
     half vs1[32];
 
-    Vmax<half> myvi;
+    Vma<half> myvi;
     cout << endl << endl << ">>>>test_vfmax<<<<" << endl;
 
     for (int i = 0; i < 32; i++) {
@@ -626,9 +652,103 @@ int test_vfmax(void)
     printf("\n\n");
 }
 
+void test_vsgnj(void)
+{
+    class Vsgnj<half> ci;
+    half vs1[32];
+    half vs2[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs1[i] = (half)(i - 15);
+        vs2[i] = (half)(i - 10);
+        vd[i] = (half)0;
+    }
+
+    PRINT_SUB_FUNC("vsgnj_vv");
+    ci.vsgnj_vv(vs2, vs1, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnj_vf rs < 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnj_vf(vs2, (half)-5.0, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnj_vf rs > 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnj_vf(vs2, (half)5.0, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjn_vv");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjn_vv(vs2, vs1, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjn_vf rs < 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjn_vf(vs2, (half)-5.0, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjn_vf rs > 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjn_vf(vs2, (half)5.0, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjx_vv");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjx_vv(vs2, vs1, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjx_vf rs < 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjx_vf(vs2, (half)-5.0, vd, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnjx_vf rs > 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)0;
+    ci.vsgnjx_vf(vs2, (half)5.0, vd, 32);
+    printf_half(vd, 32);
+}
+
+void test_vcompare(void)
+{
+    class Vcompare<half, uint16_t> ci;
+    half vs1[32];
+    half vs2[32];
+    uint16_t vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs1[i] = (half)i;
+        vs2[i] = (half)i;
+        vd[i] = (uint16_t)0;
+    }
+    for (int i = 10; i < 20; i++)
+        vs2[i] = (half)1.0;
+
+    PRINT_SUB_FUNC("veq_vv");
+    ci.veq_vv(vs2, vs1, vd, 32);
+    printf_uint16(vd, 32);
+
+    PRINT_SUB_FUNC("vsgnj_vf");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (uint16_t)0;
+    ci.veq_vf(vs2, (half)5.0, vd, 32);
+    printf_uint16(vd, 32);    
+}
 
 int main(void)
 {
+    /* custom insns */
     test_veadd();
     test_vesub();
     test_veemul();
@@ -637,6 +757,9 @@ int main(void)
     test_vemin();
     test_velkrelu();
 
+    /* vector insns */
+    test_vsgnj();
+    test_vcompare();
 
     test_vecvt_hf_xu8_m();
     test_vemul_mm();

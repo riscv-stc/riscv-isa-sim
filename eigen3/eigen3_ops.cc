@@ -27,9 +27,10 @@ typedef Map<Matrix_##Type, Unaligned, Stride<Dynamic, Dynamic> > Map_##Type;
 MY_MATRIX_DEFINE(half)
 /* Matrix_uint8_t     Map_uint8_t */
 MY_MATRIX_DEFINE(uint8_t)
+MY_MATRIX_DEFINE(int8_t)
 /* Matrix_uint16_t     Map_uint16_t */
 MY_MATRIX_DEFINE(uint16_t)
-
+MY_MATRIX_DEFINE(int16_t)
 
 #undef MY_MATRIX_DEFINE
 
@@ -38,11 +39,7 @@ MY_MATRIX_DEFINE(uint16_t)
  * 
  * 默认不开启debug
  */
-CustomInsns::CustomInsns(): debug(0)
-{
-}
-
-CustomInsns::~CustomInsns()
+CustomInsns::CustomInsns(): debug(GLOBAL_DBG)
 {
 }
 
@@ -469,6 +466,23 @@ int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 }
 
 /**
+ * vemax_m() vemax.m
+ * 
+ * 矩阵所有元素求最大值
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的数基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    
+    *rd = rs1_matrix.maxCoeff();
+    return 0;
+}
+
+/**
  * vemax_mm() vemax.mm
  * 
  * 两个矩阵对应元素间求最大值 M = max(M1, M2)
@@ -625,6 +639,23 @@ int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+    return 0;
+}
+
+/**
+ * vemin_m() vemin.m
+ * 
+ * 矩阵所有元素求最小值
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的数基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    
+    *rd = rs1_matrix.minCoeff();
     return 0;
 }
 
@@ -1137,6 +1168,81 @@ int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
 }
 
 /**
+ * vecvt_hf_x8_m() vecvt.hf.x8.m
+ * 
+ * 将矩阵中的元素由 int8 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    
+    shapestride_dbg(ss);
+    rd_matrix = rs1_matrix.cast<half>();
+
+    if (debug) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecvt_hf_x16_m() vecvt.hf.x16.m
+ * 
+ * 将矩阵中的元素由 int16 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    
+    shapestride_dbg(ss);
+    rd_matrix = rs1_matrix.cast<half>();
+
+    if (debug) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecvt_hf_xu16_m() vecvt.hf.xu16.m
+ * 
+ * 将矩阵中的元素由 uint16 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    
+    shapestride_dbg(ss);
+    rd_matrix = rs1_matrix.cast<half>();
+
+    if (debug) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
  * vfwcvt_f_xu_v() vfwcvt.f.xu.v
  * 
  * convert uinsigned integer to fp16 (uint8 -> fp16)
@@ -1166,8 +1272,11 @@ int Vfwcvt::vfwcvt_f_xu_v(uint8_t *vs2, half *vd, int num)
  * @param num 向量长度(准确的说应该是个数)
  * @return 执行结果
  */
-int vfwcvt_f_x_v(int8_t *vs2, half *vd, int num)
+int Vfwcvt::vfwcvt_f_x_v(int8_t *vs2, half *vd, int num)
 {
     return 0;
 }
 
+Vfwcvt::Vfwcvt(): debug(GLOBAL_DBG)
+{
+}
