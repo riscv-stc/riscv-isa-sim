@@ -1,3 +1,4 @@
+.vscode/
 build/
 *.gch
 autom4te.cache/
