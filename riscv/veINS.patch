@@ -1,0 +1,428 @@
+diff --git a/riscv/decode.h b/riscv/decode.h
+index 8643850..95a3529 100644
+--- a/riscv/decode.h
++++ b/riscv/decode.h
+@@ -191,6 +191,7 @@ private:
+ #define VRS3 READ_VREG(insn.rs3())
+ #define WRITE_VRD(value) WRITE_VREG(insn.rd(), value)
+ 
++#define DIM (insn.dim())
+ #define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
+ #define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
+ #define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
+diff --git a/riscv/insns/veacc_m.h b/riscv/insns/veacc_m.h
+index 98a0f57..ef1a6bb 100644
+--- a/riscv/insns/veacc_m.h
++++ b/riscv/insns/veacc_m.h
+@@ -1 +1,15 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++if(DIM == 0){
++	CusIns.veacc_m((half*)rs1, (half*)rd, &sst);
++}
++else{
++	CusIns.veacc_m((half*)rs1, (half*)rd, &sst, DIM);
++}
+diff --git a/riscv/insns/veadd_mf.h b/riscv/insns/veadd_mf.h
+index 98a0f57..921859c 100644
+--- a/riscv/insns/veadd_mf.h
++++ b/riscv/insns/veadd_mf.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.veadd_mf((half*)rs1, (half*)rd, (half)frs2.v, &sst);
+diff --git a/riscv/insns/veadd_mm.h b/riscv/insns/veadd_mm.h
+index 98a0f57..9393627 100644
+--- a/riscv/insns/veadd_mm.h
++++ b/riscv/insns/veadd_mm.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.veadd_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+diff --git a/riscv/insns/veadd_mv.h b/riscv/insns/veadd_mv.h
+index 98a0f57..164d947 100644
+--- a/riscv/insns/veadd_mv.h
++++ b/riscv/insns/veadd_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.veadd_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/vecvt_hf_xu8_m.h b/riscv/insns/vecvt_hf_xu8_m.h
+index 98a0f57..a28e34e 100644
+--- a/riscv/insns/vecvt_hf_xu8_m.h
++++ b/riscv/insns/vecvt_hf_xu8_m.h
+@@ -1 +1,9 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vecvt_hf_xu8_m((uint8_t*)rs1, (half*)rd, &sst);
+diff --git a/riscv/insns/veemacc_mm.h b/riscv/insns/veemacc_mm.h
+index 98a0f57..17ea734 100644
+--- a/riscv/insns/veemacc_mm.h
++++ b/riscv/insns/veemacc_mm.h
+@@ -1 +1,14 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++if(DIM == 0){
++	CusIns.veemacc_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
++}
++else{
++	CusIns.veemacc_mm((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
++}
+diff --git a/riscv/insns/veemacc_mv.h b/riscv/insns/veemacc_mv.h
+index 98a0f57..de74fc2 100644
+--- a/riscv/insns/veemacc_mv.h
++++ b/riscv/insns/veemacc_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.veemacc_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/veemul_mf.h b/riscv/insns/veemul_mf.h
+index 98a0f57..4425ea1 100644
+--- a/riscv/insns/veemul_mf.h
++++ b/riscv/insns/veemul_mf.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.veemul_mf((half*)rs1, (half*)rd, (half)(frs2.v), &sst);
+diff --git a/riscv/insns/veemul_mm.h b/riscv/insns/veemul_mm.h
+index 98a0f57..bd473ce 100644
+--- a/riscv/insns/veemul_mm.h
++++ b/riscv/insns/veemul_mm.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.veemul_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+diff --git a/riscv/insns/veemul_mv.h b/riscv/insns/veemul_mv.h
+index 98a0f57..9da9db5 100644
+--- a/riscv/insns/veemul_mv.h
++++ b/riscv/insns/veemul_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.veemul_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/velkrelu_mf.h b/riscv/insns/velkrelu_mf.h
+index 98a0f57..fc4a591 100644
+--- a/riscv/insns/velkrelu_mf.h
++++ b/riscv/insns/velkrelu_mf.h
+@@ -1 +1,11 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.velkrelu_mf((half*)rs1, (half)frs2.v, (half*)rd, &sst);
+diff --git a/riscv/insns/velkrelu_mv.h b/riscv/insns/velkrelu_mv.h
+index 98a0f57..6ea095e 100644
+--- a/riscv/insns/velkrelu_mv.h
++++ b/riscv/insns/velkrelu_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.velkrelu_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/velut_m.h b/riscv/insns/velut_m.h
+index 98a0f57..154e25f 100644
+--- a/riscv/insns/velut_m.h
++++ b/riscv/insns/velut_m.h
+@@ -1 +1,9 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.velut_m((uint16_t*)rs1, RS2, (half*)rd, &sst);
+diff --git a/riscv/insns/vemax_m.h b/riscv/insns/vemax_m.h
+index 98a0f57..5003e0b 100644
+--- a/riscv/insns/vemax_m.h
++++ b/riscv/insns/vemax_m.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemax_m((half*)rs1, (half*)rd, &sst, DIM);
+diff --git a/riscv/insns/vemax_mf.h b/riscv/insns/vemax_mf.h
+index 98a0f57..0357f95 100644
+--- a/riscv/insns/vemax_mf.h
++++ b/riscv/insns/vemax_mf.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.vemax_mf((half*)rs1, (half*)rd, (half)frs2.v, &sst);
+diff --git a/riscv/insns/vemax_mm.h b/riscv/insns/vemax_mm.h
+index 98a0f57..c752219 100644
+--- a/riscv/insns/vemax_mm.h
++++ b/riscv/insns/vemax_mm.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemax_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+diff --git a/riscv/insns/vemax_mv.h b/riscv/insns/vemax_mv.h
+index 98a0f57..6179205 100644
+--- a/riscv/insns/vemax_mv.h
++++ b/riscv/insns/vemax_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemax_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/vemin_m.h b/riscv/insns/vemin_m.h
+index 98a0f57..720ef70 100644
+--- a/riscv/insns/vemin_m.h
++++ b/riscv/insns/vemin_m.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemin_m((half*)rs1, (half*)rd, &sst, DIM);
+diff --git a/riscv/insns/vemin_mf.h b/riscv/insns/vemin_mf.h
+index 98a0f57..825012d 100644
+--- a/riscv/insns/vemin_mf.h
++++ b/riscv/insns/vemin_mf.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.vemin_mf((half*)rs1, (half*)rd, (half)frs2.v, &sst);
+diff --git a/riscv/insns/vemin_mm.h b/riscv/insns/vemin_mm.h
+index 98a0f57..af7156b 100644
+--- a/riscv/insns/vemin_mm.h
++++ b/riscv/insns/vemin_mm.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemin_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+diff --git a/riscv/insns/vemin_mv.h b/riscv/insns/vemin_mv.h
+index 98a0f57..b6e7df9 100644
+--- a/riscv/insns/vemin_mv.h
++++ b/riscv/insns/vemin_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemin_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+diff --git a/riscv/insns/vemul_mm.h b/riscv/insns/vemul_mm.h
+index 3dff20f..ff55fa3 100644
+--- a/riscv/insns/vemul_mm.h
++++ b/riscv/insns/vemul_mm.h
+@@ -2,13 +2,6 @@ require_extension('V');
+ 
+ class CustomInsns CusIns;
+ struct ShapeStride sst;
+-//sst.shape1_column = SHAPE1_COLUMN;
+-//sst.shape1_row = SHAPE1_ROW;
+-//sst.shape2_column = SHAPE2_COLUMN;
+-//sst.shape2_row = SHAPE2_ROW;
+-//sst.stride_rd = STRIDE_RD;
+-//sst.stride_rs1 = STRIDE_RS1;
+-//sst.stride_rs2 = STRIDE_RS2;
+ sst_fill(sst);
+ unsigned long rs1 = MMU.get_phy_addr(RS1);
+ unsigned long rs2 = MMU.get_phy_addr(RS2);
+diff --git a/riscv/insns/vemul_mv.h b/riscv/insns/vemul_mv.h
+index 98a0f57..2f3b000 100644
+--- a/riscv/insns/vemul_mv.h
++++ b/riscv/insns/vemul_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemul_mv((half*)rs1, (half*)rs2, (half*)rd, &sst);
+diff --git a/riscv/insns/vemv_m.h b/riscv/insns/vemv_m.h
+index 98a0f57..a4abc58 100644
+--- a/riscv/insns/vemv_m.h
++++ b/riscv/insns/vemv_m.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vemv_m((half*)rs1, (half*)rd, &sst);
+diff --git a/riscv/insns/vesub_mf.h b/riscv/insns/vesub_mf.h
+index 98a0f57..ab82981 100644
+--- a/riscv/insns/vesub_mf.h
++++ b/riscv/insns/vesub_mf.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rd = MMU.get_phy_addr(RD);
++float32_t frs2 = f32(FRS2);
++
++CusIns.vesub_mf((half*)rs1, (half*)rd, (half)frs2.v, &sst);
+diff --git a/riscv/insns/vesub_mm.h b/riscv/insns/vesub_mm.h
+index 98a0f57..1bdb5bf 100644
+--- a/riscv/insns/vesub_mm.h
++++ b/riscv/insns/vesub_mm.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vesub_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+diff --git a/riscv/insns/vesub_mv.h b/riscv/insns/vesub_mv.h
+index 98a0f57..bea5152 100644
+--- a/riscv/insns/vesub_mv.h
++++ b/riscv/insns/vesub_mv.h
+@@ -1 +1,10 @@
+ require_extension('V');
++
++class CustomInsns CusIns;
++struct ShapeStride sst;
++sst_fill(sst);
++unsigned long rs1 = MMU.get_phy_addr(RS1);
++unsigned long rs2 = MMU.get_phy_addr(RS2);
++unsigned long rd = MMU.get_phy_addr(RD);
++
++CusIns.vesub_mv((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);

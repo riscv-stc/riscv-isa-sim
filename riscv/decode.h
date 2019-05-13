@@ -191,6 +191,7 @@ private:
 #define VRS3 READ_VREG(insn.rs3())
 #define WRITE_VRD(value) WRITE_VREG(insn.rd(), value)
 
+#define DIM (insn.dim())
 #define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
 #define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
 #define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
