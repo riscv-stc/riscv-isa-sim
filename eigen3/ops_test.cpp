@@ -530,200 +530,352 @@ int test_velut_m(void)
     printf("\n\n");
 }
 
-void test_vfwcvt_f_xu_v(void)
+void test_vfwcvt(void)
 {
-    half vd[32];
-    uint8_t vs2[32];
-
-    Vfwcvt myvi;
-    cout << endl << endl << ">>>>test_vfwcvt_f_xu_v<<<<" << endl;
-
-    for (int i = 0; i < 32; i++) {
-        vd[i] = (half)0;
-        vs2[i] = i;
-    }
-
-    myvi.vfwcvt_f_xu_v(vs2, vd, 32);
-    
-    cout << "result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("0x%x  ", vd[i].x);
-    printf("\n\n");
-}
-
-void test_vfmul_vf(void)
-{
-    half vd[32];
-    half vs2[32];
-    half rs1 = (half)2.0;
-
-    Vmul<half> myvi;
-    cout << endl << endl << ">>>>test_vfmul_vf<<<<" << endl;
-
-    for (int i = 0; i < 32; i++) {
-        vd[i] = (half)0;
-        vs2[i] = (half)i;
-    }
-
-    myvi.vmul_vf(vs2, rs1, vd, 32);
-    
-    cout << "result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("%f(0x%x)  ", (float)vd[i], vd[i].x);
-    printf("\n\n");
-}
-
-void test_vfmerge_vf(void)
-{
-    half vd[32];
-    half vs2[32];
-    uint8_t v0[32];
-    half rs1 = (half)99.0;
-
-    Vmerge<half, uint8_t> myvi;
-    cout << endl << endl << ">>>>test_vfmul_vf<<<<" << endl;
-
-    for (int i = 0; i < 32; i++) {
-        vd[i] = (half)0;
-        vs2[i] = (half)i;
-        v0[i] = i;
-    }
-
-    myvi.vmerge_vf(vs2, rs1, vd, 0, v0, 32);
-    
-    cout << "result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("%f(0x%x)  ", (float)vd[i], vd[i].x);
-    printf("\n\n");
-}
-
-int test_vfmacc_vf(void)
-{
-    half vd[32];
-    half vs2[32];
-    half vs1[32];
-
-    Vma<half> myvi;
-    cout << endl << endl << ">>>>test_vfmacc_vf<<<<" << endl;
-
-    for (int i = 0; i < 32; i++) {
-        vd[i] = (half)10.0;
-        vs2[i] = (half)3.0;
-        vs1[i] = (half)2.0;
-    }
-
-    myvi.vmacc_vf(vs2, vs1[0], vd, 32);
-    
-    cout << "result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("0x%x  ", vd[i].x);
-    printf("\n\n");
-}
-
-int test_vfmax(void)
-{
-    half vd[32];
-    half vs2[32];
-    half vs1[32];
-
-    Vma<half> myvi;
-    cout << endl << endl << ">>>>test_vfmax<<<<" << endl;
-
-    for (int i = 0; i < 32; i++) {
-        vd[i] = (half)0.0;
-        vs2[i] = (half)i;
-        vs1[i] = (half)15.0;
-    }
-
-    myvi.vmax_vf(vs2, vs1[0], vd, 32);
-    
-    cout << "vfmax_vf result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("%f  ", (float)vd[i]);
-    printf("\n\n");
-
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0.0;
-
-    myvi.vmax_vv(vs2, vs1, vd, 32);
-    cout << "vfmax_vv result is:" << endl;
-    for (int i = 0; i < 32; i++)
-        printf("%f  ", (float)vd[i]);
-    printf("\n\n");
-}
-
-void test_vsgnj(void)
-{
-    class Vsgnj<half> ci;
-    half vs1[32];
-    half vs2[32];
+    Vfwcvt<uint16_t> cvt;
+    uint16_t vs2_ui[32];
+    int16_t vs2_i[32];
+    uint16_t v0[32];
     half vd[32];
     
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
+        vs2_ui[i] = (uint16_t)i;
+        vs2_i[i] = (int16_t)(i - 15);
+        v0[i] = i / 20;
+        vd[i] = (half)99.0;
+    }
+
+    PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 0");
+    cvt.vfwcvt_f_x_v(vs2_i, vd, 0, v0, 32);
+    printf_half(vd, 32);
+    
+    PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    cvt.vfwcvt_f_x_v(vs2_i, vd, 1, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vfwcvt_f_xu_v vm = 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    cvt.vfwcvt_f_xu_v(vs2_ui, vd, 0, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vfwcvt_f_xu_v vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    cvt.vfwcvt_f_xu_v(vs2_ui, vd, 1, v0, 32);
+    printf_half(vd, 32);
+}
+
+void test_vfadd(void)
+{
+    Vadd<half, uint16_t> add;
+    half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = (half)i;
+        vs1[i] = (half)(i + 3);
+        v0[i] = i / 20;
+        vd[i] = (half)99.0;
+    }
+
+    PRINT_SUB_FUNC("vadd_vf vm = 0");
+    add.vadd_vf(vs2, (half)5.0, vd, 0, v0, 32);
+    printf_half(vd, 32);
+    
+    PRINT_SUB_FUNC("vadd_vf vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    add.vadd_vf(vs2, (half)5.0, vd, 1, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vadd_vv vm = 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    add.vadd_vv(vs2, vs1, vd, 0, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vadd_vv vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    add.vadd_vv(vs2, vs1, vd, 1, v0, 32);
+    printf_half(vd, 32);
+}
+
+void test_vsub(void)
+{
+    Vsub<half, uint16_t> sub;
+    half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = (half)(i + 3);
+        vs1[i] = (half)i;
+        v0[i] = i / 20;
+        vd[i] = (half)99.0;
+    }
+
+    PRINT_SUB_FUNC("vsub_vf vm = 0");
+    sub.vsub_vf(vs2, (half)5.0, vd, 0, v0, 32);
+    printf_half(vd, 32);
+    
+    PRINT_SUB_FUNC("vsub_vf vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    sub.vsub_vf(vs2, (half)5.0, vd, 1, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsub_vv vm = 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    sub.vsub_vv(vs2, vs1, vd, 0, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vsub_vv vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    sub.vsub_vv(vs2, vs1, vd, 1, v0, 32);
+    printf_half(vd, 32);
+}
+
+void test_vmul(void)
+{
+    Vmul<half, uint16_t> mul;
+    half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = (half)i;
+        vs1[i] = (half)i;
+        v0[i] = i / 20;
+        vd[i] = (half)99.0;
+    }
+
+    PRINT_SUB_FUNC("vmul_vf vm = 0");
+    mul.vmul_vf(vs2, (half)5.0, vd, 0, v0, 32);
+    printf_half(vd, 32);
+    
+    PRINT_SUB_FUNC("vmul_vf vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    mul.vmul_vf(vs2, (half)5.0, vd, 1, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vmul_vv vm = 0");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    mul.vmul_vv(vs2, vs1, vd, 0, v0, 32);
+    printf_half(vd, 32);
+
+    PRINT_SUB_FUNC("vmul_vv vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    mul.vmul_vv(vs2, vs1, vd, 1, v0, 32);
+    printf_half(vd, 32);
+}
+
+void test_vmerge(void)
+{
+    Vmerge<half, uint16_t> merge;
+    half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = (half)i;
+        vs1[i] = (half)i;
+        v0[i] = i / 20;
+        vd[i] = (half)99.0;
+    }
+
+    PRINT_SUB_FUNC("vmerge_vf vm = 0");
+    merge.vmerge_vf(vs2, (half)5.0, vd, 0, v0, 32);
+    printf_half(vd, 32);
+    
+    PRINT_SUB_FUNC("vmerge_vf vm = 1");
+    for (int i = 0; i < 32; i++)
+        vd[i] = (half)99.0;
+    merge.vmerge_vf(vs2, (half)5.0, vd, 1, v0, 32);
+    printf_half(vd, 32);
+}
+
+void test_vsgnj(void)
+{
+    Vsgnj<half, uint16_t> sgnj;
+    half vs1[32];
+    half vs2[32];
+    half vd[32];
+    uint16_t v0[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        v0[i] = i / 20;
         vs1[i] = (half)(i - 15);
         vs2[i] = (half)(i - 10);
         vd[i] = (half)0;
     }
 
-    PRINT_SUB_FUNC("vsgnj_vv");
-    ci.vsgnj_vv(vs2, vs1, vd, 32);
-    printf_half(vd, 32);
+    #define VSGNJ_TEST_VV(func, func_str)          \
+        PRINT_SUB_FUNC(func_str" vm = 0");         \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, vs1, vd, 0, v0, 32);        \
+        printf_half(vd, 32);                       \
+                                                   \
+        PRINT_SUB_FUNC(func_str" vm = 1");         \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, vs1, vd, 1, v0, 32);        \
+        printf_half(vd, 32);
 
-    PRINT_SUB_FUNC("vsgnj_vf rs < 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnj_vf(vs2, (half)-5.0, vd, 32);
-    printf_half(vd, 32);
+    #define VSGNJ_TEST_VF(func, func_str)          \
+        PRINT_SUB_FUNC(func_str" vm = 0 rs < 0");  \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, (half)-5.0, vd, 0, v0, 32); \
+        printf_half(vd, 32);                       \
+                                                   \
+        PRINT_SUB_FUNC(func_str" vm = 0 rs > 0");  \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, (half)5.0, vd, 0, v0, 32);  \
+        printf_half(vd, 32);                       \
+                                                   \
+        PRINT_SUB_FUNC(func_str" vm = 1 rs < 0");  \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, (half)-5.0, vd, 1, v0, 32); \
+        printf_half(vd, 32);                       \
+                                                   \
+        PRINT_SUB_FUNC(func_str" vm = 1 rs > 0");  \
+        for (int i = 0; i < 32; i++)               \
+            vd[i] = (half)0;                       \
+        sgnj.func(vs2, (half)5.0, vd, 1, v0, 32);  \
+        printf_half(vd, 32);
 
-    PRINT_SUB_FUNC("vsgnj_vf rs > 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnj_vf(vs2, (half)5.0, vd, 32);
-    printf_half(vd, 32);
+    VSGNJ_TEST_VV(vsgnj_vv, "vsgnj_vv");
+    VSGNJ_TEST_VF(vsgnj_vf, "vsgnj_vf");
+    
+    VSGNJ_TEST_VV(vsgnjn_vv, "vsgnjn_vv");
+    VSGNJ_TEST_VF(vsgnjn_vf, "vsgnjn_vf");
+    
+    VSGNJ_TEST_VV(vsgnjx_vv, "vsgnjx_vv");
+    VSGNJ_TEST_VF(vsgnjx_vf, "vsgnjx_vf");
+}
 
-    PRINT_SUB_FUNC("vsgnjn_vv");
+void test_vext(void)
+{
+    Vext<half> ext;
+    half vs2[32];
+    half rd;
+    
+    PRINT_FUNC;
     for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjn_vv(vs2, vs1, vd, 32);
-    printf_half(vd, 32);
+        vs2[i] = (half)i;
 
-    PRINT_SUB_FUNC("vsgnjn_vf rs < 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjn_vf(vs2, (half)-5.0, vd, 32);
-    printf_half(vd, 32);
+    PRINT_SUB_FUNC("vext_x_v");
+    ext.vext_x_v(vs2, &rd, (uint16_t)10, 32);
 
-    PRINT_SUB_FUNC("vsgnjn_vf rs > 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjn_vf(vs2, (half)5.0, vd, 32);
-    printf_half(vd, 32);
+    printf("rd = %f(0x%04x)\n", (float)rd, rd.x);
+}
 
-    PRINT_SUB_FUNC("vsgnjx_vv");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjx_vv(vs2, vs1, vd, 32);
-    printf_half(vd, 32);
+void test_vma(void)
+{
+    Vma<half, uint16_t> ma;
+    half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
+    half vd[32];
+    
+    PRINT_FUNC;
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = (half)(i + 6);
+        vs1[i] = (half)(i + 5);
+        v0[i] = i / 20;
+        vd[i] = (half)2.0;
+    }
 
-    PRINT_SUB_FUNC("vsgnjx_vf rs < 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjx_vf(vs2, (half)-5.0, vd, 32);
-    printf_half(vd, 32);
+    #define VMA_TEST_VF(func, func_str)                \
+        PRINT_SUB_FUNC(func_str " vm = 0");            \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (half)2.0;                         \
+        ma.func(vs2, (half)5.0, vd, 0, v0, 32);        \
+        printf_half(vd, 32);                           \
+                                                       \
+        PRINT_SUB_FUNC(func_str" vm = 1");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (half)2.0;                         \
+        ma.func(vs2, (half)5.0, vd, 1, v0, 32);        \
+        printf_half(vd, 32);
+    
+    #define VMA_TEST_VV(func, func_str)                \
+        PRINT_SUB_FUNC(func_str" vm = 0");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (half)2.0;                         \
+        ma.func(vs2, vs1, vd, 0, v0, 32);              \
+        printf_half(vd, 32);                           \
+                                                       \
+        PRINT_SUB_FUNC(func_str" vm = 1");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (half)2.0;                         \
+        ma.func(vs2, vs1, vd, 1, v0, 32);              \
+        printf_half(vd, 32);
 
-    PRINT_SUB_FUNC("vsgnjx_vf rs > 0");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (half)0;
-    ci.vsgnjx_vf(vs2, (half)5.0, vd, 32);
-    printf_half(vd, 32);
+
+    VMA_TEST_VF(vmacc_vf, "vmacc_vf");
+    VMA_TEST_VV(vmacc_vv, "vmacc_vv");
+    
+    VMA_TEST_VF(vmadd_vf, "vmadd_vf");
+    VMA_TEST_VV(vmadd_vv, "vmadd_vv");
+
+    VMA_TEST_VF(vmax_vf, "vmax_vf");
+    VMA_TEST_VV(vmax_vv, "vmax_vv");
+
+    VMA_TEST_VF(vmin_vf, "vmin_vf");
+    VMA_TEST_VV(vmin_vv, "vmin_vv");
+
+    VMA_TEST_VF(vmsac_vf, "vmsac_vf");
+    VMA_TEST_VV(vmsac_vv, "vmsac_vv");
+
+    VMA_TEST_VF(vnmsub_vf, "vnmsub_vf");
+    VMA_TEST_VV(vnmsub_vv, "vnmsub_vv");
+
+    VMA_TEST_VF(vnmacc_vf, "vnmacc_vf");
+    VMA_TEST_VV(vnmacc_vv, "vnmacc_vv");
+    
+    VMA_TEST_VF(vnmadd_vf, "vnmadd_vf");
+    VMA_TEST_VV(vnmadd_vv, "vnmadd_vv");
+
+    VMA_TEST_VF(vnmsac_vf, "vnmsac_vf");
+    VMA_TEST_VV(vnmsac_vv, "vnmsac_vv");
+
+    VMA_TEST_VF(vnmsub_vf, "vnmsub_vf");
+    VMA_TEST_VV(vnmsub_vv, "vnmsub_vv");
+    
+    VMA_TEST_VF(vnmsub_vf, "vnmsub_vf");
+    VMA_TEST_VV(vnmsub_vv, "vnmsub_vv");
 }
 
 void test_vcompare(void)
 {
-    class Vcompare<half, uint16_t> ci;
-    half vs1[32];
+    Vcompare<half, uint16_t, uint16_t> cmp;
     half vs2[32];
+    half vs1[32];
+    uint16_t v0[32];
     uint16_t vd[32];
     
     PRINT_FUNC;
@@ -731,19 +883,54 @@ void test_vcompare(void)
         vs1[i] = (half)i;
         vs2[i] = (half)i;
         vd[i] = (uint16_t)0;
+        v0[i] = i / 20;
     }
     for (int i = 10; i < 20; i++)
         vs2[i] = (half)1.0;
 
-    PRINT_SUB_FUNC("veq_vv");
-    ci.veq_vv(vs2, vs1, vd, 32);
-    printf_uint16(vd, 32);
+    #define VCMP_TEST_VF(func, func_str)               \
+        PRINT_SUB_FUNC(func_str " vm = 0");            \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (uint16_t)3;                       \
+        cmp.func(vs2, (half)15.0, vd, 0, v0, 32);      \
+        printf_uint16(vd, 32);                         \
+                                                       \
+        PRINT_SUB_FUNC(func_str" vm = 1");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (uint16_t)3;                       \
+        cmp.func(vs2, (half)15.0, vd, 1, v0, 32);      \
+        printf_uint16(vd, 32);
+    
+    #define VCMP_TEST_VV(func, func_str)               \
+        PRINT_SUB_FUNC(func_str" vm = 0");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (uint16_t)3;                       \
+        cmp.func(vs2, vs1, vd, 0, v0, 32);             \
+        printf_uint16(vd, 32);                         \
+                                                       \
+        PRINT_SUB_FUNC(func_str" vm = 1");             \
+        for (int i = 0; i < 32; i++)                   \
+            vd[i] = (uint16_t)3;                       \
+        cmp.func(vs2, vs1, vd, 1, v0, 32);             \
+        printf_uint16(vd, 32);
 
-    PRINT_SUB_FUNC("vsgnj_vf");
-    for (int i = 0; i < 32; i++)
-        vd[i] = (uint16_t)0;
-    ci.veq_vf(vs2, (half)5.0, vd, 32);
-    printf_uint16(vd, 32);    
+    VCMP_TEST_VF(veq_vf, "veq_vf");
+    VCMP_TEST_VV(veq_vv, "veq_vv");
+
+    VCMP_TEST_VF(vge_vf, "vge_vf");
+    VCMP_TEST_VV(vge_vv, "vge_vv");
+
+    VCMP_TEST_VF(vgt_vf, "vgt_vf");
+    VCMP_TEST_VV(vgt_vv, "vgt_vv");
+    
+    VCMP_TEST_VF(vle_vf, "vle_vf");
+    VCMP_TEST_VV(vle_vv, "vle_vv");
+
+    VCMP_TEST_VF(vlt_vf, "vlt_vf");
+    VCMP_TEST_VV(vlt_vv, "vlt_vv");
+
+    VCMP_TEST_VF(vne_vf, "vne_vf");
+    VCMP_TEST_VV(vne_vv, "vne_vv");
 }
 
 int main(void)
@@ -757,10 +944,6 @@ int main(void)
     test_vemin();
     test_velkrelu();
 
-    /* vector insns */
-    test_vsgnj();
-    test_vcompare();
-
     test_vecvt_hf_xu8_m();
     test_vemul_mm();
     test_vemul_mv();
@@ -768,11 +951,15 @@ int main(void)
     test_velut_m();
 
     /* vector insns */
-    test_vfwcvt_f_xu_v();
-    test_vfmul_vf();
-    test_vfmerge_vf();
-    test_vfmacc_vf();
-    test_vfmax();
+    test_vfwcvt();
+    test_vfadd();
+    test_vsub();
+    test_vmul();
+    test_vmerge();
+    test_vext();
+    test_vma();
+    test_vsgnj();
+    test_vcompare();
     
     return 0;
 }

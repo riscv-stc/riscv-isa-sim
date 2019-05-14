@@ -25,6 +25,26 @@ using namespace std;
 
 #define GLOBAL_DBG      1
 
+#define DBG_VECTOR_VF    do {                   \
+    if (debug) {                                \
+        cout << "vs2:\n" << vector_vs2 << endl; \
+        cout << "rs1:\n" << rs1 << endl;        \
+        cout << "vm:\n" << vm << endl;          \
+        cout << "v0:\n" << vector_v0 << endl;   \
+        cout << "vd:\n" << vector_vd << endl;   \
+    }                                           \
+} while(0)
+
+#define DBG_VECTOR_VV    do {                   \
+    if (debug) {                                \
+        cout << "vs2:\n" << vector_vs2 << endl; \
+        cout << "vs1:\n" << vector_vs1 << endl; \
+        cout << "vm:\n" << vm << endl;          \
+        cout << "v0:\n" << vector_v0 << endl;   \
+        cout << "vd:\n" << vector_vd << endl;   \
+    }                                           \
+} while(0)
+
 /**
  * @brief 矩阵形状描述结构
  * 
@@ -122,17 +142,96 @@ public:
 /**
  * @brief 加宽浮点/整数类型转换指令
  * 
- * 实现整数或浮点数到两倍宽度的转换,九章处理器只支持int8/uint8 到 fp16的转换
+ * 九章处理器只支持 int16/uint16 到 fp16 的转换指令,即支持 vfcvt.f.xu.v 和 vfcvt.f.x.v。
+ * 此外,该执行转换指令时 SEW 必须为 16b,否则将触发非法指令异常。
+ * 当有将 int8/uint8 数据转换成 fp16 时,也会把 SEW 设置为 16b,在 load 数据的时候,
+ * 就已经将数据宽度从 int8/uint8 扩展到了 int16/uint16
  */
+template <typename MaskType>
 class Vfwcvt
 {
   public:
     int debug;
 
-    Vfwcvt();
+    Vfwcvt(): debug(GLOBAL_DBG)
+    {
 
-    int vfwcvt_f_x_v(int8_t *vs2, half *vd, int num);
-    int vfwcvt_f_xu_v(uint8_t *vs2, half *vd, int num);
+    }
+
+    typedef Map<Matrix<uint16_t, 1, Dynamic>> VfwcvtU16VecMap;
+    typedef Map<Matrix<int16_t, 1, Dynamic>> VfwcvtI16VecMap;
+    typedef Map<Matrix<half, 1, Dynamic>> VfwcvtHalfVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfwcvtMaskVecMap;
+
+    /**
+     * vfwcvt_f_x_v() vfwcvt.f.x.v
+     * 
+     * convert signed integer to fp16 (int16 -> fp16)
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param num 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfwcvt_f_x_v(int16_t *vs2, half *vd, int vm, MaskType *v0, int num)
+    {
+        VfwcvtI16VecMap vector_vs2(vs2, num);
+        VfwcvtHalfVecMap vector_vd(vd, num);
+        VfwcvtMaskVecMap vector_v0(v0, num);
+
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = (half)vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vs2.cast<half>();
+
+        if (debug) {
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vd:\n" << vector_vd << endl;
+        }
+
+        return 0;
+    }
+
+    /**
+     * vfwcvt_f_xu_v() vfwcvt.f.xu.v
+     * 
+     * convert uinsigned integer to fp16 (uint16 -> fp16)
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param num 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfwcvt_f_xu_v(uint16_t *vs2, half *vd, int vm, MaskType *v0, int num)
+    {
+        VfwcvtU16VecMap vector_vs2(vs2, num);
+        VfwcvtHalfVecMap vector_vd(vd, num);
+        VfwcvtMaskVecMap vector_v0(v0, num);
+
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = (half)vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vs2.cast<half>();
+        
+        if (debug) {
+            cout << "vs2:\n" << vector_vs2 << endl;            
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vd:\n" << vector_vd << endl;
+        }
+
+        return 0;
+    }
 };
 
 /**
@@ -141,14 +240,15 @@ class Vfwcvt
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
  * 
  */
-template <typename Type>
+template <typename Type, typename MaskType>
 class Vadd
 {
   public:
     int debug;
     typedef Map<Matrix<Type, 1, Dynamic>> VaddVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VaddMaskVecMap;
     
-    Vadd(): debug(GLOBAL_DBG)
+    Vadd(): debug(GLOBAL_DBG)       
     {
 
     }
@@ -158,21 +258,26 @@ class Vadd
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vadd_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VaddVecMap vector_vs2(vs2, num);
         VaddVecMap vector_vd(vd, num);
+        VaddMaskVecMap vector_v0(v0, num);
         
-        vector_vd = vector_vs2.array() + rs1;
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) + rs1;
+            }
+        } else
+            vector_vd = vector_vs2.array() + rs1;
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -182,22 +287,28 @@ class Vadd
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vadd_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VaddVecMap vector_vs2(vs2, num);
         VaddVecMap vector_vs1(vs1, num);
         VaddVecMap vector_vd(vd, num);
-        
-        vector_vd = vector_vs2.array() + vector_vs1.array();
+        VaddMaskVecMap vector_v0(v0, num);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) + vector_vs1(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() + vector_vs1.array();
+
+        DBG_VECTOR_VV;
+
         return 0;
     }
 };
@@ -209,7 +320,7 @@ class Vadd
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
  * 
  */
-template <typename Type>
+template <typename Type, typename MaskType>
 class Vsub
 {
   public:
@@ -220,27 +331,33 @@ class Vsub
     }
 
     typedef Map<Matrix<Type, 1, Dynamic>> VsubVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VsubMaskVecMap;
     
     /**
      * vsub_vf() vfsub.vf
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsub_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsubVecMap vector_vs2(vs2, num);
         VsubVecMap vector_vd(vd, num);
-        
-        vector_vd = vector_vs2.array() + -rs1;
+        VsubMaskVecMap vector_v0(v0, num);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) + -rs1;
+            }
+        } else
+            vector_vd = vector_vs2.array() + -rs1;
+
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -250,22 +367,27 @@ class Vsub
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsub_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsubVecMap vector_vs2(vs2, num);
         VsubVecMap vector_vs1(vs1, num);
         VsubVecMap vector_vd(vd, num);
+        VsubMaskVecMap vector_v0(v0, num);
         
-        vector_vd = vector_vs2.array() + -vector_vs1.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) + -vector_vs1(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() + -vector_vs1.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -277,7 +399,7 @@ class Vsub
  * 
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
  */
-template <typename Type>
+template <typename Type, typename MaskType>
 class Vmul
 {
   public:
@@ -289,27 +411,33 @@ class Vmul
     }
 
     typedef Map<Matrix<Type, 1, Dynamic>> VmulVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmulMaskVecMap;
     
     /**
      * vmul_vf() vfmul.vf
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmul_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmul_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmulVecMap vector_vs2(vs2, num);
         VmulVecMap vector_vd(vd, num);
+        VmulMaskVecMap vector_v0(v0, num);
         
-        vector_vd = vector_vs2.array() * rs1;
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * rs1;
+            }
+        } else
+            vector_vd = vector_vs2.array() * rs1;
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -319,22 +447,27 @@ class Vmul
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmul_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmul_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmulVecMap vector_vs2(vs2, num);
         VmulVecMap vector_vs1(vs1, num);
         VmulVecMap vector_vd(vd, num);
+        VmulMaskVecMap vector_v0(v0, num);
         
-        vector_vd = vector_vs2.array() * vector_vs1.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * vector_vs1(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() * vector_vs1.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -347,10 +480,10 @@ class Vmul
  * 当然，从接口格式上限制了输入向量，输出向量，输入标量这三者的数据类型必须一致
  * mask向量数据类型可以独立指定
  * 
- * TypeData 输入向量，输出向量，输入标量的数据类型
- * TypeMask mask向量的数据类型
+ * Type 输入向量，输出向量，输入标量的数据类型
+ * MaskType mask向量的数据类型
  */
-template <typename TypeData, typename TypeMask>
+template <typename Type, typename MaskType>
 class Vmerge
 {
   public:
@@ -361,8 +494,8 @@ class Vmerge
 
     }
 
-    typedef Map<Matrix<TypeData, 1, Dynamic>> VmergeDataVecMap;
-    typedef Map<Matrix<TypeMask, 1, Dynamic>> VmergeMaskVecMap;
+    typedef Map<Matrix<Type, 1, Dynamic>> VmergeDataVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmergeMaskVecMap;
 
     /**
      * vmerge_vf() vfmerge.vf
@@ -374,34 +507,24 @@ class Vmerge
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmerge_vf(TypeData *vs2, TypeData rs1, TypeData *vd, int vm, TypeMask *v0, int num)
+    int vmerge_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmergeDataVecMap vector_vs2(vs2, num);
         VmergeDataVecMap vector_vd(vd, num);
         VmergeMaskVecMap vector_v0(v0, num);
-        Matrix<TypeMask, 1, Dynamic> new_v0(num);
 
-        switch (vm) {
-        case 0:
-            for (int i = 0; i < num; i++)
-                new_v0(i) = vector_v0(i) & 0x1;
-            vector_vd = new_v0.array().select(rs1, vector_vs2);
-            break;
-        case 1:
+        if (vm) 
             vector_vd = vector_vd.Constant(1, num, rs1);
-            break;
-        default:
-            cout << "invalid vm" << endl;
-            return -BR_EPARAM;
+        else {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i);
+                else
+                    vector_vd(i) = rs1;   
+            }
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vm:" << endl << vm << endl;
-            cout << "v0:" << endl << new_v0 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -442,9 +565,15 @@ class Vext
         VextVecMap vector_vs2(vs2, num);
         
         if (rs1 >= num)
-            *rd = 0;
+            *rd = (Type)0;
         else
             *rd = vector_vs2(rs1);
+
+        if (debug) {
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "rs1:\n" << rs1 << endl;
+        }
+
         return 0;
     }
 };
@@ -456,7 +585,7 @@ class Vext
  * 支持任意数据类型
  *
  */
-template <typename Type>
+template <typename Type, typename MaskType>
 class Vma
 {
   public:
@@ -468,27 +597,33 @@ class Vma
     }
 
     typedef Map<Matrix<Type, 1, Dynamic>> VmaVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmaMaskVecMap;
     
     /**
      * vmacc_vf() vfmacc.vf
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmacc_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vs2.array() * rs1 + vector_vd.array();
-
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * rs1 + vector_vd(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() * rs1 + vector_vd.array();
+        
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -498,22 +633,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmacc_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vs2.array() * vector_vs1.array() + vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * vector_vs1(i) + vector_vd(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() * vector_vs1.array() + vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -525,21 +665,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmacc_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vnmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vs2.array() * rs1) + -vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vs2(i) * rs1) + -vector_vd(i);
+            }
+        } else
+            vector_vd = -(vector_vs2.array() * rs1) + -vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -551,22 +696,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmacc_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vnmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vs2.array() * vector_vs1.array()) + -vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + -vector_vd(i);
+            }
+        } else
+            vector_vd = -(vector_vs2.array() * vector_vs1.array()) + -vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -578,21 +728,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsac_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vs2.array() * rs1 + -vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * rs1 + -vector_vd(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() * rs1 + -vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -604,22 +759,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsac_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vs2.array() * vector_vs1.array() + -vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) * vector_vs1(i) + -vector_vd(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() * vector_vs1.array() + -vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -631,21 +791,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsac_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vnmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vs2.array() * rs1) + vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vs2(i) * rs1) + vector_vd(i);
+            }
+        } else
+            vector_vd = -(vector_vs2.array() * rs1) + vector_vd.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -657,22 +822,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsac_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vnmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vs2.array() * vector_vs1.array()) + vector_vd.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + vector_vd(i);
+            }
+        } else
+            vector_vd = -(vector_vs2.array() * vector_vs1.array()) + vector_vd.array();
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -684,21 +854,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmadd_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vd.array() * rs1 + vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vd(i) * rs1 + vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vd.array() * rs1 + vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -710,22 +885,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmadd_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vd.array() * vector_vs1.array() + vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vd(i) * vector_vs1(i) + vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vd.array() * vector_vs1.array() + vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -737,21 +917,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmadd_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vnmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vd.array() * rs1) + -vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vd(i) * rs1) + -vector_vs2(i);
+            }
+        } else
+            vector_vd = -(vector_vd.array() * rs1) + -vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -763,22 +948,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmadd_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vnmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vd.array() * vector_vs1.array()) + -vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + -vector_vs2(i);
+            }
+        } else
+            vector_vd = -(vector_vd.array() * vector_vs1.array()) + -vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -790,21 +980,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsub_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vd.array() * rs1 + -vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vd(i) * rs1 + -vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vd.array() * rs1 + -vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -816,22 +1011,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsub_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = vector_vd.array() * vector_vs1.array() + -vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vd(i) * vector_vs1(i) + -vector_vs2(i);
+            }
+        } else
+            vector_vd = vector_vd.array() * vector_vs1.array() + -vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -843,21 +1043,26 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsub_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vnmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vd.array() * rs1) + vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vd(i) * rs1) + vector_vs2(i);
+            }
+        } else
+            vector_vd = -(vector_vd.array() * rs1) + vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -869,22 +1074,27 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsub_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vnmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = -(vector_vd.array() * vector_vs1.array()) + vector_vs2.array();
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + vector_vs2(i);
+            }
+        } else
+            vector_vd = -(vector_vd.array() * vector_vs1.array()) + vector_vs2.array();
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -894,21 +1104,30 @@ class Vma
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmax_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmax_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs2.array() > rs1).select(vector_vs2, rs1);
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs2(i) > rs1)
+                        vector_vd(i) = vector_vs2(i);
+                    else
+                        vector_vd(i) = rs1;
+                }
+            }
+        } else
+            vector_vd = (vector_vs2.array() > rs1).select(vector_vs2, rs1);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -918,22 +1137,31 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmax_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmax_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs2.array() > vector_vs1.array()).select(vector_vs2, vector_vs1);
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs2(i) > vector_vs1(i))
+                        vector_vd(i) = vector_vs2(i);
+                    else
+                        vector_vd(i) = vector_vs1(i);
+                }
+            }
+        } else
+            vector_vd = (vector_vs2.array() > vector_vs1.array()).select(vector_vs2, vector_vs1);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -942,22 +1170,31 @@ class Vma
      * vmin_vf() vfmin.vf
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
-     * @param vd 目的向量基地址
+     * @param vd 目的向量基地址test_vsub
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmin_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vmin_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs2.array() < rs1).select(vector_vs2, rs1);
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs2(i) < rs1)
+                        vector_vd(i) = vector_vs2(i);
+                    else
+                        vector_vd(i) = rs1;
+                }
+            }
+        } else
+            vector_vd = (vector_vs2.array() < rs1).select(vector_vs2, rs1);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -967,22 +1204,31 @@ class Vma
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmin_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vmin_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VmaVecMap vector_vs2(vs2, num);
         VmaVecMap vector_vs1(vs1, num);
         VmaVecMap vector_vd(vd, num);
+        VmaMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs2.array() < vector_vs1.array()).select(vector_vs2, vector_vs1);
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs2(i) < vector_vs1(i))
+                        vector_vd(i) = vector_vs2(i);
+                    else
+                        vector_vd(i) = vector_vs1(i);
+                }
+            }
+        } else
+            vector_vd = (vector_vs2.array() < vector_vs1.array()).select(vector_vs2, vector_vs1);
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -993,10 +1239,18 @@ class Vma
  * 
  * 向量浮点符号注入(Sign-Injection)指令的运算结果的指数和尾数由第一个源操作数 vs2 提供
  */
-template <typename Type>
+template <typename Type, typename MaskType>
 class Vsgnj
 {
-  public:
+  private:
+    Type xxabs(Type val)
+    {
+        if (val < (Type)0)
+            return -val;
+        return val;
+    }
+
+public:
     int debug;
 
     Vsgnj(): debug(GLOBAL_DBG)
@@ -1005,29 +1259,39 @@ class Vsgnj
     }
 
     typedef Map<Matrix<Type, 1, Dynamic>> VsgnjVecMap;
-
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VsgnjMaskVecMap;
+    
     /**
      * vsgnj_vv() vfsgnj.vv
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnj_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vsgnj_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vs1(vs1, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs1.array() > (Type)0).select(
-            vector_vs2.array().abs(), -vector_vs2.array().abs());
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs1(i) > (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else
+            vector_vd = (vector_vs1.array() > (Type)0).select(
+                vector_vs2.array().abs(), -vector_vs2.array().abs());
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1037,24 +1301,34 @@ class Vsgnj
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnj_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vsgnj_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (rs1 > (Type)0)
-            vector_vd = vector_vs2.array().abs();
-        else
-            vector_vd = -vector_vs2.array().abs();
-        
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (rs1 > (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else {
+            if (rs1 > (Type)0)
+                vector_vd = vector_vs2.array().abs();
+            else
+                vector_vd = -vector_vs2.array().abs();
         }
+
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1064,23 +1338,32 @@ class Vsgnj
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjn_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vsgnjn_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vs1(vs1, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        vector_vd = (vector_vs1.array() < (Type)0).select(
-            vector_vs2.array().abs(), -vector_vs2.array().abs());
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (vector_vs1(i) < (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else
+            vector_vd = (vector_vs1.array() < (Type)0).select(
+                vector_vs2.array().abs(), -vector_vs2.array().abs());
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1090,24 +1373,34 @@ class Vsgnj
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjn_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vsgnjn_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (rs1 < (Type)0)
-            vector_vd = vector_vs2.array().abs();
-        else
-            vector_vd = -vector_vs2.array().abs();
-
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if (rs1 < (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else {
+            if (rs1 < (Type)0)
+                vector_vd = vector_vs2.array().abs();
+            else
+                vector_vd = -vector_vs2.array().abs();
         }
+
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1117,23 +1410,32 @@ class Vsgnj
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjx_vv(Type *vs2, Type *vs1, Type *vd, int num)
+    int vsgnjx_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vs1(vs1, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        vector_vd = ((vector_vs1.array() * vector_vs2.array()) > (Type)0).select(
-            vector_vs2.array().abs(), -vector_vs2.array().abs());
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if ((vector_vs1(i) * vector_vs2(i)) > (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else
+            vector_vd = ((vector_vs1.array() * vector_vs2.array()) > (Type)0).select(
+                vector_vs2.array().abs(), -vector_vs2.array().abs());
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1143,22 +1445,31 @@ class Vsgnj
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjx_vf(Type *vs2, Type rs1, Type *vd, int num)
+    int vsgnjx_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
     {
         VsgnjVecMap vector_vs2(vs2, num);
         VsgnjVecMap vector_vd(vd, num);
+        VsgnjMaskVecMap vector_v0(v0, num);
 
-        vector_vd = ((vector_vs2.array() * rs1) > (Type)0).select(
-            vector_vs2.array().abs(), -vector_vs2.array().abs());
+        if (vm) {
+            for (int i = 0; i < num; i++) {
+                if (vector_v0(i) & 0x1) {
+                    if ((vector_vs2(i) * rs1) > (Type)0)
+                        vector_vd(i) = xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = -xxabs(vector_vs2(i));
+                }
+            }
+        } else
+            vector_vd = ((vector_vs2.array() * rs1) > (Type)0).select(
+                vector_vs2.array().abs(), -vector_vs2.array().abs());
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1170,7 +1481,7 @@ class Vsgnj
  * 比较指令的作用通常是为了产生屏蔽向量的值。比较指令包括相等(==),不相等(!=),
  * 大于(>),小于(<),大于等于(>=),小于等于(<=)等类型
  */
-template <typename InType, typename OutType>
+template <typename InType, typename OutType, typename MaskType>
 class Vcompare
 {
   public:
@@ -1183,32 +1494,40 @@ class Vcompare
 
     typedef Map<Matrix<InType, 1, Dynamic>> VcompareInVecMap;
     typedef Map<Matrix<OutType, 1, Dynamic>> VcompareOutVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VcompareMaskVecMap;
 
     /**
      * veq_vf()   vfeq.vf vd, vs2, rs1, vm   Compare equal(==)
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int veq_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int veq_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VEQ_VF      do {             \
+            if (vector_vs2(i) == rs1)        \
+                vector_vd(i) = (OutType)1;   \
+            else                             \
+                vector_vd(i) = (OutType)0;   \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) == rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(i) & 0x1)
+                    VEQ_VF;
+            } else
+                VEQ_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1218,27 +1537,34 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int veq_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int veq_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
 
+        #define VEQ_VV      do {                   \
+            if (vector_vs2(i) == vector_vs1(i))    \
+                vector_vd(i) = (OutType)1;         \
+            else                                   \
+                vector_vd(i) = (OutType)0;         \
+        } while(0)
+        
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) == vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VEQ_VV;    
+            } else
+                VEQ_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1248,26 +1574,33 @@ class Vcompare
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vne_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int vne_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VNE_VF     do {               \
+            if (vector_vs2(i) != rs1)         \
+                vector_vd(i) = (OutType)1;    \
+            else                              \
+                vector_vd(i) = (OutType)0;    \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) != rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VNE_VF;    
+            } else
+                VNE_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1277,27 +1610,34 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vne_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int vne_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VNE_VV    do {                       \
+            if (vector_vs2(i) != vector_vs1(i))      \
+                vector_vd(i) = (OutType)1;           \
+            else                                     \
+                vector_vd(i) = (OutType)0;           \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) != vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VNE_VV;    
+            } else
+                VNE_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1307,26 +1647,33 @@ class Vcompare
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vlt_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int vlt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VLT_VF      do {               \
+            if (vector_vs2(i) < rs1)           \
+                vector_vd(i) = (OutType)1;     \
+            else                               \
+                vector_vd(i) = (OutType)0;     \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) < rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VLT_VF;    
+            } else
+                VLT_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1336,27 +1683,34 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vlt_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int vlt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VLT_VV       do {                 \
+            if (vector_vs2(i) < vector_vs1(i))    \
+                vector_vd(i) = (OutType)1;        \
+            else                                  \
+                vector_vd(i) = (OutType)0;        \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) < vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VLT_VV;    
+            } else
+                VLT_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1366,26 +1720,33 @@ class Vcompare
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vle_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int vle_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VLE_VF         do {         \
+            if (vector_vs2(i) <= rs1)       \
+                vector_vd(i) = (OutType)1;  \
+            else                            \
+                vector_vd(i) = (OutType)0;  \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) <= rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VLE_VF;    
+            } else
+                VLE_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1395,27 +1756,34 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vle_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int vle_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VLE_VV    do {                   \
+            if (vector_vs2(i) <= vector_vs1(i))  \
+                vector_vd(i) = (OutType)1;       \
+            else                                 \
+                vector_vd(i) = (OutType)0;       \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) <= vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VLE_VV;    
+            } else
+                VLE_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1425,26 +1793,33 @@ class Vcompare
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vgt_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int vgt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VGT_VF    do {                \
+            if (vector_vs2(i) > rs1)          \
+                vector_vd(i) = (OutType)1;    \
+            else                              \
+                vector_vd(i) = (OutType)0;    \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) > rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VGT_VF;    
+            } else
+                VGT_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1454,27 +1829,34 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vgt_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int vgt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VGT_VV     do {                  \
+            if (vector_vs2(i) > vector_vs1(i))   \
+                vector_vd(i) = (OutType)1;       \
+            else                                 \
+                vector_vd(i) = (OutType)0;       \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) > vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VGT_VV;    
+            } else
+                VGT_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
@@ -1484,26 +1866,33 @@ class Vcompare
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vge_vf(InType *vs2, InType rs1, OutType *vd, int num)
+    int vge_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VGE_VF     do {                 \
+            if (vector_vs2(i) >= rs1)           \
+                vector_vd(i) = (OutType)1;      \
+            else                                \
+                vector_vd(i) = (OutType)0;      \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) >= rs1)
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VGE_VF;    
+            } else
+                VGE_VF;
         }
         
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "rs1:" << endl << rs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VF;
 
         return 0;
     }
@@ -1513,30 +1902,38 @@ class Vcompare
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
      * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
      * @param num 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vge_vv(InType *vs2, InType *vs1, OutType *vd, int num)
+    int vge_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
     {
         VcompareInVecMap vector_vs2(vs2, num);
         VcompareInVecMap vector_vs1(vs1, num);
         VcompareOutVecMap vector_vd(vd, num);
+        VcompareMaskVecMap vector_v0(v0, num);
+
+        #define VGE_VV    do {                    \
+            if (vector_vs2(i) >= vector_vs1(i))   \
+                vector_vd(i) = (OutType)1;        \
+            else                                  \
+                vector_vd(i) = (OutType)0;        \
+        } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vector_vs2(i) >= vector_vs1(i))
-                vector_vd(i) = (OutType)1;
-            else
-                vector_vd(i) = (OutType)0;
+            if (vm) {
+                if (vector_v0(0) & 0x1)
+                    VGE_VV;    
+            } else
+                VGE_VV;
         }
 
-        if (debug) {
-            cout << "vs2:" << endl << vector_vs2 << endl;
-            cout << "vs1:" << endl << vector_vs1 << endl;
-            cout << "vd" << endl << vector_vd << endl;
-        }
+        DBG_VECTOR_VV;
 
         return 0;
     }
 };
+
 
 #endif
