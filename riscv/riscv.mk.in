@@ -317,6 +317,11 @@ riscv_insn_list = \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
+	vlb_v \
+	vlh_v \
+	vsetvl \
+	vlxhu_v \
+	vsh_v \
 	wfi \
 	xor \
 	xori \

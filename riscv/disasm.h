@@ -11,7 +11,8 @@
 extern const char* xpr_name[NXPR];
 extern const char* fpr_name[NFPR];
 extern const char* vpr_name[NVPR];
-extern const char* dim_name[NVPR];
+extern const char* dim_name[4];
+extern const char* vm_name[2];
 extern const char* csr_name(int which);
 
 class arg_t

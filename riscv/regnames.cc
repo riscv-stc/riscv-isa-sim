@@ -31,6 +31,10 @@ const char* dim_name[]={
     " "," ","dim0", "dim1"
 };
 
+const char* vm_name[]={
+    "v0.t", " "
+};
+
 const char* csr_name(int which) {
   switch (which) {
     #define DECLARE_CSR(name, number)  case number: return #name;

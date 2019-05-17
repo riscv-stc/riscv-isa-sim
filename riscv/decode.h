@@ -64,6 +64,15 @@ const int NCSR = 4096;
 #define MAX_INSN_LENGTH 8
 #define PC_ALIGN 2
 
+
+#define VTYPE_EDIV_SHIFT 5
+#define VTYPE_SEW_SHIFT  2
+#define VTYPE_LMUL_SHIFT 0
+
+#define VTYPE_EDIV 3
+#define VTYPE_VSEW  7
+#define VTYPE_VLMUL 3
+
 typedef uint64_t insn_bits_t;
 class insn_t
 {
@@ -84,9 +93,13 @@ public:
   uint64_t rs3() { return x(27, 5); }
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
-//  uint64_t dmc() { return x(25, 1); }
-//  uint64_t dm() { return x(14, 1); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t vm() { return x(25, 1); }
+  uint64_t nf() { return x(29, 3); }
+  uint64_t mop() { return x(26, 3); }
+  uint64_t width() { return x(12, 3); }
+  uint64_t lumop() { return x(20, 5); }
+  uint64_t sumop() { return x(20, 5); }
 
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
@@ -122,6 +135,14 @@ public:
     if (!zero_reg || i != 0)
       data[i] = value;
   }
+  void write_vh(size_t i, size_t v_idx, unsigned short value)
+  {
+	data[i].vh[v_idx] = value;
+  }
+  void write_vb(size_t i, size_t v_idx, unsigned char value)
+  {
+    data[i].vb[v_idx] = value;
+  }
   const T& operator [] (size_t i) const
   {
     return data[i];
@@ -145,7 +166,8 @@ private:
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
 # define WRITE_FREG(reg, value) DO_WRITE_FREG(reg, freg(value))
 //# define WRITE_VREG(reg, value) DO_WRITE_VREG(reg, vreg(value))
-# define WRITE_VREG(reg, value) STATE.VPR.write(reg, value)
+# define WRITE_VREG_H(reg_h, idx, value) STATE.VPR.write_vh(reg_h, idx, value)
+# define WRITE_VREG_B(reg_b, idx, value) STATE.VPR.write_vb(reg_b, idx, value)
 #else
 # define WRITE_REG(reg, value) ({ \
     reg_t wdata = (value); /* value may have side effects */ \
@@ -156,11 +178,6 @@ private:
     freg_t wdata = freg(value); /* value may have side effects */ \
     STATE.log_reg_write = (commit_log_reg_t){((reg) << 1) | 1, wdata}; \
     DO_WRITE_FREG(reg, wdata); \
-  })
-# define WRITE_VREG(reg, value) ({ \
-    freg_t wdata = freg(value); /* value may have side effects */ \
-    STATE.log_reg_write = (commit_log_reg_t){(reg) << 1, {wdata, 0}}; \
-    DO_WRITE_VREG(reg, wdata); \
   })
 #endif
 
@@ -189,9 +206,16 @@ private:
 #define VRS1 READ_VREG(insn.rs1())
 #define VRS2 READ_VREG(insn.rs2())
 #define VRS3 READ_VREG(insn.rs3())
-#define WRITE_VRD(value) WRITE_VREG(insn.rd(), value)
+#define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
+#define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
+#define VL (STATE.vl)
+#define VSTART (STATE.vstart)
+#define VLMAX (LMUL*VL/SEW)
+#define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
+#define WRITE_VRD_B(value, idx) WRITE_VREG_B(insn.rd(), idx, value)
 
 #define DIM (insn.dim())
+#define VM (insn.vm())
 #define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
 #define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
 #define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
@@ -237,7 +261,6 @@ private:
 #define zext32(x) ((reg_t)(uint32_t)(x))
 #define sext_xlen(x) (((sreg_t)(x) << (64-xlen)) >> (64-xlen))
 #define zext_xlen(x) (((reg_t)(x) << (64-xlen)) >> (64-xlen))
-#define vext_xlen(x) (((vreg_t)(x) << (64-xlen)) >> (64-xlen))
 
 #define set_pc(x) \
   do { p->check_pc_alignment(x); \
@@ -320,8 +343,11 @@ inline freg_t f128_negate(freg_t a)
 #define DEBUG_END                 (0x1000 - 1)
 
 /*Vector instruction support*/
-//typedef struct{ unsigned char vx[32];}vreg_t; //vector reg length 256bit
-typedef int64_t vreg_t; //vector reg length 256bit
+union vreg_t{
+	unsigned char vb[32];
+	unsigned short vh[16];
+}; //vector reg length 256bit
+//typedef int64_t vreg_t; //vector reg length 256bit
 
 
 #endif

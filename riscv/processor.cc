@@ -67,6 +67,9 @@ void processor_t::parse_isa_string(const char* str)
   const char* p = lowercase.c_str();
   const char* all_subsets = "imafdqcv";
 
+  slen = 256;
+  vlen = 256;
+  elen = 32;
   max_xlen = 64;
   state.misa = reg_t(2) << 62;
 
@@ -154,6 +157,7 @@ void processor_t::reset()
   state.dcsr.halt = halt_on_reset;
   halt_on_reset = false;
   set_csr(CSR_MSTATUS, state.mstatus);
+  set_csr(CSR_VTYPE, 0x4);
 
   if (ext)
     ext->reset(); // reset the extension
@@ -387,6 +391,8 @@ void processor_t::set_csr(int which, reg_t val)
 	case CSR_STRIDE2:
 	  state.stride2 = val;
 	  break;
+	case CSR_VTYPE:
+	  state.vtype = val;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
           (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR))
@@ -629,20 +635,31 @@ reg_t processor_t::get_csr(int which)
       return (state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT);
 	case CSR_SHAPE1:
 	  if(!supports_extension('V'))
-		  break;
+		break;
 	  return state.shape1;
 	case CSR_SHAPE2:
 	  if(!supports_extension('V'))
-		  break;
+		break;
 	  return state.shape2;
 	case CSR_STRIDE1:
 	  if(!supports_extension('V'))
-		  break;
+		break;
 	  return state.stride1;
 	case CSR_STRIDE2:
 	  if(!supports_extension('V'))
-		  break;
+		break;
 	  return state.stride2;
+	case CSR_VL:
+	  if(!supports_extension('V'))
+		break;
+	  return state.vl;
+	case CSR_VTYPE:
+	  if(!supports_extension('V'))
+		break;
+	  return state.vtype;
+	case CSR_VSTART:
+	  if(!supports_extension('V'))
+		break;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)

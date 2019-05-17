@@ -134,6 +134,12 @@ struct state_t
   uint32_t shape2;
   uint32_t stride1;
   uint32_t stride2;
+  uint32_t vstart;
+  uint32_t vxsat;
+  uint32_t vxrm;
+  uint32_t vl;
+  uint32_t vtype;
+
   bool serialized; // whether timer CSRs are in a well-defined state
 
   // When true, execute a single instruction and then enter debug mode.  This
@@ -184,6 +190,9 @@ public:
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
   unsigned get_max_xlen() { return max_xlen; }
+  unsigned get_elen() { return elen; }
+  unsigned get_slen() { return slen; }
+  unsigned get_vlen() { return vlen; }
   std::string get_isa_string() { return isa_string; }
   unsigned get_flen() {
     return supports_extension('Q') ? 128 :
@@ -312,6 +321,9 @@ private:
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
+  unsigned elen;
+  unsigned slen;
+  unsigned vlen;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;

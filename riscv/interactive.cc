@@ -71,6 +71,7 @@ void sim_t::interactive()
   funcs["fregs"] = &sim_t::interactive_fregs;
   funcs["fregd"] = &sim_t::interactive_fregd;
   funcs["vreg"] = &sim_t::interactive_vreg;
+  funcs["vregh"] = &sim_t::interactive_vregh;
   funcs["pc"] = &sim_t::interactive_pc;
   funcs["mem"] = &sim_t::interactive_mem;
   funcs["str"] = &sim_t::interactive_str;
@@ -281,7 +282,19 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
 void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::string>& args)
 {
   vreg_t r = get_vreg(args);
-  fprintf(stderr, "0x%016" PRIx64 "\n", get_reg(args));
+  for(int i=0; i<32; i++){
+	fprintf(stderr, "0x%02" PRIu8, r.vb[i]);
+	fprintf(stderr, "\n");
+  }
+}
+
+void sim_t::interactive_vregh(const std::string& cmd, const std::vector<std::string>& args)
+{
+  vreg_t r = get_vreg(args);
+  for(int i=0; i<16; i++){
+	fprintf(stderr, "0x%04" PRIu16, r.vh[i]);
+	fprintf(stderr, "\n");
+  }
 }
 
 reg_t sim_t::get_mem(const std::vector<std::string>& args)

@@ -99,6 +99,12 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+	return vm_name[insn.vm()];
+  }
+} vm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
     switch (insn.csr())
     {
       #define DECLARE_CSR(name, num) case num: return #name;
@@ -329,8 +335,11 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
   #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
   #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
-  #define DEFINE_SV1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
-  #define DEFINE_SV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
+  #define DEFINE_CV1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
+  #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
+  #define DEFINE_SV1TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &vm})
+  #define DEFINE_SV2TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &vrs2, &vm})
+  #define DEFINE_SV3TYPE(code) DISASM_INSN(#code, code, 0, {&vrs3, &xrs1, &vm})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -600,7 +609,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_VRTYPE(vadd_vv);
 
   DEFINE_R1TYPE(veacc_m);
-  DEFINE_SV2TYPE(veadd_mf);
+  DEFINE_CV2TYPE(veadd_mf);
   DEFINE_RTYPE(veadd_mm);
   DEFINE_R2TYPE(veadd_mv);
   DEFINE_R3TYPE(vecvt_hf_x8_m);
@@ -609,26 +618,31 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecvt_hf_xu16_m);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
-  DEFINE_SV2TYPE(veemul_mf);
+  DEFINE_CV2TYPE(veemul_mf);
   DEFINE_RTYPE(veemul_mm);
   DEFINE_R2TYPE(veemul_mv);
   DEFINE_R2TYPE(velkrelu_mv);
-  DEFINE_SV2TYPE(velkrelu_mf);
+  DEFINE_CV2TYPE(velkrelu_mf);
   DEFINE_RTYPE(velut_m);
   DEFINE_R1TYPE(vemax_m);
   DEFINE_RTYPE(vemax_mm);
-  DEFINE_SV2TYPE(vemax_mf);
+  DEFINE_CV2TYPE(vemax_mf);
   DEFINE_R2TYPE(vemax_mv);
   DEFINE_R1TYPE(vemin_m);
   DEFINE_RTYPE(vemin_mm);
-  DEFINE_SV2TYPE(vemin_mf);
+  DEFINE_CV2TYPE(vemin_mf);
   DEFINE_R2TYPE(vemin_mv);
   DEFINE_RTYPE(vemul_mm);
   DEFINE_RTYPE(vemul_mv);
   DEFINE_R3TYPE(vemv_m);
   DEFINE_RTYPE(vesub_mm);
-  DEFINE_SV2TYPE(vesub_mf);
+  DEFINE_CV2TYPE(vesub_mf);
   DEFINE_R2TYPE(vesub_mv);
+
+  DEFINE_SV1TYPE(vlb_v);
+  DEFINE_SV1TYPE(vlh_v);
+  DEFINE_RTYPE(vsetvl);
+  DEFINE_SV2TYPE(vlxhu_v);
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));
