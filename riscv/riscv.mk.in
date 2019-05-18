@@ -320,8 +320,16 @@ riscv_insn_list = \
 	vlb_v \
 	vlh_v \
 	vsetvl \
+	vsetvli \
 	vlxhu_v \
 	vsh_v \
+	vfmul_vf \
+	vfadd_vf \
+	vfmerge_vf \
+	vext_x_v \
+	vfmacc_vf \
+	vfmax_vv \
+	vfmax_vf \
 	wfi \
 	xor \
 	xori \

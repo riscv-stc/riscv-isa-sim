@@ -35,6 +35,18 @@ const char* vm_name[]={
     "v0.t", " "
 };
 
+const char* vlmul_name[]={
+	"m1", "m2", "m4", "m8"
+};
+
+const char* vsew_name[]={
+	"e8", "e16", "e32", "e64", "e128" , " ", " ", " "
+};
+
+const char* vediv_name[]={
+	"d1", "d2", "d3", "d4"
+};
+
 const char* csr_name(int which) {
   switch (which) {
     #define DECLARE_CSR(name, number)  case number: return #name;

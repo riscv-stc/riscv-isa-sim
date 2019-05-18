@@ -95,6 +95,9 @@ public:
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
   uint64_t vm() { return x(25, 1); }
+  uint64_t vlmul() {return x(20,2);}
+  uint64_t vsew() { return x(22,3);}
+  uint64_t vediv() { return x(25,2);}
   uint64_t nf() { return x(29, 3); }
   uint64_t mop() { return x(26, 3); }
   uint64_t width() { return x(12, 3); }
@@ -206,6 +209,8 @@ private:
 #define VRS1 READ_VREG(insn.rs1())
 #define VRS2 READ_VREG(insn.rs2())
 #define VRS3 READ_VREG(insn.rs3())
+#define VR0 READ_VREG(0)
+#define VRD  READ_VREG(insn.rd())
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
 #define VL (STATE.vl)
@@ -216,6 +221,9 @@ private:
 
 #define DIM (insn.dim())
 #define VM (insn.vm())
+#define VLMUL_I (insn.vlmul())
+#define VSEW_I (insn.vsew())
+#define VEDIV_I (insn.vediv())
 #define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
 #define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
 #define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
