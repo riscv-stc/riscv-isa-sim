@@ -157,7 +157,7 @@ void processor_t::reset()
   state.dcsr.halt = halt_on_reset;
   halt_on_reset = false;
   set_csr(CSR_MSTATUS, state.mstatus);
-  set_csr(CSR_VTYPE, 0x4);
+  state.vtype = 0x4; //vlmul=0,vsew=1,vediv=0
 
   if (ext)
     ext->reset(); // reset the extension
@@ -392,7 +392,12 @@ void processor_t::set_csr(int which, reg_t val)
 	  state.stride2 = val;
 	  break;
 	case CSR_VTYPE:
-	  state.vtype = val;
+//	  state.vtype = val;
+//	  vtype is fix in current version
+	  break;
+	case CSR_VL:
+	  state.vl = val;
+	  break;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
           (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR))
