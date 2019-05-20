@@ -208,7 +208,7 @@ private:
 // VPU macros
 #define VRS1 READ_VREG(insn.rs1())
 #define VRS2 READ_VREG(insn.rs2())
-#define VRS3 READ_VREG(insn.rs3())
+#define VRS3 READ_VREG(insn.rd())
 #define VR0 READ_VREG(0)
 #define VRD  READ_VREG(insn.rd())
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
