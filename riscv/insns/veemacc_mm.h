@@ -10,5 +10,5 @@ if(DIM == 0){
 	CusIns.veemacc_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
 }
 else{
-	CusIns.veemacc_mm((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM);
+	CusIns.veemacc_mm((half*)rs1, (half*)rd, (half*)rs2, &sst, DIM_DM);
 }
