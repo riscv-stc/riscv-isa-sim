@@ -7,7 +7,7 @@ else{
 	switch(SEW){
 	case 16:
 		for(;idx < VL; idx++){
-			if(VM|!(READ_VREG(0).vh[idx]))
+			if(!VM & !(READ_VREG(0).vh[idx]))
 				continue;
 			WRITE_VRD_H(MMU.load_int8(RS1+idx*SEW/2), idx);
 		}
