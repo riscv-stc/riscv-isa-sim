@@ -10,7 +10,7 @@
  * 按照不同的vector指令去区分该不该放在一个类里面）
  *
  * @author chenhao
- * 
+ *
  */
 
 #ifndef __EIGEN3_OPS_H__
@@ -47,7 +47,7 @@ using namespace std;
 
 /**
  * @brief 矩阵形状描述结构
- * 
+ *
  * 按照 CSR shape1, shape2, stride1, stride2 进行设计
  * 用于提供输入矩阵和输出矩阵的形状和存储方式的描述
  */
@@ -60,10 +60,10 @@ struct ShapeStride
     /* CSR shape2 */
     unsigned short shape2_column;
     unsigned short shape2_row;
-    
+
     /* CSR stride1 */
     unsigned short stride_rd;
-    
+
     /* CSR stride2 */
     unsigned short stride_rs2;
     unsigned short stride_rs1;
@@ -79,7 +79,7 @@ enum {
 
 /**
  * @brief custom扩展指令类
- * 
+ *
  * 包含了全部的custom矩阵扩展指令
  * 可以通过设置其实例的debug字段值来动态控制debug输出
  */
@@ -96,7 +96,7 @@ public:
     int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss);
-    
+
     int veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
@@ -133,7 +133,7 @@ public:
 
     int velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss);
     int velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
-    
+
     int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
     int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
@@ -141,7 +141,7 @@ public:
 
 /**
  * @brief 加宽浮点/整数类型转换指令
- * 
+ *
  * 九章处理器只支持 int16/uint16 到 fp16 的转换指令,即支持 vfcvt.f.xu.v 和 vfcvt.f.x.v。
  * 此外,该执行转换指令时 SEW 必须为 16b,否则将触发非法指令异常。
  * 当有将 int8/uint8 数据转换成 fp16 时,也会把 SEW 设置为 16b,在 load 数据的时候,
@@ -165,7 +165,7 @@ class Vfwcvt
 
     /**
      * vfwcvt_f_x_v() vfwcvt.f.x.v
-     * 
+     *
      * convert signed integer to fp16 (int16 -> fp16)
      * @param vs2 源操作向量基地址
      * @param vd 目的向量基地址
@@ -200,7 +200,7 @@ class Vfwcvt
 
     /**
      * vfwcvt_f_xu_v() vfwcvt.f.xu.v
-     * 
+     *
      * convert uinsigned integer to fp16 (uint16 -> fp16)
      * @param vs2 源操作向量基地址
      * @param vd 目的向量基地址
@@ -222,9 +222,9 @@ class Vfwcvt
             }
         } else
             vector_vd = vector_vs2.cast<half>();
-        
+
         if (debug) {
-            cout << "vs2:\n" << vector_vs2 << endl;            
+            cout << "vs2:\n" << vector_vs2 << endl;
             cout << "vm:\n" << vm << endl;
             cout << "v0:\n" << vector_v0 << endl;
             cout << "vd:\n" << vector_vd << endl;
@@ -236,9 +236,9 @@ class Vfwcvt
 
 /**
  * @brief 单宽度向量加法指令
- * 
+ *
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
- * 
+ *
  */
 template <typename Type, typename MaskType>
 class Vadd
@@ -247,8 +247,8 @@ class Vadd
     int debug;
     typedef Map<Matrix<Type, 1, Dynamic>> VaddVecMap;
     typedef Map<Matrix<MaskType, 1, Dynamic>> VaddMaskVecMap;
-    
-    Vadd(): debug(GLOBAL_DBG)       
+
+    Vadd(): debug(GLOBAL_DBG)
     {
 
     }
@@ -268,7 +268,7 @@ class Vadd
         VaddVecMap vector_vs2(vs2, num);
         VaddVecMap vector_vd(vd, num);
         VaddMaskVecMap vector_v0(v0, num);
-        
+
         if (vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
@@ -315,10 +315,10 @@ class Vadd
 
 /**
  * @brief 单宽度向量减法指令
- * 
+ *
  * 因为芯片本身不支持浮点减法， 所以利用 a + (-b) 来实现 a - b 的操作
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
- * 
+ *
  */
 template <typename Type, typename MaskType>
 class Vsub
@@ -332,7 +332,7 @@ class Vsub
 
     typedef Map<Matrix<Type, 1, Dynamic>> VsubVecMap;
     typedef Map<Matrix<MaskType, 1, Dynamic>> VsubMaskVecMap;
-    
+
     /**
      * vsub_vf() vfsub.vf
      * @param vs2 源操作向量基地址
@@ -378,7 +378,7 @@ class Vsub
         VsubVecMap vector_vs1(vs1, num);
         VsubVecMap vector_vd(vd, num);
         VsubMaskVecMap vector_v0(v0, num);
-        
+
         if (vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
@@ -396,7 +396,7 @@ class Vsub
 
 /**
  * @brief 单宽度向量乘法指令
- * 
+ *
  * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
  */
 template <typename Type, typename MaskType>
@@ -412,7 +412,7 @@ class Vmul
 
     typedef Map<Matrix<Type, 1, Dynamic>> VmulVecMap;
     typedef Map<Matrix<MaskType, 1, Dynamic>> VmulMaskVecMap;
-    
+
     /**
      * vmul_vf() vfmul.vf
      * @param vs2 源操作向量基地址
@@ -428,7 +428,7 @@ class Vmul
         VmulVecMap vector_vs2(vs2, num);
         VmulVecMap vector_vd(vd, num);
         VmulMaskVecMap vector_v0(v0, num);
-        
+
         if (vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
@@ -458,7 +458,7 @@ class Vmul
         VmulVecMap vector_vs1(vs1, num);
         VmulVecMap vector_vd(vd, num);
         VmulMaskVecMap vector_v0(v0, num);
-        
+
         if (vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
@@ -475,11 +475,11 @@ class Vmul
 
 /**
  * @brief 向量浮点合并指令类
- * 
+ *
  * 虽然目前设计文档中仅有一个操作，但本接口实际支持任意数据类型的merge
  * 当然，从接口格式上限制了输入向量，输出向量，输入标量这三者的数据类型必须一致
  * mask向量数据类型可以独立指定
- * 
+ *
  * Type 输入向量，输出向量，输入标量的数据类型
  * MaskType mask向量的数据类型
  */
@@ -513,14 +513,14 @@ class Vmerge
         VmergeDataVecMap vector_vd(vd, num);
         VmergeMaskVecMap vector_v0(v0, num);
 
-        if (vm) 
+        if (vm)
             vector_vd = vector_vd.Constant(1, num, rs1);
         else {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i);
                 else
-                    vector_vd(i) = rs1;   
+                    vector_vd(i) = rs1;
             }
         }
 
@@ -532,7 +532,7 @@ class Vmerge
 
 /**
  * @brief 整数提取指令
- * 
+ *
  * 选取源向量寄存器中的一个元素
  *
  */
@@ -548,12 +548,12 @@ class Vext
     }
 
     typedef Map<Matrix<Type, 1, Dynamic>> VextVecMap;
-    
+
     /**
      * vext_x_v() vext.x.v   rd = vs2[rs1]
-     * 
+     *
      * 如果索引超出范围则rd会被置为0，不会认为指令错误
-     * 
+     *
      * @param vs2 源操作向量基地址
      * @param rs1 元素索引
      * @param vd 目的数存放地址
@@ -563,7 +563,7 @@ class Vext
     int vext_x_v(Type *vs2, Type *rd, uint16_t rs1, int num)
     {
         VextVecMap vector_vs2(vs2, num);
-        
+
         if (rs1 >= num)
             *rd = (Type)0;
         else
@@ -580,7 +580,7 @@ class Vext
 
 /**
  * @brief 单宽度向量乘加(FMA)指令
- * 
+ *
  * 包含乘累加(macc), 乘累减(msac), 乘加(madd)， 乘减(msub)
  * 支持任意数据类型
  *
@@ -598,7 +598,7 @@ class Vma
 
     typedef Map<Matrix<Type, 1, Dynamic>> VmaVecMap;
     typedef Map<Matrix<MaskType, 1, Dynamic>> VmaMaskVecMap;
-    
+
     /**
      * vmacc_vf() vfmacc.vf
      * @param vs2 源操作向量基地址
@@ -622,7 +622,7 @@ class Vma
             }
         } else
             vector_vd = vector_vs2.array() * rs1 + vector_vd.array();
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -660,7 +660,7 @@ class Vma
 
     /**
      * vnmacc_vf() vfnmacc.vf
-     * 
+     *
      * vd[i] = -(f[rs1] * vs2[i]) - vd[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -691,7 +691,7 @@ class Vma
 
     /**
      * vnmacc_vv() vfnmacc.vv
-     * 
+     *
      * vd[i] = -(vs1[i] * vs2[i]) - vd[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -723,7 +723,7 @@ class Vma
 
     /**
      * vmsac_vf() vfmsac.vf
-     * 
+     *
      * vd[i] = +(f[rs1] * vs2[i]) - vd[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -754,7 +754,7 @@ class Vma
 
     /**
      * vmsac_vv() vfmsac.vv
-     * 
+     *
      * vd[i] = +(vs1[i] * vs2[i]) - vd[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -786,7 +786,7 @@ class Vma
 
     /**
      * vnmsac_vf() vfnmsac.vf
-     * 
+     *
      * vd[i] = -(f[rs1] * vs2[i]) + vd[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -817,7 +817,7 @@ class Vma
 
     /**
      * vnmsac_vv() vfnmsac.vv
-     * 
+     *
      * d[i] = -(vs1[i] * vs2[i]) + vd[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -841,7 +841,7 @@ class Vma
             }
         } else
             vector_vd = -(vector_vs2.array() * vector_vs1.array()) + vector_vd.array();
-        
+
         DBG_VECTOR_VV;
 
         return 0;
@@ -849,7 +849,7 @@ class Vma
 
     /**
      * vmadd_vf() vfmadd.vf
-     * 
+     *
      * vfmadd.vf vd, rs1, vs2, vm # vd[i] = +(vd[i] * f[rs1]) + vs2[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -880,7 +880,7 @@ class Vma
 
     /**
      * vmadd_vv() vfmadd.vv
-     * 
+     *
      * vfmadd.vv vd, vs1, vs2, vm # vd[i] = +(vd[i] * vs1[i]) + vs2[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -912,7 +912,7 @@ class Vma
 
     /**
      * vnmadd_vf() vfnmadd.vf
-     * 
+     *
      * vfnmadd.vf vd, rs1, vs2, vm # vd[i] = -(vd[i] * f[rs1]) - vs2[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -943,7 +943,7 @@ class Vma
 
     /**
      * vnmadd_vv() vfnmadd.vv
-     * 
+     *
      * vfnmadd.vv vd, vs1, vs2, vm # vd[i] = -(vd[i] * vs1[i]) - vs2[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -975,7 +975,7 @@ class Vma
 
     /**
      * vmsub_vf() vfmsub.vf
-     * 
+     *
      * vfmsub.vf vd, rs1, vs2, vm # vd[i] = +(vd[i] * f[rs1]) - vs2[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -1006,7 +1006,7 @@ class Vma
 
     /**
      * vmsub_vv() vfmsub.vv
-     * 
+     *
      * vfmsub.vv vd, vs1, vs2, vm # vd[i] = +(vd[i] * vs1[i]) - vs2[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -1038,7 +1038,7 @@ class Vma
 
     /**
      * vnmsub_vf() vfnmsub.vf
-     * 
+     *
      * vfnmsub.vf vd, rs1, vs2, vm # vd[i] = -(vd[i] * f[rs1]) + vs2[i]
      * @param vs2 源操作向量基地址
      * @param rs1 源标量操作数
@@ -1069,7 +1069,7 @@ class Vma
 
     /**
      * vnmsub_vv() vfnmsub.vv
-     * 
+     *
      * vfnmsub.vv vd, vs1, vs2, vm # vd[i] = -(vd[i] * vs1[i]) + vs2[i]
      * @param vs2 源操作向量二基地址
      * @param vs1 源操作向量一基地址
@@ -1236,7 +1236,7 @@ class Vma
 
 /**
  * @brief 向量浮点符号注入指令
- * 
+ *
  * 向量浮点符号注入(Sign-Injection)指令的运算结果的指数和尾数由第一个源操作数 vs2 提供
  */
 template <typename Type, typename MaskType>
@@ -1260,7 +1260,7 @@ public:
 
     typedef Map<Matrix<Type, 1, Dynamic>> VsgnjVecMap;
     typedef Map<Matrix<MaskType, 1, Dynamic>> VsgnjMaskVecMap;
-    
+
     /**
      * vsgnj_vv() vfsgnj.vv
      * @param vs2 源操作向量二基地址
@@ -1332,7 +1332,7 @@ public:
 
         return 0;
     }
-    
+
     /**
      * vsgnjn_vv() vfsgnjn.vv
      * @param vs2 源操作向量二基地址
@@ -1404,7 +1404,7 @@ public:
 
         return 0;
     }
-    
+
     /**
      * vsgnjx_vv() vfsgnjx.vv
      * @param vs2 源操作向量二基地址
@@ -1468,7 +1468,7 @@ public:
         } else
             vector_vd = ((vector_vs2.array() * rs1) > (Type)0).select(
                 vector_vs2.array().abs(), -vector_vs2.array().abs());
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1477,7 +1477,7 @@ public:
 
 /**
  * @brief 向量比较指令
- * 
+ *
  * 比较指令的作用通常是为了产生屏蔽向量的值。比较指令包括相等(==),不相等(!=),
  * 大于(>),小于(<),大于等于(>=),小于等于(<=)等类型
  */
@@ -1526,7 +1526,7 @@ class Vcompare
             } else
                 VEQ_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1555,11 +1555,11 @@ class Vcompare
             else                                   \
                 vector_vd(i) = (OutType)0;         \
         } while(0)
-        
+
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VEQ_VV;    
+                    VEQ_VV;
             } else
                 VEQ_VV;
         }
@@ -1595,11 +1595,11 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VNE_VF;    
+                    VNE_VF;
             } else
                 VNE_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1632,7 +1632,7 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VNE_VV;    
+                    VNE_VV;
             } else
                 VNE_VV;
         }
@@ -1668,11 +1668,11 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VLT_VF;    
+                    VLT_VF;
             } else
                 VLT_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1705,7 +1705,7 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VLT_VV;    
+                    VLT_VV;
             } else
                 VLT_VV;
         }
@@ -1741,11 +1741,11 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VLE_VF;    
+                    VLE_VF;
             } else
                 VLE_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1778,7 +1778,7 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VLE_VV;    
+                    VLE_VV;
             } else
                 VLE_VV;
         }
@@ -1814,11 +1814,11 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VGT_VF;    
+                    VGT_VF;
             } else
                 VGT_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1851,7 +1851,7 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VGT_VV;    
+                    VGT_VV;
             } else
                 VGT_VV;
         }
@@ -1887,11 +1887,11 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VGE_VF;    
+                    VGE_VF;
             } else
                 VGE_VF;
         }
-        
+
         DBG_VECTOR_VF;
 
         return 0;
@@ -1924,7 +1924,7 @@ class Vcompare
         for (int i = 0; i < num; i++) {
             if (vm) {
                 if (vector_v0(0) & 0x1)
-                    VGE_VV;    
+                    VGE_VV;
             } else
                 VGE_VV;
         }
