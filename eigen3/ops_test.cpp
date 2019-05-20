@@ -1,4 +1,6 @@
 #include "eigen3_ops.h"
+#include <iostream>
+#include <fstream>
 
 #define PRINT_FUNC    printf("\n\n ====================== %s ======================\n\n\n", __FUNCTION__)
 #define PRINT_SUB_FUNC(sf)   printf("<<<<<<<<<<<%s<<<<<<<<<<<\n", sf)
@@ -6,7 +8,7 @@
 static void printf_half(half *h, int num)
 {
     printf("result:\n");
-    
+
     for (int i = 0; i < num; i++) {
         if (i > 0 && !(i % 4))
             printf("\n");
@@ -18,7 +20,7 @@ static void printf_half(half *h, int num)
 static void printf_uint16(uint16_t *h, int num)
 {
     printf("result:\n");
-    
+
     for (int i = 0; i < num; i++) {
         if (i > 0 && !(i % 4))
             printf("\n");
@@ -37,6 +39,72 @@ static void printf_uint16(uint16_t *h, int num)
     ss.stride_rd = sd;
 
 
+#define TEST_OPEN_FILE(func)                \
+    string fpath = "./dataset/";            \
+    fpath += func;                          \
+    fpath += "_data.h";                     \
+    ofstream ofs(fpath, ios::out);          \
+    if (!ofs) {                             \
+        cerr << fpath << "fail" << endl;    \
+        return;                             \
+    }
+
+
+#define TEST_ADD_MATRIX(name, pdata, rows, cols, len)               \
+    string matrix##name = "\nint16_t ";                             \
+    matrix##name += #name;                                          \
+    matrix##name += "[";                                            \
+    matrix##name += #len;                                           \
+    matrix##name += "] = {\n";                                      \
+    ofs << matrix##name;                                            \
+    for (int row = 0; row < rows; row++) {                          \
+        ofs << "    ";                                              \
+        for (int col = 0; col < cols; col++)                        \
+            ofs << "0x" << hex << pdata[col + row*cols].x << ", ";  \
+        ofs << endl;                                                \
+    }                                                               \
+    ofs << "};\n\n";
+
+#define TEST_ADD_S(name, data)                     \
+    string s_##name = "\nint32_t ";                \
+    s_##name += #name;                             \
+    s_##name += "[1] = {\n";                       \
+    ofs << s_##name;                               \
+    ofs << "    0x" << hex << data.x << "\n};\n"
+
+
+#define TEST_COMB_POINTER(pname, name)   \
+    string comb##pname = "\np_";         \
+    comb##pname += #pname;               \
+    comb##pname += " = (void *)";        \
+    comb##pname += #name;                \
+    comb##pname += ";\n";                \
+    ofs << comb##pname;
+
+#define TEST_FILL_SHAPE(number, row, column)  \
+    string shape##number = "\nshape";         \
+    shape##number += #number;                 \
+    shape##number += " = DEFINE_SHAPE(";      \
+    shape##number += #row;                    \
+    shape##number += ", ";                    \
+    shape##number += #column;                 \
+    shape##number += ");\n";                  \
+    ofs << shape##number;
+
+#define TEST_FILL_STRIDE(number, s1, s2)          \
+    string stride##number = "\nstride";           \
+    stride##number += #number;                    \
+    stride##number += " = DEFINE_STRIDE(";        \
+    stride##number += #s1;                        \
+    stride##number += ", ";                       \
+    stride##number += #s2;                        \
+    stride##number += ");\n";                     \
+    ofs << stride##number;
+
+#define TEST_CLOSE_FILE     \
+    ofs << endl << endl;    \
+    ofs.close();
+
 static void test_veadd(void)
 {
     class CustomInsns ci;
@@ -44,39 +112,66 @@ static void test_veadd(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
-        rs1[i] = (half)i;
-        rs2[i] = (half)i;
+        rs1[i] = (half)(rand() % 10 + 2);
+        rs2[i] = (half)(rand() % 10 + 2);
         rd[i] = (half)0;
     }
 
+    TEST_OPEN_FILE("veadd");
+
+    /* export data to file */
+    TEST_ADD_MATRIX(rs1_m, rs1, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_m, rs2, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 6, 6);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_S(rs2_s, rs2[0]);
+
     PRINT_SUB_FUNC("veadd_mf");
-    SET_SHAPESTRIDE(ss, 2, 4, 0, 0, 4, 0, 8);
-    ci.veadd_mf(rs1, rd, (half)3, &ss);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
+    ci.veadd_mf(rs1, rd, rs2[0], &ss);
+    TEST_ADD_MATRIX(golden_mf_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veadd_mm");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 2, 4, 0, 0, 4, 4, 8);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 6, 6);
     ci.veadd_mm(rs1, rd, rs2, &ss);
+    TEST_ADD_MATRIX(golden_mm_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veadd_mv dim = 0");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 2, 4, 0, 0, 4, 0, 8);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.veadd_mv(rs1, rd, rs2, &ss, 0);
+    TEST_ADD_MATRIX(golden_mv_dim0_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veadd_mv dim = 1");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 2, 4, 0, 0, 4, 0, 8);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.veadd_mv(rs1, rd, rs2, &ss, 1);
+    TEST_ADD_MATRIX(golden_mv_dim1_m, rd, 4, 6, 24);
     printf_half(rd, 32);
+
+    TEST_ADD_MATRIX(rd_m, rd, 0, 0, 24);
+
+    TEST_COMB_POINTER(rs1_m, rs1_m);
+    TEST_COMB_POINTER(rs2_m, rs2_m);
+    TEST_COMB_POINTER(rs2_dim0_v, rs2_dim0_v);
+    TEST_COMB_POINTER(rs2_dim1_v, rs2_dim1_v);
+    TEST_COMB_POINTER(rs2_s, rs2_s);
+    TEST_COMB_POINTER(rd_m, rd_m);
+    TEST_FILL_SHAPE(1, 4, 6);
+    TEST_FILL_SHAPE(2, 4, 6);
+    TEST_FILL_STRIDE(2, 6, 6);
+    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_CLOSE_FILE;
 }
 
 static void test_vesub(void)
@@ -86,39 +181,66 @@ static void test_vesub(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
-        rs1[i] = (half)(i*2);
-        rs2[i] = (half)(-i);
+        rs1[i] = (half)(rand() % 10 + 5);
+        rs2[i] = (half)(rand() % 10 + 2);
         rd[i] = (half)0;
     }
 
+    TEST_OPEN_FILE("vesub");
+
+    /* export data to file */
+    TEST_ADD_MATRIX(rs1_m, rs1, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_m, rs2, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 6, 6);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_S(rs2_s, rs2[0]);
+
     PRINT_SUB_FUNC("vesub_mf");
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
-    ci.vesub_mf(rs1, rd, (half)13, &ss);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
+    ci.vesub_mf(rs1, rd, rs2[0], &ss);
+    TEST_ADD_MATRIX(golden_mf_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("vesub_mm");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 6, 6);
     ci.vesub_mm(rs1, rd, rs2, &ss);
+    TEST_ADD_MATRIX(golden_mm_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("vesub_mv dim = 0");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.vesub_mv(rs1, rd, rs2, &ss, 0);
+    TEST_ADD_MATRIX(golden_mv_dim0_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("vesub_mv dim = 1");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.vesub_mv(rs1, rd, rs2, &ss, 1);
+    TEST_ADD_MATRIX(golden_mv_dim1_m, rd, 4, 6, 24);
     printf_half(rd, 32);
+
+    TEST_ADD_MATRIX(rd_m, rd, 0, 0, 24);
+
+    TEST_COMB_POINTER(rs1_m, rs1_m);
+    TEST_COMB_POINTER(rs2_m, rs2_m);
+    TEST_COMB_POINTER(rs2_dim0_v, rs2_dim0_v);
+    TEST_COMB_POINTER(rs2_dim1_v, rs2_dim1_v);
+    TEST_COMB_POINTER(rs2_s, rs2_s);
+    TEST_COMB_POINTER(rd_m, rd_m);
+    TEST_FILL_SHAPE(1, 4, 6);
+    TEST_FILL_SHAPE(2, 4, 6);
+    TEST_FILL_STRIDE(2, 6, 6);
+    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_CLOSE_FILE;
 }
 
 static void test_veemul(void)
@@ -128,39 +250,66 @@ static void test_veemul(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
-        rs1[i] = (half)i;
-        rs2[i] = (half)i;
+        rs1[i] = (half)(rand() % 10 + 2);
+        rs2[i] = (half)(rand() % 10 + 2);
         rd[i] = (half)0;
     }
 
+    TEST_OPEN_FILE("veemul");
+
+    /* export data to file */
+    TEST_ADD_MATRIX(rs1_m, rs1, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_m, rs2, 4, 6, 24);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 6, 6);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_S(rs2_s, rs2[0]);
+
     PRINT_SUB_FUNC("veemul_mf");
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.veemul_mf(rs1, rd, (half)13, &ss);
+    TEST_ADD_MATRIX(golden_mf_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemul_mm");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 6, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 6, 6);
     ci.veemul_mm(rs1, rd, rs2, &ss);
+    TEST_ADD_MATRIX(golden_mm_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemul_mv dim = 0");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.veemul_mv(rs1, rd, rs2, &ss, 0);
+    TEST_ADD_MATRIX(golden_mv_dim0_m, rd, 4, 6, 24);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemul_mv dim = 1");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 5, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
     ci.veemul_mv(rs1, rd, rs2, &ss, 1);
+    TEST_ADD_MATRIX(golden_mv_dim1_m, rd, 4, 6, 24);
     printf_half(rd, 32);
+
+    TEST_ADD_MATRIX(rd_m, rd, 0, 0, 24);
+
+    TEST_COMB_POINTER(rs1_m, rs1_m);
+    TEST_COMB_POINTER(rs2_m, rs2_m);
+    TEST_COMB_POINTER(rs2_dim0_v, rs2_dim0_v);
+    TEST_COMB_POINTER(rs2_dim1_v, rs2_dim1_v);
+    TEST_COMB_POINTER(rs2_s, rs2_s);
+    TEST_COMB_POINTER(rd_m, rd_m);
+    TEST_FILL_SHAPE(1, 4, 6);
+    TEST_FILL_SHAPE(2, 4, 6);
+    TEST_FILL_STRIDE(2, 6, 6);
+    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_CLOSE_FILE;
 }
 
 static void test_veemacc(void)
@@ -170,7 +319,7 @@ static void test_veemacc(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         rs1[i] = (half)(i / 8 + 1);
@@ -218,7 +367,7 @@ static void test_vecvt_hf_xu8_m(void)
     struct ShapeStride ss;
     uint8_t rs1[32];
     half rd[32];
-    
+
     PRINT_FUNC;
 
     for (int i = 0; i < 32; i++) {
@@ -358,7 +507,7 @@ static void test_vemax(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         rs1[i] = (half)(32 - i);
@@ -415,7 +564,7 @@ static void test_vemin(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         rs1[i] = (half)(32 - i);
@@ -471,7 +620,7 @@ static void test_velkrelu(void)
     half rs1[32];
     half rs2[32];
     half rd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         rs1[i] = (half)(i - 15);
@@ -537,7 +686,7 @@ void test_vfwcvt(void)
     int16_t vs2_i[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs2_ui[i] = (uint16_t)i;
@@ -549,7 +698,7 @@ void test_vfwcvt(void)
     PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 0");
     cvt.vfwcvt_f_x_v(vs2_i, vd, 0, v0, 32);
     printf_half(vd, 32);
-    
+
     PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
@@ -576,19 +725,24 @@ void test_vfadd(void)
     half vs1[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
-        vs2[i] = (half)i;
-        vs1[i] = (half)(i + 3);
+        vs2[i] = (half)(rand() % 10 + 2);
+        vs1[i] = (half)(rand() % 10 + 5);
         v0[i] = i / 20;
         vd[i] = (half)99.0;
     }
 
+    TEST_OPEN_FILE("vfadd");
+
+    TEST_ADD_MATRIX(vs2_v, vs2, 1, 32, "32");
+    TEST_ADD_MATRIX(vs1_v, vs1, 1, 32, "32");
+
     PRINT_SUB_FUNC("vadd_vf vm = 0");
     add.vadd_vf(vs2, (half)5.0, vd, 0, v0, 32);
     printf_half(vd, 32);
-    
+
     PRINT_SUB_FUNC("vadd_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
@@ -599,6 +753,7 @@ void test_vfadd(void)
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
     add.vadd_vv(vs2, vs1, vd, 0, v0, 32);
+    TEST_ADD_MATRIX(golden_vadd_vv, vd, 1, 32, "32");
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vv vm = 1");
@@ -606,6 +761,8 @@ void test_vfadd(void)
         vd[i] = (half)99.0;
     add.vadd_vv(vs2, vs1, vd, 1, v0, 32);
     printf_half(vd, 32);
+
+    TEST_CLOSE_FILE;
 }
 
 void test_vsub(void)
@@ -615,7 +772,7 @@ void test_vsub(void)
     half vs1[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs2[i] = (half)(i + 3);
@@ -627,7 +784,7 @@ void test_vsub(void)
     PRINT_SUB_FUNC("vsub_vf vm = 0");
     sub.vsub_vf(vs2, (half)5.0, vd, 0, v0, 32);
     printf_half(vd, 32);
-    
+
     PRINT_SUB_FUNC("vsub_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
@@ -654,7 +811,7 @@ void test_vmul(void)
     half vs1[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs2[i] = (half)i;
@@ -666,7 +823,7 @@ void test_vmul(void)
     PRINT_SUB_FUNC("vmul_vf vm = 0");
     mul.vmul_vf(vs2, (half)5.0, vd, 0, v0, 32);
     printf_half(vd, 32);
-    
+
     PRINT_SUB_FUNC("vmul_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
@@ -693,7 +850,7 @@ void test_vmerge(void)
     half vs1[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs2[i] = (half)i;
@@ -705,7 +862,7 @@ void test_vmerge(void)
     PRINT_SUB_FUNC("vmerge_vf vm = 0");
     merge.vmerge_vf(vs2, (half)5.0, vd, 0, v0, 32);
     printf_half(vd, 32);
-    
+
     PRINT_SUB_FUNC("vmerge_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
@@ -720,7 +877,7 @@ void test_vsgnj(void)
     half vs2[32];
     half vd[32];
     uint16_t v0[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         v0[i] = i / 20;
@@ -769,10 +926,10 @@ void test_vsgnj(void)
 
     VSGNJ_TEST_VV(vsgnj_vv, "vsgnj_vv");
     VSGNJ_TEST_VF(vsgnj_vf, "vsgnj_vf");
-    
+
     VSGNJ_TEST_VV(vsgnjn_vv, "vsgnjn_vv");
     VSGNJ_TEST_VF(vsgnjn_vf, "vsgnjn_vf");
-    
+
     VSGNJ_TEST_VV(vsgnjx_vv, "vsgnjx_vv");
     VSGNJ_TEST_VF(vsgnjx_vf, "vsgnjx_vf");
 }
@@ -782,7 +939,7 @@ void test_vext(void)
     Vext<half> ext;
     half vs2[32];
     half rd;
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++)
         vs2[i] = (half)i;
@@ -800,7 +957,7 @@ void test_vma(void)
     half vs1[32];
     uint16_t v0[32];
     half vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs2[i] = (half)(i + 6);
@@ -821,7 +978,7 @@ void test_vma(void)
             vd[i] = (half)2.0;                         \
         ma.func(vs2, (half)5.0, vd, 1, v0, 32);        \
         printf_half(vd, 32);
-    
+
     #define VMA_TEST_VV(func, func_str)                \
         PRINT_SUB_FUNC(func_str" vm = 0");             \
         for (int i = 0; i < 32; i++)                   \
@@ -838,7 +995,7 @@ void test_vma(void)
 
     VMA_TEST_VF(vmacc_vf, "vmacc_vf");
     VMA_TEST_VV(vmacc_vv, "vmacc_vv");
-    
+
     VMA_TEST_VF(vmadd_vf, "vmadd_vf");
     VMA_TEST_VV(vmadd_vv, "vmadd_vv");
 
@@ -856,7 +1013,7 @@ void test_vma(void)
 
     VMA_TEST_VF(vnmacc_vf, "vnmacc_vf");
     VMA_TEST_VV(vnmacc_vv, "vnmacc_vv");
-    
+
     VMA_TEST_VF(vnmadd_vf, "vnmadd_vf");
     VMA_TEST_VV(vnmadd_vv, "vnmadd_vv");
 
@@ -865,7 +1022,7 @@ void test_vma(void)
 
     VMA_TEST_VF(vnmsub_vf, "vnmsub_vf");
     VMA_TEST_VV(vnmsub_vv, "vnmsub_vv");
-    
+
     VMA_TEST_VF(vnmsub_vf, "vnmsub_vf");
     VMA_TEST_VV(vnmsub_vv, "vnmsub_vv");
 }
@@ -877,7 +1034,7 @@ void test_vcompare(void)
     half vs1[32];
     uint16_t v0[32];
     uint16_t vd[32];
-    
+
     PRINT_FUNC;
     for (int i = 0; i < 32; i++) {
         vs1[i] = (half)i;
@@ -900,7 +1057,7 @@ void test_vcompare(void)
             vd[i] = (uint16_t)3;                       \
         cmp.func(vs2, (half)15.0, vd, 1, v0, 32);      \
         printf_uint16(vd, 32);
-    
+
     #define VCMP_TEST_VV(func, func_str)               \
         PRINT_SUB_FUNC(func_str" vm = 0");             \
         for (int i = 0; i < 32; i++)                   \
@@ -922,7 +1079,7 @@ void test_vcompare(void)
 
     VCMP_TEST_VF(vgt_vf, "vgt_vf");
     VCMP_TEST_VV(vgt_vv, "vgt_vv");
-    
+
     VCMP_TEST_VF(vle_vf, "vle_vf");
     VCMP_TEST_VV(vle_vv, "vle_vv");
 
@@ -938,6 +1095,7 @@ int main(void)
     /* custom insns */
     test_veadd();
     test_vesub();
+   /*    
     test_veemul();
     test_veemacc();
     test_vemax();
@@ -950,7 +1108,6 @@ int main(void)
     test_veacc_m();
     test_velut_m();
 
-    /* vector insns */
     test_vfwcvt();
     test_vfadd();
     test_vsub();
@@ -960,6 +1117,6 @@ int main(void)
     test_vma();
     test_vsgnj();
     test_vcompare();
-    
+    */
     return 0;
 }

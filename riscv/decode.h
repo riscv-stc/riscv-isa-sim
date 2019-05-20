@@ -223,6 +223,7 @@ private:
 #define SLEN (p->get_slen())
 #define ELEN (p->get_elen())
 #define DIM (insn.dim())
+#define DIM_DM (insn.dim()&1)
 #define VM (insn.vm())
 #define VLMUL_I (insn.vlmul())
 #define VSEW_I (insn.vsew())

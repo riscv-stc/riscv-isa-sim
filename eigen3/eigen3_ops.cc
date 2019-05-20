@@ -421,7 +421,7 @@ int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         }
         break;
     default:
-        cout << __FUNCTION__ << "error dim" << endl;
+        cout << __FUNCTION__ << " error dim" << endl;
         return -BR_EPARAM;
     }
     return 0;
