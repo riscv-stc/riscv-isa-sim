@@ -85,20 +85,30 @@ static void printf_uint16(uint16_t *h, int num)
     string shape##number = "\nshape";         \
     shape##number += #number;                 \
     shape##number += " = DEFINE_SHAPE(";      \
-    shape##number += #row;                    \
-    shape##number += ", ";                    \
     shape##number += #column;                 \
+    shape##number += ", ";                    \
+    shape##number += #row;                    \
     shape##number += ");\n";                  \
     ofs << shape##number;
 
-#define TEST_FILL_STRIDE(number, s1, s2)          \
-    string stride##number = "\nstride";           \
-    stride##number += #number;                    \
-    stride##number += " = DEFINE_STRIDE(";        \
-    stride##number += #s1;                        \
-    stride##number += ", ";                       \
-    stride##number += #s2;                        \
-    stride##number += ");\n";                     \
+/* dest stride */
+#define TEST_FILL_STRIDE1(sd)                           \
+    string stride1 = "\nstride1 = DEFINE_STRIDE(0, ";   \
+    stride1 += #sd;                                     \
+    stride1 += ");\n";                                  \
+    ofs << stride1;
+
+/**
+ * @breif fill stride2
+ * @param s2 源矩阵2 stride
+ * @param s1 源矩阵1 stride
+ */
+#define TEST_FILL_STRIDE2(s2, s1)                            \
+    string stride##number = "\nstride2 = DEFINE_STRIDE(";    \
+    stride##number += #s2;                                   \
+    stride##number += ", ";                                  \
+    stride##number += #s1;                                   \
+    stride##number += ");\n";                                \
     ofs << stride##number;
 
 #define TEST_CLOSE_FILE     \
@@ -123,14 +133,14 @@ static void test_veadd(void)
     TEST_OPEN_FILE("veadd");
 
     /* export data to file */
-    TEST_ADD_MATRIX(rs1_m, rs1, 4, 6, 24);
-    TEST_ADD_MATRIX(rs2_m, rs2, 4, 6, 24);
+    TEST_ADD_MATRIX(rs1_m, rs1, 4, 8, 32);
+    TEST_ADD_MATRIX(rs2_m, rs2, 4, 7, 28);
     TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 6, 6);
     TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
     TEST_ADD_S(rs2_s, rs2[0]);
 
     PRINT_SUB_FUNC("veadd_mf");
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 0, 6);
     ci.veadd_mf(rs1, rd, rs2[0], &ss);
     TEST_ADD_MATRIX(golden_mf_m, rd, 4, 6, 24);
     printf_half(rd, 32);
@@ -138,7 +148,7 @@ static void test_veadd(void)
     PRINT_SUB_FUNC("veadd_mm");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 6, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 7, 6);
     ci.veadd_mm(rs1, rd, rs2, &ss);
     TEST_ADD_MATRIX(golden_mm_m, rd, 4, 6, 24);
     printf_half(rd, 32);
@@ -146,7 +156,7 @@ static void test_veadd(void)
     PRINT_SUB_FUNC("veadd_mv dim = 0");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 0, 6);
     ci.veadd_mv(rs1, rd, rs2, &ss, 0);
     TEST_ADD_MATRIX(golden_mv_dim0_m, rd, 4, 6, 24);
     printf_half(rd, 32);
@@ -154,7 +164,7 @@ static void test_veadd(void)
     PRINT_SUB_FUNC("veadd_mv dim = 1");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 6, 0, 6);
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 0, 6);
     ci.veadd_mv(rs1, rd, rs2, &ss, 1);
     TEST_ADD_MATRIX(golden_mv_dim1_m, rd, 4, 6, 24);
     printf_half(rd, 32);
@@ -169,8 +179,8 @@ static void test_veadd(void)
     TEST_COMB_POINTER(rd_m, rd_m);
     TEST_FILL_SHAPE(1, 4, 6);
     TEST_FILL_SHAPE(2, 4, 6);
-    TEST_FILL_STRIDE(2, 6, 6);
-    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_FILL_STRIDE2(7, 8);
+    TEST_FILL_STRIDE1(6);
     TEST_CLOSE_FILE;
 }
 
@@ -238,8 +248,8 @@ static void test_vesub(void)
     TEST_COMB_POINTER(rd_m, rd_m);
     TEST_FILL_SHAPE(1, 4, 6);
     TEST_FILL_SHAPE(2, 4, 6);
-    TEST_FILL_STRIDE(2, 6, 6);
-    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_FILL_STRIDE2(7, 8);
+    TEST_FILL_STRIDE1(6);
     TEST_CLOSE_FILE;
 }
 
@@ -307,8 +317,8 @@ static void test_veemul(void)
     TEST_COMB_POINTER(rd_m, rd_m);
     TEST_FILL_SHAPE(1, 4, 6);
     TEST_FILL_SHAPE(2, 4, 6);
-    TEST_FILL_STRIDE(2, 6, 6);
-    TEST_FILL_STRIDE(1, 6, 0);
+    TEST_FILL_STRIDE2(7, 8);
+    TEST_FILL_STRIDE1(6);
     TEST_CLOSE_FILE;
 }
 
