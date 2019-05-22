@@ -197,14 +197,14 @@ int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *
 
     shapestride_dbg(ss);
 
-    *rd = (rs1_matrix.array() * rs2_matrix.array()).sum();
-
     if (debug) {
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    return 0;  
+    rd[0] = (rs1_matrix.array() * rs2_matrix.array()).sum();
+
+    return 0;
 }
 
 /**

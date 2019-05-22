@@ -111,6 +111,14 @@ static void printf_uint16(uint16_t *h, int num)
     stride##number += ");\n";                                \
     ofs << stride##number;
 
+#define TEST_FILL_VMASK(v0, len)                                     \
+    ofs << "\nvl = 8, vsew = 1, vlmul = 0, vediv = 0, vmask = 0";    \
+    for (int i = 0; i < len; i++) {                                  \
+        if (v0[i] > 0)                                               \
+            ofs << " | BIT(" << i << ")";                            \
+    }                                                                \
+    ofs << ";\n";
+
 #define TEST_CLOSE_FILE     \
     ofs << endl << endl;    \
     ofs.close();
@@ -770,37 +778,50 @@ void test_vfadd(void)
     for (int i = 0; i < 32; i++) {
         vs2[i] = (half)(rand() % 10 + 2);
         vs1[i] = (half)(rand() % 10 + 5);
-        v0[i] = i / 20;
+        v0[i] = i / 4;
         vd[i] = (half)99.0;
     }
 
     TEST_OPEN_FILE("vfadd");
 
-    TEST_ADD_MATRIX(vs2_v, vs2, 1, 32, "32");
-    TEST_ADD_MATRIX(vs1_v, vs1, 1, 32, "32");
+    TEST_ADD_MATRIX(vs1_v, vs1, 1, 8, 8);
+    TEST_ADD_MATRIX(vs2_v, vs2, 1, 8, 8);
+    TEST_ADD_S(rs1_s, vs1[0]);
 
     PRINT_SUB_FUNC("vadd_vf vm = 0");
-    add.vadd_vf(vs2, (half)5.0, vd, 0, v0, 32);
+    add.vadd_vf(vs2, vs1[0], vd, 0, v0, 8);
+    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
-    add.vadd_vf(vs2, (half)5.0, vd, 1, v0, 32);
+    add.vadd_vf(vs2, vs1[0], vd, 1, v0, 8);
+    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vv vm = 0");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
-    add.vadd_vv(vs2, vs1, vd, 0, v0, 32);
-    TEST_ADD_MATRIX(golden_vadd_vv, vd, 1, 32, "32");
+    add.vadd_vv(vs2, vs1, vd, 0, v0, 8);
+    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vv vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)99.0;
-    add.vadd_vv(vs2, vs1, vd, 1, v0, 32);
+    add.vadd_vv(vs2, vs1, vd, 1, v0, 8);
+    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 8, 8);
     printf_half(vd, 32);
+
+    TEST_ADD_MATRIX(vd, vd, 0, 0, 8);
+
+    TEST_COMB_POINTER(vs1, vs1_v);
+    TEST_COMB_POINTER(vs2, vs2_v);
+    TEST_COMB_POINTER(vd, vd);
+    TEST_COMB_POINTER(rs1_s, rs1_s);
+
+    TEST_FILL_VMASK(v0, 8);
 
     TEST_CLOSE_FILE;
 }
@@ -1149,7 +1170,10 @@ int main(void)
     test_velut_m();
 
     test_vfwcvt();
+   */
+
     test_vfadd();
+  /*
     test_vsub();
     test_vmul();
     test_vmerge();
