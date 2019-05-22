@@ -940,8 +940,16 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     shapestride_dbg(ss);
 
+    if (debug) {
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
+    }
+
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     rd_matrix = rs1_matrix * rs2_matrix;
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
     return 0;
 }
 
@@ -957,20 +965,22 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
  */
 int CustomInsns::vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
 {
-    /* param check */
-    if (ss->shape2_column != 1 && ss->shape2_row != 1) {
-        cout << __FUNCTION__ << ": rs2 need a vector" << endl;
-        return -BR_EPARAM;
-    }
-
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rs2_vector(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
-    Map_half rd_vector(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_half rs2_vector(rs2, 1, ss->shape1_row, DynStride(1, 1));
+    Map_half rd_vector(rd, 1, ss->shape1_column, DynStride(1, 1));
 
     shapestride_dbg(ss);
     
+    if (debug) {
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_vector << endl;
+    }
+
     /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_vector = rs1_matrix * rs2_vector;
+    rd_vector = rs2_vector * rs1_matrix;
+    if (debug)
+        cout << "rd:\n" << rd_vector << endl;
+
     return 0;
 }
 
@@ -991,10 +1001,10 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     Map_half rd_row_sum(rd, ss->shape1_row, 1, DynStride(1, 1));
     
     switch (dim) {
-    case 0: // column dir
+    case 0:
         rd_col_sum = rs1_matrix.colwise().sum();
         break;
-    case 1: // row dir
+    case 1:
         rd_row_sum = rs1_matrix.rowwise().sum();
         break;
     default:
