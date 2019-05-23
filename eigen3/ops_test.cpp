@@ -145,7 +145,9 @@ static void printf_uint16(uint16_t *h, int num)
     ofs << stride##number;
 
 #define TEST_FILL_VMASK(v0, len)                                     \
-    ofs << "\nvl = 8, vsew = 1, vlmul = 0, vediv = 0, vmask = 0";    \
+    ofs << "\nvl = ";                                                \
+    ofs << #len;                                                     \
+    ofs << ", vsew = 1, vlmul = 0, vediv = 0, vmask = 0";            \
     for (int i = 0; i < len; i++) {                                  \
         if (v0[i] > 0)                                               \
             ofs << " | BIT(" << i << ")";                            \
@@ -1275,33 +1277,35 @@ void test_vsgnj(void)
 
 void test_vext(void)
 {
-    Vext<half> ext;
-    half vs2[32];
+    Vext<uint16_t> ext;
+    uint16_t vs2[32];
     uint16_t rs1[1] = {6};
-    half rd[1];
+    uint16_t rd[1];
+    uint16_t v0[32];
 
     PRINT_FUNC;
-    for (int i = 0; i < 32; i++)
-        vs2[i] = (half)(rand() % 10 + 3);
-
+    for (int i = 0; i < 32; i++) {
+        vs2[i] = rand() % 10 + 3;
+        v0[i] = 0;
+    }
 
     TEST_OPEN_FILE("vext");
 
-    TEST_ADD_MATRIX(vs2_v, vs2, 1, 10, 10);
+    TEST_ADD_MATRIX_U16(vs2_v, vs2, 1, 10, 10);
     TEST_ADD_MATRIX_U16(rs1_s, rs1, 1, 1, 1);
 
     PRINT_SUB_FUNC("vext_x_v");
     ext.vext_x_v(vs2, rd, rs1[0], 10);
-    TEST_ADD_MATRIX(golden_x_v_s, rd, 1, 1, 1);
-    printf("rd = %f(0x%04x)\n", (float)rd[0], rd[0].x);
+    TEST_ADD_MATRIX_U16(golden_x_v_s, rd, 1, 1, 1);
+    printf("rd = 0x%04x\n", rd[0]);
 
-    TEST_ADD_MATRIX(rd, rd, 0, 0, 1);
+    TEST_ADD_MATRIX_U16(rd, rd, 0, 0, 1);
 
     TEST_COMB_POINTER(vs2, vs2_v);
     TEST_COMB_POINTER(rd, rd);
     TEST_COMB_POINTER(rs1_s, rs1_s);
 
-    TEST_FILL_VMASK(rs1, 0);
+    TEST_FILL_VMASK(v0, 10);
 
     TEST_CLOSE_FILE;
 }
