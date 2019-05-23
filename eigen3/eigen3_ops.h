@@ -183,7 +183,7 @@ class Vfwcvt
         VfwcvtHalfVecMap vector_vd(vd, num);
         VfwcvtMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = (half)vector_vs2(i);
@@ -219,7 +219,7 @@ class Vfwcvt
         VfwcvtHalfVecMap vector_vd(vd, num);
         VfwcvtMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = (half)vector_vs2(i);
@@ -274,7 +274,7 @@ class Vadd
         VaddVecMap vector_vd(vd, num);
         VaddMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + rs1;
@@ -304,7 +304,7 @@ class Vadd
         VaddVecMap vector_vd(vd, num);
         VaddMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + vector_vs1(i);
@@ -354,7 +354,7 @@ class Vsub
         VsubVecMap vector_vd(vd, num);
         VsubMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + -rs1;
@@ -384,7 +384,7 @@ class Vsub
         VsubVecMap vector_vd(vd, num);
         VsubMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + -vector_vs1(i);
@@ -434,7 +434,7 @@ class Vmul
         VmulVecMap vector_vd(vd, num);
         VmulMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1;
@@ -464,7 +464,7 @@ class Vmul
         VmulVecMap vector_vd(vd, num);
         VmulMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i);
@@ -518,7 +518,7 @@ class Vmerge
         VmergeDataVecMap vector_vd(vd, num);
         VmergeMaskVecMap vector_v0(v0, num);
 
-        if (vm)
+        if (!vm)
             vector_vd = vector_vd.Constant(1, num, rs1);
         else {
             for (int i = 0; i < num; i++) {
@@ -621,7 +621,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1 + vector_vd(i);
@@ -651,7 +651,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i) + vector_vd(i);
@@ -682,7 +682,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * rs1) + -vector_vd(i);
@@ -714,7 +714,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + -vector_vd(i);
@@ -745,7 +745,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1 + -vector_vd(i);
@@ -777,7 +777,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i) + -vector_vd(i);
@@ -808,7 +808,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * rs1) + vector_vd(i);
@@ -840,7 +840,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + vector_vd(i);
@@ -871,7 +871,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * rs1 + vector_vs2(i);
@@ -903,7 +903,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * vector_vs1(i) + vector_vs2(i);
@@ -934,7 +934,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * rs1) + -vector_vs2(i);
@@ -966,7 +966,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + -vector_vs2(i);
@@ -997,7 +997,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * rs1 + -vector_vs2(i);
@@ -1029,7 +1029,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * vector_vs1(i) + -vector_vs2(i);
@@ -1060,7 +1060,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * rs1) + vector_vs2(i);
@@ -1092,7 +1092,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + vector_vs2(i);
@@ -1121,7 +1121,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) > rs1)
@@ -1155,7 +1155,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) > vector_vs1(i))
@@ -1188,7 +1188,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) < rs1)
@@ -1222,7 +1222,7 @@ class Vma
         VmaVecMap vector_vd(vd, num);
         VmaMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) < vector_vs1(i))
@@ -1284,7 +1284,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs1(i) > (Type)0)
@@ -1318,7 +1318,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (rs1 > (Type)0)
@@ -1356,7 +1356,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs1(i) < (Type)0)
@@ -1390,7 +1390,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (rs1 < (Type)0)
@@ -1428,7 +1428,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if ((vector_vs1(i) * vector_vs2(i)) > (Type)0)
@@ -1462,7 +1462,7 @@ public:
         VsgnjVecMap vector_vd(vd, num);
         VsgnjMaskVecMap vector_v0(v0, num);
 
-        if (vm) {
+        if (!vm) {
             for (int i = 0; i < num; i++) {
                 if (vector_v0(i) & 0x1) {
                     if ((vector_vs2(i) * rs1) > (Type)0)
@@ -1526,7 +1526,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(i) & 0x1)
                     VEQ_VF;
             } else
@@ -1563,7 +1563,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VEQ_VV;
             } else
@@ -1599,7 +1599,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VNE_VF;
             } else
@@ -1636,7 +1636,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VNE_VV;
             } else
@@ -1672,7 +1672,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLT_VF;
             } else
@@ -1709,7 +1709,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLT_VV;
             } else
@@ -1745,7 +1745,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLE_VF;
             } else
@@ -1782,7 +1782,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLE_VV;
             } else
@@ -1818,7 +1818,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGT_VF;
             } else
@@ -1855,7 +1855,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGT_VV;
             } else
@@ -1891,7 +1891,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGE_VF;
             } else
@@ -1928,7 +1928,7 @@ class Vcompare
         } while(0)
 
         for (int i = 0; i < num; i++) {
-            if (vm) {
+            if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGE_VV;
             } else
