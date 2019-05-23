@@ -241,9 +241,9 @@ private:
 					 (x).shape1_row = SHAPE1_ROW; \
 					 (x).shape2_column = SHAPE2_COLUMN; \
 					 (x).shape2_row = SHAPE2_ROW; \
-					 (x).stride_rd = STRIDE_RD; \
-					 (x).stride_rs1 = STRIDE_RS1; \
-					 (x).stride_rs2 = STRIDE_RS2;})
+					 (x).stride_rd = STRIDE_RD>>1; \
+					 (x).stride_rs1 = STRIDE_RS1>>1; \
+					 (x).stride_rs2 = STRIDE_RS2>>1;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())

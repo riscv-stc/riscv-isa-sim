@@ -664,7 +664,11 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R2TYPE(vesub_mv);
 
   DEFINE_SV1TYPE(vlb_v);
+  DEFINE_SV1TYPE(vlbu_v);
   DEFINE_SV1TYPE(vlh_v);
+  DEFINE_SV1TYPE(vlhu_v);
+  DEFINE_SV1TYPE(vle_v);
+  DEFINE_SV1TYPE(vleu_v);
   DEFINE_RTYPE(vsetvl);
   DEFINE_SV8TYPE(vsetvli);
   DEFINE_SV2TYPE(vlxhu_v);

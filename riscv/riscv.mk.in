@@ -319,7 +319,10 @@ riscv_insn_list = \
 	vesub_mm \
 	vesub_mv \
 	vlb_v \
+	vlbu_v \
 	vlh_v \
+	vlhu_v \
+	vle_v \
 	vsetvl \
 	vsetvli \
 	vlxhu_v \
