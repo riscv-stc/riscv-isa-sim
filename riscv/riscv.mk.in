@@ -295,6 +295,7 @@ riscv_insn_list = \
 	vecvt_hf_x8_m \
 	vecvt_hf_xu16_m \
 	vecvt_hf_xu8_m \
+	veemacc_mf \
 	veemacc_mm \
 	veemacc_mv \
 	veemul_mf \

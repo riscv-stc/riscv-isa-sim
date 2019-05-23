@@ -639,6 +639,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecvt_hf_x16_m);
   DEFINE_R3TYPE(vecvt_hf_xu8_m);
   DEFINE_R3TYPE(vecvt_hf_xu16_m);
+  DEFINE_CV2TYPE(veemacc_mf);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
   DEFINE_CV2TYPE(veemul_mf);
