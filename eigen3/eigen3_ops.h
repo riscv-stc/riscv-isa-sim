@@ -118,6 +118,7 @@ public:
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
+    int veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss, int dim);
 
     int vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);

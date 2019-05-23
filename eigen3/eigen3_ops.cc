@@ -273,7 +273,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
     Matrix_half rd_matrix(ss->shape1_row, ss->shape1_column);
 
     switch (dim) {
-    case 0: // column dir
+    case 0:
         for (int col = 0; col < rs1_matrix.cols(); col++)
             rd_matrix.col(col) = rs1_matrix.col(col).array() * vec_rs2_dim0.array();
         vec_rd_dim0 = rd_matrix.colwise().sum();
@@ -285,7 +285,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
             cout << "rd:" << endl << vec_rd_dim0 << endl;
         }
         break;
-    case 1: // row dir
+    case 1:
         for (int row = 0; row < rs1_matrix.rows(); row++)
             rd_matrix.row(row) = rs1_matrix.row(row).array() * vec_rs2_dim1.array();
         vec_rd_dim1 = rd_matrix.rowwise().sum();
@@ -297,7 +297,48 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
         }
         break;
     default:
-        cout << __FUNCTION__ << "error dim" << endl;
+        cout << __FUNCTION__ << " error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+/**
+ * veemacc_mf() veemacc.mf
+ * 
+ * 当dim=0时，浮点标量和矩阵元素广播乘，再列元素(行向量)求和；
+ * 当dim=1时，浮点标量和矩阵元素广播乘，再行元素(列向量)求和
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rs2 M2,源操作向量基地址
+ * @param rd M,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @param dim 方向 dim = 0 v为行向量， dim = 1 v为列向量
+ * @return 执行结果
+ */
+int CustomInsns::veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
+
+    if (debug) {
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2 << endl;
+    }
+
+    switch (dim) {
+    case 0:
+        vec_rd_dim0 = (rs1_matrix.array() * rs2).colwise().sum();
+        if (debug)
+            cout << "rd:\n" << vec_rd_dim0 << endl;
+        break;
+    case 1:
+        vec_rd_dim1 = (rs1_matrix.array() * rs2).rowwise().sum();
+        if (debug)
+            cout << "rd:\n" << vec_rd_dim1 << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << " error dim" << endl;
         return -BR_EPARAM;
     }
     return 0;

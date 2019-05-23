@@ -387,15 +387,16 @@ static void test_veemacc(void)
     TEST_ADD_MATRIX(rs2_m, rs2, 4, 7, 28);
     TEST_ADD_MATRIX(rs2_dim0_v, rs2, 4, 1, 4);
     TEST_ADD_MATRIX(rs2_dim1_v, rs2, 1, 6, 6);
+    TEST_ADD_S(rs2_s, rs2[0]);
+
+    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 7, 6);
 
     PRINT_SUB_FUNC("veemacc_mm");
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 7, 6);
     ci.veemacc_mm(rs1, rd, rs2, &ss);
     TEST_ADD_MATRIX(golden_mm_s, rd, 1, 1, 1);
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemacc_mm dim = 0");
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 7, 6);
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
     ci.veemacc_mm(rs1, rd, rs2, &ss, 0);
@@ -403,17 +404,29 @@ static void test_veemacc(void)
     printf_half(rd, 32);
 
     PRINT_SUB_FUNC("veemacc_mm dim = 1");
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 7, 6);
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
     ci.veemacc_mm(rs1, rd, rs2, &ss, 1);
     TEST_ADD_MATRIX(golden_mm_dim1_v, rd, 4, 1, 4);
     printf_half(rd, 32);
 
+    PRINT_SUB_FUNC("veemacc_mf dim = 0");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.veemacc_mf(rs1, rd, rs2[0], &ss, 0);
+    TEST_ADD_MATRIX(golden_mf_dim0_v, rd, 1, 6, 6);
+    printf_half(rd, 32);
+
+    PRINT_SUB_FUNC("veemacc_mf dim = 1");
+    for (int i = 0; i < 32; i++)
+        rd[i] = (half)0;
+    ci.veemacc_mf(rs1, rd, rs2[0], &ss, 1);
+    TEST_ADD_MATRIX(golden_mf_dim1_v, rd, 4, 1, 4);
+    printf_half(rd, 32);
+
     PRINT_SUB_FUNC("veemacc_mv dim = 0");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 0, 6);
     ci.veemacc_mv(rs1, rd, rs2, &ss, 0);
     TEST_ADD_MATRIX(golden_mv_dim0_v, rd, 1, 6, 6);
     printf_half(rd, 32);
@@ -421,7 +434,6 @@ static void test_veemacc(void)
     PRINT_SUB_FUNC("veemacc_mv dim = 1");
     for (int i = 0; i < 32; i++)
         rd[i] = (half)0;
-    SET_SHAPESTRIDE(ss, 4, 6, 0, 0, 8, 0, 6);
     ci.veemacc_mv(rs1, rd, rs2, &ss, 1);
     TEST_ADD_MATRIX(golden_mv_dim1_v, rd, 4, 1, 4);
     printf_half(rd, 32);
