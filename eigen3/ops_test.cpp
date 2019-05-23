@@ -30,12 +30,12 @@ static void printf_uint16(uint16_t *h, int num)
 }
 
 #define SET_SHAPESTRIDE(ss, r1, c1, r2, c2, s1, s2, sd)   \
-    ss.shape1_row = r1; \
-    ss.shape1_column = c1; \
-    ss.shape2_row = r2; \
-    ss.shape2_column = c2; \
-    ss.stride_rs1 = s1; \
-    ss.stride_rs2 = s2; \
+    ss.shape1_row = r1;                                   \
+    ss.shape1_column = c1;                                \
+    ss.shape2_row = r2;                                   \
+    ss.shape2_column = c2;                                \
+    ss.stride_rs1 = s1;                                   \
+    ss.stride_rs2 = s2;                                   \
     ss.stride_rd = sd;
 
 
@@ -105,6 +105,18 @@ static void printf_uint16(uint16_t *h, int num)
     ofs << s_##name;                               \
     ofs << "    0x" << hex << data.x << "\n};\n"
 
+#define TEST_ADD_RD_S(name)                        \
+    string s_##name = "\nstatic int32_t ";         \
+    s_##name += #name;                             \
+    s_##name += "[1];\n";                          \
+    ofs << s_##name;
+
+#define TEST_ADD_S_U16(name, data)                 \
+    string s_##name = "\nstatic int32_t ";         \
+    s_##name += #name;                             \
+    s_##name += "[1] = {\n";                       \
+    ofs << s_##name;                               \
+    ofs << "    0x" << hex << data << "\n};\n"
 
 #define TEST_COMB_POINTER(pname, name)   \
     string comb##pname = "\np_";         \
@@ -114,35 +126,22 @@ static void printf_uint16(uint16_t *h, int num)
     comb##pname += ";\n";                \
     ofs << comb##pname;
 
-#define TEST_FILL_SHAPE(number, row, column)  \
-    string shape##number = "\nshape";         \
-    shape##number += #number;                 \
-    shape##number += " = DEFINE_SHAPE(";      \
-    shape##number += #column;                 \
-    shape##number += ", ";                    \
-    shape##number += #row;                    \
-    shape##number += ");\n";                  \
-    ofs << shape##number;
+#define TEST_FILL_SHAPE(number, row, column)    \
+    ofs << "\nshape" << dec << number << " = DEFINE_SHAPE(" << column << ", " << row << ");\n";
 
 /* dest stride */
-#define TEST_FILL_STRIDE1(sd)                           \
-    string stride1 = "\nstride1 = DEFINE_STRIDE(0, ";   \
-    stride1 += #sd;                                     \
-    stride1 += ");\n";                                  \
-    ofs << stride1;
+#define TEST_FILL_STRIDE1(sd)                \
+    ofs << "\nstride1 = DEFINE_STRIDE(0, ";  \
+    ofs << dec << (sd * 2) << ");\n";
 
 /**
  * @breif fill stride2
  * @param s2 源矩阵2 stride
  * @param s1 源矩阵1 stride
  */
-#define TEST_FILL_STRIDE2(s2, s1)                            \
-    string stride##number = "\nstride2 = DEFINE_STRIDE(";    \
-    stride##number += #s2;                                   \
-    stride##number += ", ";                                  \
-    stride##number += #s1;                                   \
-    stride##number += ");\n";                                \
-    ofs << stride##number;
+#define TEST_FILL_STRIDE2(s2, s1)               \
+    ofs << "\nstride2 = DEFINE_STRIDE(";        \
+    ofs << dec << (s2 * 2) << ", " << (s1 * 2) << ");\n";
 
 #define TEST_FILL_VMASK(v0, len)                                     \
     ofs << "\nvl = ";                                                \
@@ -438,7 +437,7 @@ static void test_veemacc(void)
     TEST_ADD_MATRIX(golden_mv_dim1_v, rd, 4, 1, 4);
     printf_half(rd, 32);
 
-    TEST_ADD_MATRIX(rd_s, rd, 0, 0, 1);
+    TEST_ADD_RD_S(rd_s);
     TEST_ADD_MATRIX(rd_v, rd, 0, 0, 32); // enough
 
     TEST_COMB_POINTER(rs1_m, rs1_m);
@@ -612,7 +611,7 @@ static void test_veacc(void)
     TEST_ADD_MATRIX(golden_dim1_v, rd, 4, 1, 4);
     printf_half(rd, 32);
 
-    TEST_ADD_MATRIX(rd_s, rd, 0, 0, 1);
+    TEST_ADD_RD_S(rd_s);
     TEST_ADD_MATRIX(rd_v, rd, 0, 0, 32);
     
     TEST_COMB_POINTER(rs1_m, rs1_m);
@@ -699,7 +698,7 @@ static void test_vemax(void)
 
     TEST_ADD_MATRIX(rd_m, rd, 0, 0, 32);
     TEST_ADD_MATRIX(rd_v, rd, 0, 0, 32);
-    TEST_ADD_MATRIX(rd_s, rd, 0, 0, 1);
+    TEST_ADD_RD_S(rd_s);
     
     TEST_COMB_POINTER(rs1_m, rs1_m);
     TEST_COMB_POINTER(rs2_m, rs2_m);
@@ -792,7 +791,7 @@ static void test_vemin(void)
 
     TEST_ADD_MATRIX(rd_m, rd, 0, 0, 32);
     TEST_ADD_MATRIX(rd_v, rd, 0, 0, 32);
-    TEST_ADD_MATRIX(rd_s, rd, 0, 0, 1);
+    TEST_ADD_RD_S(rd_s);
     
     TEST_COMB_POINTER(rs1_m, rs1_m);
     TEST_COMB_POINTER(rs2_m, rs2_m);
@@ -1304,14 +1303,14 @@ void test_vext(void)
     TEST_OPEN_FILE("vext");
 
     TEST_ADD_MATRIX_U16(vs2_v, vs2, 1, 10, 10);
-    TEST_ADD_MATRIX_U16(rs1_s, rs1, 1, 1, 1);
+    TEST_ADD_S_U16(rs1_s, rs1[0]);
 
     PRINT_SUB_FUNC("vext_x_v");
     ext.vext_x_v(vs2, rd, rs1[0], 10);
     TEST_ADD_MATRIX_U16(golden_x_v_s, rd, 1, 1, 1);
     printf("rd = 0x%04x\n", rd[0]);
 
-    TEST_ADD_MATRIX_U16(rd, rd, 0, 0, 1);
+    TEST_ADD_RD_S(rd);
 
     TEST_COMB_POINTER(vs2, vs2_v);
     TEST_COMB_POINTER(rd, rd);
