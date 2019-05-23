@@ -27,6 +27,7 @@ using namespace std;
 
 #define DBG_VECTOR_VF    do {                   \
     if (debug) {                                \
+        cout << __FUNCTION__ << endl;           \
         cout << "vs2:\n" << vector_vs2 << endl; \
         cout << "rs1:\n" << rs1 << endl;        \
         cout << "vm:\n" << vm << endl;          \
@@ -37,6 +38,7 @@ using namespace std;
 
 #define DBG_VECTOR_VV    do {                   \
     if (debug) {                                \
+        cout << __FUNCTION__ << endl;           \
         cout << "vs2:\n" << vector_vs2 << endl; \
         cout << "vs1:\n" << vector_vs1 << endl; \
         cout << "vm:\n" << vm << endl;          \
@@ -190,6 +192,7 @@ class Vfwcvt
             vector_vd = vector_vs2.cast<half>();
 
         if (debug) {
+            cout << __FUNCTION__ << endl;
             cout << "vs2:\n" << vector_vs2 << endl;
             cout << "vm:\n" << vm << endl;
             cout << "v0:\n" << vector_v0 << endl;
@@ -225,6 +228,7 @@ class Vfwcvt
             vector_vd = vector_vs2.cast<half>();
 
         if (debug) {
+            cout << __FUNCTION__ << endl;
             cout << "vs2:\n" << vector_vs2 << endl;
             cout << "vm:\n" << vm << endl;
             cout << "v0:\n" << vector_v0 << endl;
@@ -571,6 +575,7 @@ class Vext
             *rd = vector_vs2(rs1);
 
         if (debug) {
+            cout << __FUNCTION__ << endl;
             cout << "vs2:\n" << vector_vs2 << endl;
             cout << "rs1:\n" << rs1 << endl;
         }

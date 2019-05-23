@@ -34,6 +34,13 @@ MY_MATRIX_DEFINE(int16_t)
 
 #undef MY_MATRIX_DEFINE
 
+#define SHAPE_STRIDE_INFO(ss) do {\
+        if (debug) {\
+            cout << endl << __FUNCTION__ << endl;\
+            shapestride_dbg(ss);\
+        }\
+    } while(0)
+
 /**
  * CustomInsns() 构造函数
  * 
@@ -81,13 +88,13 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
         return -BR_EPARAM;
     }
 
-    shapestride_dbg(ss);
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     rd_matrix = rs1_matrix * rs2;
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -123,11 +130,10 @@ int CustomInsns::veemul_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *s
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = rs1_matrix.array() * rs2_matrix.array();
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -159,6 +165,7 @@ int CustomInsns::veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *s
         for (int col = 0; col < rs1_matrix.cols(); col++)
             rd_matrix.col(col) = rs1_matrix.col(col).array() * vector_dim0.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -168,6 +175,7 @@ int CustomInsns::veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *s
         for (int row = 0; row < rs1_matrix.rows(); row++)
             rd_matrix.row(row) = rs1_matrix.row(row).array() * vector_dim1.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -195,14 +203,14 @@ int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
 
-    shapestride_dbg(ss);
+    rd[0] = (rs1_matrix.array() * rs2_matrix.array()).sum();
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
+        cout << "rd:" << endl << rd[0] << endl;
     }
-
-    rd[0] = (rs1_matrix.array() * rs2_matrix.array()).sum();
 
     return 0;
 }
@@ -224,10 +232,10 @@ int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half vector_dim1(rd, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
-    
-    shapestride_dbg(ss);
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "dim: " << dim << endl;
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
@@ -279,6 +287,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
         vec_rd_dim0 = rd_matrix.colwise().sum();
 
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vec_rs2_dim0 << endl;
             cout << "mul:" << endl << rd_matrix << endl;
@@ -290,6 +299,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
             rd_matrix.row(row) = rs1_matrix.row(row).array() * vec_rs2_dim1.array();
         vec_rd_dim1 = rd_matrix.rowwise().sum();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vec_rs2_dim1 << endl;
             cout << "mul:" << endl << rd_matrix << endl;
@@ -322,6 +332,8 @@ int CustomInsns::veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *s
     Map_half vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "dim: " << dim << endl;
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2 << endl;
     }
@@ -366,8 +378,6 @@ int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
      * convert this operation to matrix + matrix
      */
@@ -376,6 +386,7 @@ int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     rd_matrix = rs1_matrix + const_matrix;
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -411,11 +422,10 @@ int CustomInsns::veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = rs1_matrix + rs2_matrix;
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -447,6 +457,7 @@ int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         for (int col = 0; col < rs1_matrix.cols(); col++)
             rd_matrix.col(col) = rs1_matrix.col(col).array() + vector_dim0.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -456,6 +467,7 @@ int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         for (int row = 0; row < rs1_matrix.rows(); row++)
             rd_matrix.row(row) = rs1_matrix.row(row).array() + vector_dim1.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -488,6 +500,7 @@ int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     case 0:
         rd_col_max = rs1_matrix.colwise().maxCoeff();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rd:" << endl << rd_col_max << endl;
         }
@@ -495,6 +508,7 @@ int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     case 1:
         rd_row_max = rs1_matrix.rowwise().maxCoeff();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rd:" << endl << rd_row_max << endl;
         }
@@ -550,11 +564,10 @@ int CustomInsns::vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = (rs1_matrix.array() > rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -585,11 +598,10 @@ int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = (rs1_matrix.array() > rs2).select(rs1_matrix, rs2);
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -623,6 +635,7 @@ int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             rd_matrix.col(col) = (rs1_matrix.col(col).array() > vector_dim0.array()).select(
                 rs1_matrix.col(col), vector_dim0);
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -633,6 +646,7 @@ int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             rd_matrix.row(row) = (rs1_matrix.row(row).array() > vector_dim1.array()).select(
                 rs1_matrix.row(row), vector_dim1);
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -665,6 +679,7 @@ int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     case 0:
         rd_col_max = rs1_matrix.colwise().minCoeff();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rd:" << endl << rd_col_max << endl;
         }
@@ -672,6 +687,7 @@ int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     case 1:
         rd_row_max = rs1_matrix.rowwise().minCoeff();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rd:" << endl << rd_row_max << endl;
         }
@@ -727,11 +743,10 @@ int CustomInsns::vemin_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = (rs1_matrix.array() < rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -762,11 +777,10 @@ int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     rd_matrix = (rs1_matrix.array() < rs2).select(rs1_matrix, rs2);
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -800,6 +814,7 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             rd_matrix.col(col) = (rs1_matrix.col(col).array() < vector_dim0.array()).select(
                 rs1_matrix.col(col), vector_dim0);
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -810,6 +825,7 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             rd_matrix.row(row) = (rs1_matrix.row(row).array() < vector_dim1.array()).select(
                 rs1_matrix.row(row), vector_dim1);
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -848,7 +864,6 @@ int CustomInsns::vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    shapestride_dbg(ss);
 
     /* our half not support operator - (const half& a, const half& b),
      * but can support operator - (const half& a),
@@ -857,6 +872,7 @@ int CustomInsns::vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     rd_matrix = rs1_matrix + -rs2_matrix;
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -892,6 +908,7 @@ int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         for (int col = 0; col < rs1_matrix.cols(); col++)
             rd_matrix.col(col) = rs1_matrix.col(col).array() + -vector_dim0.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -901,6 +918,7 @@ int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         for (int row = 0; row < rs1_matrix.rows(); row++)
             rd_matrix.row(row) = rs1_matrix.row(row).array() + -vector_dim1.array();
         if (debug) {
+            SHAPE_STRIDE_INFO(ss);
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -935,8 +953,6 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
      * convert this operation to matrix + matrix
      * Our half not support operator - (const half& a, const half& b),
@@ -948,6 +964,7 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     rd_matrix = rs1_matrix + const_matrix;
 
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
         cout << "rd:" << endl << rd_matrix << endl;
@@ -979,9 +996,8 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
-
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_matrix << endl;
     }
@@ -1010,9 +1026,8 @@ int CustomInsns::vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_vector(rs2, 1, ss->shape1_row, DynStride(1, 1));
     Map_half rd_vector(rd, 1, ss->shape1_column, DynStride(1, 1));
 
-    shapestride_dbg(ss);
-    
     if (debug) {
+        SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_vector << endl;
     }
@@ -1040,7 +1055,7 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
     Map_half rd_row_sum(rd, ss->shape1_row, 1, DynStride(1, 1));
-    
+
     switch (dim) {
     case 0:
         rd_col_sum = rs1_matrix.colwise().sum();
@@ -1052,6 +1067,17 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "dim: " << dim << endl;
+        cout << "rs1:\n" << rs1_matrix << endl;
+        if (dim == 0)
+            cout << "rd_col_sum:\n" << rd_col_sum << endl;
+        if (dim == 1)
+            cout << "rd_row_sum:\n" << rd_row_sum << endl;
+    }
+
     return 0;
 }
 
@@ -1069,6 +1095,13 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
 
     *rd = rs1_matrix.sum();
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rd:\n" << *rd << endl;
+    }
+
     return 0;
 }
 
@@ -1086,7 +1119,8 @@ int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
+
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = (rs1_matrix.array() > (half)0).select(rs1_matrix, rs1_matrix * rs2);
     return 0;
 }
@@ -1110,6 +1144,8 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
     Map_half vector_dim0(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim1(rs2, 1, ss->shape1_column, DynStride(1, 1));
 
+    SHAPE_STRIDE_INFO(ss);
+
     switch (dim) {
     case 0:
         for (int col = 0; col < rs1_matrix.cols(); col++)
@@ -1117,6 +1153,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
                 rs1_matrix.col(col), 
                 rs1_matrix.col(col).array() * vector_dim0.array());
         if (debug) {
+            cout << "dim: " << dim << endl;
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim0 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -1128,6 +1165,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
                 rs1_matrix.row(row),
                 rs1_matrix.row(row).array() * vector_dim1.array());
         if (debug) {
+            cout << "dim: " << dim << endl;
             cout << "rs1:" << endl << rs1_matrix << endl;
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
@@ -1154,6 +1192,8 @@ int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct Shap
 {
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
 
     //rs2 = rs2 & 0x3ff;
     for (int i = 0; i < ss->shape1_row; i++)
@@ -1182,7 +1222,7 @@ int CustomInsns::vemv_m(half *rs1, half *rd, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
-    shapestride_dbg(ss);
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = rs1_matrix;
 
     if (debug) {
@@ -1207,7 +1247,7 @@ int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
-    shapestride_dbg(ss);
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = rs1_matrix.cast<half>();
 
     if (debug) {
@@ -1232,7 +1272,7 @@ int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
-    shapestride_dbg(ss);
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = rs1_matrix.cast<half>();
 
     if (debug) {
@@ -1257,7 +1297,7 @@ int CustomInsns::vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss)
     Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
-    shapestride_dbg(ss);
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = rs1_matrix.cast<half>();
 
     if (debug) {
@@ -1282,7 +1322,7 @@ int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
-    shapestride_dbg(ss);
+    SHAPE_STRIDE_INFO(ss);
     rd_matrix = rs1_matrix.cast<half>();
 
     if (debug) {
