@@ -5,13 +5,11 @@ if(VSTART >= VL){
 else{
 	unsigned int idx = VSTART;
 	switch(SEW){
-	case 8:
-		break;
 	case 16:
 		for(;idx < VL; idx++){
 			if(!VM & !(READ_VREG(0).vh[idx]))
 				continue;
-			WRITE_VRD_H(MMU.load_uint16(RS1+idx*(SEW/8)), idx);
+			WRITE_VRD_H(MMU.load_int16(RS1+VRS2.vh[idx]), idx);
 		}
 		break;
 	default:

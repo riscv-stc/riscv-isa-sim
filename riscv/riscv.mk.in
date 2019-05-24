@@ -318,15 +318,32 @@ riscv_insn_list = \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
+	vsetvl \
+	vsetvli \
 	vlb_v \
 	vlbu_v \
 	vlh_v \
 	vlhu_v \
 	vle_v \
-	vsetvl \
-	vsetvli \
+	vleu_v \
+	vlsb_v \
+	vlsbu_v \
+	vlsh_v \
+	vlshu_v \
+	vlse_v \
+	vlseu_v \
+	vlxb_v \
+	vlxbu_v \
+	vlxh_v \
 	vlxhu_v \
+	vlxe_v \
+	vlxeu_v \
+	vsb_v \
+	vsbu_v \
 	vsh_v \
+	vshu_v \
+	vse_v \
+	vseu_v \
 	vfmul_vf \
 	vfadd_vf \
 	vfmerge_vf \

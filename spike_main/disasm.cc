@@ -363,6 +363,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_SV6TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &vrs1, &vm})
   #define DEFINE_SV7TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &frs1, &vm})
   #define DEFINE_SV8TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &vsew, &vlmul, &vediv})
+  #define DEFINE_SV9TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &xrs2, &vm})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -663,16 +664,33 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_CV2TYPE(vesub_mf);
   DEFINE_R2TYPE(vesub_mv);
 
+  DEFINE_RTYPE(vsetvl);
+  DEFINE_SV8TYPE(vsetvli);
   DEFINE_SV1TYPE(vlb_v);
   DEFINE_SV1TYPE(vlbu_v);
   DEFINE_SV1TYPE(vlh_v);
   DEFINE_SV1TYPE(vlhu_v);
   DEFINE_SV1TYPE(vle_v);
   DEFINE_SV1TYPE(vleu_v);
-  DEFINE_RTYPE(vsetvl);
-  DEFINE_SV8TYPE(vsetvli);
+  DEFINE_SV9TYPE(vlsb_v);
+  DEFINE_SV9TYPE(vlsbu_v);
+  DEFINE_SV9TYPE(vlsh_v);
+  DEFINE_SV9TYPE(vlshu_v);
+  DEFINE_SV9TYPE(vlse_v);
+  DEFINE_SV9TYPE(vlseu_v);
+  DEFINE_SV2TYPE(vlxb_v);
+  DEFINE_SV2TYPE(vlxbu_v);
+  DEFINE_SV2TYPE(vlxh_v);
   DEFINE_SV2TYPE(vlxhu_v);
+  DEFINE_SV2TYPE(vlxe_v);
+  DEFINE_SV2TYPE(vlxeu_v);
+  DEFINE_SV3TYPE(vsb_v);
+  DEFINE_SV3TYPE(vsbu_v);
   DEFINE_SV3TYPE(vsh_v);
+  DEFINE_SV3TYPE(vshu_v);
+  DEFINE_SV3TYPE(vse_v);
+  DEFINE_SV3TYPE(vseu_v);
+
   DEFINE_SV4TYPE(vfmul_vf);
   DEFINE_SV4TYPE(vfadd_vf);
   DEFINE_SV4TYPE(vfmerge_vf);
