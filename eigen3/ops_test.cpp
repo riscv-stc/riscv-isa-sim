@@ -442,6 +442,7 @@ static void test_veemacc(void)
 
     TEST_COMB_POINTER(rs1_m, rs1_m);
     TEST_COMB_POINTER(rs2_m, rs2_m);
+    TEST_COMB_POINTER(rs2_s, rs2_s);
     TEST_COMB_POINTER(rs2_dim0_v, rs2_dim0_v);
     TEST_COMB_POINTER(rs2_dim1_v, rs2_dim1_v);
     
