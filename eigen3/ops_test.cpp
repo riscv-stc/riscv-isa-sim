@@ -646,8 +646,8 @@ static void test_vemax(void)
     TEST_OPEN_FILE("vemax");
     TEST_ADD_MATRIX(rs1_m, rs1, 4, 8, 32);
     TEST_ADD_MATRIX(rs2_m, rs2, 4, 7, 28);
-    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 5, 5);
-    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 1, 5, 5);
     TEST_ADD_S(rs2_s, rs2[0]);
 
     PRINT_SUB_FUNC("vemax_mm");
@@ -739,8 +739,8 @@ static void test_vemin(void)
     TEST_OPEN_FILE("vemin");
     TEST_ADD_MATRIX(rs1_m, rs1, 4, 8, 32);
     TEST_ADD_MATRIX(rs2_m, rs2, 4, 7, 28);
-    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 5, 5);
-    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 1, 5, 5);
     TEST_ADD_S(rs2_s, rs2[0]);
 
     PRINT_SUB_FUNC("vemin_mm");
@@ -830,8 +830,8 @@ static void test_velkrelu(void)
 
     TEST_OPEN_FILE("velkrelu");
     TEST_ADD_MATRIX(rs1_m, rs1, 4, 8, 32);
-    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 1, 5, 5);
-    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim0_v, rs2, 4, 1, 4);
+    TEST_ADD_MATRIX(rs2_dim1_v, rs2, 1, 5, 5);
     TEST_ADD_S(rs2_s, rs2[0]);
 
     PRINT_SUB_FUNC("velkrelu_mf");
@@ -1023,28 +1023,28 @@ void test_vadd(void)
 
     PRINT_SUB_FUNC("vadd_vf vm = 0");
     add.vadd_vf(vs2, vs1[0], vd, 0, v0, 8);
-    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 8, 8);
+    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     add.vadd_vf(vs2, vs1[0], vd, 1, v0, 8);
-    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 8, 8);
+    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vv vm = 0");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     add.vadd_vv(vs2, vs1, vd, 0, v0, 8);
-    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 8, 8);
+    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vadd_vv vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     add.vadd_vv(vs2, vs1, vd, 1, v0, 8);
-    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 8, 8);
+    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 8, 8);
     printf_half(vd, 32);
 
     TEST_ADD_MATRIX(vd, vd, 0, 0, 8);
@@ -1083,28 +1083,28 @@ void test_vsub(void)
 
     PRINT_SUB_FUNC("vsub_vf vm = 0");
     sub.vsub_vf(vs2, vs1[0], vd, 0, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vsub_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     sub.vsub_vf(vs2, vs1[0], vd, 1, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vsub_vv vm = 0");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     sub.vsub_vv(vs2, vs1, vd, 0, v0, 10);
-    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vsub_vv vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     sub.vsub_vv(vs2, vs1, vd, 1, v0, 10);
-    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     TEST_ADD_MATRIX(vd, vd, 0, 0, 10);
@@ -1143,28 +1143,28 @@ void test_vmul(void)
 
     PRINT_SUB_FUNC("vmul_vf vm = 0");
     mul.vmul_vf(vs2, vs1[0], vd, 0, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vmul_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     mul.vmul_vf(vs2, vs1[0], vd, 1, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vmul_vv vm = 0");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     mul.vmul_vv(vs2, vs1, vd, 0, v0, 10);
-    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vmul_vv vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     mul.vmul_vv(vs2, vs1, vd, 1, v0, 10);
-    TEST_ADD_MATRIX(golden_vv_m, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vv_nm, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     TEST_ADD_MATRIX(vd, vd, 0, 0, 10);
@@ -1202,14 +1202,14 @@ void test_vmerge(void)
 
     PRINT_SUB_FUNC("vmerge_vf vm = 0");
     merge.vmerge_vf(vs2, vs1[0], vd, 0, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     PRINT_SUB_FUNC("vmerge_vf vm = 1");
     for (int i = 0; i < 32; i++)
         vd[i] = (half)0.0;
     merge.vmerge_vf(vs2, vs1[0], vd, 1, v0, 10);
-    TEST_ADD_MATRIX(golden_vf_m, vd, 1, 10, 10);
+    TEST_ADD_MATRIX(golden_vf_nm, vd, 1, 10, 10);
     printf_half(vd, 32);
 
     TEST_ADD_MATRIX(vd, vd, 0, 0, 10);
@@ -1349,14 +1349,14 @@ void test_vma(void)
         for (int i = 0; i < 32; i++)                   \
             vd[i] = (half)0.0;                         \
         ma.func(vs2, vs1[0], vd, 0, v0, 10);           \
-        TEST_ADD_MATRIX(golden_##func##_nm, vd, 1, 10, 10); \
+        TEST_ADD_MATRIX(golden_##func##_m, vd, 1, 10, 10); \
         printf_half(vd, 32);                           \
                                                        \
         PRINT_SUB_FUNC(func_str" vm = 1");             \
         for (int i = 0; i < 32; i++)                   \
             vd[i] = (half)0.0;                         \
         ma.func(vs2, vs1[0], vd, 1, v0, 10);           \
-        TEST_ADD_MATRIX(golden_##func##_m, vd, 1, 10, 10);  \
+        TEST_ADD_MATRIX(golden_##func##_nm, vd, 1, 10, 10);  \
         printf_half(vd, 32);
 
     #define VMA_TEST_VV(func, func_str)                \
@@ -1364,14 +1364,14 @@ void test_vma(void)
         for (int i = 0; i < 32; i++)                   \
             vd[i] = (half)0.0;                         \
         ma.func(vs2, vs1, vd, 0, v0, 10);              \
-        TEST_ADD_MATRIX(golden_##func##_nm, vd, 1, 10, 10);  \
+        TEST_ADD_MATRIX(golden_##func##_m, vd, 1, 10, 10);  \
         printf_half(vd, 32);                           \
                                                        \
         PRINT_SUB_FUNC(func_str" vm = 1");             \
         for (int i = 0; i < 32; i++)                   \
             vd[i] = (half)0.0;                         \
         ma.func(vs2, vs1, vd, 1, v0, 10);              \
-        TEST_ADD_MATRIX(golden_##func##_m, vd, 1, 10, 10);  \
+        TEST_ADD_MATRIX(golden_##func##_nm, vd, 1, 10, 10);  \
         printf_half(vd, 32);
 
 

@@ -8,7 +8,7 @@ unsigned long rs2 = MMU.get_phy_addr(RS2);
 unsigned long rd = MMU.get_phy_addr(RD);
 
 if(DIM == 0){
-	CusIns.veacc_m((half*)rs1, (half*)&FRD.v, &sst);
+	CusIns.vemax_m((half*)rs1, (half*)&FRD.v, &sst);
 }
 else{
 	CusIns.vemax_m((half*)rs1, (half*)rd, &sst, DIM_DM);
