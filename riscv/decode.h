@@ -237,16 +237,18 @@ private:
 #define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
 
-#define check_v0hmask(x) if(!VM & !(READ_VREG(0).vh[x])) \
-							continue;
-#define check_v0bmask(x) if(!VM & !(READ_VREG(0).vb[x])) \
-							continue;
+#define check_v0hmask(x) if(!VM & !(READ_VREG(0).vh[x])) continue; \
+						 else if(x > VL) {WRITE_VRD_H(0, x); continue;} \
+						 else
 
-#define check_vstart if(VSTART >= VL) \
-						VSTART = 0; \
+#define check_v0bmask(x) if(!VM & !(READ_VREG(0).vb[x])) continue; \
+						 else if(x > VL) {WRITE_VRD_B(0, x); continue;} \
+						 else
+
+#define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else
 
-#define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
+#define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
 
 
 #define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \
