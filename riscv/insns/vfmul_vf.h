@@ -1,8 +1,7 @@
 require_extension('V');
-if(VSTART >= VL){
-	VSTART = 0;
-}
-else{
-	Vmul<unsigned short, unsigned short> vmul;
-	vmul.vmul_vf(&VRS2.vh[VSTART], (unsigned short)FRS1.v, VRD.vh, VM, VR0.vh, VL);
+check_vstart{
+	half vr1;
+	vr1.x = (unsigned short)FRS1.v[0];
+	Vmul<half, unsigned short> vmul;
+	vmul.vmul_vf((half*)&VRS2.vh[VSTART], vr1, (half*)&VRD.vh[VSTART], VM, VR0.vh, VL);
 }

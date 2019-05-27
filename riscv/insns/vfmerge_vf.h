@@ -1,8 +1,7 @@
 require_extension('V');
-if(VSTART >= VL){
-	VSTART = 0;
-}
-else{
-	Vmerge<unsigned short, unsigned short> vmerge;
-	vmerge.vmerge_vf(&VRS2.vh[VSTART], (unsigned short)FRS1.v, VRD.vh, VM, VR0.vh, VL);
+check_vstart{
+	half vr1;
+	vr1.x = (unsigned short)FRS1.v[0];
+	Vmerge<half, unsigned short> vmerge;
+	vmerge.vmerge_vf((half*)&VRS2.vh[VSTART], vr1, (half*)&VRD.vh[VSTART], VM, VR0.vh, VL);
 }

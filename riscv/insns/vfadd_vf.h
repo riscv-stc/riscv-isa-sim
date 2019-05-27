@@ -1,8 +1,5 @@
 require_extension('V');
-if(VSTART >= VL){
-	VSTART = 0;
-}
-else{
+check_vstart{
 	half vr1;
 	vr1.x = (unsigned short)FRS1.v[0];
 	Vadd<half, unsigned short> vadd;

@@ -344,6 +344,7 @@ riscv_insn_list = \
 	vshu_v \
 	vse_v \
 	vseu_v \
+	vssb_v \
 	vfmul_vf \
 	vfadd_vf \
 	vfmerge_vf \
