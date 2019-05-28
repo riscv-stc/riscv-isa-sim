@@ -1,14 +1,9 @@
 require_extension('V');
-if(VSTART >= VL){
-	VSTART = 0;
-}
-else{
-	unsigned int idx = VSTART;
+check_vstart{
 	switch(SEW){
 	case 16:
-		for(;idx < VL; idx++){
-			if(!VM & !(READ_VREG(0).vh[idx]))
-				continue;
+		vector_for_each(idx){
+			check_v0hmask(idx);
 			WRITE_VRD_H(MMU.load_uint16(RS1+idx*VRS2.vh[idx]), idx);
 		}
 		break;
