@@ -1,14 +1,11 @@
 require_extension('V');
 check_vstart{
 	switch(SEW){
-	case 8:
-		vector_for_each(idx){
-			check_v0bmask(idx);
-			MMU.store_uint8(RS1+idx*SEW/8, VRS3.vb[idx]);
-		}
-		break;
 	case 16:
-		abort();
+		vector_for_each(idx){
+			check_v0hmask(idx);
+			MMU.store_uint16(RS1+VRS2.vh[idx], VRS3.vh[idx]);
+		}
 		break;
 	default:
 		break;

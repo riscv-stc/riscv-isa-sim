@@ -348,6 +348,14 @@ riscv_insn_list = \
 	vssbu_v \
 	vssh_v \
 	vsshu_v \
+	vsse_v \
+	vsseu_v \
+	vsxb_v \
+	vsxbu_v \
+	vsxe_v \
+	vsxeu_v \
+	vsxh_v \
+	vsxhu_v \
 	vfmul_vf \
 	vfadd_vf \
 	vfmerge_vf \

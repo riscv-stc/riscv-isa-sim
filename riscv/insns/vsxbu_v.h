@@ -4,7 +4,7 @@ check_vstart{
 	case 8:
 		vector_for_each(idx){
 			check_v0bmask(idx);
-			MMU.store_uint8(RS1+idx*SEW/8, VRS3.vb[idx]);
+			MMU.store_uint8(RS1+VRS2.vb[idx], VRS3.vb[idx]);
 		}
 		break;
 	case 16:
