@@ -239,11 +239,9 @@ private:
 
 #define check_v0hmask(x) if(!VM & !(READ_VREG(0).vh[x])) continue; \
 						 else if(x > VL) {WRITE_VRD_H(0, x); continue;} \
-						 else
 
 #define check_v0bmask(x) if(!VM & !(READ_VREG(0).vb[x])) continue; \
 						 else if(x > VL) {WRITE_VRD_B(0, x); continue;} \
-						 else
 
 #define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else

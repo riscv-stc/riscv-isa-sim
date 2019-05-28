@@ -691,6 +691,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV3TYPE(vse_v);
   DEFINE_SV3TYPE(vseu_v);
   DEFINE_SV9TYPE(vssb_v);
+  DEFINE_SV9TYPE(vssbu_v);
+  DEFINE_SV9TYPE(vssh_v);
+  DEFINE_SV9TYPE(vsshu_v);
 
   DEFINE_SV4TYPE(vfmul_vf);
   DEFINE_SV4TYPE(vfadd_vf);
