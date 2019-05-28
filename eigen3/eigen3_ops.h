@@ -518,7 +518,8 @@ class Vmerge
         VmergeDataVecMap vector_vd(vd, num);
         VmergeMaskVecMap vector_v0(v0, num);
 
-        if (!vm)
+        /* vm = 1, vd[0...n] = rs1 */
+        if (vm)
             vector_vd = vector_vd.Constant(1, num, rs1);
         else {
             for (int i = 0; i < num; i++) {
