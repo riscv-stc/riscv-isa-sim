@@ -174,17 +174,17 @@ class Vfwcvt
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vfwcvt_f_x_v(int16_t *vs2, half *vd, int vm, MaskType *v0, int num)
+    int vfwcvt_f_x_v(int16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
     {
-        VfwcvtI16VecMap vector_vs2(vs2, num);
-        VfwcvtHalfVecMap vector_vd(vd, num);
-        VfwcvtMaskVecMap vector_v0(v0, num);
+        VfwcvtI16VecMap vector_vs2(vs2, vl);
+        VfwcvtHalfVecMap vector_vd(vd, vl);
+        VfwcvtMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = (half)vector_vs2(i);
             }
@@ -210,17 +210,17 @@ class Vfwcvt
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vfwcvt_f_xu_v(uint16_t *vs2, half *vd, int vm, MaskType *v0, int num)
+    int vfwcvt_f_xu_v(uint16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
     {
-        VfwcvtU16VecMap vector_vs2(vs2, num);
-        VfwcvtHalfVecMap vector_vd(vd, num);
-        VfwcvtMaskVecMap vector_v0(v0, num);
+        VfwcvtU16VecMap vector_vs2(vs2, vl);
+        VfwcvtHalfVecMap vector_vd(vd, vl);
+        VfwcvtMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = (half)vector_vs2(i);
             }
@@ -265,17 +265,17 @@ class Vadd
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VaddVecMap vector_vs2(vs2, num);
-        VaddVecMap vector_vd(vd, num);
-        VaddMaskVecMap vector_v0(v0, num);
+        VaddVecMap vector_vs2(vs2, vl);
+        VaddVecMap vector_vd(vd, vl);
+        VaddMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + rs1;
             }
@@ -294,18 +294,18 @@ class Vadd
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VaddVecMap vector_vs2(vs2, num);
-        VaddVecMap vector_vs1(vs1, num);
-        VaddVecMap vector_vd(vd, num);
-        VaddMaskVecMap vector_v0(v0, num);
+        VaddVecMap vector_vs2(vs2, vl);
+        VaddVecMap vector_vs1(vs1, vl);
+        VaddVecMap vector_vd(vd, vl);
+        VaddMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + vector_vs1(i);
             }
@@ -345,17 +345,17 @@ class Vsub
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsubVecMap vector_vs2(vs2, num);
-        VsubVecMap vector_vd(vd, num);
-        VsubMaskVecMap vector_v0(v0, num);
+        VsubVecMap vector_vs2(vs2, vl);
+        VsubVecMap vector_vd(vd, vl);
+        VsubMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + -rs1;
             }
@@ -374,18 +374,18 @@ class Vsub
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsubVecMap vector_vs2(vs2, num);
-        VsubVecMap vector_vs1(vs1, num);
-        VsubVecMap vector_vd(vd, num);
-        VsubMaskVecMap vector_v0(v0, num);
+        VsubVecMap vector_vs2(vs2, vl);
+        VsubVecMap vector_vs1(vs1, vl);
+        VsubVecMap vector_vd(vd, vl);
+        VsubMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) + -vector_vs1(i);
             }
@@ -425,17 +425,17 @@ class Vmul
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmul_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmul_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmulVecMap vector_vs2(vs2, num);
-        VmulVecMap vector_vd(vd, num);
-        VmulMaskVecMap vector_v0(v0, num);
+        VmulVecMap vector_vs2(vs2, vl);
+        VmulVecMap vector_vd(vd, vl);
+        VmulMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1;
             }
@@ -454,18 +454,18 @@ class Vmul
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmul_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmul_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmulVecMap vector_vs2(vs2, num);
-        VmulVecMap vector_vs1(vs1, num);
-        VmulVecMap vector_vd(vd, num);
-        VmulMaskVecMap vector_v0(v0, num);
+        VmulVecMap vector_vs2(vs2, vl);
+        VmulVecMap vector_vs1(vs1, vl);
+        VmulVecMap vector_vd(vd, vl);
+        VmulMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i);
             }
@@ -509,20 +509,20 @@ class Vmerge
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmerge_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmerge_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmergeDataVecMap vector_vs2(vs2, num);
-        VmergeDataVecMap vector_vd(vd, num);
-        VmergeMaskVecMap vector_v0(v0, num);
+        VmergeDataVecMap vector_vs2(vs2, vl);
+        VmergeDataVecMap vector_vd(vd, vl);
+        VmergeMaskVecMap vector_v0(v0, vl);
 
         /* vm = 1, vd[0...n] = rs1 */
         if (vm)
-            vector_vd = vector_vd.Constant(1, num, rs1);
+            vector_vd = vector_vd.Constant(1, vl, rs1);
         else {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i);
                 else
@@ -563,14 +563,14 @@ class Vext
      * @param vs2 源操作向量基地址
      * @param rs1 元素索引
      * @param vd 目的数存放地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vext_x_v(Type *vs2, Type *rd, uint16_t rs1, int num)
+    int vext_x_v(Type *vs2, Type *rd, uint16_t rs1, int vl)
     {
-        VextVecMap vector_vs2(vs2, num);
+        VextVecMap vector_vs2(vs2, vl);
 
-        if (rs1 >= num)
+        if (rs1 >= vl)
             *rd = (Type)0;
         else
             *rd = vector_vs2(rs1);
@@ -613,17 +613,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1 + vector_vd(i);
             }
@@ -642,18 +642,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i) + vector_vd(i);
             }
@@ -674,17 +674,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmacc_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * rs1) + -vector_vd(i);
             }
@@ -705,18 +705,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmacc_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + -vector_vd(i);
             }
@@ -737,17 +737,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * rs1 + -vector_vd(i);
             }
@@ -768,18 +768,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vs2(i) * vector_vs1(i) + -vector_vd(i);
             }
@@ -800,17 +800,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmsac_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * rs1) + vector_vd(i);
             }
@@ -831,18 +831,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmsac_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vs2(i) * vector_vs1(i)) + vector_vd(i);
             }
@@ -863,17 +863,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * rs1 + vector_vs2(i);
             }
@@ -894,18 +894,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * vector_vs1(i) + vector_vs2(i);
             }
@@ -926,17 +926,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmadd_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * rs1) + -vector_vs2(i);
             }
@@ -957,18 +957,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmadd_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + -vector_vs2(i);
             }
@@ -989,17 +989,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * rs1 + -vector_vs2(i);
             }
@@ -1020,18 +1020,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = vector_vd(i) * vector_vs1(i) + -vector_vs2(i);
             }
@@ -1052,17 +1052,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * rs1) + vector_vs2(i);
             }
@@ -1083,18 +1083,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vnmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vnmsub_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1)
                     vector_vd(i) = -(vector_vd(i) * vector_vs1(i)) + vector_vs2(i);
             }
@@ -1113,17 +1113,17 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmax_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmax_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) > rs1)
                         vector_vd(i) = vector_vs2(i);
@@ -1146,18 +1146,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmax_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmax_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) > vector_vs1(i))
                         vector_vd(i) = vector_vs2(i);
@@ -1180,17 +1180,17 @@ class Vma
      * @param vd 目的向量基地址test_vsub
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmin_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmin_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) < rs1)
                         vector_vd(i) = vector_vs2(i);
@@ -1213,18 +1213,18 @@ class Vma
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmin_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vmin_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VmaVecMap vector_vs2(vs2, num);
-        VmaVecMap vector_vs1(vs1, num);
-        VmaVecMap vector_vd(vd, num);
-        VmaMaskVecMap vector_v0(v0, num);
+        VmaVecMap vector_vs2(vs2, vl);
+        VmaVecMap vector_vs1(vs1, vl);
+        VmaVecMap vector_vd(vd, vl);
+        VmaMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs2(i) < vector_vs1(i))
                         vector_vd(i) = vector_vs2(i);
@@ -1275,18 +1275,18 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnj_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnj_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vs1(vs1, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vs1(vs1, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs1(i) > (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1310,17 +1310,17 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnj_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnj_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (rs1 > (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1347,18 +1347,18 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjn_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnjn_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vs1(vs1, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vs1(vs1, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (vector_vs1(i) < (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1382,17 +1382,17 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjn_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnjn_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if (rs1 < (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1419,18 +1419,18 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjx_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnjx_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vs1(vs1, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vs1(vs1, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if ((vector_vs1(i) * vector_vs2(i)) > (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1454,17 +1454,17 @@ public:
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vsgnjx_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int num)
+    int vsgnjx_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
-        VsgnjVecMap vector_vs2(vs2, num);
-        VsgnjVecMap vector_vd(vd, num);
-        VsgnjMaskVecMap vector_v0(v0, num);
+        VsgnjVecMap vector_vs2(vs2, vl);
+        VsgnjVecMap vector_vd(vd, vl);
+        VsgnjMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
-            for (int i = 0; i < num; i++) {
+            for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
                     if ((vector_vs2(i) * rs1) > (Type)0)
                         vector_vd(i) = xxabs(vector_vs2(i));
@@ -1510,14 +1510,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int veq_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int veq_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VEQ_VF      do {             \
             if (vector_vs2(i) == rs1)        \
@@ -1526,7 +1526,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;   \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(i) & 0x1)
                     VEQ_VF;
@@ -1546,15 +1546,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int veq_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int veq_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VEQ_VV      do {                   \
             if (vector_vs2(i) == vector_vs1(i))    \
@@ -1563,7 +1563,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;         \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VEQ_VV;
@@ -1583,14 +1583,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vne_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vne_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VNE_VF     do {               \
             if (vector_vs2(i) != rs1)         \
@@ -1599,7 +1599,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;    \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VNE_VF;
@@ -1619,15 +1619,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vne_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vne_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VNE_VV    do {                       \
             if (vector_vs2(i) != vector_vs1(i))      \
@@ -1636,7 +1636,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;           \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VNE_VV;
@@ -1656,14 +1656,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vlt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vlt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VLT_VF      do {               \
             if (vector_vs2(i) < rs1)           \
@@ -1672,7 +1672,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;     \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLT_VF;
@@ -1692,15 +1692,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vlt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vlt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VLT_VV       do {                 \
             if (vector_vs2(i) < vector_vs1(i))    \
@@ -1709,7 +1709,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;        \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLT_VV;
@@ -1729,14 +1729,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vle_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vle_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VLE_VF         do {         \
             if (vector_vs2(i) <= rs1)       \
@@ -1745,7 +1745,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;  \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLE_VF;
@@ -1765,15 +1765,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vle_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vle_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VLE_VV    do {                   \
             if (vector_vs2(i) <= vector_vs1(i))  \
@@ -1782,7 +1782,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;       \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VLE_VV;
@@ -1802,14 +1802,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vgt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vgt_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VGT_VF    do {                \
             if (vector_vs2(i) > rs1)          \
@@ -1818,7 +1818,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;    \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGT_VF;
@@ -1838,15 +1838,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vgt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vgt_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VGT_VV     do {                  \
             if (vector_vs2(i) > vector_vs1(i))   \
@@ -1855,7 +1855,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;       \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGT_VV;
@@ -1875,14 +1875,14 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vge_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vge_vf(InType *vs2, InType rs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VGE_VF     do {                 \
             if (vector_vs2(i) >= rs1)           \
@@ -1891,7 +1891,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;      \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGE_VF;
@@ -1911,15 +1911,15 @@ class Vcompare
      * @param vd 目的向量基地址
      * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
      * @param v0 mask向量基地址
-     * @param num 向量长度(准确的说应该是个数)
+     * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vge_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int num)
+    int vge_vv(InType *vs2, InType *vs1, OutType *vd, int vm, MaskType *v0, int vl)
     {
-        VcompareInVecMap vector_vs2(vs2, num);
-        VcompareInVecMap vector_vs1(vs1, num);
-        VcompareOutVecMap vector_vd(vd, num);
-        VcompareMaskVecMap vector_v0(v0, num);
+        VcompareInVecMap vector_vs2(vs2, vl);
+        VcompareInVecMap vector_vs1(vs1, vl);
+        VcompareOutVecMap vector_vd(vd, vl);
+        VcompareMaskVecMap vector_v0(v0, vl);
 
         #define VGE_VV    do {                    \
             if (vector_vs2(i) >= vector_vs1(i))   \
@@ -1928,7 +1928,7 @@ class Vcompare
                 vector_vd(i) = (OutType)0;        \
         } while(0)
 
-        for (int i = 0; i < num; i++) {
+        for (int i = 0; i < vl; i++) {
             if (!vm) {
                 if (vector_v0(0) & 0x1)
                     VGE_VV;
