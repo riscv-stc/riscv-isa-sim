@@ -524,7 +524,8 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (max)(const half& a, const half& b) {
 }
 
 EIGEN_ALWAYS_INLINE std::ostream& operator << (std::ostream& os, const half& v) {
-  os << static_cast<float>(v);
+  //os << static_cast<float>(v);
+  os << static_cast<float>(v) << "(0x" << std::hex << v.x << ")";
   return os;
 }
 
