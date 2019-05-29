@@ -685,6 +685,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV2TYPE(vlxhu_v);
   DEFINE_SV2TYPE(vlxe_v);
   DEFINE_SV2TYPE(vlxeu_v);
+  DEFINE_SV1TYPE(vlbff_v);
+  DEFINE_SV1TYPE(vlbuff_v);
+  DEFINE_SV1TYPE(vlhff_v);
+  DEFINE_SV1TYPE(vlhuff_v);
+  DEFINE_SV1TYPE(vleff_v);
+  DEFINE_SV1TYPE(vleuff_v);
+
   DEFINE_SV3TYPE(vsb_v);
   DEFINE_SV3TYPE(vsbu_v);
   DEFINE_SV3TYPE(vsh_v);
