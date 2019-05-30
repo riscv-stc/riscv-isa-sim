@@ -6,3 +6,4 @@ autom4te.cache/
 *.o
 *.d
 .gdb_history
+cscope.*
