@@ -736,6 +736,18 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV13TYPE(vfmsub_vv);
   DEFINE_SV14TYPE(vfnmadd_vf);
   DEFINE_SV13TYPE(vfnmadd_vv);
+  DEFINE_SV7TYPE(vfmin_vf);
+  DEFINE_SV6TYPE(vfmin_vv);
+  DEFINE_SV7TYPE(vfsgnj_vf);
+  DEFINE_SV6TYPE(vfsgnj_vv);
+  DEFINE_SV7TYPE(vfsgnjn_vf);
+  DEFINE_SV6TYPE(vfsgnjn_vv);
+  DEFINE_SV7TYPE(vfsgnjx_vf);
+  DEFINE_SV6TYPE(vfsgnjx_vv);
+  DEFINE_SV7TYPE(vfeq_vf);
+  DEFINE_SV6TYPE(vfeq_vv);
+  DEFINE_SV7TYPE(vfne_vf);
+  DEFINE_SV6TYPE(vfne_vv);
   DEFINE_SV15TYPE(vfmv_f_s);
   DEFINE_SV6TYPE(vfmax_vv);
   DEFINE_SV7TYPE(vfmax_vf);

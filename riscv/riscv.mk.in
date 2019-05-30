@@ -386,6 +386,18 @@ riscv_insn_list = \
 	vfmsub_vv \
 	vfnmsub_vf \
 	vfnmsub_vv \
+	vfmin_vf \
+	vfmin_vv \
+	vfsgnj_vf \
+	vfsgnj_vv \
+	vfsgnjn_vf \
+	vfsgnjn_vv \
+	vfsgnjx_vf \
+	vfsgnjx_vv \
+	vfeq_vf \
+	vfeq_vv \
+	vfne_vf \
+	vfne_vv \
 	vfmerge_vf \
 	vfmv_f_s \
 	vext_x_v \
