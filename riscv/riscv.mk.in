@@ -362,14 +362,18 @@ riscv_insn_list = \
 	vsxeu_v \
 	vsxh_v \
 	vsxhu_v \
-	vfmul_vf \
 	vfadd_vf \
 	vfadd_vv \
 	vfsub_vf \
 	vfsub_vv \
+	vfmul_vf \
+	vfmul_vv \
+	vfmacc_vf \
+	vfmacc_vv \
+	vfnmacc_vf \
+	vfnmacc_vv \
 	vfmerge_vf \
 	vext_x_v \
-	vfmacc_vf \
 	vfmax_vv \
 	vfmax_vf \
 	wfi \
