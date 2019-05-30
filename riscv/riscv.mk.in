@@ -398,6 +398,14 @@ riscv_insn_list = \
 	vfeq_vv \
 	vfne_vf \
 	vfne_vv \
+	vflt_vf \
+	vflt_vv \
+	vfgt_vf \
+	vfgt_vv \
+	vfle_vf \
+	vfle_vv \
+	vfge_vf \
+	vfge_vv \
 	vfmerge_vf \
 	vfmv_f_s \
 	vext_x_v \
