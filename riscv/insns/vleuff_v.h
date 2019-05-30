@@ -14,7 +14,7 @@ check_vstart{
 	case 16:
 		vector_for_each(idx){
 			check_v0hmask(idx);
-			int16_t tmp = MMU.load_uint16(RS1+idx*SEW/8);
+			uint16_t tmp = MMU.load_uint16(RS1+idx*SEW/8);
 			if(tmp == 0)
 				break;
 			WRITE_VRD_H(tmp, idx);

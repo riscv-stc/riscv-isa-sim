@@ -364,6 +364,9 @@ riscv_insn_list = \
 	vsxhu_v \
 	vfmul_vf \
 	vfadd_vf \
+	vfadd_vv \
+	vfsub_vf \
+	vfsub_vv \
 	vfmerge_vf \
 	vext_x_v \
 	vfmacc_vf \
