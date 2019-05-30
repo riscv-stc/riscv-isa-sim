@@ -1495,10 +1495,8 @@ int main(void)
     test_vmerge();
     test_vext();
     test_vma();
-  
-  /*
     test_vsgnj();
     test_vcompare();
-    */
+
     return 0;
 }
