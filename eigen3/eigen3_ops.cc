@@ -1,4 +1,4 @@
-//**
+/**
  * @file eigen3_ops.cc
  * @brief The Source Code About Eigen3 To Spike Interface
  *
