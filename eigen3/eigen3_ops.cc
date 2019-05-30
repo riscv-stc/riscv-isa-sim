@@ -1,4 +1,4 @@
-/**
+//**
  * @file eigen3_ops.cc
  * @brief The Source Code About Eigen3 To Spike Interface
  *
@@ -1265,7 +1265,7 @@ int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct Shap
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            rd_matrix(i, j) = *(half *)(rs2 + rs1_matrix(i, j));
+            rd_matrix(i, j) = *((half *)rs2 + rs1_matrix(i, j));
     
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
