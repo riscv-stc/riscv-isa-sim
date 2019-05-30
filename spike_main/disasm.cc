@@ -146,6 +146,12 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.v_uimm());
+  }
+} v_uimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
     return std::to_string((int)insn.shamt());
   }
 } shamt;
@@ -365,6 +371,8 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_SV8TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &vsew, &vlmul, &vediv})
   #define DEFINE_SV9TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &xrs2, &vm})
   #define DEFINE_SV10TYPE(code) DISASM_INSN(#code, code, 0, {&vrs3, &xrs1, &xrs2, &vm})
+  #define DEFINE_SV11TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &v_uimm, &vm})
+  #define DEFINE_SV12TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &xrs1, &vm})
   #define DEFINE_SV13TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs1, &vrs2, &vm})
   #define DEFINE_SV14TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &frs1, &vrs2, &vm})
   #define DEFINE_SV15TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &vrs2})
@@ -730,6 +738,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV4TYPE(vfmerge_vf);
   DEFINE_SV5TYPE(vext_x_v);
 
+  DEFINE_SV11TYPE(vslidedown_vi);
+  DEFINE_SV12TYPE(vslidedown_vx);
 
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});

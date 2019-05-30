@@ -87,6 +87,7 @@ public:
   int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
+  uint64_t v_uimm() { return x(15, 5); }
   uint64_t rd() { return x(7, 5); }
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
@@ -211,6 +212,7 @@ private:
 #define VRS3 READ_VREG(insn.rd())
 #define VR0  READ_VREG(0)
 #define VRD  READ_VREG(insn.rd())
+#define VUIMM	READ_REG(insn.v_uimm())
 #define FRD  READ_FREG(insn.rd())
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
@@ -237,11 +239,11 @@ private:
 #define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
 
-#define check_v0hmask(x) if(!VM & !(READ_VREG(0).vh[x])) continue; \
-						 else if(x > VL) {WRITE_VRD_H(0, x); continue;} \
+#define check_v0hmask(x) \
+	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;
 
-#define check_v0bmask(x) if(!VM & !(READ_VREG(0).vb[x])) continue; \
-						 else if(x > VL) {WRITE_VRD_B(0, x); continue;} \
+#define check_v0bmask(x) \
+	if(!VM & !(READ_VREG(0).vb[x] & 0x1)) continue;
 
 #define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else
