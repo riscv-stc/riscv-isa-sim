@@ -378,6 +378,14 @@ riscv_insn_list = \
 	vfmsac_vv \
 	vfnmsac_vf \
 	vfnmsac_vv \
+	vfmadd_vf \
+	vfmadd_vv \
+	vfnmadd_vf \
+	vfnmadd_vv \
+	vfmsub_vf \
+	vfmsub_vv \
+	vfnmsub_vf \
+	vfnmsub_vv \
 	vfmerge_vf \
 	vfmv_f_s \
 	vext_x_v \
