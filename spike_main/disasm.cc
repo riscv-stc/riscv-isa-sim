@@ -710,9 +710,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV10TYPE(vsxeu_v);
   DEFINE_SV10TYPE(vsxh_v);
   DEFINE_SV10TYPE(vsxhu_v);
+  DEFINE_SV4TYPE(vfadd_vf);
+  DEFINE_SV6TYPE(vfadd_vv);
+  DEFINE_SV4TYPE(vfsub_vf);
+  DEFINE_SV6TYPE(vfsub_vv);
+
 
   DEFINE_SV4TYPE(vfmul_vf);
-  DEFINE_SV4TYPE(vfadd_vf);
   DEFINE_SV4TYPE(vfmerge_vf);
   DEFINE_SV5TYPE(vext_x_v);
   DEFINE_SV2TYPE(vfmacc_vf);
