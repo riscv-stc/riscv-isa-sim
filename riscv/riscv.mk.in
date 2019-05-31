@@ -353,6 +353,9 @@ riscv_insn_list = \
 	vslidedown_vi \
 	vslidedown_vx \
 	vslide1down_vx \
+	vslideup_vi \
+	vslideup_vx \
+	vslide1up_vx \
 	vssb_v \
 	vssbu_v \
 	vssh_v \

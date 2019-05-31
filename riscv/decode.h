@@ -212,11 +212,11 @@ private:
 #define VRS3 READ_VREG(insn.rd())
 #define VR0  READ_VREG(0)
 #define VRD  READ_VREG(insn.rd())
-#define VUIMM	READ_REG(insn.v_uimm())
 #define FRD  READ_FREG(insn.rd())
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
 #define VL (STATE.vl)
+#define VUIMM	(insn.v_uimm())
 #define VSTART (STATE.vstart)
 #define VLMAX (LMUL*(VLEN/SEW))
 #define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
@@ -249,6 +249,8 @@ private:
 					 else
 
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
+#define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VLMAX; (x)++)
+
 
 
 #define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \

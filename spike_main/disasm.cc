@@ -768,6 +768,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV11TYPE(vslidedown_vi);
   DEFINE_SV12TYPE(vslidedown_vx);
   DEFINE_SV12TYPE(vslide1down_vx);
+  DEFINE_SV11TYPE(vslideup_vi);
+  DEFINE_SV12TYPE(vslideup_vx);
+  DEFINE_SV12TYPE(vslide1up_vx);
 
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
