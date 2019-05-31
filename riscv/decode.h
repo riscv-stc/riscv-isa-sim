@@ -87,6 +87,7 @@ public:
   int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
+  uint64_t v_uimm() { return x(15, 5); }
   uint64_t rd() { return x(7, 5); }
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
@@ -215,6 +216,7 @@ private:
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
 #define VL (STATE.vl)
+#define VUIMM	(insn.v_uimm())
 #define VSTART (STATE.vstart)
 #define VLMAX (LMUL*(VLEN/SEW))
 #define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
@@ -237,16 +239,18 @@ private:
 #define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
 
-#define check_v0hmask(x) if(!VM & !(READ_VREG(0).vh[x])) continue; \
-						 else if(x > VL) {WRITE_VRD_H(0, x); continue;} \
+#define check_v0hmask(x) \
+	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;
 
-#define check_v0bmask(x) if(!VM & !(READ_VREG(0).vb[x])) continue; \
-						 else if(x > VL) {WRITE_VRD_B(0, x); continue;} \
+#define check_v0bmask(x) \
+	if(!VM & !(READ_VREG(0).vb[x] & 0x1)) continue;
 
 #define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else
 
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
+#define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VLMAX; (x)++)
+
 
 
 #define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \

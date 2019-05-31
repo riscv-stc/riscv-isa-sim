@@ -961,9 +961,9 @@ static void test_vemv(void)
 }
 
 
-void test_vfwcvt(void)
+void test_vfcvt(void)
 {
-    Vfwcvt<uint16_t> cvt;
+    Vfcvt<uint16_t> cvt;
     int16_t vs2_i[VLMAX];
     uint16_t v0[VLMAX];
     half vd[VLMAX];
@@ -975,31 +975,31 @@ void test_vfwcvt(void)
         vd[i] = vd_init;
     }
 
-    TEST_OPEN_FILE("vfwcvt");
+    TEST_OPEN_FILE("vfcvt");
     TEST_ADD_MATRIX_U16(vs2_v, vs2_i, 1, VLMAX, VLMAX);
     TEST_ADD_MATRIX(vd, vd, 1, VLMAX, VLMAX);
 
-    PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 0");
+    PRINT_SUB_FUNC("vfcvt_f_x_v vm = 0");
     MEMSET_VD4GOLDEN;
-    cvt.vfwcvt_f_x_v(vs2_i, vd, 0, v0, VL);
+    cvt.vfcvt_f_x_v(vs2_i, vd, 0, v0, VL);
     TEST_ADD_MATRIX(golden_f_x_v_nm, vd, 1, VLMAX, VLMAX);
     printf_half(vd, VLMAX);
 
-    PRINT_SUB_FUNC("vfwcvt_f_x_v vm = 1");
+    PRINT_SUB_FUNC("vfcvt_f_x_v vm = 1");
     MEMSET_VD4GOLDEN;
-    cvt.vfwcvt_f_x_v(vs2_i, vd, 1, v0, VL);
+    cvt.vfcvt_f_x_v(vs2_i, vd, 1, v0, VL);
     TEST_ADD_MATRIX(golden_f_x_v_m, vd, 1, VLMAX, VLMAX);
     printf_half(vd, VLMAX);
 
-    PRINT_SUB_FUNC("vfwcvt_f_xu_v vm = 0");
+    PRINT_SUB_FUNC("vfcvt_f_xu_v vm = 0");
     MEMSET_VD4GOLDEN;
-    cvt.vfwcvt_f_xu_v((uint16_t *)vs2_i, vd, 0, v0, VL);
+    cvt.vfcvt_f_xu_v((uint16_t *)vs2_i, vd, 0, v0, VL);
     TEST_ADD_MATRIX(golden_f_xu_v_nm, vd, 1, VLMAX, VLMAX);
     printf_half(vd, VLMAX);
 
-    PRINT_SUB_FUNC("vfwcvt_f_xu_v vm = 1");
+    PRINT_SUB_FUNC("vfcvt_f_xu_v vm = 1");
     MEMSET_VD4GOLDEN;
-    cvt.vfwcvt_f_xu_v((uint16_t *)vs2_i, vd, 1, v0, VL);
+    cvt.vfcvt_f_xu_v((uint16_t *)vs2_i, vd, 1, v0, VL);
     TEST_ADD_MATRIX(golden_f_xu_v_m, vd, 1, VLMAX, VLMAX);
     printf_half(vd, VLMAX);
 
@@ -1489,7 +1489,7 @@ int main(void)
 
     /* vector insns */
     test_vadd();
-    test_vfwcvt();
+    test_vfcvt();
     test_vsub();
     test_vmul();
     test_vmerge();

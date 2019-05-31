@@ -146,6 +146,12 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.v_uimm());
+  }
+} v_uimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
     return std::to_string((int)insn.shamt());
   }
 } shamt;
@@ -365,6 +371,11 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_SV8TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &vsew, &vlmul, &vediv})
   #define DEFINE_SV9TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &xrs2, &vm})
   #define DEFINE_SV10TYPE(code) DISASM_INSN(#code, code, 0, {&vrs3, &xrs1, &xrs2, &vm})
+  #define DEFINE_SV11TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &v_uimm, &vm})
+  #define DEFINE_SV12TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &xrs1, &vm})
+  #define DEFINE_SV13TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs1, &vrs2, &vm})
+  #define DEFINE_SV14TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &frs1, &vrs2, &vm})
+  #define DEFINE_SV15TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &vrs2})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -691,7 +702,6 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV1TYPE(vlhuff_v);
   DEFINE_SV1TYPE(vleff_v);
   DEFINE_SV1TYPE(vleuff_v);
-
   DEFINE_SV3TYPE(vsb_v);
   DEFINE_SV3TYPE(vsbu_v);
   DEFINE_SV3TYPE(vsh_v);
@@ -714,14 +724,53 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV6TYPE(vfadd_vv);
   DEFINE_SV4TYPE(vfsub_vf);
   DEFINE_SV6TYPE(vfsub_vv);
-
-
-  DEFINE_SV4TYPE(vfmul_vf);
-  DEFINE_SV4TYPE(vfmerge_vf);
-  DEFINE_SV5TYPE(vext_x_v);
-  DEFINE_SV2TYPE(vfmacc_vf);
+  DEFINE_SV14TYPE(vfmacc_vf);
+  DEFINE_SV13TYPE(vfmacc_vv);
+  DEFINE_SV14TYPE(vfnmacc_vf);
+  DEFINE_SV13TYPE(vfnmacc_vv);
+  DEFINE_SV14TYPE(vfmadd_vf);
+  DEFINE_SV13TYPE(vfmadd_vv);
+  DEFINE_SV14TYPE(vfnmadd_vf);
+  DEFINE_SV13TYPE(vfnmadd_vv);
+  DEFINE_SV14TYPE(vfmsub_vf);
+  DEFINE_SV13TYPE(vfmsub_vv);
+  DEFINE_SV14TYPE(vfnmadd_vf);
+  DEFINE_SV13TYPE(vfnmadd_vv);
+  DEFINE_SV7TYPE(vfmin_vf);
+  DEFINE_SV6TYPE(vfmin_vv);
+  DEFINE_SV7TYPE(vfsgnj_vf);
+  DEFINE_SV6TYPE(vfsgnj_vv);
+  DEFINE_SV7TYPE(vfsgnjn_vf);
+  DEFINE_SV6TYPE(vfsgnjn_vv);
+  DEFINE_SV7TYPE(vfsgnjx_vf);
+  DEFINE_SV6TYPE(vfsgnjx_vv);
+  DEFINE_SV7TYPE(vfeq_vf);
+  DEFINE_SV6TYPE(vfeq_vv);
+  DEFINE_SV7TYPE(vfne_vf);
+  DEFINE_SV6TYPE(vfne_vv);
+  DEFINE_SV7TYPE(vflt_vf);
+  DEFINE_SV6TYPE(vflt_vv);
+  DEFINE_SV7TYPE(vfgt_vf);
+  DEFINE_SV6TYPE(vfgt_vv);
+  DEFINE_SV7TYPE(vfle_vf);
+  DEFINE_SV6TYPE(vfle_vv);
+  DEFINE_SV7TYPE(vfge_vf);
+  DEFINE_SV6TYPE(vfge_vv);
+  DEFINE_SV15TYPE(vfmv_f_s);
   DEFINE_SV6TYPE(vfmax_vv);
   DEFINE_SV7TYPE(vfmax_vf);
+  DEFINE_SV6TYPE(vfmul_vv);
+  DEFINE_SV4TYPE(vfmul_vf);
+
+  DEFINE_SV4TYPE(vfmerge_vf);
+  DEFINE_SV5TYPE(vext_x_v);
+
+  DEFINE_SV11TYPE(vslidedown_vi);
+  DEFINE_SV12TYPE(vslidedown_vx);
+  DEFINE_SV12TYPE(vslide1down_vx);
+  DEFINE_SV11TYPE(vslideup_vi);
+  DEFINE_SV12TYPE(vslideup_vx);
+  DEFINE_SV12TYPE(vslide1up_vx);
 
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
