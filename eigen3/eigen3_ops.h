@@ -143,31 +143,29 @@ public:
 };
 
 /**
- * @brief 加宽浮点/整数类型转换指令
+ * @brief 浮点/整数类型转换指令
  *
  * 九章处理器只支持 int16/uint16 到 fp16 的转换指令,即支持 vfcvt.f.xu.v 和 vfcvt.f.x.v。
  * 此外,该执行转换指令时 SEW 必须为 16b,否则将触发非法指令异常。
- * 当有将 int8/uint8 数据转换成 fp16 时,也会把 SEW 设置为 16b,在 load 数据的时候,
- * 就已经将数据宽度从 int8/uint8 扩展到了 int16/uint16
  */
 template <typename MaskType>
-class Vfwcvt
+class Vfcvt
 {
   public:
     int debug;
 
-    Vfwcvt(): debug(GLOBAL_DBG)
+    Vfcvt(): debug(GLOBAL_DBG)
     {
 
     }
 
-    typedef Map<Matrix<uint16_t, 1, Dynamic>> VfwcvtU16VecMap;
-    typedef Map<Matrix<int16_t, 1, Dynamic>> VfwcvtI16VecMap;
-    typedef Map<Matrix<half, 1, Dynamic>> VfwcvtHalfVecMap;
-    typedef Map<Matrix<MaskType, 1, Dynamic>> VfwcvtMaskVecMap;
+    typedef Map<Matrix<uint16_t, 1, Dynamic>> VfcvtU16VecMap;
+    typedef Map<Matrix<int16_t, 1, Dynamic>> VfcvtI16VecMap;
+    typedef Map<Matrix<half, 1, Dynamic>> VfcvtHalfVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfcvtMaskVecMap;
 
     /**
-     * vfwcvt_f_x_v() vfwcvt.f.x.v
+     * vfcvt_f_x_v() vfcvt.f.x.v
      *
      * convert signed integer to fp16 (int16 -> fp16)
      * @param vs2 源操作向量基地址
@@ -177,11 +175,11 @@ class Vfwcvt
      * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vfwcvt_f_x_v(int16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
+    int vfcvt_f_x_v(int16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
     {
-        VfwcvtI16VecMap vector_vs2(vs2, vl);
-        VfwcvtHalfVecMap vector_vd(vd, vl);
-        VfwcvtMaskVecMap vector_v0(v0, vl);
+        VfcvtI16VecMap vector_vs2(vs2, vl);
+        VfcvtHalfVecMap vector_vd(vd, vl);
+        VfcvtMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
             for (int i = 0; i < vl; i++) {
@@ -203,7 +201,7 @@ class Vfwcvt
     }
 
     /**
-     * vfwcvt_f_xu_v() vfwcvt.f.xu.v
+     * vfcvt_f_xu_v() vfcvt.f.xu.v
      *
      * convert uinsigned integer to fp16 (uint16 -> fp16)
      * @param vs2 源操作向量基地址
@@ -213,11 +211,11 @@ class Vfwcvt
      * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vfwcvt_f_xu_v(uint16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
+    int vfcvt_f_xu_v(uint16_t *vs2, half *vd, int vm, MaskType *v0, int vl)
     {
-        VfwcvtU16VecMap vector_vs2(vs2, vl);
-        VfwcvtHalfVecMap vector_vd(vd, vl);
-        VfwcvtMaskVecMap vector_v0(v0, vl);
+        VfcvtU16VecMap vector_vs2(vs2, vl);
+        VfcvtHalfVecMap vector_vd(vd, vl);
+        VfcvtMaskVecMap vector_v0(v0, vl);
 
         if (!vm) {
             for (int i = 0; i < vl; i++) {
