@@ -6,7 +6,7 @@ check_vstart{
 			vector_for_each(idx){
 				if (idx < VL) {
 				    check_v0bmask(idx);
-				    WRITE_VRD_B((RS1 >= VLMAX) ? 0 : VRS2.vb[RS1]);
+				    WRITE_VRD_B((RS1 >= VLMAX) ? 0 : VRS2.vb[RS1], idx);
 				}
 				else {
 				    WRITE_VRD_B(0, idx);
@@ -18,7 +18,7 @@ check_vstart{
 			vector_for_each(idx){
 				if (idx < VL) {
 				    check_v0hmask(idx);
-				    WRITE_VRD_H((RS1 >= VLMAX) ? 0 : VRS2.vh[RS1]);
+				    WRITE_VRD_H((RS1 >= VLMAX) ? 0 : VRS2.vh[RS1], idx);
 				}
 				else {
 				    WRITE_VRD_H(0, idx);
