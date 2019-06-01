@@ -398,23 +398,23 @@ riscv_insn_list = \
 	vfsgnjn_vv \
 	vfsgnjx_vf \
 	vfsgnjx_vv \
-	vfeq_vf \
-	vfeq_vv \
-	vfne_vf \
-	vfne_vv \
-	vflt_vf \
-	vflt_vv \
-	vfgt_vf \
-	vfgt_vv \
-	vfle_vf \
-	vfle_vv \
-	vfge_vf \
-	vfge_vv \
 	vfmerge_vf \
 	vfmv_f_s \
 	vext_x_v \
 	vfmax_vv \
 	vfmax_vf \
+	vmfeq_vf \
+	vmfeq_vv \
+	vmfge_vf \
+	vmfge_vv \
+	vmfgt_vf \
+	vmfgt_vv \
+	vmfle_vf \
+	vmfle_vv \
+	vmflt_vf \
+	vmflt_vv \
+	vmfne_vf \
+	vmfne_vv \
 	wfi \
 	xor \
 	xori \
