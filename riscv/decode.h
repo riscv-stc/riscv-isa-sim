@@ -250,8 +250,8 @@ private:
 
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
 #define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VLMAX; (x)++)
-
-
+#define vdh_clear_exceed(idx) if(idx > VL) {WRITE_VRD_H(0,idx); continue;} \
+								else
 
 #define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \
 					 (x).shape1_row = SHAPE1_ROW; \
