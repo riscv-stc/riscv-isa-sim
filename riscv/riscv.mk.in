@@ -345,6 +345,7 @@ riscv_insn_list = \
 	vleuff_v \
 	vlhff_v \
 	vlhuff_v \
+	vmsbf_m \
 	vmsif_m \
 	vmsof_m \
 	vrgather_vi \
