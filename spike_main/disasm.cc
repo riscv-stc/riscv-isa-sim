@@ -790,6 +790,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV11TYPE(vrgather_vi);
   DEFINE_SV17TYPE(vcompress_vm);
   DEFINE_SV18TYPE(vmv_s_x);
+  DEFINE_SV16TYPE(vid_v);
 
 
 
