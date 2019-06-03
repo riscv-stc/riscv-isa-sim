@@ -792,6 +792,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV18TYPE(vmv_s_x);
   DEFINE_SV16TYPE(vid_v);
   DEFINE_SV16TYPE(viota_m);
+  DEFINE_SV16TYPE(vmsof_m);
 
 
 
