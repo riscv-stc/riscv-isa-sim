@@ -5,11 +5,11 @@ check_vstart{
                 case 8:
 			vector_for_each_from_zero(idx) {
 				if (VRS2.vb[idx]) {
-				    WRITE_REG(insn.rd(), idx);
+				    WRITE_RD(idx);
 				    break;
 				}
 				if ((idx == (VLMAX -1)) && (!VRS2.vb[idx])) {
-				    WRITE_REG(insn.rd(), -1);
+				    WRITE_RD(-1);
 				}
 			}
                 break;
@@ -17,11 +17,11 @@ check_vstart{
                 case 16:
 			vector_for_each_from_zero(idx) {
 				if (VRS2.vh[idx]) {
-					WRITE_REG(insn.rd(), idx);
+					WRITE_RD(idx);
 					break;
 				}
 				if ((idx == (VLMAX -1)) && (!VRS2.vh[idx])) {
-				    WRITE_REG(insn.rd(), -1);
+				    WRITE_RD(-1);
 				}
 			}
                 break;
