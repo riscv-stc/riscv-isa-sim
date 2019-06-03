@@ -247,6 +247,9 @@ private:
 #define check_v0bmask(x) \
 	if(!VM & !(READ_VREG(0).vb[x] & 0x1)) continue;
 
+#define v0b_mask(x)	(!VM & !(READ_VREG(0).vb[x] & 0x1))
+#define v0h_mask(x)	(!VM & !(READ_VREG(0).vh[x] & 0x1))
+
 #define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else
 
