@@ -201,6 +201,7 @@ private:
 #define FRS1 READ_FREG(insn.rs1())
 #define FRS2 READ_FREG(insn.rs2())
 #define FRS3 READ_FREG(insn.rs3())
+#define FLEN (*p->get_flen())
 #define dirty_fp_state (STATE.mstatus |= MSTATUS_FS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define dirty_ext_state (STATE.mstatus |= MSTATUS_XS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define DO_WRITE_FREG(reg, value) (STATE.FPR.write(reg, value), dirty_fp_state)
@@ -219,6 +220,7 @@ private:
 #define VUIMM	(insn.v_uimm())
 #define VSTART (STATE.vstart)
 #define VLMAX (LMUL*(VLEN/SEW))
+#define VLMAX_NO_LMUL	(VLEN/SEW)
 #define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
 #define WRITE_VRD_B(value, idx) WRITE_VREG_B(insn.rd(), idx, value)
 
@@ -248,8 +250,12 @@ private:
 #define check_vstart if(VSTART >= VL) VSTART = 0; \
 					 else
 
+#define check_vl() if(VL == 0) return;
+
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
 #define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VLMAX; (x)++)
+#define vector_for_each_no_lmlu(x) for(unsigned int (x) = 0; (x) < VLMAX_NO_LMUL; (x)++)
+
 #define vdh_clear_exceed(idx) if(idx > VL) {WRITE_VRD_H(0,idx); continue;} \
 								else
 
