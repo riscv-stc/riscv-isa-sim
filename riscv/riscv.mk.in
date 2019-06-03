@@ -411,6 +411,7 @@ riscv_insn_list = \
 	vfsgnjx_vv \
 	vfmerge_vf \
 	vfmv_f_s \
+	vfmv_s_f \
 	vext_x_v \
 	vfmax_vv \
 	vfmax_vf \

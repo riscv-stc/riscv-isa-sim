@@ -380,6 +380,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_SV17TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vrs2, &vrs1})
   #define DEFINE_SV18TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1})
   #define DEFINE_SV19TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &vrs2, &vm})
+  #define DEFINE_SV20TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &frs1})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -761,6 +762,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV7TYPE(vmfge_vf);
   DEFINE_SV6TYPE(vmfge_vv);
   DEFINE_SV15TYPE(vfmv_f_s);
+  DEFINE_SV20TYPE(vfmv_s_f);
   DEFINE_SV6TYPE(vfmax_vv);
   DEFINE_SV7TYPE(vfmax_vf);
   DEFINE_SV6TYPE(vfmul_vv);
