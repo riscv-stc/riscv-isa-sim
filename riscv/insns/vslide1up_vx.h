@@ -8,14 +8,17 @@ check_vstart{
 			vector_for_each(idx) {
 				if (idx == VSTART && idx == 0) {
 				    check_v0bmask(idx);
-				    WRITE_VRD_B(xlen < SEW ? (RS1 & ((0x1 << xlen) - 1)) : RS1, idx);
+
+				    if (xlen < SEW)
+					WRITE_VRD_B(0, idx);
+				    WRITE_VRD_B(RS1, idx);
 				}
 				else if (idx >= start && idx < VL) {
 				    check_v0bmask(idx);
 				    WRITE_VRD_B(VRS2.vb[idx - 1], idx);
 				}
 				else {
-					WRITE_VRD_B(0, idx);
+				    WRITE_VRD_B(0, idx);
 				}
 			}
 		break;
@@ -24,7 +27,9 @@ check_vstart{
 			vector_for_each(idx) {
 				if (idx == VSTART && idx == 0) {
 				    check_v0hmask(idx);
-				    WRITE_VRD_H(xlen < SEW ? (RS1 & ((0x1 << xlen) - 1)) : RS1, idx);
+				    if (xlen < SEW)
+					WRITE_VRD_H(0, idx);
+				    WRITE_VRD_H(RS1, idx);
 				}
 				else if (idx >= start && idx < VL) {
 				    check_v0hmask(idx);
