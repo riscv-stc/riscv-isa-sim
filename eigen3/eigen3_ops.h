@@ -47,6 +47,32 @@ using namespace std;
     }                                           \
 } while(0)
 
+#define DBG_INFO4(flag, arg1, arg2, arg3, arg4) do {  \
+    if (flag) {                                       \
+        cout << __FUNCTION__ << endl;                 \
+        cout << #arg1":\n" << arg1 << endl;           \
+        cout << #arg2":\n" << arg2 << endl;           \
+        cout << #arg3":\n" << arg3 << endl;           \
+        cout << #arg4":\n" << arg4 << endl;           \
+    }                                                 \
+} while(0)
+
+#define DBG_INFO5(flag, arg1, arg2, arg3, arg4, arg5) do {  \
+    if (flag) {                                             \
+        cout << __FUNCTION__ << endl;                       \
+        cout << #arg1":\n" << arg1 << endl;                 \
+        cout << #arg2":\n" << arg2 << endl;                 \
+        cout << #arg3":\n" << arg3 << endl;                 \
+        cout << #arg4":\n" << arg4 << endl;                 \
+        cout << #arg5":\n" << arg5 << endl;                 \
+    }                                                       \
+} while(0)
+
+#define SET_BIT(number, bit) do   \
+    {                             \
+        number |= (0x1 << bit);   \ 
+    } while(0)
+
 /**
  * @brief 矩阵形状描述结构
  *
@@ -1563,7 +1589,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VEQ_VV;
             } else
                 VEQ_VV;
@@ -1599,7 +1625,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VNE_VF;
             } else
                 VNE_VF;
@@ -1636,7 +1662,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VNE_VV;
             } else
                 VNE_VV;
@@ -1672,7 +1698,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VLT_VF;
             } else
                 VLT_VF;
@@ -1709,7 +1735,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VLT_VV;
             } else
                 VLT_VV;
@@ -1745,7 +1771,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VLE_VF;
             } else
                 VLE_VF;
@@ -1782,7 +1808,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VLE_VV;
             } else
                 VLE_VV;
@@ -1818,7 +1844,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VGT_VF;
             } else
                 VGT_VF;
@@ -1855,7 +1881,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VGT_VV;
             } else
                 VGT_VV;
@@ -1891,7 +1917,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VGE_VF;
             } else
                 VGE_VF;
@@ -1928,7 +1954,7 @@ class Vcompare
 
         for (int i = 0; i < vl; i++) {
             if (!vm) {
-                if (vector_v0(0) & 0x1)
+                if (vector_v0(i) & 0x1)
                     VGE_VV;
             } else
                 VGE_VV;
@@ -1940,5 +1966,1082 @@ class Vcompare
     }
 };
 
+/**
+ * @brief 向量归约操作
+ *
+ * 以一个向量寄存器和一个向量寄存器元素 0 的标量为
+ * 输入, 对其做 reduction 操作
+ *
+ */
+template <typename Type, typename MaskType>
+class Vfred
+{
+  public:
+    int debug;
+
+    Vfred(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VfredVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfredMaskVecMap;
+
+    /**
+     * vfredosum_vs() vfredosum.vs   vd[0] = vs1[0] + sum(vs2)
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfredosum_vs(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VfredVecMap vector_vs2(vs2, vl);
+        VfredMaskVecMap vector_v0(v0, vl);
+        
+        vd[0] = vs1[0];
+        for (int i = 0; i < vl; i++)
+            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? 0 : vector_vs2(i));
+
+        if (debug) {
+            cout << __FUNCTION__ << endl;
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "vs1:\n" << vs1[0] << endl;
+            cout << "vd:\n" << vd[0] << endl;
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vl:\n" << vl << endl;
+        }
+
+        return 0;
+    }
+
+    /**
+     * vfredsum_vs() vfredsum.vs   vd[0] = vs1[0] + sum(vs2)
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfredsum_vs(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VfredVecMap vector_vs2(vs2, vl);
+        VfredMaskVecMap vector_v0(v0, vl);
+        
+        vd[0] = vs1[0];
+        for (int i = 0; i < vl; i++)
+            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? 0 : vector_vs2(i));
+
+        if (debug) {
+            cout << __FUNCTION__ << endl;
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "vs1:\n" << vs1[0] << endl;
+            cout << "vd:\n" << vd[0] << endl;
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vl:\n" << vl << endl;
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * vfredmin_vs() vfredmin.vs   vd[0] = min(vs1[0], vs2[0]..vs2[vl-1])
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfredmin_vs(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VfredVecMap vector_vs2(vs2, vl);
+        VfredMaskVecMap vector_v0(v0, vl);
+        
+        vd[0] = vs1[0];
+        for (int i = 0; i < vl; i++)
+            if (vm || (vector_v0[i] & 0x1))
+                vd[0] = (vd[0] > vector_vs2(i)) ? vector_vs2(i) : vd[0];    
+
+        if (debug) {
+            cout << __FUNCTION__ << endl;
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "vs1:\n" << vs1[0] << endl;
+            cout << "vd:\n" << vd[0] << endl;
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vl:\n" << vl << endl;
+        }
+        
+        return 0;   
+     }
+
+    /**
+     * vfredmax_vs() vfredmax.vs   vd[0] = max(vs1[0], vs2[0]..vs2[vl-1])
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfredmax_vs(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VfredVecMap vector_vs2(vs2, vl);
+        VfredMaskVecMap vector_v0(v0, vl);
+        
+        vd[0] = vs1[0];
+        for (int i = 0; i < vl; i++)
+            if (vm || (vector_v0[i] & 0x1))
+                vd[0] = (vd[0] < vector_vs2(i)) ? vector_vs2(i) : vd[0];    
+
+        if (debug) {
+            cout << __FUNCTION__ << endl;
+            cout << "vs2:\n" << vector_vs2 << endl;
+            cout << "vs1:\n" << vs1[0] << endl;
+            cout << "vd:\n" << vd[0] << endl;
+            cout << "vm:\n" << vm << endl;
+            cout << "v0:\n" << vector_v0 << endl;
+            cout << "vl:\n" << vl << endl;
+        }
+        
+        return 0;
+     }
+};
+
+/**
+ * @brief 向量屏蔽寄存器逻辑指令
+ *
+ * 向量屏蔽寄存器逻辑指令操作屏蔽寄存器
+ *
+ */
+template <typename Type>
+class Vlogic
+{
+  public:
+    int debug;
+
+    Vlogic(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VlogicVecMap;
+
+    /**
+     * vmand_mm() vmand.mm vd = vs1 & vs2
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmand_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i = vstart; i < vl; i++)
+            vector_vd(i) = vector_vs2(i) & vector_vs1(i);
+        
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmnand_mm() vmnand.mm vd = ~(vs1 & vs2)
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmnand_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i = vstart; i < vl; i++)
+            vector_vd(i) = ~(vector_vs2(i) & vector_vs1(i));
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmandnot_mm() vmandnot.mm vd = vs2 & ~vs1
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmandnot_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=vstart; i < vl; i++)
+            vector_vd(i) = vector_vs2(i) & (~vector_vs1(i));
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmxor_mm() vmxor.mm vd = vs1 ^ vs2
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmxor_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=vstart; i < vl; i++)
+            vector_vd(i) = vector_vs2(i) ^ vector_vs1(i);
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmor_mm() vmor.mm vd = vs1 | vs2
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmor_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=vstart; i < vl; i++)
+            vector_vd(i) = vector_vs2(i) | vector_vs1(i);
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmnor_mm() vmnor.mm vd = ~(vs1 | vs2)
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmnor_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=0; i < vl; i++)
+            vector_vd(i) = ~(vector_vs2(i) | vector_vs1(i));
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmornot_mm() vmornot.mm vd = vs2 | ~vs1
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmornot_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=vstart; i < vl; i++)
+            vector_vd(i) = vector_vs2(i) | (~vector_vs1(i));
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+
+    /**
+     * vmxor_mm() vmxor.mm vd = ~(vs2 ^ vs1)
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 原操作数基地址
+     * @param vd 目的数存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 起始元素
+     * @param vlmax 最大元素数量
+     * @return 执行结果
+     */
+    int vmxnor_mm(Type *vs2, Type *vs1, Type *vd, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VlogicVecMap vector_vs2(vs2, vl);
+        VlogicVecMap vector_vs1(vs1, vl);
+        VlogicVecMap vector_vd(vd, vlmax);
+
+        for (int i=0; i < vl; i++)
+            vector_vd(i) = ~(vector_vs2(i) ^ vector_vs1(i));
+
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO4(debug, vector_vs2, vector_vs1, vector_vd, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief 向量屏蔽计数
+ *
+ * 指令用来统计向量源屏蔽寄存器中 active 元素里的最低有效位为 1 的
+ * 屏蔽元素的数量,然后把结果写到标量寄存器 x 中。
+ *
+ */
+template <typename Type, typename MaskType>
+class Vmpopc
+{
+  public:
+    int debug;
+
+    Vmpopc(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VmpopcVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmpopcMaskVecMap;
+
+    /**
+     * vmpopc_m() vmpopc.m  x[rd] = sum_i ( vs2[i].LSB && v0[i].LSB )
+     *
+     * @param vs2 源操作向量基地址
+     * @param rd 目的数存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmpopc_m(Type *vs2, int *rd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VmpopcVecMap vector_vs2(vs2, vl);
+        VmpopcMaskVecMap vector_mask(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            number += (!vm && !(vector_mask(i) & 0x1)) ? 0 : vector_vs2(i) & 0x1;
+
+        *rd = number;
+
+        DBG_INFO5(debug, vector_vs2, vm, vector_mask, number, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief find-first-set mask bit
+ *
+ * 从索引0开始, 依次扫描源操作数指定的屏蔽向量, 寻找第一个mask有效的mask元素;
+ * 如果找到这样的 mask 元素, 就把对应的元素索引值写到目的寄存器 rd 中.
+ * 如果没有找到即写入-1.
+ *
+ */
+template <typename Type, typename MaskType>
+class Vmfirst
+{
+  public:
+    int debug;
+
+    Vmfirst(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VmfirstVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmfirstMaskVecMap;
+
+    /**
+     * vmfirst_m()  x[rd] = first(vs2[i].LSB && v0[i].LSB)
+     *
+     * @param vs2 源操作向量基地址
+     * @param rd 目的数存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmfirst_m(Type *vs2, int *rd, int vm, MaskType *mask, int vl)
+    {
+        VmfirstVecMap vector_vs2(vs2, vl);
+        VmfirstMaskVecMap vector_mask(mask, vl);
+        
+        *rd = -1;
+        for (int i=0; i < vl; i++)
+            if ((vm || (vector_mask(i) & 0x1)) && (vector_vs2(i) & 0x1)) {
+                *rd = i;
+                break;
+            }
+
+        DBG_INFO4(debug, vector_vs2, vm, vector_mask, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief set-before-first mask bit
+ *
+ * 第一个mask有效元素之前的所有active元素将被写 1, 之后包括自己的所有active元素则被写0.
+ * 
+ *
+ */
+template <typename Type, typename MaskType>
+class Vmsbf
+{
+  public:
+    int debug;
+
+    Vmsbf(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VmsbfVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmsbfMaskVecMap;
+
+    /**
+     * vmsbf_m()  vmsbf.m vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmsbf_m(Type *vs2, Type *vd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VmsbfVecMap vector_vs2(vs2, vl);
+        VmsbfVecMap vector_vd(vd, vl);
+        VmsbfMaskVecMap vector_mask(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_mask(i) & 0x1)) {
+                number += vector_vs2(i) & 0x1;
+                vector_vd(i) = number ? 0 : 1;
+            }
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_mask, number, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief set-inclue-first mask bit
+ *
+ * 第一个mask有效元素及之前的所有active元素将被写 1, 之后所有active元素则被写0.
+ * 
+ *
+ */
+template <typename Type, typename MaskType>
+class Vmsif
+{
+  public:
+    int debug;
+
+    Vmsif(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VmsifVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmsifMaskVecMap;
+
+    /**
+     * vmsbf_m()  vmsbf.m vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmsif_m(Type *vs2, Type *vd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VmsifVecMap vector_vs2(vs2, vl);
+        VmsifVecMap vector_vd(vd, vl);
+        VmsifMaskVecMap vector_mask(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_mask(i) & 0x1)) {
+                vector_vd(i) = number ? 0 : 1;
+                number += vector_vs2(i) & 0x1;
+            }
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_mask, number, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief set-only-first mask bit
+ *
+ * 第一个mask有效元素将被写 1, 其他active元素则被写0.
+ * 
+ *
+ */
+template <typename Type, typename MaskType>
+class Vmsof
+{
+  public:
+    int debug;
+
+    Vmsof(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VmsofVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VmsofMaskVecMap;
+
+    /**
+     * vmsof_m()  vmsof.m vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmsof_m(Type *vs2, Type *vd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VmsofVecMap vector_vs2(vs2, vl);
+        VmsofVecMap vector_vd(vd, vl);
+        VmsofMaskVecMap vector_v0(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_v0(i) & 0x1)) {
+                number += vector_vs2(i) & 0x1;
+                vector_vd(i) = (number == 1) ? 0 : 1;
+            }
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_v0, number, vl);
+        return 0;
+    }
+};
+
+/**
+ *
+ * @brief 对源操作数的向量元素所有之前active元素的mask有效位求和.
+ *
+ */
+template <typename Type, typename Typed, typename MaskType>
+class Viota
+{
+  public:
+    int debug;
+
+    Viota(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> ViotaVecMap;
+    typedef Map<Matrix<Typed, 1, Dynamic>> ViotaDstVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> ViotaMaskVecMap;
+
+    /**
+     * viota_m()  viota.m vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int viota_m(Type *vs2, Typed *vd, int vm, MaskType *mask, int vl)
+    {
+        Type number = static_cast<Type>(0);
+        ViotaVecMap vector_vs2(vs2, vl);
+        ViotaDstVecMap vector_vd(vd, vl);
+        ViotaMaskVecMap vector_v0(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_v0(i) & 0x1)) {
+                vector_vd(i) = number;
+                number += vector_vs2(i) & 0x1;
+            }
+        
+        DBG_INFO4(debug, vector_vs2, vector_vd, vector_v0, vl);
+        return 0;
+    }
+};
+
+/**
+ * 向量元素索引指令
+ * @brief 把每个元素的索引写入到目标向量寄存器组里, 从0到vl.
+ *        vs2 不会进行实际操作, 但必须设置成v0.
+ *
+ */
+template <typename Type, typename Typed, typename MaskType>
+class Vid
+{
+  public:
+    int debug;
+
+    Vid(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VidVecMap;
+    typedef Map<Matrix<Typed, 1, Dynamic>> VidDstVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VidMaskVecMap;
+
+    /**
+     * vid_v()  vid.v vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vid_v(Type *vs2, Typed *vd, int vm, MaskType *mask, int vl)
+    {
+        VidVecMap vector_vs2(vs2, vl);
+        VidDstVecMap vector_vd(vd, vl);
+        VidMaskVecMap vector_v0(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_v0(i) & 0x1)) 
+                vector_vd(i) = i;
+        
+        DBG_INFO4(debug, vector_vs2, vector_vd, vector_v0, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief 向量平移指令(Vector Slide Instructions) 
+ *
+ * slide指令对一个向量寄存器组的元素进行上下移动操作(以元素为单位)。 
+ *
+ */
+template <typename Type, typename TypeMask>
+class Vslide
+{
+  public:
+    int debug;
+
+    Vslide(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VslideVecMap;
+    typedef Map<Matrix<TypeMask, 1, Dynamic>> VslideMaskVecMap;
+
+    /**
+     * vslideup_vx() vslideup.vx 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 移动大小
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslideup_vx(Type *vs2, uint32_t rs1, Type *vd, uint32_t vm, 
+            TypeMask *v0, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VslideVecMap vector_vs2(vs2, vl);
+        VslideVecMap vector_vd(vd, vl);
+        VslideMaskVecMap vector_v0(v0, vl);
+        uint32_t start = (rs1 < vstart) ? vstart : rs1;
+
+        for (int i = start; i < vl; i++)
+            if (vm || (vector_v0(i) && 0x1))
+                vector_vd(i) = vector_vs2(i - start);
+        
+        //clear tail elment
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+        
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_v0, start, vm);
+        return 0;
+    }
+    
+    /**
+     * vslideup_vi() vslideup.vi 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 移动大小, 立即数版本
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslideup_vi(Type *vs2, uint32_t rs1, Type *vd, uint32_t vm, 
+            TypeMask *v0, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        return vslideup_vx(vs2, rs1, vd, vm, v0, vl, vstart, vlmax);
+    }
+
+    /**
+     * vslide1up_vx() vslide1up.vx 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 插入到vd[0]的数
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslide1up_vx(Type *vs2, Type rs1, Type *vd, uint32_t vm, TypeMask *v0, 
+            int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        vd[0] = rs1;
+        return vslideup_vx(vs2, 1, vd, vm, v0, vl, vstart, vlmax);
+    }
+
+    /**
+     * vslidedown_vx() vslidedown.vx 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 向下移动大小
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslidedown_vx(Type *vs2, uint32_t rs1, Type *vd, uint32_t vm, 
+            TypeMask *v0, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        VslideVecMap vector_vs2(vs2, vl);
+        VslideVecMap vector_vd(vd, vl);
+        VslideMaskVecMap vector_v0(v0, vl);
+
+        for (int i = vstart; i < vl; i++)
+            if (vm || (vector_v0(i) && 0x1))
+                vector_vd(i) = vector_vs2(i + rs1);
+        
+        for (int j = vl; j < vlmax; j++)
+            vector_vd(j) = 0;
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_v0, vl, vstart);
+        return 0;
+    }
+    
+    /**
+     * vslidedown_vi() vslidedown.vi 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 向下移动大小
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslidedown_vi(Type *vs2, uint32_t rs1, Type *vd, uint32_t vm, 
+            TypeMask *v0, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        return vslidedown_vx(vs2, rs1, vd, vm, v0, vl, vstart, vlmax);
+    }
+
+    /**
+     * vslide1down_vx() vslide1down.vx 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 插入尾部的向量
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vstart 移动起始元素
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vslide1down_vx(Type *vs2, Type rs1, Type *vd, uint32_t vm, 
+          TypeMask *v0, int vl, uint32_t vstart, uint32_t vlmax)
+    {
+        vd[vl-1] = rs1;
+        return vslidedown_vx(vs2, rs1, vd, vm, v0, vl, vstart, vlmax);        
+    }
+};
+
+/**
+ * @brief 向量寄存器聚集指令(Vector Register Gather Instructions) 
+ *
+ * 向量寄存器聚集指令从第二个源操作数读取向量元素, 元素索引由第一个源向量寄存器组给出。 
+ *
+ */
+template <typename Type, typename Type2, typename TypeMask>
+class Vrgather
+{
+  public:
+    int debug;
+
+    Vrgather(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VrgatherVecMap;
+    typedef Map<Matrix<Type2, 1, Dynamic>> VIndexVecMap;
+    typedef Map<Matrix<TypeMask, 1, Dynamic>> VrgatherMaskVecMap;
+
+    /**
+     * vrgather_vv() vrgather.vv 
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 索引存放基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vrgather_vv(Type *vs2, Type2 *vs1, Type *vd, uint32_t vm, 
+         TypeMask *v0, int vl, uint32_t vlmax)
+    {
+        VrgatherVecMap vector_vs2(vs2, vl);
+        VIndexVecMap vector_vs1(vs1, vl);
+        VrgatherVecMap vector_vd(vd, vl);
+        VrgatherMaskVecMap vector_v0(v0, vl);
+        
+        for (int i = 0; i < vl; i++)
+            if (vm || (vector_v0(i) & 0x1))
+                vector_vd(i) = (vector_vs1(i) < vlmax) ? vector_vs2(vector_vs1(i)) : 0;
+        
+        DBG_INFO5(debug, vector_vs2, vector_vs1, vector_vd, vector_v0, vm);
+        return 0;
+    }
+
+    /**
+     * vrgather_vx() vrgather.vx 
+     *
+     * @param vs2 源操作向量基地址
+     * @param rs1 索引值
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vrgather_vx(Type *vs2, uint32_t rs1, Type *vd, uint32_t vm, 
+         TypeMask *v0, int vl, uint32_t vlmax)
+    {
+        VrgatherVecMap vector_vs2(vs2, vl);
+        VrgatherVecMap vector_vd(vd, vl);
+        VrgatherMaskVecMap vector_v0(v0, vl);
+        
+        for (int i = 0; i < vl; i++)
+            if (vm || (vector_v0(i) & 0x1))
+                vector_vd(i) = (rs1 < vlmax) ? vector_vs2(rs1) : 0;
+        
+        DBG_INFO5(debug, vector_vs2, rs1, vector_vd, vector_v0, vm);
+        return 0;
+    }
+    
+    /**
+     * vrgather_vi() vrgather.vi 
+     *
+     * @param vs2 源操作向量基地址
+     * @param imm 索引值
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param v0 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @param vlmax 元素总数
+     * @return 执行结果
+     */
+    int vrgather_vi(Type *vs2, uint32_t imm, Type *vd, uint32_t vm, 
+         TypeMask *v0, int vl, uint32_t vlmax)
+    {
+        return vrgather_vx(vs2, imm, vd, vm, v0, vl, vlmax);
+    }
+    
+    /**
+     * vcompress_vm()  
+     *
+     * @param vs2 源操作向量基地址
+     * @param vs1 索引值列表
+     * @param vd 目的向量存放地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vcompress_vm(Type *vs2, Type2 *vs1, Type *vd, int vl)
+    {
+        VrgatherVecMap vector_vs2(vs2, vl);
+        VIndexVecMap vector_vs1(vs1, vl);
+        VrgatherVecMap vector_vd(vd, vl);
+        uint32_t number = 0;
+
+        for (int i = 0; i < vl; i++) {
+            if (vector_vs1(i) & 0x1) {
+                vector_vd(number) = vector_vs2(i);
+                number++;
+            }
+        }
+        
+        DBG_INFO5(debug, vector_vs2, vector_vs1, vector_vd, number, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief 向量浮点分类(Classify)指令
+ *
+ * Classify 指令检查源操作数中的每个浮点元素,并按照其值的不同将其分为 10 类。
+ *
+ */
+template <typename Type, typename MaskType>
+class Vfclass
+{
+  public:
+    int debug;
+
+    Vfclass(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<half, 1, Dynamic>> VfclassVecMap;
+    typedef Map<Matrix<Type, 1, Dynamic>> VfclassDstVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfclassMaskVecMap;
+
+    /**
+     * vfclass_v() vfclass.v
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfclass_v(half *vs2, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VfclassVecMap vector_vs2(vs2, vl);
+        VfclassDstVecMap vector_vd(vd, vl);
+        VfclassMaskVecMap vector_v0(v0, vl);
+        uint32_t bit = 0;
+
+        for (int i = 0; i < vl; i++) 
+        {
+            if (vm || (vector_v0(i) & 0x1))
+            {
+                if (vector_vs2(i).x & 0x7fff == 0x7c00)      //isinf 无穷大
+                    bit = vector_vs2(i).x & 0x8000 ? 0 : 7;
+                else if (vector_vs2(i).x & 0x7fff > 0x7c00)  //isnan
+                    bit = vector_vs2(i).x & 0x7e00 ? 8 : 9;
+                else if (0 == (vector_vs2(i).x & 0x7fff))    //+-0
+                    bit = vector_vs2(i).x & 0x8000 ? 4 : 3;
+                else if (!(vector_vs2(i).x & 0x7c00) && (vector_vs2(i).x & 0x3ff))
+                    bit = vector_vs2(i).x & 0x8000 ? 2 : 5;  //非规格化数
+                else
+                    bit = vector_vs2(i).x & 0x8000 ? 1 : 6;  //规格化数
+
+                SET_BIT(vector_vd(i), bit);
+            }
+        }
+
+        DBG_INFO4(debug, vector_vs2, vector_vd, vector_v0, vm);
+        return 0;
+    }
+};
 
 #endif
+
+
+
