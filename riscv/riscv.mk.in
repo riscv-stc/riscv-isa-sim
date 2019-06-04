@@ -350,6 +350,7 @@ riscv_insn_list = \
 	vmsbf_m \
 	vmsif_m \
 	vmsof_m \
+	vmv_s_x \
 	vrgather_vi \
 	vrgather_vv \
 	vrgather_vx \
