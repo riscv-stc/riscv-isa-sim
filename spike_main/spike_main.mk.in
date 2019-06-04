@@ -1,4 +1,5 @@
 spike_main_subproject_deps = \
+	Transport \
 	fesvr \
 	softfloat \
 	riscv \
@@ -12,3 +13,6 @@ spike_main_install_prog_srcs = \
 spike_main_hdrs = \
 
 spike_main_srcs = \
+
+spike_main_gen_hdrs = \
+	${Transport_gen_hdrs} \

@@ -21,6 +21,7 @@
 #include "specialize.h"
 #include "eigen3_ops.h"
 #include <cinttypes>
+#include "Transport/Interface.h"
 
 typedef int64_t sreg_t;
 typedef uint64_t reg_t;

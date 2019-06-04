@@ -527,6 +527,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(remw);
   DEFINE_RTYPE(remuw);
 
+  DEFINE_RTYPE(sync);
+  DEFINE_RTYPE(icxfer_p);
+
   DEFINE_NOARG(ecall);
   DEFINE_NOARG(ebreak);
   DEFINE_NOARG(uret);

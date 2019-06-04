@@ -4743,6 +4743,71 @@ $as_echo "#define SOFTFLOAT_ENABLED /**/" >>confdefs.h
 
 
 
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libgrpc++" >&5
+$as_echo_n "checking for libgrpc++... " >&6; }
+if ${ac_cv_lib_grpc+:} false; then : 
+  $as_echo_n "(cached) " >&6 
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgrpc++  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */  
+#include <grpcpp/grpcpp.h>
+using grpc::Channel;
+int
+main ()
+{
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_grpc=yes
+else
+  ac_cv_lib_grpc=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_grpc" >&5
+$as_echo "$ac_cv_lib_grpc" >&6; } 
+if test "x$ac_cv_lib_grpc" = xyes; then : 
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBGRPC++ 1
+_ACEOF
+
+  LIBS="`pkg-config --libs grpc++`  `pkg-config --libs protobuf` $LIBS"
+
+else
+  as_fn_error $? "libgrpc++ is required" "$LINENO" 5
+fi
+
+
+
+    # Add subproject to our running list
+
+    subprojects="$subprojects Transport"
+
+    # Process the subproject appropriately. If enabled add it to the
+    # $enabled_subprojects running shell variable, set a
+    # SUBPROJECT_ENABLED C define, and include the appropriate
+    # 'subproject.ac'.
+
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : Transport" >&5
+$as_echo "$as_me: configuring default subproject : Transport" >&6;}
+      ac_config_files="$ac_config_files Transport.mk:Transport/Transport.mk.in"
+
+      enable_Transport_sproj="yes"
+      subprojects_enabled="$subprojects_enabled Transport"
+  cat >>confdefs.h <<_ACEOF
+#define INVALID_CORE_ID -1
+_ACEOF
+
+$as_echo "#define  TRANSPORT_ENABLED /**/" >>confdefs.h
+
+
+
 
 
     # Add subproject to our running list
@@ -4847,6 +4912,8 @@ ac_config_files="$ac_config_files riscv-fesvr.pc"
 ac_config_files="$ac_config_files riscv-softfloat.pc"
 
 ac_config_files="$ac_config_files riscv-eigen3.pc"
+
+ac_config_files="$ac_config_files riscv-Transport.pc"
 
 ac_config_files="$ac_config_files riscv-dummy_rocc.pc"
 

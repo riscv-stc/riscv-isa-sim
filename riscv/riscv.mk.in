@@ -237,6 +237,8 @@ riscv_insn_list = \
 	fsub_q \
 	fsub_s \
 	fsw \
+	icxfer_p \
+	icxfer_m \
 	jal \
 	jalr \
 	lb \
@@ -287,6 +289,7 @@ riscv_insn_list = \
 	sub \
 	subw \
 	sw \
+	sync \
 	vcompress_vm \
 	veacc_m \
 	veadd_mf \

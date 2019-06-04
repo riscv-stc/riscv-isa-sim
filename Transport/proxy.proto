@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package proxy;
+
+import "google/protobuf/empty.proto";
+
+// Proxy Interface for spike messages
+service Proxy {
+  // send a message
+  rpc Send(Message) returns (google.protobuf.Empty);
+  // receive messages via stream
+  rpc Recv(RecvRequest) returns (stream Message);
+  // do bsp sync
+  rpc Sync(SyncRequest) returns (google.protobuf.Empty);
+}
+
+// Message present a message
+message Message {
+  int32 source = 1;
+  int32 target = 2;
+  bool  forwarding = 3;
+  bytes body = 4;
+}
+
+// RecvRequest present a request for spike to receive messages
+message RecvRequest {
+  int32 spikeId = 1;
+}
+
+// SyncRequest present a request for spike to do sync operation
+message SyncRequest {
+  int32 spikeId = 1;
+}
