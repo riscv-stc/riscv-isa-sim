@@ -805,6 +805,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV19TYPE(vmfirst_m);
   DEFINE_SV19TYPE(vmpopc_m);
   DEFINE_SV16TYPE(vfclass_v);
+  DEFINE_SV4TYPE(vmford_vf);
+  DEFINE_SV6TYPE(vmford_vv);
 
 
 

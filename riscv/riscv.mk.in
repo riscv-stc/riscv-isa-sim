@@ -346,6 +346,8 @@ riscv_insn_list = \
 	vlhff_v \
 	vlhuff_v \
 	vmfirst_m \
+	vmford_vf \
+	vmford_vv \
 	vmpopc_m \
 	vmsbf_m \
 	vmsif_m \
