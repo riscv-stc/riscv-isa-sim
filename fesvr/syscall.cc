@@ -12,6 +12,8 @@
 #include <termios.h>
 #include <sstream>
 #include <iostream>
+#include "eigen3_ops.h"
+
 using namespace std::placeholders;
 
 #define RISCV_AT_FDCWD -100
@@ -70,6 +72,7 @@ syscall_t::syscall_t(htif_t* htif)
   table[79] = &syscall_t::sys_fstatat;
   table[80] = &syscall_t::sys_fstat;
   table[93] = &syscall_t::sys_exit;
+  table[100] = &syscall_t::sys_log;
   table[1039] = &syscall_t::sys_lstat;
   table[2011] = &syscall_t::sys_getmainvars;
 
@@ -152,6 +155,26 @@ reg_t syscall_t::sys_write(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, 
   std::vector<char> buf(len);
   memif->read(pbuf, len, &buf[0]);
   reg_t ret = sysret_errno(write(fds.lookup(fd), &buf[0], len));
+  return ret;
+}
+
+reg_t syscall_t::sys_log(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, reg_t a5, reg_t a6)
+{
+  int i;
+  half v;
+  reg_t ret = 0;
+  char s[16];
+
+  len = len >> 1;
+  std::vector<uint16_t> buf(len);
+  memif->read(pbuf, len*2, &buf[0]);
+
+  for (i=0; i<len; i++) {
+    v.x = buf[i];
+    sprintf(s, "%10.3f,", (float)v);
+    ret |= sysret_errno(write(fds.lookup(fd), s, strlen(s)));
+  }
+
   return ret;
 }
 
