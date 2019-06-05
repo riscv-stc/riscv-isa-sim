@@ -2005,7 +2005,7 @@ class Vfred
         
         vd[0] = vs1[0];
         for (int i = 0; i < vl; i++)
-            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? 0 : vector_vs2(i));
+            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
 
         if (debug) {
             cout << __FUNCTION__ << endl;
@@ -2038,7 +2038,7 @@ class Vfred
         
         vd[0] = vs1[0];
         for (int i = 0; i < vl; i++)
-            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? 0 : vector_vs2(i));
+            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
 
         if (debug) {
             cout << __FUNCTION__ << endl;

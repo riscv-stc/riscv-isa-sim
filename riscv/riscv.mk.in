@@ -404,6 +404,7 @@ riscv_insn_list = \
 	vfnmsub_vv \
 	vfmin_vf \
 	vfmin_vv \
+	vfredosum_vs \
 	vfsgnj_vf \
 	vfsgnj_vv \
 	vfsgnjn_vf \
