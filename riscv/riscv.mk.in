@@ -432,6 +432,7 @@ riscv_insn_list = \
 	vmflt_vv \
 	vmfne_vf \
 	vmfne_vv \
+	vfclass_v \
 	vfcvt_f_xu_v\
 	vfcvt_f_x_v \
 	vmand_mm \
