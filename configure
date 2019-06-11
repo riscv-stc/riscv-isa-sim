@@ -4745,11 +4745,16 @@ $as_echo "#define SOFTFLOAT_ENABLED /**/" >>confdefs.h
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libgrpc++" >&5
 $as_echo_n "checking for libgrpc++... " >&6; }
+
+
+export PKG_CONFIG_PATH=$RISCV/lib/pkgconfig
+sh $srcdir/thirdParty/thirdParty.sh $srcdir/thirdParty || as_fn_error $? "thirdParty fail to build" "$LINENO"
+
 if ${ac_cv_lib_grpc+:} false; then : 
   $as_echo_n "(cached) " >&6 
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lgrpc++  $LIBS"
+  LIBS="`pkg-config --cflags grpc++` `pkg-config --libs grpc++`  `pkg-config --libs protobuf` $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */  
 #include <grpcpp/grpcpp.h>
@@ -4776,8 +4781,8 @@ if test "x$ac_cv_lib_grpc" = xyes; then :
 #define HAVE_LIBGRPC++ 1
 _ACEOF
 
-  LIBS="`pkg-config --libs grpc++`  `pkg-config --libs protobuf` $LIBS"
-
+  LIBS="`pkg-config --libs grpc++` `pkg-config --libs grpc` `pkg-config --libs protobuf` `pkg-config --libs libcares` $LIBS"
+  CXXFLAGS="`pkg-config --cflags grpc++` `pkg-config --cflags grpc` `pkg-config --cflags protobuf` `pkg-config --cflags libcares` $CXXFLAGS"
 else
   as_fn_error $? "libgrpc++ is required" "$LINENO" 5
 fi
