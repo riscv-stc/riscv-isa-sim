@@ -4748,7 +4748,7 @@ $as_echo_n "checking for libgrpc++... " >&6; }
 
 
 export PKG_CONFIG_PATH=$RISCV/lib/pkgconfig
-sh $srcdir/thirdParty/thirdParty.sh $srcdir/thirdParty || as_fn_error $? "thirdParty fail to build" "$LINENO"
+bash $srcdir/thirdParty/thirdParty.sh $srcdir/thirdParty || as_fn_error $? "thirdParty fail to build" "$LINENO"
 
 if ${ac_cv_lib_grpc+:} false; then : 
   $as_echo_n "(cached) " >&6 
