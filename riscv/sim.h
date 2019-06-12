@@ -30,7 +30,9 @@ public:
   ~sim_t();
 
   // run the simulation to completion
-  int run();
+  int run(const char *fname_load, const char *fname_dump);
+  void load_heap(const char *path);
+  void dump_heap(const char *path);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);

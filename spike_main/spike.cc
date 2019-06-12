@@ -111,6 +111,8 @@ int main(int argc, char** argv)
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
   int coreId = INVALID_CORE_ID;
+  const char *load_file = NULL;
+  const char *dump_file = NULL;
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned progsize = 2;
@@ -176,6 +178,15 @@ int main(int argc, char** argv)
       [&](const char* s){support_hasel = false;});
   parser.option(0, "debug-no-abstract-csr", 0,
       [&](const char* s){support_abstract_csr_access = false;});
+  
+  /* a backdoor for ncbet
+   * load-path is case input path
+   * dump-path is memory dump path, for ncbet get result
+   */
+  parser.option(0, "load-file", 1,
+      [&](const char* s){load_file = s;});
+  parser.option(0, "dump-file", 1,
+      [&](const char* s){dump_file = s;});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -219,5 +230,5 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
-  return s.run();
+  return s.run(load_file, dump_file);
 }

@@ -6,6 +6,7 @@
 #include "remote_bitbang.h"
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <climits>
 #include <cstdlib>
@@ -95,11 +96,99 @@ void sim_t::main()
   }
 }
 
-int sim_t::run()
+void sim_t::load_heap(const char *fname)
 {
+  memif_t mem(this);
+  if (!fname)
+    return;
+
+  std::cout << "Load heap file " << fname << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str == "dat") {
+    std::ifstream ifs(fname, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << __FUNCTION__ << ": Error opening file";
+        return;
+    }
+
+    char buf[512];
+    addr_t addr = 0x1002C000;
+    while(!ifs.eof()) {
+      ifs.getline(buf, 512);
+      char *p = buf;
+      for (int i = 0; i < 64; i++, p += 5, addr += 2) {
+        uint16_t data = (uint16_t)strtol(p, NULL, 16);
+        mem.write(addr, 2, &data);
+      }
+    }
+    ifs.close();
+  } else if (suffix_str == "bin") {
+    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) {
+        std::cout << __FUNCTION__ << ": Error opening file";
+        return;
+    std::cout << "ERROR: unsupport load bin file now......" << std::endl;
+    exit(1);
+    }
+  } else {
+      std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+      exit(1);
+  }
+}
+
+void sim_t::dump_heap(const char *fname)
+{
+  memif_t mem(this);
+  if (!fname)
+    return;
+
+  std::cout << "Dump heap file " << fname << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str == "dat") {
+    std::ofstream ofs(fname, std::ios::out);
+    if (!ofs.is_open()) {
+        std::cout << __FUNCTION__ << ": Error opening file";
+        return;
+    }
+
+    uint16_t data;
+    char buf[5];
+    for (addr_t addr = 0; addr < 0x40000; addr += 2) {
+      mem.read(0x1002C000 + addr, 2, &data);
+      sprintf(buf, "%04x", data);
+      ofs << buf << " ";
+      if (!((addr + 2) % 128))
+        ofs << endl;
+    }
+
+    ofs.close();
+  } else if (suffix_str == "bin") {
+    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) {
+        std::cout << __FUNCTION__ << ": Error opening file";
+        return;
+    std::cout << "ERROR: unsupport load bin file now......" << std::endl;
+    exit(1);
+    }
+  } else {
+      std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+      exit(1);
+  }
+}
+
+int sim_t::run(const char *fname_load, const char *fname_dump)
+{
+  int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);
-  return htif_t::run();
+  load_heap(fname_load);
+  stat = htif_t::run();
+  dump_heap(fname_dump);
+  return stat;
 }
 
 void sim_t::step(size_t n)
