@@ -51,7 +51,7 @@ class Stream {
 
   /**
    * @brief post function of recv function in BSP module
-   * @param coreId: ID of core(spike)
+   * @param coreId: ID of source core(spike)
    * @param data: address of data
    * @param dataSize: size of data
    * @param streamType: type of a stream

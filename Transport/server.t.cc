@@ -1,9 +1,10 @@
 /**
  * See LICENSE for license details
  * Transportsrc=../Transport/
- * g++ -g -O0 -I${Transportsrc} -I. -std=c++11 ${Transportsrc}/server.t.cc
- * libTransport.a `pkg-config --libs protobuf` `pkg-config --libs grpc++`
- * `pkg-config --libs protobuf` -o testServer
+ *  export PKG_CONFIG_PATH=/home/simon/opt/riscv/lib/pkgconfig/ && g++ -g -O0
+ * -I${Transportsrc} -I. -std=c++11 ${Transportsrc}/server.t.cc libTransport.a
+ * `pkg-config --libs protobuf` `pkg-config --libs grpc++` `pkg-config --cflags
+ * grpc` `pkg-config --libs protobuf` -o testServer
  *
  * @author Jiang,Bin
  *
@@ -51,6 +52,8 @@ class ServerContextServiceImpl final : public Proxy::Service {
       } else {
         proxy::Message msg;
         msg.set_body("recv:" + std::to_string(count));
+        msg.set_source(12);
+        msg.set_target(1);
         writer->Write(msg);
       }
     }

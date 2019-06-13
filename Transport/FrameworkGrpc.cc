@@ -126,8 +126,14 @@ void FrameworkGrpc::loadToRecvQueue(void) {
   while (reader->Read(&reply)) {
     auto stream = Stream::getInstance(streamType);
     // enqueue data to message queue
+
+    if (reply.target() != mCoreId) {
+      std::cout << "message is sent to " << reply.target() << " nor " << mCoreId
+                << std::endl;
+      continue;
+    }
     if (stream &&
-        stream->recvPost(mCoreId, reply.mutable_body()->data(),
+        stream->recvPost(reply.source(), reply.mutable_body()->data(),
                          reply.mutable_body()->size(), streamType) == false) {
       std::cout << "fail to post receive message" << std::endl;
     }
