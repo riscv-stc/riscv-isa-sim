@@ -74,7 +74,7 @@ class ServerContextServiceImpl final : public Proxy::Service {
  * @brief RunServer
  */
 void RunServer() {
-  std::string server_address("localhost:50051");
+  std::string server_address("localhost:3291");
   ServerContextServiceImpl service;
 
   ServerBuilder builder;

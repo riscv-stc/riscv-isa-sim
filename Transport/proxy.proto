@@ -9,7 +9,7 @@ service Proxy {
   // send a message
   rpc Send(Message) returns (google.protobuf.Empty);
   // receive messages via stream
-  rpc Recv(RecvRequest) returns (stream Message);
+  rpc Recv(stream RecvRequest) returns (stream Message);
   // do bsp sync
   rpc Sync(SyncRequest) returns (google.protobuf.Empty);
 }

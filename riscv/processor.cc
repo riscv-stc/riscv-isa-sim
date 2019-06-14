@@ -163,7 +163,7 @@ void processor_t::reset()
     ext->reset(); // reset the extension
 
   if (sim)
-    sim->proc_reset(id);
+    sim->proc_reset(0); // TODO, workaround: id is 26~28, cause segment fault
 }
 
 // Count number of contiguous 0 bits starting from the LSB.

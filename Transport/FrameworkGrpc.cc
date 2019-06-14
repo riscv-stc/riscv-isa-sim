@@ -107,7 +107,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
   if (gGrpcClient->mRecvStub == nullptr) {
     std::cout << "recv stub is null, since grpc doesn't initialize"
               << std::endl;
-    return false;
+    return;
   }
   // only message stream has recv queue
   StreamType streamType = StreamType::STREAM_MESSAGE;
@@ -121,15 +121,19 @@ void FrameworkGrpc::loadToRecvQueue(void) {
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReader<Message>> reader(
-      mRecvStub->Recv(&context, request));
-  while (reader->Read(&reply)) {
+  std::unique_ptr<grpc::ClientReaderWriter<RecvRequest, Message>> readWriter(
+      mRecvStub->Recv(&context));
+
+  readWriter->Write(request);
+
+  while (readWriter->Read(&reply)) {
     auto stream = Stream::getInstance(streamType);
     // enqueue data to message queue
 
     if (reply.target() != mCoreId) {
       std::cout << "message is sent to " << reply.target() << " nor " << mCoreId
                 << std::endl;
+      readWriter->Write(request);
       continue;
     }
     if (stream &&
@@ -137,8 +141,10 @@ void FrameworkGrpc::loadToRecvQueue(void) {
                          reply.mutable_body()->size(), streamType) == false) {
       std::cout << "fail to post receive message" << std::endl;
     }
+
+    readWriter->Write(request);
   }
-  Status status = reader->Finish();
+  Status status = readWriter->Finish();
 
   if (status.ok()) {
   } else {
