@@ -41,9 +41,12 @@ class ServerContextServiceImpl final : public Proxy::Service {
     return Status::OK;
   }
 
-  Status Recv(ServerContext* context, const ::proxy::RecvRequest* request,
-              grpc::ServerWriter<::proxy::Message>* writer) override {
-    std::cout << "Recv--source ID:" << request->spikeid() << std::endl;
+  Status Recv(ServerContext* context,
+              grpc::ServerReaderWriter< ::proxy::Message, ::proxy::RecvRequest>*
+                  stream) override {
+    proxy::RecvRequest request;
+    stream->Read(&request);
+    std::cout << "Recv--source ID:" << request.spikeid() << std::endl;
     while (1) {
       while (!bSent)
         ;
@@ -54,7 +57,8 @@ class ServerContextServiceImpl final : public Proxy::Service {
         msg.set_body("recv:" + std::to_string(count));
         msg.set_source(12);
         msg.set_target(1);
-        writer->Write(msg);
+        stream->Write(msg);
+        stream->Read(&request);
       }
     }
     return Status::OK;
