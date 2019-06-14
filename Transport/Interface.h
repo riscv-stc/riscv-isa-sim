@@ -49,7 +49,7 @@ class Interface {
    */
   static bool init(uint16_t coreId, SIM_S *sim,
                    std::string grpcServerAddr = "localhost",
-                   int grpcServerPort = 50051);
+                   int grpcServerPort = 3291);
 
   /**
    * @brief get singleton instance of a framework
