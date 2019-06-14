@@ -443,10 +443,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_XAMO(sc_d)
 
   DEFINE_FLOAD(flw)
+  DEFINE_FLOAD(flhw)
   DEFINE_FLOAD(fld)
   DEFINE_FLOAD(flq)
 
   DEFINE_FSTORE(fsw)
+  DEFINE_FSTORE(fshw)
   DEFINE_FSTORE(fsd)
   DEFINE_FSTORE(fsq)
 

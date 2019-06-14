@@ -189,6 +189,7 @@ riscv_insn_list = \
 	fle_d \
 	fle_q \
 	fle_s \
+	flhw \
 	flq \
 	flt_d \
 	flt_q \
@@ -220,6 +221,7 @@ riscv_insn_list = \
 	fnmsub_q \
 	fnmsub_s \
 	fsd \
+	fshw \
 	fsgnj_d \
 	fsgnj_q \
 	fsgnjn_d \
