@@ -9,6 +9,7 @@
 #define TRANSPORT_FRAMEWORK_GRPC_H
 
 #include <grpcpp/grpcpp.h>
+#include <mutex>
 #include <thread>
 #include "Framework.h"
 #include "Stream.h"
@@ -76,8 +77,29 @@ class FrameworkGrpc : public Framework {
    * @brief receive data from grpc server and store them in message queue
    */
   void loadToRecvQueue(void);
-
   std::thread mRecvThread;  // thread to run loadToRecvQueue
+
+  /**
+   * @brief dump a block of memory in target
+   * @param addr: start address of memory to dump
+   * @param size: size of memory to dump
+   * @param syncCount: count of done sync, default is -1
+   * @return true - success; false - fail
+   */
+  bool dump(uint32_t addr, uint32_t size, int32_t syncCount = -1);
+
+  /**
+   * @brief wait for grpc request to dump memory in target
+   */
+  void waitDumpRequest(void);
+  std::thread mDumpMemThread;  // thread to run loadToRecvQueue
+
+  bool mSyncDumpFlag = false;  // flag to dump memory when sync done
+  uint32_t mSyncDumpAddr;      // start of memory to dump when sync done
+  uint32_t mSyncDumpSize;      // length of memory to dump when sync done
+  std::mutex mDumpMutex;       // mutex for above data
+
+  uint32_t mSyncCount = 0;  // count of done sync
 };
 }
 

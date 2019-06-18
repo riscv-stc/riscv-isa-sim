@@ -5,6 +5,7 @@
  *
  */
 #include "Stream.h"
+#include "StreamDumpMem.h"
 #include "StreamMessage.h"
 
 using namespace Transport;
@@ -81,4 +82,13 @@ bool Stream::recvPost(uint16_t coreId, const char* data, uint32_t dataSize,
     // Rdma stream
     return true;
   }
+}
+
+/**
+ * @brief dump memory in target to data
+ */
+bool Stream::dump(uint32_t addr, uint32_t size, std::string* data) {
+  auto streamDump = dynamic_cast<StreamDumpMem*>(this);
+  streamDump->dump(dynamic_cast<simif_t*>(gSim)->addr_to_mem(addr), size, data);
+  return false;
 }

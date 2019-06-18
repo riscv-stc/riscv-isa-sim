@@ -47,15 +47,18 @@ class Framework : public Interface {
    * @param sim: pionter to sim_t
    * @param grpcServerAddr: address of grpc server
    * @param grpcServerPort: port of grpc server
+   * @param logServerAddr: address of log server
+   * @param logServerPort: port of log server
    * @return true - success; false - fail
    */
   static bool init(uint16_t coreId, SIM_S *sim, std::string grpcServerAddr,
-                   int grpcServerPort);
+                   int grpcServerPort, std::string logServerAddr,
+                   int logServerPort);
   /**
    * @brief initialize grpc framework
    * @param coreId: ID of core(spike)
-   * @param serverAddr: address of grpc server
-   * @param serverPort: port of grpc server
+   * @param serverAddr: address of grpc/log server
+   * @param serverPort: port of grpc/log server
    * @return true - success; false - fail
    */
   virtual bool init(uint16_t coreId, std::string serverAddr, int serverPort);

@@ -59,6 +59,15 @@ class Stream {
    */
   bool recvPost(uint16_t coreId, const char *data, uint32_t dataSize,
                 Interface::StreamType streamType);
+
+  /**
+   * @brief dump memory in target to data
+   * @param addr: start address of memory to dump
+   * @param size: size of memory to dump
+   * @param[out] data: store dumped memory to data
+   * @return true - success; false - fail
+   */
+  bool dump(uint32_t addr, uint32_t size, std::string *data);
 };
 }
 

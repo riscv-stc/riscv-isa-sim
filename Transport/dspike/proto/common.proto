@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package dspike.proto;
+
+message DumpInfo {
+    int32 spikeId = 1;
+    int32 dumpId = 2;
+    int32 timestamp = 3;
+    int32 start = 4;
+    int32 length = 5;
+    int32 syncCount = 6;
+}
+
+// DumpParam present a param for spike to do dump
+message DumpParam {
+    oneof trigger {
+        bool now = 1;
+        bool onsync = 2;
+    }
+    int32 start = 4;
+    int32 length = 5;
+}
