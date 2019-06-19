@@ -3091,16 +3091,16 @@ class Vfclass
         {
             if (vm || (vector_v0(i) & 0x1))
             {
-                if (vector_vs2(i).x & 0x7fff == 0x7c00)      //isinf 无穷大
+                if (isinf(vector_vs2(i)))                     //isinf 无穷大
                     bit = vector_vs2(i).x & 0x8000 ? 0 : 7;
-                else if (vector_vs2(i).x & 0x7fff > 0x7c00)  //isnan
+                else if (isnan(vector_vs2(i)))                //isnan
                     bit = vector_vs2(i).x & 0x400 ? 9 : 8;
-                else if (0 == (vector_vs2(i).x & 0x7fff))    //+-0
-                    bit = vector_vs2(i).x & 0x8000 ? 4 : 3;
+                else if (0 == (vector_vs2(i).x & 0x7fff))     //+-0
+                    bit = vector_vs2(i).x & 0x8000 ? 3 : 4;
                 else if (!(vector_vs2(i).x & 0x7c00) && (vector_vs2(i).x & 0x3ff))
-                    bit = vector_vs2(i).x & 0x8000 ? 2 : 5;  //非规格化数
+                    bit = vector_vs2(i).x & 0x8000 ? 2 : 5;   //非规格化数
                 else
-                    bit = vector_vs2(i).x & 0x8000 ? 1 : 6;  //规格化数
+                    bit = vector_vs2(i).x & 0x8000 ? 1 : 6;   //规格化数
 
                 SET_BIT(vector_vd(i), bit);
             }
