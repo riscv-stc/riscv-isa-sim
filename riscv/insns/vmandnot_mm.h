@@ -6,7 +6,7 @@ check_vstart{
 			break;
 			case 16:
 				vdh_clear_exceed(idx){
-					WRITE_VRD_H((VRS1.vh[idx] & 0x1) & ~(VRS2.vh[idx] & 0x1), idx);
+					WRITE_VRD_H((VRS2.vh[idx] & 0x1) && (!(VRS1.vh[idx] & 0x1)), idx);
 				}
 			break;
 		}
