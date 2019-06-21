@@ -158,7 +158,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 }
 
 /**
- * implement send function of BSP module
+ * implement sync function of BSP module
  */
 bool FrameworkGrpc::sync(StreamType streamType) {
   if (gGrpcClient->mSyncStub == nullptr) {

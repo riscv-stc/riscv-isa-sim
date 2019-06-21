@@ -21,7 +21,7 @@ static __attribute__((constructor)) void REGISTER_INSTANCE() {
     try {
       StreamDumpMem::gStreamDumpMem = new StreamDumpMem;
       StreamDumpMem::gStreamDumpMem->registerInstance(
-          Interface::STREAM_MESSAGE, StreamDumpMem::gStreamDumpMem);
+          Interface::STREAM_DUMP, StreamDumpMem::gStreamDumpMem);
     } catch (std::bad_alloc &e) {
       std::cout << "fail to alloc:" << e.what();
     }

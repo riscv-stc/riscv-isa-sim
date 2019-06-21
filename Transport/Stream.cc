@@ -61,6 +61,11 @@ bool Stream::recvPost(uint16_t coreId, const char* data, uint32_t dataSize,
     uint32_t QMax = proc->get_csr(CSR_TRMMC);
 
     auto streamMessage = dynamic_cast<StreamMessage*>(this);
+    if (streamMessage == nullptr) {
+      std::cout << "fail to get stream message instance" << std::endl;
+      return false;
+    }
+
     // configure queue information
     if (!streamMessage->setQueueInfo(
             dynamic_cast<simif_t*>(gSim)->addr_to_mem(bufRV), bufRV, bufSize,
