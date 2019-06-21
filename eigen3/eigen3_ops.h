@@ -511,7 +511,7 @@ class Vmul
  * Type 输入向量，输出向量，输入标量的数据类型
  * MaskType mask向量的数据类型
  */
-template <typename Type, typename MaskType>
+template <typename Type, typename Typef, typename MaskType>
 class Vmerge
 {
   public:
@@ -535,22 +535,18 @@ class Vmerge
      * @param vl 向量长度(准确的说应该是个数)
      * @return 执行结果
      */
-    int vmerge_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
+    int vmerge_vf(Type *vs2, Typef rs1, Type *vd, int vm, MaskType *v0, int vl)
     {
         VmergeDataVecMap vector_vs2(vs2, vl);
         VmergeDataVecMap vector_vd(vd, vl);
         VmergeMaskVecMap vector_v0(v0, vl);
 
         /* vm = 1, vd[0...n] = rs1 */
-        if (vm)
-            vector_vd = vector_vd.Constant(1, vl, rs1);
-        else {
-            for (int i = 0; i < vl; i++) {
-                if (vector_v0(i) & 0x1)
-                    vector_vd(i) = vector_vs2(i);
-                else
-                    vector_vd(i) = rs1;
-            }
+        for (int i = 0; i < vl; i++) {
+            if (vm || vector_v0(i) & 0x1)
+                vector_vd(i) = rs1;
+            else
+                vector_vd(i) = vector_vs2(i);
         }
 
         DBG_VECTOR_VF;
