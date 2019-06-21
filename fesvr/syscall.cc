@@ -13,6 +13,7 @@
 #include <sstream>
 #include <iostream>
 #include "eigen3_ops.h"
+#include "Transport/Interface.h"
 
 using namespace std::placeholders;
 
@@ -154,6 +155,13 @@ reg_t syscall_t::sys_write(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, 
 {
   std::vector<char> buf(len);
   memif->read(pbuf, len, &buf[0]);
+
+  if (fd == 1) {  // only log stdout
+    auto logger = Transport::Interface::getInstance(
+        Transport::Interface::FRAMEWORK_UDP_LOG);
+    if (logger) logger->console(&buf[0], len);
+  }
+
   reg_t ret = sysret_errno(write(fds.lookup(fd), &buf[0], len));
   return ret;
 }

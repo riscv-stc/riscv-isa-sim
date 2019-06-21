@@ -6,6 +6,7 @@
  */
 #include "Framework.h"
 #include "FrameworkGrpc.h"
+#include "FrameworkUdpLog.h"
 #include "Stream.h"
 
 using namespace Transport;
@@ -34,8 +35,9 @@ bool Framework::registerInstance(FrameworkType frameworkType,
  * initialize framework
  */
 bool Framework::init(uint16_t coreId, SIM_S* sim, std::string grpcServerAddr,
-                     int grpcServerPort) {
-  bool ret;
+                     int grpcServerPort, std::string logServerAddr,
+                     int logServerPort) {
+  bool ret = false;
 
   // initialize stream
   ret = Stream::init(static_cast<sim_t*>(sim));
@@ -49,7 +51,17 @@ bool Framework::init(uint16_t coreId, SIM_S* sim, std::string grpcServerAddr,
    */
   auto grpcClient =
       dynamic_cast<FrameworkGrpc*>(Framework::getInstance(FRAMEWORK_GRPC));
-  ret = grpcClient->init(coreId, grpcServerAddr, grpcServerPort);
+  if (grpcClient) {
+    ret = grpcClient->init(coreId, grpcServerAddr, grpcServerPort);
+  }
+  if (ret == false) return ret;
+
+  // initialize udp(log) framework
+  auto logClient =
+      dynamic_cast<FrameworkUdpLog*>(Framework::getInstance(FRAMEWORK_UDP_LOG));
+  if (logClient) {
+    ret = logClient->init(coreId, logServerAddr, logServerPort);
+  }
   if (ret == false) return ret;
 
   return ret;

@@ -3,6 +3,7 @@ syntax = "proto3";
 package proxy;
 
 import "google/protobuf/empty.proto";
+import "dspike/proto/common.proto";
 
 // Proxy Interface for spike messages
 service Proxy {
@@ -12,6 +13,11 @@ service Proxy {
   rpc Recv(stream RecvRequest) returns (stream Message);
   // do bsp sync
   rpc Sync(SyncRequest) returns (google.protobuf.Empty);
+
+  // upload dump data to proxy
+  rpc Dump(DumpData) returns (google.protobuf.Empty);
+  // wait for proxy send a DumpParam to get dump data or turn on/off sync dump
+  rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam);
 }
 
 // Message present a message
@@ -29,5 +35,16 @@ message RecvRequest {
 
 // SyncRequest present a request for spike to do sync operation
 message SyncRequest {
+  int32 spikeId = 1;
+}
+
+// DumpData present a dump data of spike
+message DumpData {
+  dspike.proto.DumpInfo info = 1;
+  bytes data = 2;
+}
+
+// WaitDumpRequest present a request for spike to receive dump param
+message WaitDumpRequest {
   int32 spikeId = 1;
 }

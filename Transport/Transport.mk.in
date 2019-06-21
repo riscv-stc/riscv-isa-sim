@@ -1,26 +1,38 @@
 Transport_CFLAGS = -fPIC
 
 Transport_srcs = \
+  common.grpc.pb.cc \
+  common.pb.cc \
   proxy.grpc.pb.cc \
   proxy.pb.cc \
   Interface.cc \
   Framework.cc \
   FrameworkGrpc.cc \
+  FrameworkUdpLog.cc \
   Stream.cc \
   StreamMessage.cc \
+  StreamDumpMem.cc \
 
 Transport_gen_hdrs = \
-proxy.grpc.pb.h \
-proxy.pb.h \
+  dspike/proto/common.grpc.pb.h \
+  dspike/proto/common.pb.h \
+  proxy.grpc.pb.h \
+  proxy.pb.h \
 
-proxy.pb.cc : proxy.proto
+Transport_protos = \
+  proxy.pb.cc \
+  proxy.pb.h \
+  proxy.grpc.pb.cc \
+  proxy.grpc.pb.h \
+  common.pb.cc \
+  dspike/proto/common.pb.h \
+  common.grpc.pb.cc \
+  dspike/proto/common.grpc.pb.h
+
+$(Transport_protos) : proxy.proto dspike/proto/common.proto
+	protoc --cpp_out=.  --proto_path=$(src_dir)/Transport dspike/proto/common.proto
+	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` --proto_path=$(src_dir)/Transport dspike/proto/common.proto
+	cp dspike/proto/common.*.cc .
 	protoc --cpp_out=.  --proto_path=$(src_dir)/Transport proxy.proto
-
-proxy.pb.h : proxy.proto
-	protoc --cpp_out=.  --proto_path=$(src_dir)/Transport proxy.proto
-
-proxy.grpc.pb.cc :proxy.pb.cc
 	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` --proto_path=$(src_dir)/Transport proxy.proto
 
-proxy.grpc.pb.h :proxy.pb.cc
-	protoc --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` --proto_path=$(src_dir)/Transport proxy.proto

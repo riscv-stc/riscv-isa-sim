@@ -63,6 +63,11 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
   gGrpcClient->mRecvThread = std::thread(func);
   gGrpcClient->mRecvThread.detach();
 
+  // start a thread to dump memory of target
+  auto funcDump = std::bind(&FrameworkGrpc::waitDumpRequest, gGrpcClient);
+  gGrpcClient->mDumpMemThread = std::thread(funcDump);
+  gGrpcClient->mDumpMemThread.detach();
+
   return true;
 }
 
@@ -146,8 +151,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
   }
   Status status = readWriter->Finish();
 
-  if (status.ok()) {
-  } else {
+  if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
   }
@@ -173,9 +177,107 @@ bool FrameworkGrpc::sync(StreamType streamType) {
   // actual RPC.
   Status status = mSyncStub->Sync(&context, request, &reply);
 
+  mSyncCount++;
+
+  // dump memory
+  if (mSyncDumpFlag) {
+    uint32_t addr;
+    uint32_t size = 0;
+    {
+      std::lock_guard<std::mutex> lock(mDumpMutex);
+      if (mSyncDumpFlag) {
+        addr = mSyncDumpAddr;
+        size = mSyncDumpSize;
+      }
+    }
+    if (size != 0) addr = dump(addr, size, mSyncCount);
+  }
+
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
 
   return status.ok();
+}
+
+/**
+ * dump a block of memory in target
+ */
+bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
+  if (gGrpcClient->mSendStub == nullptr) {
+    std::cout << "send stub is null, since grpc doesn't initialize"
+              << std::endl;
+    return false;
+  }
+
+  // prepare message data
+  proxy::DumpData request;
+  auto info = new dspike::proto::DumpInfo;
+  info->set_spikeid(mCoreId);
+  info->set_synccount(syncCount);
+  info->set_start(addr);
+  info->set_length(size);
+  request.set_allocated_info(info);
+
+  auto data = request.mutable_data();
+  // dump memory into data
+  auto stream = Stream::getInstance(STREAM_DUMP);
+  stream->dump(addr, size, data);
+
+  // container for the data we expect from the server
+  google::protobuf::Empty reply;
+
+  // context for the client
+  ClientContext context;
+
+  // actual RPC
+  Status status = mSendStub->Dump(&context, request, &reply);
+
+  if (!status.ok())
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+
+  return status.ok();
+}
+
+/**
+ * wait for grpc request to dump memory in target
+ */
+void FrameworkGrpc::waitDumpRequest(void) {
+  while (1) {
+    proxy::WaitDumpRequest request;
+    request.set_spikeid(mCoreId);
+    dspike::proto::DumpParam reply;
+
+    // context for the client
+    ClientContext context;
+
+    // actual RPC
+    std::unique_ptr<grpc::ClientReader<dspike::proto::DumpParam>> reader(
+        mRecvStub->WaitDump(&context, request));
+    while (reader->Read(&reply)) {
+      switch (reply.trigger_case()) {
+        // request to dump in done sync
+        case dspike::proto::DumpParam::kOnsync:
+          std::lock_guard<std::mutex> lock(mDumpMutex);
+          mSyncDumpFlag = reply.onsync();
+          mSyncDumpAddr = reply.start();
+          mSyncDumpSize = reply.length();
+          break;
+        // request to dump now
+        case dspike::proto::DumpParam::kNow:
+          dump(reply.start(), reply.length());
+          break;
+        default:
+          std::cout << "dump reply is empty" << std::endl;
+      }
+    }
+    Status status = reader->Finish();
+
+    if (!status.ok()) {
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
+      break;
+    }
+  }
 }
