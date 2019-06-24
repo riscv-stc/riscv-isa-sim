@@ -48,14 +48,14 @@ class Interface {
    * @param grpcServerAddr: address of grpc server, default is localhost
    * @param grpcServerPort: port of grpc server, default is 3291
    * @param logServerAddr: address of log server, default is 127.0.0.1
-   * @param logServerPort: port of log server, default is 3292
+   * @param logServerPort: port of log server, default is 3291
    * @return true - success; false - fail
    */
   static bool init(uint16_t coreId, SIM_S *sim,
                    std::string grpcServerAddr = "localhost",
                    int grpcServerPort = 3291,
                    std::string logServerAddr = "127.0.0.1",
-                   int logServerPort = 3292);
+                   int logServerPort = 3291);
 
   /**
    * @brief get singleton instance of a framework

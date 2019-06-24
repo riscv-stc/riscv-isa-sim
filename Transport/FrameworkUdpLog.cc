@@ -66,9 +66,11 @@ bool FrameworkUdpLog::console(char *data, uint32_t size) {
   if (mSockFd < 0) return false;
 
   if (size > 0) {
-    int sent = sendto(mSockFd, data, size, 0, (struct sockaddr *)&mSockAddr,
-                      mSockAddrLen);
-    if (size != sent)
+    std::string message = "logs,spike_id=" + std::to_string(mCoreId) +
+                          " message=\"" + std::string(data, size) + "\"";
+    int sent = sendto(mSockFd, message.data(), message.size(), 0,
+                      (struct sockaddr *)&mSockAddr, mSockAddrLen);
+    if (message.size() != sent)
       std::cout << "sendto fails, sent:" << sent << "size:" << size
                 << std::endl;
   }

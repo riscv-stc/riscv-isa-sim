@@ -72,6 +72,9 @@ class FrameworkGrpc : public Framework {
   std::unique_ptr<Proxy::Stub> mSendStub = nullptr;  // stub for send service
   std::unique_ptr<Proxy::Stub> mRecvStub = nullptr;  // stub for recv service
   std::unique_ptr<Proxy::Stub> mSyncStub = nullptr;  // stub for sync service
+  std::unique_ptr<Proxy::Stub> mDumpStub = nullptr;  // stub for dump service
+  std::unique_ptr<Proxy::Stub> mWaitDumpStub =
+      nullptr;  // stub for wait dump service
 
   /**
    * @brief receive data from grpc server and store them in message queue
@@ -79,6 +82,9 @@ class FrameworkGrpc : public Framework {
   void loadToRecvQueue(void);
   std::thread mRecvThread;  // thread to run loadToRecvQueue
 
+#define DEFAULT_DUMP_ADDR 0x10000000
+#define DEFAULT_DUMP_SIZE 0x100
+#define INVALID_DUMP_VAL -1
   /**
    * @brief dump a block of memory in target
    * @param addr: start address of memory to dump

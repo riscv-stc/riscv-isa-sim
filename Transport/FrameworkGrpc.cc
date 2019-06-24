@@ -52,7 +52,15 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
   gGrpcClient->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
       gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
 
+  gGrpcClient->mDumpStub = Proxy::NewStub(grpc::CreateChannel(
+      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+
+  gGrpcClient->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
+      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+
   if (gGrpcClient->mSendStub == nullptr || gGrpcClient->mRecvStub == nullptr ||
+      gGrpcClient->mDumpStub == nullptr ||
+      gGrpcClient->mWaitDumpStub == nullptr ||
       gGrpcClient->mSyncStub == nullptr) {
     std::cout << "failt to new stub" << std::endl;
     return false;
@@ -204,8 +212,8 @@ bool FrameworkGrpc::sync(StreamType streamType) {
  * dump a block of memory in target
  */
 bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
-  if (gGrpcClient->mSendStub == nullptr) {
-    std::cout << "send stub is null, since grpc doesn't initialize"
+  if (gGrpcClient->mDumpStub == nullptr) {
+    std::cout << "Dumpd stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
   }
@@ -231,7 +239,7 @@ bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
   ClientContext context;
 
   // actual RPC
-  Status status = mSendStub->Dump(&context, request, &reply);
+  Status status = mDumpStub->Dump(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -254,22 +262,24 @@ void FrameworkGrpc::waitDumpRequest(void) {
 
     // actual RPC
     std::unique_ptr<grpc::ClientReader<dspike::proto::DumpParam>> reader(
-        mRecvStub->WaitDump(&context, request));
+        mWaitDumpStub->WaitDump(&context, request));
     while (reader->Read(&reply)) {
-      switch (reply.trigger_case()) {
-        // request to dump in done sync
-        case dspike::proto::DumpParam::kOnsync:
-          std::lock_guard<std::mutex> lock(mDumpMutex);
-          mSyncDumpFlag = reply.onsync();
-          mSyncDumpAddr = reply.start();
-          mSyncDumpSize = reply.length();
-          break;
+      // request to dump in done sync
+      if (reply.trigger_case() == dspike::proto::DumpParam::kOnsync) {
+        std::lock_guard<std::mutex> lock(mDumpMutex);
+        mSyncDumpFlag = reply.onsync();
+        mSyncDumpAddr = reply.start() == INVALID_DUMP_VAL ? DEFAULT_DUMP_ADDR
+                                                          : reply.start();
+        mSyncDumpSize = reply.length() == INVALID_DUMP_VAL ? DEFAULT_DUMP_SIZE
+                                                           : reply.length();
+      } else if (reply.trigger_case() == dspike::proto::DumpParam::kNow) {
         // request to dump now
-        case dspike::proto::DumpParam::kNow:
-          dump(reply.start(), reply.length());
-          break;
-        default:
-          std::cout << "dump reply is empty" << std::endl;
+        dump(reply.start() == INVALID_DUMP_VAL ? DEFAULT_DUMP_ADDR
+                                               : reply.start(),
+             reply.length() == INVALID_DUMP_VAL ? DEFAULT_DUMP_SIZE
+                                                : reply.length());
+      } else {
+        std::cout << "dump reply is empty" << std::endl;
       }
     }
     Status status = reader->Finish();
