@@ -95,7 +95,7 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   proxy::Message request;
   request.set_source(mCoreId);
   request.set_target(targetCoreId);
-  request.set_forwarding(true);  // TODO, it's useful?
+  request.set_forwarding(false);
   request.set_body(data, dataSize);
   // container for the data we expect from the server
   google::protobuf::Empty reply;
