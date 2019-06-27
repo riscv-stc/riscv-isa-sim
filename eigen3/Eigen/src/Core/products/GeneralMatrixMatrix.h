@@ -215,7 +215,7 @@ struct gemm_functor
   void initParallelSession(Index num_threads) const
   {
     m_blocking.initParallel(m_lhs.rows(), m_rhs.cols(), m_lhs.cols(), num_threads);
-    m_blocking.allocateA();
+    m_blocking.allocateAll();
   }
 
   void operator() (Index row, Index rows, Index col=0, Index cols=-1, GemmParallelInfo<Index>* info=0) const

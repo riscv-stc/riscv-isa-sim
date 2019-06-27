@@ -94,9 +94,10 @@ void parallelize_gemm(const Functor& func, Index rows, Index cols, Index depth, 
   // parallelizer mechanism has to be redisigned anyway.
   EIGEN_UNUSED_VARIABLE(depth);
   EIGEN_UNUSED_VARIABLE(transpose);
+  Eigen::initParallel();
+  func.initParallelSession(1);
   func(0,rows, 0,cols);
 #else
-
   // Dynamically check whether we should enable or disable OpenMP.
   // The conditions are:
   // - the max number of threads we can create is greater than 1
