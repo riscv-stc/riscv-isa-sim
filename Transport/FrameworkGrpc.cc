@@ -84,7 +84,7 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
  */
 bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
                          char* data, int dataSize, StreamType streamType,
-                         uint8_t lut) {
+                         uint8_t lut, uint16_t tag, uint16_t mark) {
   if (gGrpcClient->mSendStub == nullptr) {
     std::cout << "send stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -97,6 +97,8 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   request.set_target(targetCoreId);
   request.set_forwarding(false);
   request.set_body(data, dataSize);
+  request.set_tag(tag);
+  request.set_mark(mark);
   // container for the data we expect from the server
   google::protobuf::Empty reply;
 

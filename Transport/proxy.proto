@@ -26,6 +26,8 @@ message Message {
   int32 target = 2;
   bool  forwarding = 3;
   bytes body = 4;
+  int32 tag = 5;
+  int32 mark = 6;
 }
 
 // RecvRequest present a request for spike to receive messages
