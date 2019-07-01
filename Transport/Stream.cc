@@ -42,7 +42,8 @@ bool Stream::registerInstance(Interface::StreamType streamType,
  * post function of recv function in BSP module
  */
 bool Stream::recvPost(uint16_t coreId, const char* data, uint32_t dataSize,
-                      Interface::StreamType streamType) {
+                      Interface::StreamType streamType, uint16_t tag,
+                      uint16_t mark) {
   // Message stream
   if (streamType == Interface::STREAM_MESSAGE) {
     // spike must only emulate one processor
@@ -75,7 +76,7 @@ bool Stream::recvPost(uint16_t coreId, const char* data, uint32_t dataSize,
     }
 
     // enqueue new data
-    streamMessage->enqueue(coreId, data, dataSize);
+    streamMessage->enqueue(coreId, data, dataSize, tag, mark);
 
     // update latest queue information to CSRs
     if (streamMessage->getQueueInfo(QHead, QCount)) {

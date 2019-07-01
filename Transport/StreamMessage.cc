@@ -70,7 +70,7 @@ void *StreamMessage::toHostAddr(uint32_t rvAddr) {
  * enqueue a data to message queue
  */
 bool StreamMessage::enqueue(uint16_t coreId, const char *data,
-                            uint32_t dataSize) {
+                            uint32_t dataSize, uint16_t tag, uint16_t mark) {
   // validate for message queue
   if (mBufferSize <= sizeof(MessageHeader) * mMaxMsgs) {
     std::cout << "size of message queue is too small:" << mBufferSize
@@ -180,6 +180,8 @@ bool StreamMessage::enqueue(uint16_t coreId, const char *data,
   // set new message's header and body
   newHost->nextRV = 0;
   newHost->size = dataSize;
+  newHost->tag = tag;
+  newHost->reserved[0] = mark;
   newHost->coreId = coreId;
   memcpy((char *)toHostAddr(newHost->bodyRV), data, dataSize);
   mQueueInfo.count++;

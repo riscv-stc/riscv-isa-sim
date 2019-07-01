@@ -84,7 +84,7 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
  */
 bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
                          char* data, int dataSize, StreamType streamType,
-                         uint8_t lut, uint16_t tag, uint16_t mark) {
+                         uint16_t tag, uint16_t mark, uint8_t lut) {
   if (gGrpcClient->mSendStub == nullptr) {
     std::cout << "send stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -153,7 +153,8 @@ void FrameworkGrpc::loadToRecvQueue(void) {
     }
     if (stream &&
         stream->recvPost(reply.source(), reply.mutable_body()->data(),
-                         reply.mutable_body()->size(), streamType) == false) {
+                         reply.mutable_body()->size(), streamType, reply.tag(),
+                         reply.mark()) == false) {
       std::cout << "fail to post receive message" << std::endl;
     }
 

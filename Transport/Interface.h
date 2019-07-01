@@ -77,8 +77,8 @@ class Interface {
    */
   virtual bool send(uint16_t targetChipId, uint16_t targetCoreId, char *data,
                     int dataSize, StreamType streamType = STREAM_MESSAGE,
-                    uint8_t lut = LUT_DISABLE,
-                    uint16_t tag = 0, uint16_t mark = 0);
+                    uint16_t tag = 0, uint16_t mark = 0,
+                    uint8_t lut = LUT_DISABLE);
 
   /**
    * @brief implement sync function in BSP module

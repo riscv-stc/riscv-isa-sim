@@ -46,8 +46,8 @@ class FrameworkGrpc : public Framework {
    * @return true - success; false - fail
    */
   bool send(uint16_t targetChipId, uint16_t targetCoreId, char *data,
-            int dataSize, StreamType streamType, uint8_t lut,
-            uint16_t tag, uint16_t mark) override;
+            int dataSize, StreamType streamType, uint16_t tag, uint16_t mark,
+            uint8_t lut) override;
 
   /**
    * @brief implement sync function of BSP module

@@ -32,8 +32,8 @@ Interface* Interface::getInstance(FrameworkType frameworkType) {
  * implement send function in BSP module
  */
 bool Interface::send(uint16_t targetChipId, uint16_t targetCoreId, char* data,
-                     int dataSize, StreamType streamType, uint8_t lut,
-                     uint16_t tag, uint16_t mark) {
+                     int dataSize, StreamType streamType, uint16_t tag,
+                     uint16_t mark, uint8_t lut) {
   return false;
 };
 

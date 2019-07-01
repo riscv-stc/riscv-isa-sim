@@ -55,10 +55,12 @@ class Stream {
    * @param data: address of data
    * @param dataSize: size of data
    * @param streamType: type of a stream
+   * @param tag: message tag
+   * @param mark: message mark
    * @return true - success; false - fail
    */
   bool recvPost(uint16_t coreId, const char *data, uint32_t dataSize,
-                Interface::StreamType streamType);
+                Interface::StreamType streamType, uint16_t tag, uint16_t mark);
 
   /**
    * @brief dump memory in target to data
