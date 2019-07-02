@@ -36,8 +36,8 @@
 typedef unsigned short                          BIT16;
 #define RND_NEAREST_EVEN 0 //000 RNE Round to Nearest, ties to Even
 #define RND_TO_ZERO      1 //001 RTZ Round towards Zero
-#define RND_UP           2 //010 RDN Round Down (towards âˆ?)
-#define RND_DOWN         3 //011 RUP Round Up (towards +1)
+#define RND_DOWN         2 //010 RDN Round Down (towards ï¿½?)
+#define RND_UP           3 //011 RUP Round Up (towards +1)
 #define RND_NEAREST_UP   4 //100 RMM Round to Nearest, ties to Max Magnitude
 #define RND_FROM_ZERO    5 //101 ??? Round away from zero
 
