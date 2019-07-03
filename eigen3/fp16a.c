@@ -69,7 +69,7 @@ static BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK)
     break;
     default:
       printf("Unknown rounding mode!\n");
-  } printf ("sw:rnd=%x,sign=%x,guard=%x,rounb=%x,stick=%x\n",RND_eval,Sign,l ,r,STK);
+  } //printf ("sw:rnd=%x,sign=%x,guard=%x,rounb=%x,stick=%x\n",RND_eval,Sign,l ,r,STK);
   return RND_eval;
 }
 

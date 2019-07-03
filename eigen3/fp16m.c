@@ -115,11 +115,11 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
     LZ_IN = LZ_INA + LZ_INB;
     EZ = EA + EB - LZ_IN + Denorm_A + Denorm_B;
     MZ = MA * MB;
-    printf("MA*MB=%x\n",MZ);
+    //printf("MA*MB=%x\n",MZ);
     // denormal multiplication
     if (ieee_compliance)
       MZ = MZ << LZ_IN;
-    printf("MZ<<%x=%x\n",LZ_IN,MZ);
+    //printf("MZ<<%x=%x\n",LZ_IN,MZ);
     // After the computation, left justify the Mantissa to `Movf-1 bit.
     // Note that the normalized Mantissa after computation is in `Movf-2 bit,
     // and now we normalize it to `Movf-1 bit.
@@ -139,7 +139,7 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
     {
       Range_Check = EA + EB + Denorm_A + Denorm_B + MZ_Movf1 - ((1<<(exp_width-1))-1) - LZ_IN -1;
       EZ_Shift = -Range_Check;
-      printf("Range_Ch=%x,EZ_Shift=%x\n",Range_Check,EZ_Shift);
+      //printf("Range_Ch=%x,EZ_Shift=%x\n",Range_Check,EZ_Shift);
       if (EZ_Shift >= 0)
       {
         for (i = 0; i< EZ_Shift; i=i+1)
@@ -176,7 +176,7 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
       EZ = EZ + 1;
       MZ = MZ >> 1;
     }
-    printf("after Rnd add, EZ=%x,MZ=%x\n",EZ,MZ);
+    //printf("after Rnd add, EZ=%x,MZ=%x\n",EZ,MZ);
     // Correction of denormal output
     if (ieee_compliance & (EZ <= ((1 << (exp_width-1)) - 1)) & ((MZ>>(Movf - 1))&0x1)) 
       EZ = EZ + 1;
@@ -186,7 +186,7 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
     if((((EZ>>ez_msb)&0x1) == 0) & (EZ >= ((1 << (exp_width-1)) - 1))) 
       EZ = EZ - ((1 << (exp_width-1)) - 1);
     else EZ = 0;
-    printf("after adjust, EZ=%x,MZ=%x\n",EZ,MZ);
+    //printf("after adjust, EZ=%x,MZ=%x\n",EZ,MZ);
     // Huge
     if (EZ >= ((((1 << (exp_width-1)) - 1) * 2) + 1))
     {
@@ -210,7 +210,7 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
       if ((((MZ>>11)&0x3ff)==0)&((EZ&0x1f)==0))
         status_reg = status_reg | 0x1;
     }
-    printf("final, EZ=%x,MZ=%x\n",EZ,MZ);
+    //printf("final, EZ=%x,MZ=%x\n",EZ,MZ);
     status_reg = status_reg | ( (RND_val>>1)&0x1
                               | ( ~(Zero_A | Zero_B) 
                                 & ((EZ&0x1f) == 0) 
@@ -232,7 +232,7 @@ BIT16 func_CS16FM (BIT16 a, BIT16 b)
   BIT16 z;
   z = DW_fp_mult(a,b, RND_NEAREST_UP);
                       //RND_FROM_ZERO);
-  printf("(hex:%x*%x=%x)\n",a,b,z);
+  //printf("(hex:%x*%x=%x)\n",a,b,z);
   return z;
 }
 
