@@ -42,9 +42,14 @@
 #define EIGEN_EXPLICIT_CAST(tgt_type) operator tgt_type()
 #endif
 
+#define USING_RISCV_FP16
+#ifdef USING_RISCV_FP16
+typedef unsigned short BIT16;
+extern BIT16 func_CS16FM (BIT16 a, BIT16 b);
+extern BIT16 func_CS16FA (BIT16 a, BIT16 b);
+#endif
 
 namespace Eigen {
-
 struct half;
 
 namespace half_impl {
@@ -266,13 +271,25 @@ EIGEN_STRONG_INLINE __device__ bool operator >= (const half& a, const half& b) {
 // to/from float32_bits.
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator + (const half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  return Eigen::half_impl::raw_uint16_to_half(func_CS16FA(a.x, b.x));
+#elif
   return half(float(a) + float(b));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  return Eigen::half_impl::raw_uint16_to_half(func_CS16FM(a.x, b.x));
+#elif
   return half(float(a) * float(b));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  return Eigen::half_impl::raw_uint16_to_half(func_CS16FA(a.x, -b.x));
+#elif
   return half(float(a) - float(b));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator / (const half& a, const half& b) {
   return half(float(a) / float(b));
@@ -283,15 +300,27 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a) {
   return result;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator += (half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  a.x = func_CS16FA(a.x, b.x);
+#elif
   a = half(float(a) + float(b));
+#endif
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  a.x = func_CS16FM(a.x, b.x);
+#elif
   a = half(float(a) * float(b));
+#endif
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator -= (half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  a.x = func_CS16FA(a.x, -b.x);
+#elif
   a = half(float(a) - float(b));
+#endif
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator /= (half& a, const half& b) {

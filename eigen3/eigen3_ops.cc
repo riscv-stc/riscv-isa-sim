@@ -14,6 +14,8 @@
  */
 
 #include "eigen3_ops.h"
+#include "fp16a.c"
+#include "fp16m.c"
 
 /* dynamic stride for map */
 typedef Stride<Dynamic, Dynamic> DynStride;

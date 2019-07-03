@@ -1,5 +1,5 @@
-#include "fp16am.h"
-
+#include <stdio.h>
+#include <math.h>
 //-------------------------------------------------------------------------------
 //
 // ABSTRACT: Floating-point two-operand Adder
@@ -40,9 +40,17 @@
 //
 //-------------------------------------------------------------------------------
 
+typedef   int   BIT16;
+typedef   int   BIT32;
 //typedef unsigned BIT16                          BIT16;
+#define RND_NEAREST_EVEN 0 //000 RNE Round to Nearest, ties to Even
+#define RND_TO_ZERO      1 //001 RTZ Round towards Zero
+#define RND_DOWN         2 //010 RDN Round Down (towards −1)
+#define RND_UP           3 //011 RUP Round Up (towards +1)
+#define RND_NEAREST_UP   4 //100 RMM Round to Nearest, ties to Max Magnitude
+#define RND_FROM_ZERO    5
 
-static BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK)
+BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK)
 { // l:guard_bit,r:round_bit,STK:sticky
   BIT16 RND_eval; // 4bits
   RND_eval = 0;
@@ -69,15 +77,15 @@ static BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK)
     break;
     default:
       printf("Unknown rounding mode!\n");
-  } printf ("sw:rnd=%x,sign=%x,guard=%x,rounb=%x,stick=%x\n",RND_eval,Sign,l ,r,STK);
+  }
   return RND_eval;
 }
 
 BIT16 DW_fp_add (BIT16 a,BIT16 b,BIT16 rnd)
 {
   BIT16 z;
-  //BIT16 exp_width = 5;
-  //BIT16 sig_width = 10;
+  BIT16 exp_width = 5;
+  BIT16 sig_width = 10;
   BIT16 ieee_compliance = 1;
   BIT16 status_int;
   BIT16 z_temp,Large,Small;
@@ -364,3 +372,12 @@ double f16a (double i0f, double i1f)
   //printf("float:%lf+%lf=%lf(hex:%x+%x=%x)\n",i0f,i1f,of,i0b,i1b,ob);
   return of;
 }
+#ifndef DPI_TEST_ON
+int main()
+{
+  double i0f,i1f,of;
+  i0f = 0.01;
+  i1f = 0.04;
+  of  = f16a(i0f,i1f);
+}
+#endif
