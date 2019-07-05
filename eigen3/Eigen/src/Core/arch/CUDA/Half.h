@@ -47,6 +47,8 @@
 typedef unsigned short BIT16;
 extern BIT16 func_CS16FM (BIT16 a, BIT16 b);
 extern BIT16 func_CS16FA (BIT16 a, BIT16 b);
+extern int fp16tofp32(int fp_data_in);
+extern int fp32tofp16(int fp_data);
 #endif
 
 namespace Eigen {
@@ -380,6 +382,12 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float_to_half_rtne(float ff) {
   h.x = _cvtss_sh(ff, 0);
   return h;
 
+#elif defined(USING_RISCV_FP16)
+  __half_raw h;
+  float32_bits f; f.f = ff;
+  h.x = fp32tofp16(f.u);
+  return h;
+
 #else
   float32_bits f; f.f = ff;
 
@@ -432,6 +440,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float half_to_float(__half_raw h) {
 
 #elif defined(EIGEN_HAS_FP16_C)
   return _cvtsh_ss(h.x);
+
+#elif defined(USING_RISCV_FP16)
+  return fp16tofp32(h.x);
 
 #else
   const float32_bits magic = { 113 << 23 };
