@@ -1066,31 +1066,6 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     return 0;
 }
-int CustomInsns::vemul_mm_fl(float *rs1, float *rs2, float *rd, struct ShapeStride *ss)
-{
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
-
-    Map_float rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_float rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
-    Map_float rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        //cout << "rs1:\n" << rs1_matrix << endl;
-        //cout << "rs2:\n" << rs2_matrix << endl;
-    }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_matrix = rs1_matrix * rs2_matrix;
-    if (debug)
-        //cout << "rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
 
 /**
  * vemul_mv() vemul.mv
