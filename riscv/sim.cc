@@ -114,7 +114,7 @@ void sim_t::load_heap(const char *fname)
     }
 
     char buf[512];
-    addr_t addr = 0x1002C000;
+    addr_t addr = 0x10000;
     while(!ifs.eof()) {
       ifs.getline(buf, 512);
       char *p = buf;
@@ -158,7 +158,7 @@ void sim_t::dump_heap(const char *fname)
     uint16_t data;
     char buf[5];
     for (addr_t addr = 0; addr < 0x40000; addr += 2) {
-      mem.read(0x1002C000 + addr, 2, &data);
+      mem.read(0x10000 + addr, 2, &data);
       sprintf(buf, "%04x", data);
       ofs << buf << " ";
       if (!((addr + 2) % 128))
