@@ -16,6 +16,7 @@
 #include "eigen3_ops.h"
 #include "fp16a.c"
 #include "fp16m.c"
+#include "fp16convfp32.c"
 
 /* dynamic stride for map */
 typedef Stride<Dynamic, Dynamic> DynStride;
@@ -33,7 +34,8 @@ MY_MATRIX_DEFINE(int8_t)
 /* Matrix_uint16_t     Map_uint16_t */
 MY_MATRIX_DEFINE(uint16_t)
 MY_MATRIX_DEFINE(int16_t)
-
+/*Matrix_float_t     Map_float_t */
+MY_MATRIX_DEFINE(float)
 #undef MY_MATRIX_DEFINE
 
 #define SHAPE_STRIDE_INFO(ss) do {\
@@ -1053,14 +1055,14 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2:\n" << rs2_matrix << endl;
+        //cout << "rs1:\n" << rs1_matrix << endl;
+        //cout << "rs2:\n" << rs2_matrix << endl;
     }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     rd_matrix = rs1_matrix * rs2_matrix;
     if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
+        //cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }
