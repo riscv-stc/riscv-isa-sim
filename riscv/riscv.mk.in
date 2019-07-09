@@ -297,9 +297,7 @@ riscv_insn_list = \
 	veadd_mf \
 	veadd_mm \
 	veadd_mv \
-	vecvt_hf_x16_m \
 	vecvt_hf_x8_m \
-	vecvt_hf_xu16_m \
 	vecvt_hf_xu8_m \
 	veemacc_mf \
 	veemacc_mm \
@@ -331,29 +329,25 @@ riscv_insn_list = \
 	vlh_v \
 	vlhu_v \
 	vle_v \
-	vleu_v \
 	vlsb_v \
 	vlsbu_v \
 	vlsh_v \
 	vlshu_v \
 	vlse_v \
-	vlseu_v \
 	vlxb_v \
 	vlxbu_v \
 	vlxh_v \
 	vlxhu_v \
 	vlxe_v \
-	vlxeu_v \
 	vlbff_v \
 	vlbuff_v \
 	vleff_v \
-	vleuff_v \
 	vlhff_v \
 	vlhuff_v \
-	vmfirst_m \
+	vfirst_m \
 	vmford_vf \
 	vmford_vv \
-	vmpopc_m \
+	vpopc_m \
 	vmsbf_m \
 	vmsif_m \
 	vmsof_m \
@@ -364,11 +358,8 @@ riscv_insn_list = \
 	vsetvl \
 	vsetvli \
 	vsb_v \
-	vsbu_v \
 	vse_v \
-	vseu_v \
 	vsh_v \
-	vshu_v \
 	vslidedown_vi \
 	vslidedown_vx \
 	vslide1down_vx \
@@ -376,17 +367,11 @@ riscv_insn_list = \
 	vslideup_vx \
 	vslide1up_vx \
 	vssb_v \
-	vssbu_v \
 	vssh_v \
-	vsshu_v \
 	vsse_v \
-	vsseu_v \
 	vsxb_v \
-	vsxbu_v \
 	vsxe_v \
-	vsxeu_v \
 	vsxh_v \
-	vsxhu_v \
 	vfadd_vf \
 	vfadd_vv \
 	vfsub_vf \
