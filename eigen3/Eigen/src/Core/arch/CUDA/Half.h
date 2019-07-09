@@ -275,21 +275,21 @@ EIGEN_STRONG_INLINE __device__ bool operator >= (const half& a, const half& b) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator + (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   return Eigen::half_impl::raw_uint16_to_half(func_CS16FA(a.x, b.x));
-#elif
+#else
   return half(float(a) + float(b));
 #endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   return Eigen::half_impl::raw_uint16_to_half(func_CS16FM(a.x, b.x));
-#elif
+#else
   return half(float(a) * float(b));
 #endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   return Eigen::half_impl::raw_uint16_to_half(func_CS16FA(a.x, -b.x));
-#elif
+#else
   return half(float(a) - float(b));
 #endif
 }
@@ -304,7 +304,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator += (half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   a.x = func_CS16FA(a.x, b.x);
-#elif
+#else
   a = half(float(a) + float(b));
 #endif
   return a;
@@ -312,7 +312,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator += (half& a, const half& b)
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   a.x = func_CS16FM(a.x, b.x);
-#elif
+#else
   a = half(float(a) * float(b));
 #endif
   return a;
@@ -320,7 +320,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, const half& b)
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator -= (half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   a.x = func_CS16FA(a.x, -b.x);
-#elif
+#else
   a = half(float(a) - float(b));
 #endif
   return a;
@@ -442,7 +442,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float half_to_float(__half_raw h) {
   return _cvtsh_ss(h.x);
 
 #elif defined(USING_RISCV_FP16)
-  return fp16tofp32(h.x);
+  float32_bits o;
+  o.u = fp16tofp32(h.x);
+  return o.f;
 
 #else
   const float32_bits magic = { 113 << 23 };
