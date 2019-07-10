@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 float32_t f16_to_f32( float16_t a )
 {
+#ifdef USING_SOFTFLOAT
     union ui16_f16 uA;
     uint_fast16_t uiA;
     bool sign;
@@ -88,6 +89,11 @@ float32_t f16_to_f32( float16_t a )
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;
+#elif defined USING_RISCV_FP16
+	extern int fp16tofp32(int fp_data_in);
+	uZ.ui = fp16tofp32(a.v);
+	return uZ.f;
+#endif
 
 }
 
