@@ -165,6 +165,7 @@ public:
     int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
     int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vemv_f(half rs1, half *rd, struct ShapeStride *ss);
 };
 
 /**
@@ -384,6 +385,35 @@ class Vsub
             }
         } else
             vector_vd = vector_vs2.array() + -rs1;
+
+        DBG_VECTOR_VF;
+
+        return 0;
+    }
+
+    /**
+     * vrsub_vf() vfrsub.vf
+     * @param vs2 源操作向量基地址
+     * @param rs1 源标量操作数
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vrsub_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VsubVecMap vector_vs2(vs2, vl);
+        VsubVecMap vector_vd(vd, vl);
+        VsubMaskVecMap vector_v0(v0, vl);
+
+        if (!vm) {
+            for (int i = 0; i < vl; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = rs1 + -vector_vs2(i);
+            }
+        } else
+            vector_vd = rs1 + -vector_vs2.array();
 
         DBG_VECTOR_VF;
 

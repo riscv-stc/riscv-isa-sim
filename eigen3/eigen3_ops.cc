@@ -1306,6 +1306,33 @@ int CustomInsns::vemv_m(half *rs1, half *rd, struct ShapeStride *ss)
 }
 
 /**
+ * vemv_f() vemv.f
+ *
+ * 将浮点标量寄存器单值复制扩展成一个矩阵
+ * @param rs1 标 量 操 作 数
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemv_f(half rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1 << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    rd_matrix = rd_matrix.Constant(ss->shape1_row, ss->shape1_column, rs1);
+
+    if (debug)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
  * vecvt_hf_xu8_m() vecvt.hf.xu8.m
  * 
  * 将矩阵中的元素由 uint8 格式转换为 fp16

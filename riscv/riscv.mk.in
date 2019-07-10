@@ -318,6 +318,7 @@ riscv_insn_list = \
 	vemin_mv \
 	vemul_mm \
 	vemul_mv \
+	vemv_f \
 	vemv_m \
 	vesub_mf \
 	vesub_mm \
@@ -375,6 +376,7 @@ riscv_insn_list = \
 	vfadd_vf \
 	vfadd_vv \
 	vfsub_vf \
+	vfrsub_vf \
 	vfsub_vv \
 	vfmul_vf \
 	vfmul_vv \
@@ -406,9 +408,10 @@ riscv_insn_list = \
 	vfsgnjn_vv \
 	vfsgnjx_vf \
 	vfsgnjx_vv \
-	vfmerge_vf \
+	vfmerge_vfm \
 	vfmv_f_s \
 	vfmv_s_f \
+	vfmv_v_f \
 	vext_x_v \
 	vfmax_vv \
 	vfmax_vf \

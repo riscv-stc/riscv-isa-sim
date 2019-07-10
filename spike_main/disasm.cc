@@ -659,9 +659,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(veadd_mm);
   DEFINE_R2TYPE(veadd_mv);
   DEFINE_R3TYPE(vecvt_hf_x8_m);
-  //DEFINE_R3TYPE(vecvt_hf_x16_m);
   DEFINE_R3TYPE(vecvt_hf_xu8_m);
-  //DEFINE_R3TYPE(vecvt_hf_xu16_m);
   DEFINE_CV2TYPE(veemacc_mf);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
@@ -682,6 +680,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(vemul_mm);
   DEFINE_RTYPE(vemul_mv);
   DEFINE_R3TYPE(vemv_m);
+  DEFINE_FXTYPE(vemv_f);
   DEFINE_RTYPE(vesub_mm);
   DEFINE_CV2TYPE(vesub_mf);
   DEFINE_R2TYPE(vesub_mv);
@@ -733,6 +732,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV4TYPE(vfadd_vf);
   DEFINE_SV6TYPE(vfadd_vv);
   DEFINE_SV4TYPE(vfsub_vf);
+  DEFINE_SV4TYPE(vfrsub_vf);
   DEFINE_SV6TYPE(vfsub_vv);
   DEFINE_SV14TYPE(vfmacc_vf);
   DEFINE_SV13TYPE(vfmacc_vv);
@@ -784,7 +784,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV6TYPE(vmxnor_mm);
 
 
-  DEFINE_SV4TYPE(vfmerge_vf);
+  DEFINE_SV4TYPE(vfmerge_vfm);
+  DEFINE_SV4TYPE(vfmv_v_f);
   DEFINE_SV5TYPE(vext_x_v);
   DEFINE_SV5TYPE(vfredmax_vs);
   DEFINE_SV5TYPE(vfredmin_vs);
