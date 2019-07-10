@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "internals.h"
 #include "specialize.h"
 #include "softfloat.h"
+#define USING_RISCV_FP16
 
 float32_t f16_to_f32( float16_t a )
 {
@@ -91,6 +92,7 @@ float32_t f16_to_f32( float16_t a )
     return uZ.f;
 #elif defined USING_RISCV_FP16
 	extern int fp16tofp32(int fp_data_in);
+        union ui32_f32 uZ;
 	uZ.ui = fp16tofp32(a.v);
 	return uZ.f;
 #endif

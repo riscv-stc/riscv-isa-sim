@@ -1,4 +1,6 @@
+
 /*ANDES exchange between fp16 and fp32*/
+extern "C" {
 int fp16tofp32(int fp_data_in){
     int fp_data;
     int fp_out;
@@ -117,4 +119,6 @@ int fp32tofp16(int fp_data){
 
     fp_out = ((fp_conv_sign&0x1)<<15) | ((fp_conv_exp&0x1f)<<10) | ((fp_conv_fraction&0x3ff)<<0);
     return fp_out;
+}
+
 }

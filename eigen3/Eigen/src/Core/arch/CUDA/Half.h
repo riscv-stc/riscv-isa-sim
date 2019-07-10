@@ -47,8 +47,8 @@
 typedef unsigned short BIT16;
 extern BIT16 func_CS16FM (BIT16 a, BIT16 b);
 extern BIT16 func_CS16FA (BIT16 a, BIT16 b);
-extern int fp16tofp32(int fp_data_in);
-extern int fp32tofp16(int fp_data);
+extern "C" int fp16tofp32(int fp_data_in);
+extern "C" int fp32tofp16(int fp_data);
 #endif
 
 namespace Eigen {
