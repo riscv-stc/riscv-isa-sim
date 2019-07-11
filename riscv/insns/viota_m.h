@@ -11,7 +11,7 @@ vector_for_each_from_zero(idx) {
 		    continue;
 		}
 		else {
-		    sum += (v0b_mask(idx) ? 0 : VRS2.vb[idx-1]);
+		    sum += (v0b_mask(idx) ? 0 : (VRS2.vb[idx-1] & 0x1));
 		    WRITE_VRD_B((char)sum, idx);
 		}
 
@@ -25,7 +25,7 @@ vector_for_each_from_zero(idx) {
 		    continue;
 		}
 		else {
-		    sum += (v0h_mask(idx) ? 0 : VRS2.vh[idx-1]);
+		    sum += (v0h_mask(idx) ? 0 : (VRS2.vh[idx-1] & 0x1));
 		    WRITE_VRD_H((short)sum, idx);
 		}
 	break;
