@@ -381,6 +381,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_SV18TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1})
   #define DEFINE_SV19TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &vrs2, &vm})
   #define DEFINE_SV20TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &frs1})
+  #define DEFINE_SV21TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &vm})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -803,7 +804,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV11TYPE(vrgather_vi);
   DEFINE_SV17TYPE(vcompress_vm);
   DEFINE_SV18TYPE(vmv_s_x);
-  DEFINE_SV16TYPE(vid_v);
+  DEFINE_SV21TYPE(vid_v);
   DEFINE_SV16TYPE(viota_m);
   DEFINE_SV16TYPE(vmsof_m);
   DEFINE_SV16TYPE(vmsif_m);
