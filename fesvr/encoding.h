@@ -1031,7 +1031,7 @@
 #define MATCH_VIOTA_M 0x58082057
 #define MASK_VIOTA_M  0xfc0ff07f
 #define MATCH_VID_V 0x5808a057
-#define MASK_VID_V  0xfc0ff07f
+#define MASK_VID_V  0xfdfff07f
 #define MATCH_VEXT_X_V 0x32002057
 #define MASK_VEXT_X_V  0xfe00707f
 #define MATCH_VMV_S_X 0x36006057
