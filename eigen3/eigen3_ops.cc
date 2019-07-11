@@ -1321,7 +1321,6 @@ int CustomInsns::vemv_f(half rs1, half *rd, struct ShapeStride *ss)
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1 << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
     }
 
     rd_matrix = rd_matrix.Constant(ss->shape1_row, ss->shape1_column, rs1);
