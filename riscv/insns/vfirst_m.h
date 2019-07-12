@@ -9,7 +9,7 @@ check_vstart{
 				index = idx;
 				check_v0bmask(idx);
 
-				if (VRS2.vb[idx] & 0x1) {
+				if (idx < VL &&  VRS2.vb[idx] & 0x1) {
 				    WRITE_RD(idx);
 				    break;
 				}
@@ -21,7 +21,7 @@ check_vstart{
 				index = idx;
 				check_v0hmask(idx);
 
-				if (VRS2.vh[idx] & 0x1) {
+				if (idx < VL && VRS2.vh[idx] & 0x1) {
 					WRITE_RD(idx);
 					break;
 				}
