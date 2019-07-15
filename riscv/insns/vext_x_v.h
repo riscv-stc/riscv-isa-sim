@@ -1,5 +1,7 @@
 require_extension('V');
 check_vstart{
-	Vext<half> vext;
-	vext.vext_x_v((half*)&VRS2.vh[VSTART], (half*)&VRD.vh[VSTART], (unsigned short)RS1, VL);
+	Vext<unsigned short> vext;
+	unsigned short rd;
+	vext.vext_x_v(VRS2.vh, &rd, (unsigned short)RS1, VLEN/SEW);
+	WRITE_RD(rd);
 }
