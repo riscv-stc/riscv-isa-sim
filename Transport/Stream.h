@@ -52,15 +52,15 @@ class Stream {
   /**
    * @brief post function of recv function in BSP module
    * @param coreId: ID of source core(spike)
+   * @param targetAddr: target address for rdma
    * @param data: address of data
    * @param dataSize: size of data
    * @param streamType: type of a stream
    * @param tag: message tag
-   * @param mark: message mark
    * @return true - success; false - fail
    */
-  bool recvPost(uint16_t coreId, const char *data, uint32_t dataSize,
-                Interface::StreamType streamType, uint16_t tag, uint16_t mark);
+  bool recvPost(uint16_t coreId, uint32_t targetAddr, const char *data, uint32_t dataSize,
+                Interface::StreamType streamType, uint16_t tag);
 
   /**
    * @brief dump memory in target to data

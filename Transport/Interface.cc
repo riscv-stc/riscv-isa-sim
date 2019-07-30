@@ -14,9 +14,10 @@ Interface::~Interface() {}
 /**
  * initialize Transport module
  */
-bool Interface::init(uint16_t coreId, SIM_S* sim, std::string grpcServerAddr,
+bool Interface::init(uint16_t coreId, SIM_S *sim, std::string grpcServerAddr,
                      int grpcServerPort, std::string logServerAddr,
-                     int logServerPort) {
+                     int logServerPort)
+{
   return Framework::init(coreId, sim, grpcServerAddr, grpcServerPort,
                          logServerAddr, logServerPort);
 }
@@ -24,16 +25,19 @@ bool Interface::init(uint16_t coreId, SIM_S* sim, std::string grpcServerAddr,
 /**
  * get singleton instance of a framework
  */
-Interface* Interface::getInstance(FrameworkType frameworkType) {
+Interface *Interface::getInstance(FrameworkType frameworkType)
+{
   return Framework::getInstance(frameworkType);
 }
 
 /**
  * implement send function in BSP module
  */
-bool Interface::send(uint16_t targetChipId, uint16_t targetCoreId, char* data,
+bool Interface::send(uint16_t targetChipId, uint16_t targetCoreId,
+                     uint32_t targetAddr, char *data,
                      int dataSize, StreamType streamType, uint16_t tag,
-                     uint16_t mark, uint8_t lut) {
+                     uint8_t lut)
+{
   return false;
 };
 
@@ -45,4 +49,4 @@ bool Interface::sync(StreamType streamType) { return false; };
 /**
  * send log message to log server
  */
-bool Interface::console(char* data, uint32_t size) { return false; };
+bool Interface::console(char *data, uint32_t size) { return false; };

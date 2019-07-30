@@ -17,7 +17,7 @@ service Proxy {
   // upload dump data to proxy
   rpc Dump(DumpData) returns (google.protobuf.Empty);
   // wait for proxy send a DumpParam to get dump data or turn on/off sync dump
-  rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam);
+  rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam); 
 }
 
 // Message present a message
@@ -27,7 +27,12 @@ message Message {
   bool  forwarding = 3;
   bytes body = 4;
   int32 tag = 5;
-  int32 mark = 6;
+  enum StreamType {
+    rdma = 0;
+    message = 1;
+  }
+  StreamType type = 6;
+  int32 dstAddr = 7;
 }
 
 // RecvRequest present a request for spike to receive messages

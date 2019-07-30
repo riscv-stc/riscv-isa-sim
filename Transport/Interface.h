@@ -31,8 +31,8 @@ class Interface {
   // type of stream used in GRPC framework
   enum StreamType {
     // public for user
-    STREAM_MESSAGE = 0,  // message
-    STREAM_RDMA,         // rdma
+    STREAM_MESSAGE = 1,  // message
+    STREAM_RDMA    = 0,  // rdma
 
     // private for user
     STREAM_DUMP = 100,  // dump memory
@@ -75,10 +75,9 @@ class Interface {
    * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
-  virtual bool send(uint16_t targetChipId, uint16_t targetCoreId, char *data,
-                    int dataSize, StreamType streamType = STREAM_MESSAGE,
-                    uint16_t tag = 0, uint16_t mark = 0,
-                    uint8_t lut = LUT_DISABLE);
+  virtual bool send(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
+                    char *data, int dataSize, StreamType streamType = STREAM_MESSAGE,
+                    uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
 
   /**
    * @brief implement sync function in BSP module

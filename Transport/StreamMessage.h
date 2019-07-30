@@ -67,7 +67,7 @@ class StreamMessage : public Stream {
    * @return true - success; false - fail
    */
   bool enqueue(uint16_t coreId, const char *data, uint32_t dataSize,
-               uint16_t tag, uint16_t mark);
+               uint16_t tag);
 
   /**
    * @brief garbage collection to clean gStreamMessage

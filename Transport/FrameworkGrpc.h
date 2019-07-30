@@ -42,11 +42,10 @@ class FrameworkGrpc : public Framework {
    * @param streamType: type of stream
    * @param lut: index of lookup table for boradcast
    * @param tag: message tag
-   * @param mark: message mark
    * @return true - success; false - fail
    */
-  bool send(uint16_t targetChipId, uint16_t targetCoreId, char *data,
-            int dataSize, StreamType streamType, uint16_t tag, uint16_t mark,
+  bool send(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
+            int dataSize, StreamType streamType, uint16_t tag,
             uint8_t lut) override;
 
   /**

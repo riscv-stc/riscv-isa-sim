@@ -83,8 +83,9 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
  * implement send function of BSP module
  */
 bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
+                         uint32_t targetAddr,
                          char* data, int dataSize, StreamType streamType,
-                         uint16_t tag, uint16_t mark, uint8_t lut) {
+                         uint16_t tag, uint8_t lut) {
   if (gGrpcClient->mSendStub == nullptr) {
     std::cout << "send stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -98,7 +99,13 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   request.set_forwarding(false);
   request.set_body(data, dataSize);
   request.set_tag(tag);
-  request.set_mark(mark);
+  auto t = (streamType == StreamType::STREAM_MESSAGE)?
+                proxy::Message::message : proxy::Message::rdma;
+  request.set_type(t);
+  request.set_dstaddr(targetAddr);
+
+  fprintf(stdout, "grpc send, type=%d, dst=0x%08x\n", request.type(), request.dstaddr());
+
   // container for the data we expect from the server
   google::protobuf::Empty reply;
 
@@ -124,8 +131,6 @@ void FrameworkGrpc::loadToRecvQueue(void) {
               << std::endl;
     return;
   }
-  // only message stream has recv queue
-  StreamType streamType = StreamType::STREAM_MESSAGE;
 
   proxy::RecvRequest request;
   request.set_spikeid(mCoreId);
@@ -141,8 +146,8 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 
   readWriter->Write(request);
 
+  auto stream = Stream::getInstance(StreamType::STREAM_MESSAGE);
   while (readWriter->Read(&reply)) {
-    auto stream = Stream::getInstance(streamType);
     // enqueue data to message queue
 
     if (reply.target() != mCoreId) {
@@ -151,10 +156,16 @@ void FrameworkGrpc::loadToRecvQueue(void) {
       readWriter->Write(request);
       continue;
     }
+
+    fprintf(stdout, "grpc receive, type=%d, dst=0x%08x\n", reply.type(), reply.dstaddr());
+    auto streamType = StreamType::STREAM_MESSAGE;
+    if (reply.type() != proxy::Message::message) {
+      streamType = StreamType::STREAM_RDMA;
+    }
     if (stream &&
-        stream->recvPost(reply.source(), reply.mutable_body()->data(),
-                         reply.mutable_body()->size(), streamType, reply.tag(),
-                         reply.mark()) == false) {
+        stream->recvPost(reply.source(), reply.dstaddr(), reply.mutable_body()->data(),
+                         reply.mutable_body()->size(), streamType, 
+                         reply.tag()) == false) {
       std::cout << "fail to post receive message" << std::endl;
     }
 
