@@ -99,6 +99,12 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+	return ts_name[insn.ts()];
+  }
+} tsx;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
 	return vm_name[insn.vm()];
   }
 } vm;
@@ -359,6 +365,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
   #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
   #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+  #define DEFINE_R4TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &tsx})
   #define DEFINE_CV1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
   #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
   #define DEFINE_SV1TYPE(code) DISASM_INSN(#code, code, 0, {&vrd, &xrs1, &vm})
@@ -685,6 +692,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(vesub_mm);
   DEFINE_CV2TYPE(vesub_mf);
   DEFINE_R2TYPE(vesub_mv);
+  DEFINE_R3TYPE(vetr_m);
+  DEFINE_R4TYPE(vemmul_mm);
 
   DEFINE_RTYPE(vsetvl);
   DEFINE_SV8TYPE(vsetvli);
@@ -812,11 +821,6 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV19TYPE(vfirst_m);
   DEFINE_SV19TYPE(vpopc_m);
   DEFINE_SV16TYPE(vfclass_v);
-  DEFINE_SV4TYPE(vmford_vf);
-  DEFINE_SV6TYPE(vmford_vv);
-
-
-
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

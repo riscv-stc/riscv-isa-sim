@@ -987,6 +987,110 @@ int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 }
 
 /**
+ * vemmul_mm() vemmul.mm
+ * 
+ * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
+ * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 M2,源操作矩阵二基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
+{
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
+    }
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    rd_matrix = rs1_matrix * rs2_matrix;
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vemmul_mm() vemmul.mm
+ * 
+ * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
+ * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 M2,源操作矩阵二基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
+    }
+
+    if (ts == 1) {
+        /* param check */
+        if (ss->shape1_row != ss->shape2_row) {
+            cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+            return -BR_EPARAM;
+        }
+
+        Map_half rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
+	rd_matrix = rs1_matrix.transpose() * rs2_matrix;
+
+        if (debug)
+            cout << "rd:\n" << rd_matrix << endl;
+    }
+
+    if (ts == 2) {
+        /* param check */
+        if (ss->shape1_column != ss->shape2_column) {
+            cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+            return -BR_EPARAM;
+        }
+
+        Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_row, DynStride(ss->stride_rd, 1));
+	rd_matrix = rs1_matrix * rs2_matrix.transpose();
+
+        if (debug)
+            cout << "rd:\n" << rd_matrix << endl;
+    }
+
+    if (ts == 3) {
+        /* param check */
+        if (ss->shape1_column != ss->shape2_row) {
+            cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+            return -BR_EPARAM;
+        }
+
+        Map_half rd_matrix(rd, ss->shape2_column, ss->shape1_row, DynStride(ss->stride_rd, 1));
+        rd_matrix = rs2_matrix.transpose() * rs1_matrix.transpose();
+
+        if (debug)
+            cout << "rd:\n" << rd_matrix << endl;
+    }
+
+
+    return 0;
+}
+/**
  * vesub_mf() vesub.mf
  * 
  * 标量和矩阵元素广播减 M = M1 - f
@@ -1055,14 +1159,14 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
-        //cout << "rs1:\n" << rs1_matrix << endl;
-        //cout << "rs2:\n" << rs2_matrix << endl;
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
     }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     rd_matrix = rs1_matrix * rs2_matrix;
     if (debug)
-        //cout << "rd:\n" << rd_matrix << endl;
+        cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }
@@ -1271,6 +1375,33 @@ int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct Shap
         for (int j = 0; j < ss->shape1_column; j++)
             rd_matrix(i, j) = *((half *)rs2 + rs1_matrix(i, j));
     
+    if (debug)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vetr_m() vetr.m
+ *
+ * 将矩阵从一个地方搬移到另一个地方
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vetr_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_column, ss->shape1_row, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    rd_matrix = rs1_matrix.transpose();
+
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
 

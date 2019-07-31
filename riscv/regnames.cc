@@ -31,6 +31,10 @@ const char* dim_name[]={
     " "," ","dim0", "dim1"
 };
 
+const char* ts_name[]={
+    " ","ts1","ts2", "td"
+};
+
 const char* vm_name[]={
     "v0.t", " "
 };

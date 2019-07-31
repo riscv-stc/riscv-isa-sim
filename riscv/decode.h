@@ -96,6 +96,7 @@ public:
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t ts() { return (x(25, 1) << 1) + x(14, 1); }
   uint64_t vm() { return x(25, 1); }
   uint64_t vlmul() {return x(20,2);}
   uint64_t vsew() { return x(22,3);}
@@ -229,6 +230,7 @@ private:
 #define SLEN (p->get_slen())
 #define ELEN (p->get_elen())
 #define DIM (insn.dim())
+#define TS (insn.ts())
 #define DIM_DM (insn.dim()&1)
 #define VM (insn.vm())
 #define VLMUL_I (insn.vlmul())

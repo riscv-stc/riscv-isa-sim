@@ -401,9 +401,6 @@ void processor_t::set_csr(int which, reg_t val)
 	case CSR_TCSR:
 	  state.tcsr = val;
 	  break;
-	case CSR_TECAUSE:
-	  state.tecause = val;
-	  break;
 	case CSR_TRBASE:
 	  state.trbase = val;
 	  break;
@@ -690,10 +687,6 @@ reg_t processor_t::get_csr(int which)
 	  if(!supports_extension('V'))
 		break;
 	  return state.tcsr;
-	case CSR_TECAUSE:
-	  if(!supports_extension('V'))
-		break;
-	  return state.tecause;
 	case CSR_TRBASE:
 	  if(!supports_extension('V'))
 		break;

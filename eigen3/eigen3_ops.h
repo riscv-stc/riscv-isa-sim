@@ -135,6 +135,9 @@ public:
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
 
+    int vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
+    int vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
+
     int vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
 
@@ -166,6 +169,7 @@ public:
 
     int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vemv_f(half rs1, half *rd, struct ShapeStride *ss);
+    int vetr_m(half *rs1, half *rd, struct ShapeStride *ss);
 };
 
 /**
@@ -1990,76 +1994,6 @@ class Vcompare
         return 0;
     }
 
-    /**
-     * vmford_vv()    vmford.vv vd, vs2, vs1, vm 
-     * @param vs2 源操作向量二基地址
-     * @param vs1 源操作向量一基地址
-     * @param vd 目的向量基地址
-     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
-     * @param v0 mask向量基地址
-     * @param vl 向量长度(准确的说应该是个数)
-     * @return 执行结果
-     */
-    int vmford_vv(half *vs2, half *vs1, OutType *vd, int vm, MaskType *v0, int vl)
-    {
-        Map<Matrix<half, 1, Dynamic>> vector_vs2(vs2, vl);
-        Map<Matrix<half, 1, Dynamic>> vector_vs1(vs1, vl);
-        VcompareOutVecMap vector_vd(vd, vl);
-        VcompareMaskVecMap vector_v0(v0, vl);
-
-        #define VMFORD_VV    do {                               \
-            if (isnan(vector_vs2(i)) || isnan(vector_vs1(i)))   \
-                vector_vd(i) = (OutType)0;                      \
-            else                                                \
-                vector_vd(i) = (OutType)1;                      \
-        } while(0)
-
-        for (int i = 0; i < vl; i++) {
-            if (!vm) {
-                if (vector_v0(i) & 0x1)
-                    VMFORD_VV;
-            } else
-                VMFORD_VV;
-        }
-
-        DBG_INFO5(debug, vector_vs2, vector_vs1, vector_vd, vector_v0, vm);
-        return 0;
-    }
-    
-    /**
-     * vmford_vf()    vmford.vv vd, vs2, vs1, vm 
-     * @param vs2 源操作向量二基地址
-     * @param rs1 源操作向量一基地址
-     * @param vd 目的向量基地址
-     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
-     * @param v0 mask向量基地址
-     * @param vl 向量长度(准确的说应该是个数)
-     * @return 执行结果
-     */
-    int vmford_vf(half *vs2, half rs1, OutType *vd, int vm, MaskType *v0, int vl)
-    {
-        Map<Matrix<half, 1, Dynamic>> vector_vs2(vs2, vl);
-        VcompareOutVecMap vector_vd(vd, vl);
-        VcompareMaskVecMap vector_v0(v0, vl);
-
-        #define VMFORD_VF    do {                     \
-            if (isnan(vector_vs2(i)) || isnan(rs1))   \
-                vector_vd(i) = (OutType)0;            \
-            else                                      \
-                vector_vd(i) = (OutType)1;            \
-        } while(0)
-
-        for (int i = 0; i < vl; i++) {
-            if (!vm) {
-                if (vector_v0(i) & 0x1)
-                    VMFORD_VF;
-            } else
-                VMFORD_VF;
-        }
-
-        DBG_INFO5(debug, vector_vs2, rs1, vector_vd, vector_v0, vm);
-        return 0;
-    }
 };
 
 /**
