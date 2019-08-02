@@ -39,12 +39,27 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
         abstract_delay_usec, support_hasel,
         support_abstract_csr_access)
 {
+  char add_debug_dev = 1;
+  char add_clint_dev = 1;
+
   signal(SIGINT, &handle_signal);
 
-  for (auto& x : mems)
-    bus.add_device(x.first, x.second);
+  for (auto& x : mems) {
+      bus.add_device(x.first, x.second);
+      if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
+        add_debug_dev = 0;
+      if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
+        add_clint_dev = 0;
+  }
 
-  debug_module.add_device(&bus);
+  /* debug_module default base is DEBUG_START=0x80100.
+   * if our memory is bigger than this, debug_module
+   * may caught a mistake when read/write addr 0x80100,
+   * for the cache will change to visit debug_module but
+   * we want to visit mem infact.
+   */
+  if (add_debug_dev)
+    debug_module.add_device(&bus);
 
   debug_mmu = new mmu_t(this, NULL);
 
@@ -64,7 +79,10 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   }
 
   clint.reset(new clint_t(procs));
-  bus.add_device(CLINT_BASE, clint.get());
+
+  /* the same with debug_module */
+  if (add_clint_dev)
+    bus.add_device(CLINT_BASE, clint.get());
 }
 
 sim_t::~sim_t()
@@ -138,7 +156,7 @@ void sim_t::load_heap(const char *fname)
   }
 }
 
-void sim_t::dump_heap(const char *fname)
+void sim_t::dump_heap(const char *fname, size_t len)
 {
   memif_t mem(this);
   if (!fname)
@@ -157,7 +175,7 @@ void sim_t::dump_heap(const char *fname)
 
     uint16_t data;
     char buf[5];
-    for (addr_t addr = 0; addr < 0x40000; addr += 2) {
+    for (addr_t addr = 0; addr < len; addr += 2) {
       mem.read(0x10000 + addr, 2, &data);
       sprintf(buf, "%04x", data);
       ofs << buf << " ";
@@ -180,14 +198,14 @@ void sim_t::dump_heap(const char *fname)
   }
 }
 
-int sim_t::run(const char *fname_load, const char *fname_dump)
+int sim_t::run(const char *fname_load, const char *fname_dump, size_t len)
 {
   int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);
   load_heap(fname_load);
   stat = htif_t::run();
-  dump_heap(fname_dump);
+  dump_heap(fname_dump, len);
   return stat;
 }
 
@@ -280,14 +298,15 @@ void sim_t::make_dtb()
   rom.resize((rom.size() + align - 1) / align * align);
 
   boot_rom.reset(new rom_device_t(rom));
-  bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
+  //bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t*>(desc.second))
     if (addr - desc.first < mem->size())
-      return mem->contents() + (addr - desc.first);
+        return mem->contents() + (addr - desc.first);
+      
   return NULL;
 }
 

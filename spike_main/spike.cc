@@ -112,6 +112,7 @@ int main(int argc, char** argv)
   int coreId = INVALID_CORE_ID;
   const char *load_file = NULL;
   const char *dump_file = NULL;
+  size_t dump_len = 0x40000; 
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned progsize = 2;
@@ -185,6 +186,8 @@ int main(int argc, char** argv)
       [&](const char* s){load_file = s;});
   parser.option(0, "dump-file", 1,
       [&](const char* s){dump_file = s;});
+  parser.option(0, "dump-len", 1,
+      [&](const char* s){dump_len = strtoull(s, 0, 0);});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -231,5 +234,5 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
-  return s.run(load_file, dump_file);
+  return s.run(load_file, dump_file, dump_len);
 }
