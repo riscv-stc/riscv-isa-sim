@@ -1,8 +1,10 @@
 # Recursive make is bad, but in this case we're cross compiling which is a
 # pretty unusual use case.
 
-CC = $(RISCV)/bin/riscv64-unknown-elf-gcc
-OBJCOPY = $(RISCV)/bin/riscv64-unknown-elf-objcopy
+# CC = $(RISCV)/bin/riscv64-unknown-elf-gcc
+# OBJCOPY = $(RISCV)/bin/riscv64-unknown-elf-objcopy
+CC = $(RISCV)/bin/riscv32-unknown-elf-gcc
+OBJCOPY = $(RISCV)/bin/riscv32-unknown-elf-objcopy
 
 COMPILE = $(CC) -nostdlib -nostartfiles -I.. -Tlink.ld
 

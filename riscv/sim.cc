@@ -39,27 +39,28 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
         abstract_delay_usec, support_hasel,
         support_abstract_csr_access)
 {
-  char add_debug_dev = 1;
-  char add_clint_dev = 1;
+  //char add_debug_dev = 1;
+  //char add_clint_dev = 1;
 
   signal(SIGINT, &handle_signal);
 
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
-      if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
-        add_debug_dev = 0;
-      if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
-        add_clint_dev = 0;
+      //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
+      //  add_debug_dev = 0;
+      //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
+      //  add_clint_dev = 0;
   }
 
+  debug_module.add_device(&bus);
   /* debug_module default base is DEBUG_START=0x80100.
    * if our memory is bigger than this, debug_module
    * may caught a mistake when read/write addr 0x80100,
    * for the cache will change to visit debug_module but
    * we want to visit mem infact.
    */
-  if (add_debug_dev)
-    debug_module.add_device(&bus);
+  //if (add_debug_dev)
+  //  debug_module.add_device(&bus);
 
   debug_mmu = new mmu_t(this, NULL);
 
@@ -79,10 +80,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   }
 
   clint.reset(new clint_t(procs));
+  bus.add_device(CLINT_BASE, clint.get());
 
   /* the same with debug_module */
-  if (add_clint_dev)
-    bus.add_device(CLINT_BASE, clint.get());
+  //if (add_clint_dev)
+  //  bus.add_device(CLINT_BASE, clint.get());
 }
 
 sim_t::~sim_t()
@@ -298,7 +300,7 @@ void sim_t::make_dtb()
   rom.resize((rom.size() + align - 1) / align * align);
 
   boot_rom.reset(new rom_device_t(rom));
-  //bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
+  bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {

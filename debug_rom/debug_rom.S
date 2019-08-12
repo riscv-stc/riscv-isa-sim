@@ -32,13 +32,25 @@ _entry:
 entry_loop:
         csrr s0, CSR_MHARTID
         sw   s0, DEBUG_ROM_HALTED(zero)
+        add  s0, s0, zero
         lbu  s0, DEBUG_ROM_FLAGS(s0) // 1 byte flag per hart. Only one hart advances here.
         andi s0, s0, (1 << DEBUG_ROM_FLAG_GO)
-        bnez s0, going
+        # bnez s0, going
+        # li   t0, 0
+        # andi t0, t0, 1
+        add  s0, s0, zero
+        bne  s0, zero, going
+        sub  s0, s0, zero
         csrr s0, CSR_MHARTID
+        add  s0, s0, zero
         lbu  s0, DEBUG_ROM_FLAGS(s0) // multiple harts can resume  here
         andi s0, s0, (1 << DEBUG_ROM_FLAG_RESUME)
-        bnez s0, _resume
+        # bnez s0, _resume
+        # li   t0, 0
+        # andi t0, t0, 1
+        add  s0, s0, zero
+        bne  s0, zero, _resume
+        sub  s0, s0, zero
         wfi
         jal  zero, entry_loop
 

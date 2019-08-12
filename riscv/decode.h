@@ -160,7 +160,8 @@ private:
 // helpful macros, etc
 #define MMU (*p->get_mmu())
 #define STATE (*p->get_state())
-#define READ_REG(reg) STATE.XPR[reg]
+#define READ_REG(reg) (unlikely((((0x40000800 <= pc) && (0x40000884 >= pc)) || ((0x40000360 <= pc) && (0x40000374 > pc))) && (reg == 0)) ? 0x40000000 : STATE.XPR[reg])
+
 #define READ_FREG(reg) STATE.FPR[reg]
 #define READ_VREG(reg) STATE.VPR[reg]
 #define RS1 READ_REG(insn.rs1())
@@ -380,8 +381,10 @@ inline freg_t f128_negate(freg_t a)
   (which); })
 
 // Seems that 0x0 doesn't work.
-#define DEBUG_START             (0x80100)
-#define DEBUG_END               (0x81000 - 1)
+#define DEBUG_BASE              (0x40000000)
+#define DEBUG_START             (0x100)
+#define DEBUG_END               (0x40001000 - 1)
+
 
 /*Vector instruction support*/
 union vreg_t{
