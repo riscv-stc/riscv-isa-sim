@@ -2072,10 +2072,12 @@ class Vfred
     {
         VfredVecMap vector_vs2(vs2, vl);
         VfredMaskVecMap vector_v0(v0, vl);
-        
-        vd[0] = vs1[0];
+        Type val;
+
+        val = vs1[0];
         for (int i = 0; i < vl; i++)
-            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
+            val += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
+        vd[0] = val;
 
         if (debug) {
             cout << __FUNCTION__ << endl;
@@ -2105,10 +2107,11 @@ class Vfred
     {
         VfredVecMap vector_vs2(vs2, vl);
         VfredMaskVecMap vector_v0(v0, vl);
-        
-        vd[0] = vs1[0];
+        Type val;
+        val = vs1[0];
         for (int i = 0; i < vl; i++)
-            vd[0] += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
+            val += ((!vm && !(vector_v0[i] & 0x1)) ? (Type)0 : vector_vs2(i));
+        vd[0] = val;
 
         if (debug) {
             cout << __FUNCTION__ << endl;
@@ -2138,11 +2141,12 @@ class Vfred
     {
         VfredVecMap vector_vs2(vs2, vl);
         VfredMaskVecMap vector_v0(v0, vl);
-        
-        vd[0] = vs1[0];
+        Type val;
+        val = vs1[0];
         for (int i = 0; i < vl; i++)
             if (vm || (vector_v0[i] & 0x1))
-                vd[0] = (vd[0] > vector_vs2(i)) ? vector_vs2(i) : vd[0];    
+                val = (val > vector_vs2(i)) ? vector_vs2(i) : val;
+        vd[0] = val;
 
         if (debug) {
             cout << __FUNCTION__ << endl;
@@ -2172,11 +2176,13 @@ class Vfred
     {
         VfredVecMap vector_vs2(vs2, vl);
         VfredMaskVecMap vector_v0(v0, vl);
-        
-        vd[0] = vs1[0];
+        Type val;
+
+        val = vs1[0];
         for (int i = 0; i < vl; i++)
             if (vm || (vector_v0[i] & 0x1))
-                vd[0] = (vd[0] < vector_vs2(i)) ? vector_vs2(i) : vd[0];    
+                val = (val < vector_vs2(i)) ? vector_vs2(i) : val;
+        vd[0] = val;
 
         if (debug) {
             cout << __FUNCTION__ << endl;
