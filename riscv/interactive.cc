@@ -284,7 +284,7 @@ void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::stri
 {
   vreg_t r = get_vreg(args);
   for(int i=0; i<32; i++){
-	fprintf(stderr, "0x%02" PRIu8, r.vb[i]);
+	fprintf(stderr, "0x%02" PRIx8, r.vb[i]);
 	fprintf(stderr, "\n");
   }
 }
@@ -293,7 +293,7 @@ void sim_t::interactive_vregh(const std::string& cmd, const std::vector<std::str
 {
   vreg_t r = get_vreg(args);
   for(int i=0; i<16; i++){
-	fprintf(stderr, "0x%04" PRIu16, r.vh[i]);
+	fprintf(stderr, "0x%04" PRIx16, r.vh[i]);
 	fprintf(stderr, "\n");
   }
 }
