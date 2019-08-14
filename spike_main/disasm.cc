@@ -795,6 +795,7 @@ disassembler_t::disassembler_t(int xlen)
 
 
   DEFINE_SV4TYPE(vfmerge_vfm);
+  DEFINE_SV6TYPE(vfmerge_vvm);
   DEFINE_SV4TYPE(vfmv_v_f);
   DEFINE_SV5TYPE(vext_x_v);
   DEFINE_SV5TYPE(vfredmax_vs);

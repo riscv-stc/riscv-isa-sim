@@ -402,6 +402,9 @@ void processor_t::set_csr(int which, reg_t val)
 	case CSR_TCSR:
 	  state.tcsr = val;
 	  break;
+	case CSR_TPARA0:
+	  state.tpara0 = val;
+	  break;
 	case CSR_TRBASE:
 	  state.trbase = val;
 	  break;
@@ -416,6 +419,12 @@ void processor_t::set_csr(int which, reg_t val)
 	  break;
 	case CSR_TRQSIZE:
 	  state.trqsize = val;
+	  break;
+	case CSR_TMODE:
+	  state.tmode = val;
+	  break;
+	case CSR_TMSGCLR:
+	  state.tmsgclr = val;
 	  break;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
@@ -688,6 +697,10 @@ reg_t processor_t::get_csr(int which)
 	  if(!supports_extension('V'))
 		break;
 	  return state.tcsr;
+	case CSR_TPARA0:
+	  if(!supports_extension('V'))
+		break;
+	  return state.tpara0;
 	case CSR_TRBASE:
 	  if(!supports_extension('V'))
 		break;
@@ -708,6 +721,14 @@ reg_t processor_t::get_csr(int which)
 	  if(!supports_extension('V'))
 		break;
 	  return state.trqsize;
+	case CSR_TMODE:
+	  if(!supports_extension('V'))
+		break;
+	  return state.tmode;
+	case CSR_TMSGCLR:
+	  if(!supports_extension('V'))
+		break;
+	  return state.tmsgclr;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)

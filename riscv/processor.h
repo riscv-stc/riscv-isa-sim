@@ -140,12 +140,15 @@ struct state_t
   uint32_t vl;
   uint32_t vtype;
   uint32_t tcsr;
+  uint32_t tpara0;
   uint32_t tecause;
   uint32_t trbase;
   uint32_t trsz;
   uint32_t trmmc;
   uint32_t trqhead;
   uint32_t trqsize;
+  uint32_t tmode;
+  uint32_t tmsgclr;
 
   bool serialized; // whether timer CSRs are in a well-defined state
 

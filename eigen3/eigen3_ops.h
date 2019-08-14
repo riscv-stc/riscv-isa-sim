@@ -24,6 +24,16 @@ using namespace Eigen;
 using namespace std;
 
 #define GLOBAL_DBG      1
+#define DBG_VECTOR_VVM    do {                   \
+    if (debug) {                                \
+        cout << __FUNCTION__ << endl;           \
+        cout << "vs2:\n" << vector_vs2 << endl; \
+        cout << "vs1:\n" << vector_vs1 << endl;        \
+        cout << "vm:\n" << vm << endl;          \
+        cout << "v0:\n" << vector_v0 << endl;   \
+        cout << "vd:\n" << vector_vd << endl;   \
+    }                                           \
+} while(0)
 
 #define DBG_VECTOR_VF    do {                   \
     if (debug) {                                \
@@ -584,6 +594,36 @@ class Vmerge
         }
 
         DBG_VECTOR_VF;
+
+        return 0;
+    }
+
+    /**
+     * vmerge_vvm() vfmerge.vvm
+     * @param vs2 源操作向量基地址
+     * @param rs1 源标量操作数
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vmerge_vvm(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VmergeDataVecMap vector_vs2(vs2, vl);
+        VmergeDataVecMap vector_vs1(vs1, vl);
+        VmergeDataVecMap vector_vd(vd, vl);
+        VmergeMaskVecMap vector_v0(v0, vl);
+
+        /* vm = 1, vd[0...n] = vs1[i] */
+        for (int i = 0; i < vl; i++) {
+            if (vm || vector_v0(i) & 0x1)
+                vector_vd(i) = vector_vs1(i);
+            else
+                vector_vd(i) = vector_vs2(i);
+        }
+
+        DBG_VECTOR_VVM;
 
         return 0;
     }

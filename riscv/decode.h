@@ -244,6 +244,7 @@ private:
 #define STRIDE_RD (STATE.stride1 & 0xFFFF)
 #define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
+#define TMODE	(STATE.tmode)
 
 #define check_v0hmask(x) \
 	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;

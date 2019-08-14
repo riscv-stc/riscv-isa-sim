@@ -9,4 +9,4 @@ auto tag = (RS2 & 0xff80000) >> 19;
 auto chipId = (RS2 & 0xf0000000) >> 28;
 auto coreId = (RD & 0x1ff80000) >> 19;
 auto lut = (RD & 0xe0000000) >> 29;
-trans->send(chipId, coreId, dst, src, dataSize, insn.rm(), tag, lut);
+trans->send(chipId, coreId, dst, src, dataSize, TMODE & 0x1, tag, lut);

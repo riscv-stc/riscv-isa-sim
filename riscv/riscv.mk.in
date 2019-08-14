@@ -409,6 +409,7 @@ riscv_insn_list = \
 	vfsgnjx_vf \
 	vfsgnjx_vv \
 	vfmerge_vfm \
+	vfmerge_vvm \
 	vfmv_f_s \
 	vfmv_s_f \
 	vfmv_v_f \
