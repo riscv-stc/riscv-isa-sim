@@ -28,7 +28,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   register_base_instructions();
 
   mmu = new mmu_t(sim, this);
-
+  synctimes = 0;
   disassembler = new disassembler_t(max_xlen);
   if (ext)
     for (auto disasm_insn : ext->get_disasms())

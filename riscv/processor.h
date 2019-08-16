@@ -196,7 +196,11 @@ public:
   void step(size_t n); // run for n cycles
   void set_csr(int which, reg_t val);
   reg_t get_csr(int which);
-  mmu_t* get_mmu() { return mmu; }
+  mmu_t* get_mmu() { return mmu; };
+  simif_t* get_sim() { return sim; };
+  uint32_t get_syncs() {return synctimes; };
+  uint32_t set_syncs(uint32_t times) {return synctimes = times; };
+  uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
   unsigned get_max_xlen() { return max_xlen; }
@@ -334,6 +338,7 @@ private:
   unsigned elen;
   unsigned slen;
   unsigned vlen;
+  uint32_t synctimes;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
