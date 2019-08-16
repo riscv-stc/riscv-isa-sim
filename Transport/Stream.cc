@@ -88,10 +88,9 @@ bool Stream::recvPost(uint16_t coreId, uint32_t targetAddr, const char* data, ui
     uint32_t base = proc->get_csr(CSR_TRBASE);
     char *dst = dynamic_cast<simif_t*>(gSim)->addr_to_mem(base + targetAddr);
     memcpy(dst, data, dataSize);
-
-    uint32_t qcount = proc->get_csr(CSR_TRQSIZE);
-    proc->set_csr(CSR_TRQSIZE, qcount + 1);
-
+    /*RDMA need set active bit in TCSR*/
+    uint32_t tcsr = proc->get_csr(CSR_TCSR);
+    proc->set_csr(CSR_TCSR, tcsr | TCSR_RX_ACTIVE_MASK);
     return true;
   }
 }

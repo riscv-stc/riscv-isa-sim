@@ -2,11 +2,13 @@ auto trans = Transport::Interface::getInstance();
 if (trans == nullptr) return -1;
 
 auto src = MMU.get_phy_addr(RS1);
-auto dst = RD & 0x7ffff;
+auto dst = RD;
 
-// FIXME: workaround because of current message size
-auto dataSize = RS2 & 0x7ffff;
-auto tag = (RS2 & 0xff80000) >> 19;
-auto chipId = (RS2 & 0xf0000000) >> 28;
-auto coreId = (RD & 0x1ff80000) >> 19;
-trans->send(chipId, coreId, dst, src, dataSize, TMODE & 0x1, tag);
+auto dataSize = RS2;
+auto tmode =  TMODE & 0x1;
+auto tag = 0; /*tag for RDMA*/
+if (tmode == 0) /*Msg*/
+    tag = (TPARA0 >> TPARA0_TAG_SHIFT) & TPARA0_TAG_MASK;
+auto chipId = (TPARA0 >> TPARA0_CHIP_SHIFT) & TPARA0_CHIP_MASK;
+auto coreId =(TPARA0 >> TPARA0_CORE_SHIFT) & TPARA0_CORE_MASK;
+trans->send(chipId, coreId, dst, src, dataSize, tmode, tag);

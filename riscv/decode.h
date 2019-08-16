@@ -246,6 +246,21 @@ private:
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
 #define TMODE	(STATE.tmode)
 
+#define TCSR_RX_ACTIVE_MASK (0x2)
+
+#define TPARA0_TAG_MASK (0xff)
+#define TPARA0_TAG_SHIFT (0)
+/*LUT 13-15*/
+#define TPARA0_LUT_MASK (0x7)
+#define TPARA0_LUT_SHIFT (13)
+/*Core ID 16-26*/
+#define TPARA0_CORE_MASK (0x7FF)
+#define TPARA0_CORE_SHIFT (16)
+/*Chip ID 27-31*/
+#define TPARA0_CHIP_MASK (0x1F)
+#define TPARA0_CHIP_SHIFT (27)
+#define TPARA0	(STATE.tpara0)
+
 #define check_v0hmask(x) \
 	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;
 
