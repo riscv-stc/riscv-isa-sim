@@ -31,8 +31,8 @@ class Interface {
   // type of stream used in GRPC framework
   enum StreamType {
     // public for user
-    STREAM_MESSAGE = 1,  // message
-    STREAM_RDMA    = 0,  // rdma
+    STREAM_MESSAGE = 0,  // message
+    STREAM_RDMA    = 1,  // rdma
 
     // private for user
     STREAM_DUMP = 100,  // dump memory
