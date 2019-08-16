@@ -149,6 +149,7 @@ struct state_t
   uint32_t trqsize;
   uint32_t tmode;
   uint32_t tmsgclr;
+  uint32_t tid; /*Need init by H/W */
 
   bool serialized; // whether timer CSRs are in a well-defined state
 

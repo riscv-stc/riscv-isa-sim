@@ -729,6 +729,10 @@ reg_t processor_t::get_csr(int which)
 	  if(!supports_extension('V'))
 		break;
 	  return state.tmsgclr;
+	case CSR_TID:
+	  if(!supports_extension('V'))
+		break;
+	  return state.tid;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)
