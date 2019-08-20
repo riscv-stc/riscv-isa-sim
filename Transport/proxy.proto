@@ -28,8 +28,8 @@ message Message {
   bytes body = 4;
   int32 tag = 5;
   enum StreamType {
-    rdma = 0;
-    message = 1;
+    message = 0;
+    rdma = 1;
   }
   StreamType type = 6;
   int32 dstAddr = 7;
