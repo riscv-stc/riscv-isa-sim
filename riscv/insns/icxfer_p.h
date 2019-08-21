@@ -11,4 +11,4 @@ if (tmode == 0) /*Msg*/
     tag = (TPARA0 >> TPARA0_TAG_SHIFT) & TPARA0_TAG_MASK;
 auto chipId = (TPARA0 >> TPARA0_CHIP_SHIFT) & TPARA0_CHIP_MASK;
 auto coreId =(TPARA0 >> TPARA0_CORE_SHIFT) & TPARA0_CORE_MASK;
-trans->send(chipId, coreId, dst, src, dataSize, tmode, tag);
+trans->send(chipId, coreId, dst, src, dataSize + 1, tmode, tag);
