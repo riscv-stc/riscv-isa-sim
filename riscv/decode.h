@@ -247,6 +247,7 @@ private:
 #define TMODE	(STATE.tmode)
 
 #define TCSR_RX_ACTIVE_MASK (0x2)
+#define TCSR_RX_READY_MASK (0x1)
 
 #define TPARA0_TAG_MASK (0xff)
 #define TPARA0_TAG_SHIFT (0)

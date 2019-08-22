@@ -336,6 +336,11 @@ int processor_t::paddr_bits()
   return max_xlen == 64 ? 50 : 34;
 }
 
+void processor_t::set_rx_active() {
+  uint32_t tcsr = state.tcsr;
+  state.tcsr = tcsr | TCSR_RX_ACTIVE_MASK;
+}
+
 void processor_t::set_csr(int which, reg_t val)
 {
   val = zext_xlen(val);
@@ -399,9 +404,13 @@ void processor_t::set_csr(int which, reg_t val)
 	case CSR_VL:
 	  state.vl = val;
 	  break;
-	case CSR_TCSR:
-	  state.tcsr = val;
+	case CSR_TCSR: {
+    uint32_t tcsr = state.tcsr;
+    tcsr &= ~(val & TCSR_RX_ACTIVE_MASK);
+    tcsr |= val & TCSR_RX_READY_MASK;
+	  state.tcsr = tcsr;
 	  break;
+  }
 	case CSR_TPARA0:
 	  state.tpara0 = val;
 	  break;
@@ -693,6 +702,7 @@ reg_t processor_t::get_csr(int which)
 	case CSR_VSTART:
 	  if(!supports_extension('V'))
 		break;
+    return state.vstart;
 	case CSR_TCSR:
 	  if(!supports_extension('V'))
 		break;
