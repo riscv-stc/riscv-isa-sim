@@ -385,56 +385,56 @@ void processor_t::set_csr(int which, reg_t val)
       state.fflags = (val & FSR_AEXC) >> FSR_AEXC_SHIFT;
       state.frm = (val & FSR_RD) >> FSR_RD_SHIFT;
       break;
-	case CSR_SHAPE1:
-	  state.shape1 = val;
-	  break;
-	case CSR_SHAPE2:
-	  state.shape2 = val;
-	  break;
-	case CSR_STRIDE1:
-	  state.stride1 = val;
-	  break;
-	case CSR_STRIDE2:
-	  state.stride2 = val;
-	  break;
-	case CSR_VTYPE:
-//	  state.vtype = val;
-//	  vtype is fix in current version
-	  break;
-	case CSR_VL:
-	  state.vl = val;
-	  break;
-	case CSR_TCSR: {
-    uint32_t tcsr = state.tcsr;
-    tcsr &= ~(val & TCSR_RX_ACTIVE_MASK);
-    tcsr |= val & TCSR_RX_READY_MASK;
-	  state.tcsr = tcsr;
-	  break;
-  }
-	case CSR_TPARA0:
-	  state.tpara0 = val;
-	  break;
-	case CSR_TRBASE:
-	  state.trbase = val;
-	  break;
-	case CSR_TRSZ:
-	  state.trsz = val;
-	  break;
-	case CSR_TRMMC:
-	  state.trmmc = val;
-	  break;
-	case CSR_TRQHEAD:
-	  state.trqhead = val;
-	  break;
-	case CSR_TRQSIZE:
-	  state.trqsize = val;
-	  break;
-	case CSR_TMODE:
-	  state.tmode = val;
-	  break;
-	case CSR_TMSGCLR:
-	  state.tmsgclr = val;
-	  break;
+    case CSR_SHAPE1:
+      state.shape1 = val;
+      break;
+    case CSR_SHAPE2:
+      state.shape2 = val;
+      break;
+    case CSR_STRIDE1:
+      state.stride1 = val;
+      break;
+    case CSR_STRIDE2:
+      state.stride2 = val;
+      break;
+    case CSR_VTYPE:
+      // state.vtype = val;
+      // vtype is fix in current version
+      break;
+    case CSR_VL:
+      state.vl = val;
+      break;
+    case CSR_TCSR: {
+      uint32_t tcsr = state.tcsr;
+      tcsr &= ~(val & TCSR_RX_ACTIVE_MASK);
+      tcsr |= val & TCSR_RX_READY_MASK;
+      state.tcsr = tcsr;
+      break;
+    }
+    case CSR_TPARA0:
+      state.tpara0 = val;
+      break;
+    case CSR_TRBASE:
+      state.trbase = val;
+      break;
+    case CSR_TRSZ:
+      state.trsz = val;
+      break;
+    case CSR_TRMMC:
+      state.trmmc = val;
+      break;
+    case CSR_TRQHEAD:
+      state.trqhead = val;
+      break;
+    case CSR_TRQSIZE:
+      state.trqsize = val;
+      break;
+    case CSR_TMODE:
+      state.tmode = val;
+      break;
+    case CSR_TMSGCLR:
+      state.tmsgclr = val;
+      break;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
           (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR))
@@ -675,74 +675,74 @@ reg_t processor_t::get_csr(int which)
       if (!supports_extension('F'))
         break;
       return (state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT);
-	case CSR_SHAPE1:
-	  if(!supports_extension('V'))
-		break;
-	  return state.shape1;
-	case CSR_SHAPE2:
-	  if(!supports_extension('V'))
-		break;
-	  return state.shape2;
-	case CSR_STRIDE1:
-	  if(!supports_extension('V'))
-		break;
-	  return state.stride1;
-	case CSR_STRIDE2:
-	  if(!supports_extension('V'))
-		break;
-	  return state.stride2;
-	case CSR_VL:
-	  if(!supports_extension('V'))
-		break;
-	  return state.vl;
-	case CSR_VTYPE:
-	  if(!supports_extension('V'))
-		break;
-	  return state.vtype;
-	case CSR_VSTART:
-	  if(!supports_extension('V'))
-		break;
-    return state.vstart;
-	case CSR_TCSR:
-	  if(!supports_extension('V'))
-		break;
-	  return state.tcsr;
-	case CSR_TPARA0:
-	  if(!supports_extension('V'))
-		break;
-	  return state.tpara0;
-	case CSR_TRBASE:
-	  if(!supports_extension('V'))
-		break;
-	  return state.trbase;
-	case CSR_TRSZ:
-	  if(!supports_extension('V'))
-		break;
-	  return state.trsz;
-	case CSR_TRMMC:
-	  if(!supports_extension('V'))
-		break;
-	  return state.trmmc;
-	case CSR_TRQHEAD:
-	  if(!supports_extension('V'))
-		break;
-	  return state.trqhead;
-	case CSR_TRQSIZE:
-	  if(!supports_extension('V'))
-		break;
-	  return state.trqsize;
-	case CSR_TMODE:
-	  if(!supports_extension('V'))
-		break;
-	  return state.tmode;
-	case CSR_TMSGCLR:
-	  if(!supports_extension('V'))
-		break;
-	  return state.tmsgclr;
-	case CSR_TID:
-	  if(!supports_extension('V'))
-		break;
-	  return id;
+    case CSR_SHAPE1:
+      if(!supports_extension('V'))
+        break;
+      return state.shape1;
+    case CSR_SHAPE2:
+      if(!supports_extension('V'))
+        break;
+      return state.shape2;
+    case CSR_STRIDE1:
+      if(!supports_extension('V'))
+        break;
+      return state.stride1;
+    case CSR_STRIDE2:
+      if(!supports_extension('V'))
+        break;
+      return state.stride2;
+    case CSR_VL:
+      if(!supports_extension('V'))
+        break;
+      return state.vl;
+    case CSR_VTYPE:
+      if(!supports_extension('V'))
+        break;
+      return state.vtype;
+    case CSR_VSTART:
+      if(!supports_extension('V'))
+        break;
+      return state.vstart;
+    case CSR_TCSR:
+      if(!supports_extension('V'))
+        break;
+      return state.tcsr;
+    case CSR_TPARA0:
+      if(!supports_extension('V'))
+        break;
+      return state.tpara0;
+    case CSR_TRBASE:
+      if(!supports_extension('V'))
+        break;
+      return state.trbase;
+    case CSR_TRSZ:
+      if(!supports_extension('V'))
+        break;
+      return state.trsz;
+    case CSR_TRMMC:
+      if(!supports_extension('V'))
+        break;
+      return state.trmmc;
+    case CSR_TRQHEAD:
+      if(!supports_extension('V'))
+        break;
+      return state.trqhead;
+    case CSR_TRQSIZE:
+      if(!supports_extension('V'))
+        break;
+      return state.trqsize;
+    case CSR_TMODE:
+      if(!supports_extension('V'))
+        break;
+      return state.tmode;
+    case CSR_TMSGCLR:
+      if(!supports_extension('V'))
+        break;
+      return state.tmsgclr;
+    case CSR_TID:
+      if(!supports_extension('V'))
+        break;
+      return id;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)
