@@ -244,6 +244,15 @@ private:
 #define STRIDE_RD (STATE.stride1 & 0xFFFF)
 #define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
+
+#define BC_SHAPE1_COLUMN ((STATE.bc_shape1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW (STATE.bc_shape1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN ((STATE.bc_shape2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW (STATE.bc_shape2 & 0xFFFF)
+#define BC_STRIDE_RD (STATE.bc_stride1 & 0xFFFF)
+#define BC_STRIDE_RS1 (STATE.bc_stride2 & 0xFFFF)
+#define BC_STRIDE_RS2 ((STATE.bc_stride2 & 0xFFFF0000) >> 16)
+
 #define TMODE	(STATE.tmode)
 
 #define TCSR_RX_ACTIVE_MASK (0x2)
@@ -290,6 +299,14 @@ private:
 					 (x).stride_rd = STRIDE_RD>>1; \
 					 (x).stride_rs1 = STRIDE_RS1>>1; \
 					 (x).stride_rs2 = STRIDE_RS2>>1;})
+
+#define bc_sst_fill(x) ({(x).shape1_column = BC_SHAPE1_COLUMN; \
+					 (x).shape1_row = BC_SHAPE1_ROW; \
+					 (x).shape2_column = BC_SHAPE2_COLUMN; \
+					 (x).shape2_row = BC_SHAPE2_ROW; \
+					 (x).stride_rd = BC_STRIDE_RD>>1; \
+					 (x).stride_rs1 = BC_STRIDE_RS1>>1; \
+					 (x).stride_rs2 = BC_STRIDE_RS2>>1;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())

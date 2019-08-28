@@ -397,6 +397,18 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_STRIDE2:
       state.stride2 = val;
       break;
+    case CSR_BC_SHAPE1:
+      state.bc_shape1 = val;
+      break;
+    case CSR_BC_SHAPE2:
+      state.bc_shape2 = val;
+      break;
+    case CSR_BC_STRIDE1:
+      state.bc_stride1 = val;
+      break;
+    case CSR_BC_STRIDE2:
+      state.bc_stride2 = val;
+      break;
     case CSR_VTYPE:
       // state.vtype = val;
       // vtype is fix in current version
@@ -691,6 +703,22 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return state.stride2;
+    case CSR_BC_SHAPE1:
+      if(!supports_extension('V'))
+        break;
+      return state.bc_shape1;
+    case CSR_BC_SHAPE2:
+      if(!supports_extension('V'))
+        break;
+      return state.bc_shape2;
+    case CSR_BC_STRIDE1:
+      if(!supports_extension('V'))
+        break;
+      return state.bc_stride1;
+    case CSR_BC_STRIDE2:
+      if(!supports_extension('V'))
+        break;
+      return state.bc_stride2;
     case CSR_VL:
       if(!supports_extension('V'))
         break;

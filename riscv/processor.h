@@ -134,6 +134,10 @@ struct state_t
   uint32_t shape2;
   uint32_t stride1;
   uint32_t stride2;
+  uint32_t bc_shape1;
+  uint32_t bc_shape2;
+  uint32_t bc_stride1;
+  uint32_t bc_stride2;
   uint32_t vstart;
   uint32_t vxsat;
   uint32_t vxrm;
