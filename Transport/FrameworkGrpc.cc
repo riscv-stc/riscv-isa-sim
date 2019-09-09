@@ -11,8 +11,8 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using proxy::Message;
-using proxy::RecvRequest;
+using dspike::proto::Message;
+using proxy::TCPXferCbRequest;
 using proxy::Proxy;
 
 using namespace Transport;
@@ -93,14 +93,14 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   }
 
   // prepare message data
-  proxy::Message request;
+  Message request;
   request.set_source(mCoreId);
   request.set_target(targetCoreId);
   request.set_forwarding(false);
   request.set_body(data, dataSize);
   request.set_tag(tag);
   auto t = (streamType == StreamType::STREAM_MESSAGE)?
-                proxy::Message::message : proxy::Message::rdma;
+                Message::message : Message::rdma;
   request.set_type(t);
   request.set_dstaddr(targetAddr);
 
@@ -113,7 +113,7 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   ClientContext context;
 
   // actual RPC
-  Status status = mSendStub->Send(&context, request, &reply);
+  Status status = mSendStub->TCPXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -132,17 +132,17 @@ void FrameworkGrpc::loadToRecvQueue(void) {
     return;
   }
 
-  proxy::RecvRequest request;
+  proxy::TCPXferCbRequest request;
   request.set_spikeid(mCoreId);
 
-  proxy::Message reply;
+  dspike::proto::Message reply;
 
   // context for the client
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReaderWriter<RecvRequest, Message>> readWriter(
-      mRecvStub->Recv(&context));
+  std::unique_ptr<grpc::ClientReaderWriter< proxy::TCPXferCbRequest, Message>> readWriter(
+      mRecvStub->TCPXferCb(&context));
 
   readWriter->Write(request);
 
@@ -159,7 +159,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 
     fprintf(stdout, "grpc receive, type=%d, dst=0x%08x\n", reply.type(), reply.dstaddr());
     auto streamType = StreamType::STREAM_MESSAGE;
-    if (reply.type() != proxy::Message::message) {
+    if (reply.type() != Message::message) {
       streamType = StreamType::STREAM_RDMA;
     }
     if (stream &&

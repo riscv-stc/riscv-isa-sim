@@ -2,6 +2,46 @@ syntax = "proto3";
 
 package dspike.proto;
 
+// Message present a message
+message Message {
+    enum Direction {
+      core2core = 0;
+      core2llb = 1;
+      llb2core = 2;
+    }
+    enum StreamType {
+      message = 0;
+      rdma = 1;
+    }
+    Direction direction = 1;
+    int32 source = 2;
+    int32 target = 3;
+    bool  forwarding = 4;
+    bytes body = 5;
+    int32 tag = 6;
+    StreamType type = 7;
+    int32 srcAddr = 8;
+    int32 dstAddr = 9;
+    int32 length = 10;
+}
+
+// DMAXferRequest present a request for DMA transfer
+message DMAXferRequest {
+    enum Direction {
+      llb2ddr = 0;
+      ddr2llb = 1;
+    }
+    Direction direction = 1;
+    int64 srcAddr = 3;
+    int64 dstAddr = 4;
+    int64 length = 5;
+}
+
+// DMAXferPollResponse present a response from DMA transfer poll
+message DMAXferPollResponse {
+    bool busy = 1;
+}
+
 message DumpInfo {
     int32 spikeId = 1;
     int32 dumpId = 2;

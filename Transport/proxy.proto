@@ -8,35 +8,26 @@ import "dspike/proto/common.proto";
 // Proxy Interface for spike messages
 service Proxy {
   // send a message
-  rpc Send(Message) returns (google.protobuf.Empty);
+  rpc TCPXfer(dspike.proto.Message) returns (google.protobuf.Empty);
   // receive messages via stream
-  rpc Recv(stream RecvRequest) returns (stream Message);
+  rpc TCPXferCb(stream TCPXferCbRequest) returns (stream dspike.proto.Message);
+
   // do bsp sync
   rpc Sync(SyncRequest) returns (google.protobuf.Empty);
+
+  // do DMA transfer for LLB <-> DDR
+  rpc DMAXfer(dspike.proto.DMAXferRequest) returns (google.protobuf.Empty);
+  // poll DMA transfer status
+  rpc DMAXferPoll(google.protobuf.Empty) returns (dspike.proto.DMAXferPollResponse);
 
   // upload dump data to proxy
   rpc Dump(DumpData) returns (google.protobuf.Empty);
   // wait for proxy send a DumpParam to get dump data or turn on/off sync dump
-  rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam); 
+  rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam);
 }
 
-// Message present a message
-message Message {
-  int32 source = 1;
-  int32 target = 2;
-  bool  forwarding = 3;
-  bytes body = 4;
-  int32 tag = 5;
-  enum StreamType {
-    message = 0;
-    rdma = 1;
-  }
-  StreamType type = 6;
-  int32 dstAddr = 7;
-}
-
-// RecvRequest present a request for spike to receive messages
-message RecvRequest {
+// TCPXferCbRequest present a request for spike to receive messages
+message TCPXferCbRequest {
   int32 spikeId = 1;
 }
 
