@@ -31,12 +31,28 @@ Interface *Interface::getInstance(FrameworkType frameworkType)
 }
 
 /**
- * implement send function in BSP module
+ * implement tcpXfer function in BSP module
  */
-bool Interface::send(uint16_t targetChipId, uint16_t targetCoreId,
-                     uint32_t targetAddr, char *data,
-                     int dataSize, StreamType streamType, uint16_t tag,
-                     uint8_t lut)
+bool Interface::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
+                     uint32_t targetAddr, char *data, int dataSize,
+                     StreamType streamType, StreamDir streamDir = CORE2CORE,
+                     uint16_t tag, uint8_t lut)
+{
+  return false;
+};
+
+/**
+ * implement dmaXfer function
+ */
+bool Interface::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len)
+{
+  return false;
+};
+
+/**
+ * implement dmaXferPoll function
+ */
+bool Interface::dmaXferPoll()
 {
   return false;
 };

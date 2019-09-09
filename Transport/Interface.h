@@ -38,6 +38,19 @@ class Interface {
     STREAM_DUMP = 100,  // dump memory
   };
 
+  // direction of stream used in GRPC framework
+  enum StreamDir {
+    CORE2CORE  = 0,  // from a core(spike) to another core(spike)
+    CORE2LLB   = 1,  // from a core(spike) to LLB
+    LLB2CORE   = 2,  // from LLB to a core(spike)
+  };
+
+  // direction of DMA
+  enum DmaDir {
+    LLB2DDR  = 0,   // from LLB to DDR
+    DDR2LLB   = 1,  // from DDR to LLB
+  };
+
   // pure virtual deconstructor, used for abstract class
   virtual ~Interface() = 0;
 
@@ -67,17 +80,36 @@ class Interface {
 #define LUT_DISABLE 0xff  // invalid lut means lut is not used
 
   /**
-   * @brief implement send function in BSP module
-   * @param targetId: ID of target core(spike)
+   * @brief implement tcpXfer function in BSP module
+   * @param targetChipId: ID of chip
+   * @param targetCoreId: ID of target core(spike)
+   * @param targetAddr: address of target
    * @param data: address of data
    * @param dataSize: size of data
-   * @param streamType: type of stream, defalut is STREAM_MESSAGE
+   * @param streamType: type of stream, default is STREAM_MESSAGE
+   * @param streamDir: direction of stream, default is CORE2CORE
    * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
-  virtual bool send(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
+  virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
                     char *data, int dataSize, StreamType streamType = STREAM_MESSAGE,
-                    uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
+                    StreamDir streamDir = CORE2CORE, uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
+
+  /**
+   * @brief implement dmaXfer function
+   * @param targetAddr: address of target
+   * @param sourceAddr: address of source
+   * @param streamDir: direction of dma
+   * @param len: size of data
+   * @return true - success; false - fail
+   */
+  virtual bool dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len);
+
+  /**
+   * @brief implement dmaXferPoll function
+   * @return true - busy; false - done
+   */
+  virtual bool dmaXferPoll();
 
   /**
    * @brief implement sync function in BSP module

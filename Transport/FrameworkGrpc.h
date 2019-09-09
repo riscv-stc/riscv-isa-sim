@@ -35,18 +35,36 @@ class FrameworkGrpc : public Framework {
   bool init(uint16_t coreId, std::string serverAddr, int serverPort) override;
 
   /**
-   * @brief implement send function of BSP module
-   * @param targetId: ID of target core(spike)
-   * @param data: message data
-   * @param dataSize: size of message data
-   * @param streamType: type of stream
-   * @param lut: index of lookup table for boradcast
-   * @param tag: message tag
+   * @brief implement tcpXfer function of BSP module
+   * @param targetChipId: ID of chip
+   * @param targetCoreId: ID of target core(spike)
+   * @param targetAddr: address of target
+   * @param data: address of data
+   * @param dataSize: size of data
+   * @param streamType: type of stream, default is STREAM_MESSAGE
+   * @param streamDir: direction of stream, default is CORE2CORE
+   * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
-  bool send(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
-            int dataSize, StreamType streamType, uint16_t tag,
+  bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
+            int dataSize, StreamType streamType, StreamDir streamDir, uint16_t tag,
             uint8_t lut) override;
+
+  /**
+   * @brief implement dmaXfer function
+   * @param targetAddr: address of target
+   * @param sourceAddr: address of source
+   * @param streamDir: direction of dma
+   * @param len: size of data
+   * @return true - success; false - fail
+   */
+  bool dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len) override;
+
+  /**
+   * @brief implement dmaXferPoll function
+   * @return true - busy; false - done
+   */
+  bool dmaXferPoll() override;
 
   /**
    * @brief implement sync function of BSP module
@@ -71,8 +89,10 @@ class FrameworkGrpc : public Framework {
 
  private:
   std::string serverAddr = "";  // address + port of grpc server
-  std::unique_ptr<Proxy::Stub> mSendStub = nullptr;  // stub for send service
-  std::unique_ptr<Proxy::Stub> mRecvStub = nullptr;  // stub for recv service
+  std::unique_ptr<Proxy::Stub> mTcpXferStub = nullptr;  // stub for tcp Xfer service
+  std::unique_ptr<Proxy::Stub> mTcpXferCbStub = nullptr;  // stub for tcp Xfer callback service
+  std::unique_ptr<Proxy::Stub> mDmaXferStub = nullptr;  // stub for dma Xfer service
+  std::unique_ptr<Proxy::Stub> mDmaXferPollStub = nullptr;  // stub for dma xfer poll service
   std::unique_ptr<Proxy::Stub> mSyncStub = nullptr;  // stub for sync service
   std::unique_ptr<Proxy::Stub> mDumpStub = nullptr;  // stub for dump service
   std::unique_ptr<Proxy::Stub> mWaitDumpStub =

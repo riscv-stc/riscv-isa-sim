@@ -12,6 +12,8 @@ using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
 using dspike::proto::Message;
+using dspike::proto::DMAXferRequest;
+using dspike::proto::DMAXferPollResponse;
 using proxy::TCPXferCbRequest;
 using proxy::Proxy;
 
@@ -43,10 +45,16 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
   gGrpcClient->mCoreId = coreId;
   gGrpcClient->serverAddr = serverAddr + ":" + std::to_string(serverPort);
 
-  gGrpcClient->mSendStub = Proxy::NewStub(grpc::CreateChannel(
+  gGrpcClient->mTcpXferStub = Proxy::NewStub(grpc::CreateChannel(
       gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mRecvStub = Proxy::NewStub(grpc::CreateChannel(
+  gGrpcClient->mDmaXferStub = Proxy::NewStub(grpc::CreateChannel(
+      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+
+  gGrpcClient->mDmaXferPollStub = Proxy::NewStub(grpc::CreateChannel(
+      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+
+  gGrpcClient->mTcpXferCbStub = Proxy::NewStub(grpc::CreateChannel(
       gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
 
   gGrpcClient->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
@@ -58,7 +66,7 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
   gGrpcClient->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
       gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
 
-  if (gGrpcClient->mSendStub == nullptr || gGrpcClient->mRecvStub == nullptr ||
+  if (gGrpcClient->mTcpXferStub == nullptr || gGrpcClient->mTcpXferCbStub == nullptr ||
       gGrpcClient->mDumpStub == nullptr ||
       gGrpcClient->mWaitDumpStub == nullptr ||
       gGrpcClient->mSyncStub == nullptr) {
@@ -80,14 +88,14 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
 }
 
 /**
- * implement send function of BSP module
+ * implement tcpXfer function of BSP module
  */
-bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
-                         uint32_t targetAddr,
-                         char* data, int dataSize, StreamType streamType,
+bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
+                         uint32_t targetAddr, char* data, int dataSize,
+                         StreamType streamType, StreamDir streamDir,
                          uint16_t tag, uint8_t lut) {
-  if (gGrpcClient->mSendStub == nullptr) {
-    std::cout << "send stub is null, since grpc doesn't initialize"
+  if (gGrpcClient->mTcpXferStub == nullptr) {
+    std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
   }
@@ -113,7 +121,7 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
   ClientContext context;
 
   // actual RPC
-  Status status = mSendStub->TCPXfer(&context, request, &reply);
+  Status status = mTcpXferStub->TCPXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -123,10 +131,78 @@ bool FrameworkGrpc::send(uint16_t targetChipId, uint16_t targetCoreId,
 }
 
 /**
+ * implement dmaXfer function
+ */
+bool FrameworkGrpc::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len) {
+  if (gGrpcClient->mDmaXferStub == nullptr) {
+    std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
+              << std::endl;
+    return false;
+  }
+
+  // prepare message data
+  DMAXferRequest request;
+  request.set_dstaddr(targetAddr);
+  request.set_srcaddr(sourceAddr);
+  auto d = (dir == LLB2DDR?
+              DMAXferRequest::llb2ddr : DMAXferRequest::ddr2llb);
+  request.set_direction(d);
+  request.set_length(len);
+
+  fprintf(stdout, "grpc send, dst=0x%16lx src=0x%16lx\n", request.dstaddr(), request.srcaddr());
+
+  google::protobuf::Empty reply;
+
+  // context for the client
+  ClientContext context;
+
+  // actual RPC
+  Status status = mDmaXferStub->DMAXfer(&context, request, &reply);
+
+  if (!status.ok())
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+
+  return status.ok();
+}
+
+/**
+ * implement dmaXferPoll function
+ */
+bool FrameworkGrpc::dmaXferPoll() {
+  if (gGrpcClient->mDmaXferPollStub == nullptr) {
+    std::cout << "dmaXferPoll stub is null, since grpc doesn't initialize"
+              << std::endl;
+    return false;
+  }
+
+  google::protobuf::Empty request;
+
+  fprintf(stdout, "grpc dmaXferPoll\n");
+
+  // container for the data we expect from the server
+  DMAXferPollResponse reply;
+
+  // context for the client
+  ClientContext context;
+
+  // actual RPC
+  Status status = mDmaXferPollStub->DMAXferPoll(&context, request, &reply);
+
+  if (!status.ok()) {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return true; // when fail, also return busy mode
+  }
+  else
+    return reply.busy();
+}
+
+/**
  * receive data from grpc server and store them in message queue
  */
 void FrameworkGrpc::loadToRecvQueue(void) {
-  if (gGrpcClient->mRecvStub == nullptr) {
+  if (gGrpcClient->mTcpXferCbStub == nullptr) {
     std::cout << "recv stub is null, since grpc doesn't initialize"
               << std::endl;
     return;
@@ -142,7 +218,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 
   // actual RPC
   std::unique_ptr<grpc::ClientReaderWriter< proxy::TCPXferCbRequest, Message>> readWriter(
-      mRecvStub->TCPXferCb(&context));
+      mTcpXferCbStub->TCPXferCb(&context));
 
   readWriter->Write(request);
 
