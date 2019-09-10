@@ -34,9 +34,8 @@ Interface *Interface::getInstance(FrameworkType frameworkType)
  * implement tcpXfer function in BSP module
  */
 bool Interface::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
-                     uint32_t targetAddr, char *data, int dataSize,
-                     StreamType streamType, StreamDir streamDir = CORE2CORE,
-                     uint16_t tag, uint8_t lut)
+                     uint32_t targetAddr, char *data, int dataSize, uint32_t sourceAddr,
+                     StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut)
 {
   return false;
 };

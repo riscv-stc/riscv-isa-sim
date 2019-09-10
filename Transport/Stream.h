@@ -60,7 +60,7 @@ class Stream {
    * @return true - success; false - fail
    */
   bool recvPost(uint16_t coreId, uint32_t targetAddr, const char *data, uint32_t dataSize,
-                Interface::StreamType streamType, uint16_t tag);
+                Interface::StreamType streamType, Interface::StreamDir streamDir, uint16_t tag);
 
   /**
    * @brief dump memory in target to data

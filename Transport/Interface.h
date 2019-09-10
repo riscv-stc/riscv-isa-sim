@@ -92,8 +92,8 @@ class Interface {
    * @return true - success; false - fail
    */
   virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
-                    char *data, int dataSize, StreamType streamType = STREAM_MESSAGE,
-                    StreamDir streamDir = CORE2CORE, uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
+                    char *data, int dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE,
+                     StreamType streamType = STREAM_MESSAGE, uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
 
   /**
    * @brief implement dmaXfer function

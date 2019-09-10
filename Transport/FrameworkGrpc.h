@@ -47,7 +47,7 @@ class FrameworkGrpc : public Framework {
    * @return true - success; false - fail
    */
   bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
-            int dataSize, StreamType streamType, StreamDir streamDir, uint16_t tag,
+            int dataSize, uint32_t sourceAddr, StreamDir streamDir, StreamType streamType, uint16_t tag,
             uint8_t lut) override;
 
   /**

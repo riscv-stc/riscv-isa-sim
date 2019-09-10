@@ -241,6 +241,12 @@ riscv_insn_list = \
 	fsw \
 	icxfer_p \
 	icxfer_m \
+	lcxfer_d \
+	lcxfer_u \
+	lcxfer_u_m \
+	dlxfer_d \
+	dlxfer_u \
+	dmapoll \
 	jal \
 	jalr \
 	lb \

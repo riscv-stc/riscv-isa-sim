@@ -42,7 +42,7 @@ bool Stream::registerInstance(Interface::StreamType streamType,
  * post function of recv function in BSP module
  */
 bool Stream::recvPost(uint16_t coreId, uint32_t targetAddr, const char* data, uint32_t dataSize,
-                      Interface::StreamType streamType, uint16_t tag) {
+                      Interface::StreamType streamType, Interface::StreamDir streamDir,uint16_t tag) {
 // spike must only emulate one processor
   if (!gSim || gSim->nprocs() != 1) {
     std::cout << "can't work for spike simulating more than one processor"
@@ -50,6 +50,12 @@ bool Stream::recvPost(uint16_t coreId, uint32_t targetAddr, const char* data, ui
     return false;
   }
   auto proc = gSim->get_core(0);
+
+  if (streamDir == Interface::StreamDir::LLB2CORE) {
+    char *dst = dynamic_cast<simif_t*>(gSim)->addr_to_mem(targetAddr);
+    memcpy((char *)dst, data, dataSize);
+    return true;
+  }
 
   // Message stream
   if (streamType == Interface::STREAM_MESSAGE) {

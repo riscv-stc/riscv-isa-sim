@@ -91,9 +91,8 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
  * implement tcpXfer function of BSP module
  */
 bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
-                         uint32_t targetAddr, char* data, int dataSize,
-                         StreamType streamType, StreamDir streamDir,
-                         uint16_t tag, uint8_t lut) {
+                         uint32_t targetAddr, char* data, int dataSize, uint32_t sourceAddr,
+                         StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut) {
   if (gGrpcClient->mTcpXferStub == nullptr) {
     std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -102,15 +101,35 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 
   // prepare message data
   Message request;
-  request.set_source(mCoreId);
-  request.set_target(targetCoreId);
-  request.set_forwarding(false);
-  request.set_body(data, dataSize);
-  request.set_tag(tag);
-  auto t = (streamType == StreamType::STREAM_MESSAGE)?
-                Message::message : Message::rdma;
-  request.set_type(t);
-  request.set_dstaddr(targetAddr);
+  switch (streamDir) {
+    case CORE2CORE:
+          request.set_source(mCoreId);
+          request.set_target(targetCoreId);
+          request.set_forwarding(false);
+          request.set_body(data, dataSize);
+          request.set_tag(tag);
+          if (streamType == StreamType::STREAM_MESSAGE)
+            request.set_type(Message::message);
+          else
+            request.set_type(Message::rdma);
+          request.set_dstaddr(targetAddr);
+          break;
+
+    case LLB2CORE:
+          request.set_srcaddr(sourceAddr);
+          request.set_dstaddr(targetAddr);
+          request.set_direction(Message::llb2core);
+          break;
+
+    case CORE2LLB:
+          request.set_source(mCoreId);
+          request.set_body(data, dataSize);
+          request.set_dstaddr(targetAddr);
+          request.set_direction(Message::core2llb);
+          break;
+    default:
+          break;
+  }
 
   fprintf(stdout, "grpc send, type=%d, dst=0x%08x\n", request.type(), request.dstaddr());
 
@@ -144,9 +163,10 @@ bool FrameworkGrpc::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir
   DMAXferRequest request;
   request.set_dstaddr(targetAddr);
   request.set_srcaddr(sourceAddr);
-  auto d = (dir == LLB2DDR?
-              DMAXferRequest::llb2ddr : DMAXferRequest::ddr2llb);
-  request.set_direction(d);
+  if (dir == LLB2DDR)
+    request.set_direction(DMAXferRequest::llb2ddr);
+  else
+    request.set_direction(DMAXferRequest::ddr2llb);
   request.set_length(len);
 
   fprintf(stdout, "grpc send, dst=0x%16lx src=0x%16lx\n", request.dstaddr(), request.srcaddr());
@@ -238,10 +258,15 @@ void FrameworkGrpc::loadToRecvQueue(void) {
     if (reply.type() != Message::message) {
       streamType = StreamType::STREAM_RDMA;
     }
+
+    auto streamDir = StreamDir::CORE2CORE;
+    if (reply.direction() == Message::llb2core)
+      streamDir = StreamDir::LLB2CORE;
+
     if (stream &&
         stream->recvPost(reply.source(), reply.dstaddr(), reply.mutable_body()->data(),
-                         reply.mutable_body()->size(), streamType, 
-                         reply.tag()) == false) {
+                       reply.mutable_body()->size(), streamType, streamDir,
+                       reply.tag()) == false) {
       std::cout << "fail to post receive message" << std::endl;
     }
 
