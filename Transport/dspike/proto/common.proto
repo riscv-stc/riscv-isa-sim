@@ -32,9 +32,9 @@ message DMAXferRequest {
       ddr2llb = 1;
     }
     Direction direction = 1;
-    int64 srcAddr = 3;
-    int64 dstAddr = 4;
-    int64 length = 5;
+    int32 llbAddr = 3;
+    int64 ddrAddr = 4;
+    int32 length = 5;
 }
 
 // DMAXferPollResponse present a response from DMA transfer poll

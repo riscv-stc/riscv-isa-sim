@@ -20,8 +20,7 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using proxy::Message;
-using proxy::RecvRequest;
+using dspike::proto::Message;
 using proxy::Proxy;
 
 using grpc::Server;
@@ -32,31 +31,44 @@ bool bSent = false;
 int count = 0;
 // Logic and data behind the server's behavior.
 class ServerContextServiceImpl final : public Proxy::Service {
-  Status Send(ServerContext* context, const ::proxy::Message* request,
+  Status TCPXfer(ServerContext* context, const ::dspike::proto::Message* request,
               ::google::protobuf::Empty* response) override {
-    std::cout << "Send--source ID:" << request->source()
+    std::cout << "TCPXfer--source ID:" << request->source()
+              << " target ID:" << request->target()
               << " target ID:" << request->target()
               << " body:" << request->body() << std::endl;
+    printf(" src address:%p, dst address:%p direction:%d\n" ,request->srcaddr(),request->dstaddr(), request->direction());
     bSent = true;
     return Status::OK;
   }
 
-  Status Recv(ServerContext* context,
-              grpc::ServerReaderWriter< ::proxy::Message, ::proxy::RecvRequest>*
+  Status DMAXfer(ServerContext* context, const ::dspike::proto::DMAXferRequest* request,
+              ::google::protobuf::Empty* response) override {
+    printf("DMAXfer ddr address:%p, llb address:%p direction:%d\n" ,request->ddraddr(),request->llbaddr(),request->direction());
+    bSent = true;
+    return Status::OK;
+  }
+
+  Status TCPXferCb(ServerContext* context,
+              grpc::ServerReaderWriter< ::dspike::proto::Message, ::proxy::TCPXferCbRequest>*
                   stream) override {
-    proxy::RecvRequest request;
+    proxy::TCPXferCbRequest request;
     stream->Read(&request);
-    std::cout << "Recv--source ID:" << request.spikeid() << std::endl;
     while (1) {
       while (!bSent)
         ;
-      if (count++ > 1000) {
+      if (count++ > 2) {
         break;
       } else {
-        proxy::Message msg;
+    std::cout << "TCPXferCb" << std::endl;
+        dspike::proto::Message msg;
         msg.set_body("recv:" + std::to_string(count));
+#if 0
         msg.set_source(12);
         msg.set_target(1);
+#endif
+        msg.set_dstaddr(0xcdfc);
+        msg.set_direction(Message::llb2core);
         stream->Write(msg);
         stream->Read(&request);
       }

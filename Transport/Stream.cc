@@ -52,6 +52,7 @@ bool Stream::recvPost(uint16_t coreId, uint32_t targetAddr, const char* data, ui
   auto proc = gSim->get_core(0);
 
   if (streamDir == Interface::StreamDir::LLB2CORE) {
+    //std::cout << "targetAddr"<< targetAddr<< "data:"<< std::string(data,dataSize) <<std::endl;
     char *dst = dynamic_cast<simif_t*>(gSim)->addr_to_mem(targetAddr);
     memcpy((char *)dst, data, dataSize);
     return true;

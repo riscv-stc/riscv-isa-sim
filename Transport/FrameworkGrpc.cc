@@ -131,7 +131,8 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
           break;
   }
 
-  fprintf(stdout, "grpc send, type=%d, dst=0x%08x\n", request.type(), request.dstaddr());
+  fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
+                           request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);
 
   // container for the data we expect from the server
   google::protobuf::Empty reply;
@@ -152,7 +153,7 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool FrameworkGrpc::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len) {
+bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len) {
   if (gGrpcClient->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -161,15 +162,16 @@ bool FrameworkGrpc::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir
 
   // prepare message data
   DMAXferRequest request;
-  request.set_dstaddr(targetAddr);
-  request.set_srcaddr(sourceAddr);
+  request.set_llbaddr(llbAddr);
+  request.set_ddraddr(ddrAddr);
   if (dir == LLB2DDR)
     request.set_direction(DMAXferRequest::llb2ddr);
   else
     request.set_direction(DMAXferRequest::ddr2llb);
   request.set_length(len);
 
-  fprintf(stdout, "grpc send, dst=0x%16lx src=0x%16lx\n", request.dstaddr(), request.srcaddr());
+  fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
+                        dir, request.ddraddr(), request.llbaddr(), len);
 
   google::protobuf::Empty reply;
 
@@ -198,7 +200,7 @@ bool FrameworkGrpc::dmaXferPoll() {
 
   google::protobuf::Empty request;
 
-  fprintf(stdout, "grpc dmaXferPoll\n");
+  fprintf(stdout, "[dmaXferPoll]\n");
 
   // container for the data we expect from the server
   DMAXferPollResponse reply;
@@ -246,14 +248,15 @@ void FrameworkGrpc::loadToRecvQueue(void) {
   while (readWriter->Read(&reply)) {
     // enqueue data to message queue
 
-    if (reply.target() != mCoreId) {
+    if (reply.direction() == Message::core2core && reply.target() != mCoreId) {
       std::cout << "message is sent to " << reply.target() << " nor " << mCoreId
                 << std::endl;
       readWriter->Write(request);
       continue;
     }
 
-    fprintf(stdout, "grpc receive, type=%d, dst=0x%08x\n", reply.type(), reply.dstaddr());
+    fprintf(stdout, "[tcpXferCb] direction:%d, dst:0x%08x type:%d data size:%d\n",
+                         reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
     auto streamType = StreamType::STREAM_MESSAGE;
     if (reply.type() != Message::message) {
       streamType = StreamType::STREAM_RDMA;

@@ -43,7 +43,7 @@ bool Interface::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool Interface::dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len)
+bool Interface::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len)
 {
   return false;
 };

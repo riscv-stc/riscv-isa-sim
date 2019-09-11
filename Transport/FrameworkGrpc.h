@@ -58,7 +58,7 @@ class FrameworkGrpc : public Framework {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  bool dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len) override;
+  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len) override;
 
   /**
    * @brief implement dmaXferPoll function

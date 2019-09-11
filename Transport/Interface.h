@@ -97,13 +97,13 @@ class Interface {
 
   /**
    * @brief implement dmaXfer function
-   * @param targetAddr: address of target
-   * @param sourceAddr: address of source
+   * @param ddrAddr: address of target
+   * @param llbAddr: address of source
    * @param streamDir: direction of dma
    * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint32_t targetAddr, uint32_t sourceAddr, DmaDir dir, uint16_t len);
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len);
 
   /**
    * @brief implement dmaXferPoll function
