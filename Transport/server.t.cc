@@ -37,7 +37,7 @@ class ServerContextServiceImpl final : public Proxy::Service {
               << " target ID:" << request->target()
               << " target ID:" << request->target()
               << " body:" << request->body() << std::endl;
-    printf(" src address:%p, dst address:%p direction:%d\n" ,request->srcaddr(),request->dstaddr(), request->direction());
+    printf(" src address:%p, dst address:%p direction:%d length:%d\n" ,request->srcaddr(),request->dstaddr(), request->direction(), request->length());
     bSent = true;
     return Status::OK;
   }

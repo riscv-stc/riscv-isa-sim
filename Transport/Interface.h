@@ -92,7 +92,7 @@ class Interface {
    * @return true - success; false - fail
    */
   virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
-                    char *data, int dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE,
+                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE,
                      StreamType streamType = STREAM_MESSAGE, uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
 
   /**
@@ -103,7 +103,7 @@ class Interface {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len);
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len);
 
   /**
    * @brief implement dmaXferPoll function

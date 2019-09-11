@@ -47,7 +47,7 @@ class FrameworkGrpc : public Framework {
    * @return true - success; false - fail
    */
   bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
-            int dataSize, uint32_t sourceAddr, StreamDir streamDir, StreamType streamType, uint16_t tag,
+            uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir, StreamType streamType, uint16_t tag,
             uint8_t lut) override;
 
   /**
@@ -58,7 +58,7 @@ class FrameworkGrpc : public Framework {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len) override;
+  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) override;
 
   /**
    * @brief implement dmaXferPoll function

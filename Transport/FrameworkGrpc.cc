@@ -91,7 +91,7 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
  * implement tcpXfer function of BSP module
  */
 bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
-                         uint32_t targetAddr, char* data, int dataSize, uint32_t sourceAddr,
+                         uint32_t targetAddr, char* data, uint32_t dataSize, uint32_t sourceAddr,
                          StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut) {
   if (gGrpcClient->mTcpXferStub == nullptr) {
     std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
@@ -116,9 +116,11 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
           break;
 
     case LLB2CORE:
+          request.set_target(targetCoreId);
           request.set_srcaddr(sourceAddr);
           request.set_dstaddr(targetAddr);
           request.set_direction(Message::llb2core);
+          request.set_length(dataSize);
           break;
 
     case CORE2LLB:
@@ -153,7 +155,7 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint16_t len) {
+bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) {
   if (gGrpcClient->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
