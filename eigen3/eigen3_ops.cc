@@ -284,7 +284,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half vec_rs2_dim1(rs2, 1, ss->shape1_column, DynStride(1, 1));
     Map_half vec_rs2_dim0(rs2, ss->shape1_row, 1, DynStride(1, 1));
-    Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     Map_half vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
     Matrix_half rd_matrix(ss->shape1_row, ss->shape1_column);
 
