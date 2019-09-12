@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 
 unsigned int index = 0;
 

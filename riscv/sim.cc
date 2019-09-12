@@ -16,6 +16,15 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+#define mcu_addr_start       (0x00000000)
+#define mcu_space_size       (0x00020000)
+#define l1_buffer_start      (0x00080000)
+#define l1_buffer_size       (0x00180000)
+#define weight_buffer_start  (0x00200000)
+#define weight_buffer_size   (0x00080000)
+#define im_buffer_start      (0x00280000)
+#define im_buffer_size       (0x00080000)
+
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
@@ -31,7 +40,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
-             bool support_abstract_csr_access)
+             bool support_abstract_csr_access, bool layout)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -43,13 +52,36 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   //char add_clint_dev = 1;
 
   signal(SIGINT, &handle_signal);
+  memory_layout = layout;
+  aunit = MCU;
 
-  for (auto& x : mems) {
-      bus.add_device(x.first, x.second);
-      //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
-      //  add_debug_dev = 0;
-      //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
-      //  add_clint_dev = 0;
+  if (layout) {
+    for (auto& x : mems) {
+      if (x.first == mcu_addr_start && x.second->size() == mcu_space_size)
+        bus.add_device(x.first, x.second);
+
+      if (x.first == l1_buffer_start && x.second->size() == l1_buffer_size) {
+        tbus.add_device(x.first, x.second);
+        nbus.add_device(x.first, x.second);
+      }
+
+      if (x.first == weight_buffer_start && x.second->size() == weight_buffer_size) {
+        tbus.add_device(x.first, x.second);
+        nbus.add_device(x.first, x.second);
+      }
+
+      if (x.first == im_buffer_start && x.second->size() == im_buffer_size)
+        nbus.add_device(x.first, x.second);
+    }
+  }
+  else {
+      for (auto& x : mems) {
+          bus.add_device(x.first, x.second);
+          //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
+          //  add_debug_dev = 0;
+          //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
+          //  add_clint_dev = 0;
+      }
   }
 
   debug_module.add_device(&bus);
@@ -259,16 +291,72 @@ void sim_t::set_procs_debug(bool value)
 
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
+  bool result = false;
+  //bus_t *pbus = nullptr;
+  
   if (addr + len < addr)
     return false;
-  return bus.load(addr, len, bytes);
+
+  //if (memory_layout) {
+  //  switch (aunit) {
+  //    case MCU:
+  //      pbus = &bus;
+  //      break;
+  //    case NCP:
+  //      pbus = &nbus;
+  //      break;
+  //    case TCP:
+  //      pbus = &tbus;
+  //      break;
+  //    default:
+  //      pbus = &bus;
+  //  }
+  //}
+  //else {
+  //  pbus = &bus;
+  //}
+  
+  result = bus.load(addr, len, bytes);
+  if (unlikely(!result && (MCU == aunit)))  
+    std::cout << "mcu can't load addr:" << hex << addr \
+      << " in aunit: " << aunit << std::endl;
+  
+  return result;
 }
 
 bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
+  bool result = false;
+  //bus_t *pbus = nullptr;
+
   if (addr + len < addr)
     return false;
-  return bus.store(addr, len, bytes);
+
+  //if (memory_layout) {
+  //  switch (aunit) {
+  //    case MCU:
+  //      pbus = &bus;
+  //      break;
+  //    case NCP:
+  //      pbus = &nbus;
+  //      break;
+  //    case TCP:
+  //      pbus = &tbus;
+  //      break;
+  //    default:
+  //      pbus = &bus;
+  //  }
+  //}
+  //else {
+  //  pbus = &bus;
+  //}
+  
+  result = bus.store(addr, len, bytes);
+  if (unlikely(!result && (MCU == aunit)))  
+    std::cout << "mcu can't store addr:" << hex << addr \
+      << " in aunit: " << aunit << std::endl;
+  
+  return result;
 }
 
 void sim_t::make_dtb()
@@ -304,11 +392,39 @@ void sim_t::make_dtb()
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {
-  auto desc = bus.find_device(addr);
-  if (auto mem = dynamic_cast<mem_t*>(desc.second))
+  bus_t *pbus = nullptr;
+
+  if (memory_layout) {
+    switch (aunit) {
+      case MCU:
+        pbus = &bus;
+        break;
+      case NCP:
+        pbus = &nbus;
+        break;
+      case TCP:
+        pbus = &tbus;
+        break;
+      default:
+        pbus = &bus;
+    }
+  }
+  else {
+    pbus = &bus;
+  }
+
+  auto desc = pbus->find_device(addr);
+  if (auto mem = dynamic_cast<mem_t *>(desc.second))
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
-      
+    
+  if (unlikely((NCP == aunit) || (TCP == aunit))) { 
+    const char *aname = (NCP == aunit) ? "ncp" : "tcp";
+    std::cout << aname << " can't access addr:" << hex << addr \
+      << " in aunit: " << aunit << std::endl;
+    throw std::runtime_error("ncp or tcp access illegal address.");
+  }
+  
   return NULL;
 }
 

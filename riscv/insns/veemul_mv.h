@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 
 class CustomInsns CusIns;
 struct ShapeStride sst;

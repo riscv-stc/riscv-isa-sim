@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 
 uint32_t start = VSTART > 1 ? VSTART : 1;
 

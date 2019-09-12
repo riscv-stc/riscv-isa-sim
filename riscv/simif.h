@@ -5,6 +5,12 @@
 
 #include "decode.h"
 
+enum access_unit {
+  MCU,
+  NCP,
+  TCP, 
+};
+
 // this is the interface to the simulator used by the processors and memory
 class simif_t
 {
@@ -18,6 +24,7 @@ public:
   virtual void proc_reset(unsigned id) = 0;
   virtual void load_heap(const char *path) = 0;
   virtual void dump_heap(const char *path, size_t len) = 0;
+  virtual access_unit set_aunit(access_unit unit) = 0;
 };
 
 #endif

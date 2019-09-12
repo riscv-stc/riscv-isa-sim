@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 p->set_csr(CSR_VTYPE, RS2);
 if(RS1 <= VLMAX){
 	p->set_csr(CSR_VL, RS1);

@@ -92,6 +92,9 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
   return res;
 }
 
+
+#define DEFAULT_LAYOUT (true)
+#define DEFAULT_MEMORY_LAYOUT "0x0:0x20000, 0x80000:0x180000, 0x200000:0x80000, 0x280000:0x80000"
 int main(int argc, char** argv)
 {
   bool debug = false;
@@ -100,6 +103,7 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
+  bool mem_layout = false;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -191,9 +195,11 @@ int main(int argc, char** argv)
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
-  if (mems.empty())
-    mems = make_mems("2048");
-
+  if (mems.empty()) {
+    mems = make_mems(DEFAULT_MEMORY_LAYOUT);
+    mem_layout = DEFAULT_LAYOUT;
+  }
+  
   if (!*argv1)
     help();
 
@@ -202,7 +208,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, nprocs, halted, start_pc, mems, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
-      abstract_rti, support_hasel, support_abstract_csr_access);
+      abstract_rti, support_hasel, support_abstract_csr_access, mem_layout);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 p->set_csr(CSR_VTYPE, (VSEW_I<<VTYPE_SEW_SHIFT) \
 					   |(VEDIV_I<<VTYPE_EDIV_SHIFT) \
 					   |(VLMUL_I<<VTYPE_LMUL_SHIFT));

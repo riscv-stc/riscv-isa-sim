@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 
 /* TODO: VS1 byte or half ? */
 check_vstart{

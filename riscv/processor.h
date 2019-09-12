@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "simif.h"
 #include "debug_rom_defines.h"
 
 class processor_t;
@@ -18,6 +19,18 @@ class simif_t;
 class trap_t;
 class extension_t;
 class disassembler_t;
+
+#ifndef NO_MEMORY_LIMIT
+#define RESTORE_AUNIT() p->restore_aunit()
+#define NCP_AUNIT()     p->set_aunit(NCP)
+#define TCP_AUNIT()     p->set_aunit(TCP)
+#define MCU_AUNIT()     p->set_aunit(MCU)
+#else
+#define RESTORE_AUNIT() 
+#define NCP_AUNIT()    
+#define TCP_AUNIT()  
+#define MCU_AUNIT()  
+#endif
 
 struct insn_desc_t
 {
@@ -194,7 +207,9 @@ class processor_t : public abstract_device_t
 public:
   processor_t(const char* isa, simif_t* sim, uint32_t id, bool halt_on_reset=false);
   ~processor_t();
-
+  
+  inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit); };
+  inline void restore_aunit() { sim->set_aunit(MCU); };
   void set_debug(bool value);
   void set_histogram(bool value);
   void reset();

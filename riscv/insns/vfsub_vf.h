@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 check_vstart{
 	half vr1;
 	vr1.x = f32_to_f16(f32(FRS1)).v;

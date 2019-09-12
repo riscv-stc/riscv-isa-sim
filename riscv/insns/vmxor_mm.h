@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 check_vstart{
 	vector_for_each(idx){
 		switch(SEW){

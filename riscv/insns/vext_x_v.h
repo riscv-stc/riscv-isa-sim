@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 check_vstart{
 	Vext<unsigned short> vext;
 	unsigned short rd;

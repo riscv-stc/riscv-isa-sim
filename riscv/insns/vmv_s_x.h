@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 
 check_vstart{
 	check_vl();

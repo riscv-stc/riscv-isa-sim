@@ -1,4 +1,5 @@
 require_extension('V');
+NCP_AUNIT();
 check_vstart{
 	Vma<half, unsigned short> vma;
 	vma.vmsub_vv((half*)&VRS2.vh[VSTART], (half*)&VRS1.vh[VSTART], 

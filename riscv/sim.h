@@ -26,7 +26,7 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
         bool require_authentication, suseconds_t abstract_delay_usec,
-        bool support_hasel, bool support_abstract_csr_access);
+        bool support_hasel, bool support_abstract_csr_access, bool layout);
   ~sim_t();
 
   // run the simulation to completion
@@ -49,7 +49,8 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
-
+  access_unit set_aunit(access_unit unit) {aunit = unit; return aunit; };
+  
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   mmu_t* debug_mmu;  // debug port into main memory
@@ -59,6 +60,8 @@ private:
   std::unique_ptr<rom_device_t> boot_rom;
   std::unique_ptr<clint_t> clint;
   bus_t bus;
+  bus_t tbus;
+  bus_t nbus;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
@@ -69,6 +72,8 @@ private:
   size_t current_proc;
   bool debug;
   bool log;
+  bool memory_layout;
+  access_unit aunit;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
   remote_bitbang_t* remote_bitbang;
