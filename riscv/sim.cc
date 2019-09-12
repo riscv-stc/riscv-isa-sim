@@ -148,13 +148,15 @@ void sim_t::main()
   }
 }
 
-void sim_t::load_heap(const char *fname)
+void sim_t::load_heap(const char *fname, reg_t off, size_t len)
 {
   memif_t mem(this);
   if (!fname)
     return;
 
-  std::cout << "Load heap file " << fname << std::endl;
+  std::cout << "Load heap off 0x" << std::hex << off
+            << " len 0x" << std::hex << len
+            << " to file " << fname << std::endl;
   std::string name = std::string(fname);
   std::string suffix_str = name.substr(name.find_last_of('.') + 1);
 
@@ -166,7 +168,7 @@ void sim_t::load_heap(const char *fname)
     }
 
     char buf[512];
-    addr_t addr = 0x10000;
+    addr_t addr = off;
     while(!ifs.eof()) {
       ifs.getline(buf, 512);
       char *p = buf;
@@ -190,13 +192,15 @@ void sim_t::load_heap(const char *fname)
   }
 }
 
-void sim_t::dump_heap(const char *fname, size_t len)
+void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
 {
   memif_t mem(this);
   if (!fname)
     return;
 
-  std::cout << "Dump heap file " << fname << std::endl;
+  std::cout << "Dump heap off 0x" << std::hex << off
+            << " len 0x" << std::hex << len
+            << " to file " << fname << std::endl;
   std::string name = std::string(fname);
   std::string suffix_str = name.substr(name.find_last_of('.') + 1);
 
@@ -210,7 +214,7 @@ void sim_t::dump_heap(const char *fname, size_t len)
     uint16_t data;
     char buf[5];
     for (addr_t addr = 0; addr < len; addr += 2) {
-      mem.read(0x10000 + addr, 2, &data);
+      mem.read(off + addr, 2, &data);
       sprintf(buf, "%04x", data);
       ofs << buf << " ";
       if (!((addr + 2) % 128))
@@ -232,14 +236,14 @@ void sim_t::dump_heap(const char *fname, size_t len)
   }
 }
 
-int sim_t::run(const char *fname_load, const char *fname_dump, size_t len)
+int sim_t::run(const char *fname_load, const char *fname_dump, addr_t off, size_t len)
 {
   int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);
-  load_heap(fname_load);
+  load_heap(fname_load, off, len);
   stat = htif_t::run();
-  dump_heap(fname_dump, len);
+  dump_heap(fname_dump, off, len);
   return stat;
 }
 

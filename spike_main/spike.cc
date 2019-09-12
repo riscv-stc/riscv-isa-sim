@@ -51,6 +51,14 @@ static void help(int exit_code = 1)
       "required for an abstract command to execute [default 0]\n");
   fprintf(stderr, "  --without-hasel       Debug module supports hasel\n");
   fprintf(stderr, "  --debug-no-abstract-csr  Debug module won't support abstract to authenticate\n");
+  
+  /* added a backdoor by hao.chen */
+  fprintf(stderr, "BackDoor Options:\n");
+  fprintf(stderr, "  --map=<n>             Define the size of mem2 <n> bytes [default 0x40000]\n");
+  fprintf(stderr, "  --map=<a:m,b:n>       Define the mem2 offset m and size n bytes\n");
+  fprintf(stderr, "                          [default offset 0x10000]\n");
+  fprintf(stderr, "  --load=<file>         Define the mem2 file to load before run\n");
+  fprintf(stderr, "  --dump=<file>         Define the mem2 file to dump after run\n");
 
   exit(exit_code);
 }
@@ -92,9 +100,25 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
   return res;
 }
 
-
 #define DEFAULT_LAYOUT (true)
 #define DEFAULT_MEMORY_LAYOUT "0x0:0x20000, 0x80000:0x180000, 0x200000:0x80000, 0x280000:0x80000"
+
+static std::pair<reg_t, size_t> make_mem2(const char* arg)
+{
+  // handle legacy mem argument
+  char* p;
+  auto first = strtoull(arg, &p, 0);
+  if (*p == 0)
+    return std::make_pair((reg_t)0x10000, (size_t)first);
+
+  if (!*p || *p != ':')
+      help(); // help will exit
+  auto size = strtoull(p + 1, &p, 0);
+  if ((size | first) % PGSIZE != 0)
+      help();
+  return std::make_pair((reg_t)first, (size_t)size);
+}
+
 int main(int argc, char** argv)
 {
   bool debug = false;
@@ -116,7 +140,7 @@ int main(int argc, char** argv)
   int coreId = INVALID_CORE_ID;
   const char *load_file = NULL;
   const char *dump_file = NULL;
-  size_t dump_len = 0x40000; 
+  std::pair<reg_t, size_t> mem2 = {0x10000, 0x40000}; 
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned progsize = 2;
@@ -186,12 +210,9 @@ int main(int argc, char** argv)
    * load-path is case input path
    * dump-path is memory dump path, for ncbet get result
    */
-  parser.option(0, "load-file", 1,
-      [&](const char* s){load_file = s;});
-  parser.option(0, "dump-file", 1,
-      [&](const char* s){dump_file = s;});
-  parser.option(0, "dump-len", 1,
-      [&](const char* s){dump_len = strtoull(s, 0, 0);});
+  parser.option(0, "map", 1, [&](const char* s){mem2 = make_mem2(s);});
+  parser.option(0, "load", 1, [&](const char* s){load_file = s;});
+  parser.option(0, "dump", 1, [&](const char* s){dump_file = s;});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -240,5 +261,6 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
-  return s.run(load_file, dump_file, dump_len);
+  
+  return s.run(load_file, dump_file, mem2.first, mem2.second);
 }
