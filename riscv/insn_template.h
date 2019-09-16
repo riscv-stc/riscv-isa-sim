@@ -8,3 +8,7 @@
 #include "tracer.h"
 #include "eigen3_ops.h"
 #include <assert.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+

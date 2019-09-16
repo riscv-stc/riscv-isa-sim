@@ -7,7 +7,10 @@ trans->sync();
 simif_t* sim = p->get_sim();
 char fname[40] = {0};
 
+if (access("dump", F_OK))
+    mkdir("dump", 0777);
+
 sprintf(fname, "dump/output_mem2-%d@%d.dat", p->get_syncs(), p->get_id());
 p->set_syncs(p->get_syncs() + 1);
-sim->dump_heap(fname, 0x10000, 0x60000);
+sim->dump_heap(fname, 0x80000, 0x10000);
 
