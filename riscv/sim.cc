@@ -57,7 +57,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   if (layout) {
     for (auto& x : mems) {
-      if (x.first == mcu_addr_start && x.second->size() == mcu_space_size)
+      //update mcu can access all space of mcu_space l1_buffer weight_buffer im_buffer
+      //if (x.first == mcu_addr_start && x.second->size() == mcu_space_size)
         bus.add_device(x.first, x.second);
 
       if (x.first == l1_buffer_start && x.second->size() == l1_buffer_size) {
