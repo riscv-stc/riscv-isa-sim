@@ -18,13 +18,10 @@
 
 #define mcu_addr_start       (0x00000000)
 #define mcu_space_size       (0x00020000)
-#define l1_buffer_start      (0x00080000)
-#define l1_buffer_size       (0x00180000)
-#define weight_buffer_start  (0x00200000)
-#define weight_buffer_size   (0x00080000)
-#define im_buffer_start      (0x00280000)
+#define l1_buffer_start      (0x00100000)
+#define l1_buffer_size       (0x00100000)
+#define im_buffer_start      (0x00400000)
 #define im_buffer_size       (0x00080000)
-
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
@@ -62,11 +59,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
         bus.add_device(x.first, x.second);
 
       if (x.first == l1_buffer_start && x.second->size() == l1_buffer_size) {
-        tbus.add_device(x.first, x.second);
-        nbus.add_device(x.first, x.second);
-      }
-
-      if (x.first == weight_buffer_start && x.second->size() == weight_buffer_size) {
         tbus.add_device(x.first, x.second);
         nbus.add_device(x.first, x.second);
       }

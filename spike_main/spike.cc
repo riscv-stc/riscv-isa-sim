@@ -101,7 +101,7 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
 }
 
 #define DEFAULT_LAYOUT (true)
-#define DEFAULT_MEMORY_LAYOUT "0x0:0x20000, 0x80000:0x180000, 0x200000:0x80000, 0x280000:0x80000"
+#define DEFAULT_MEMORY_LAYOUT "0x0:0x20000, 0x100000:0x100000, 0x400000:0x80000"
 
 static std::pair<reg_t, size_t> make_mem2(const char* arg)
 {
