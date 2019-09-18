@@ -48,8 +48,11 @@ class disasm_insn_t
     if (args.size())
     {
       s << std::string(std::max(1, 8 - len), ' ');
-      for (size_t i = 0; i < args.size()-1; i++)
-        s << args[i]->to_string(insn) << ", ";
+      for (size_t i = 0; i < args.size()-1; i++) {
+        s << args[i]->to_string(insn);
+	if (!(i == args.size() - 2 && args[args.size()-1]->to_string(insn) == " "))
+	   s << ", ";
+      }
       s << args[args.size()-1]->to_string(insn);
     }
     return s.str();
