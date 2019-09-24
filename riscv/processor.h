@@ -208,8 +208,8 @@ public:
   processor_t(const char* isa, simif_t* sim, uint32_t id, bool halt_on_reset=false);
   ~processor_t();
   
-  inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit); };
-  inline void restore_aunit() { sim->set_aunit(MCU); };
+  inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit, this->id); };
+  inline void restore_aunit() { sim->set_aunit(MCU, 0); };
   void set_debug(bool value);
   void set_histogram(bool value);
   void reset();

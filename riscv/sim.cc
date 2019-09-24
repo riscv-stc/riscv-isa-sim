@@ -17,10 +17,10 @@
 #include <sys/types.h>
 
 #define mcu_addr_start       (0x00000000)
-#define mcu_space_size       (0x00020000)
-#define l1_buffer_start      (0x00100000)
+#define mcu_space_size       (0xc0000000)
+#define l1_buffer_start      (0xc0000000)
 #define l1_buffer_size       (0x00100000)
-#define im_buffer_start      (0x00400000)
+#define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00080000)
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
@@ -39,6 +39,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access, bool layout)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
+    tbus(std::max(nprocs, size_t(1))), nbus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
     debug_module(this, progsize, max_bus_master_bits, require_authentication,
@@ -52,6 +53,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   memory_layout = layout;
   aunit = MCU;
 
+  for (size_t i = 0; i < procs.size(); i++) {
+    tbus[i] = new bus_t();
+    nbus[i] = new bus_t();
+  }
+
   if (layout) {
     for (auto& x : mems) {
       //update mcu can access all space of mcu_space l1_buffer weight_buffer im_buffer
@@ -59,12 +65,16 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
         bus.add_device(x.first, x.second);
 
       if (x.first == l1_buffer_start && x.second->size() == l1_buffer_size) {
-        tbus.add_device(x.first, x.second);
-        nbus.add_device(x.first, x.second);
+        for (size_t i = 0; i < procs.size(); i++) {
+          tbus[i]->add_device(x.first, x.second);
+          nbus[i]->add_device(x.first, x.second);
+        }
       }
 
       if (x.first == im_buffer_start && x.second->size() == im_buffer_size)
-        nbus.add_device(x.first, x.second);
+        for (size_t i = 0; i < procs.size(); i++) {
+          nbus[i]->add_device(x.first, x.second);
+        }
     }
   }
   else {
@@ -114,8 +124,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
 sim_t::~sim_t()
 {
-  for (size_t i = 0; i < procs.size(); i++)
+  for (size_t i = 0; i < procs.size(); i++) {
     delete procs[i];
+    delete tbus[i];
+    delete nbus[i];
+  }
   delete debug_mmu;
 }
 
@@ -397,10 +410,10 @@ char* sim_t::addr_to_mem(reg_t addr) {
         pbus = &bus;
         break;
       case NCP:
-        pbus = &nbus;
+        pbus = nbus[aproc_id];
         break;
       case TCP:
-        pbus = &tbus;
+        pbus = tbus[aproc_id];
         break;
       default:
         pbus = &bus;

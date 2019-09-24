@@ -24,7 +24,7 @@ public:
   virtual void proc_reset(unsigned id) = 0;
   virtual void load_heap(const char *path, reg_t off, size_t len) = 0;
   virtual void dump_heap(const char *path, reg_t off, size_t len) = 0;
-  virtual access_unit set_aunit(access_unit unit) = 0;
+  virtual access_unit set_aunit(access_unit unit, unsigned id) = 0;
 };
 
 #endif

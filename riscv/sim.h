@@ -49,7 +49,7 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
-  access_unit set_aunit(access_unit unit) {aunit = unit; return aunit; };
+  access_unit set_aunit(access_unit unit, unsigned id) {aunit = unit; aproc_id = id; return aunit; };
   
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -60,8 +60,8 @@ private:
   std::unique_ptr<rom_device_t> boot_rom;
   std::unique_ptr<clint_t> clint;
   bus_t bus;
-  bus_t tbus;
-  bus_t nbus;
+  std::vector<bus_t*> tbus;
+  std::vector<bus_t*> nbus;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
@@ -73,6 +73,7 @@ private:
   bool debug;
   bool log;
   bool memory_layout;
+  unsigned aproc_id;
   access_unit aunit;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
