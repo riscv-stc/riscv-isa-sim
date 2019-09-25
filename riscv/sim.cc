@@ -39,7 +39,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access, bool layout)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
-    tbus(std::max(nprocs, size_t(1))), nbus(std::max(nprocs, size_t(1))),
+    local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
     debug_module(this, progsize, max_bus_master_bits, require_authentication,
@@ -53,38 +53,20 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   memory_layout = layout;
   aunit = MCU;
 
-  for (size_t i = 0; i < procs.size(); i++) {
-    tbus[i] = new bus_t();
-    nbus[i] = new bus_t();
-  }
-
   if (layout) {
     for (auto& x : mems) {
-      //update mcu can access all space of mcu_space l1_buffer weight_buffer im_buffer
-      //if (x.first == mcu_addr_start && x.second->size() == mcu_space_size)
         bus.add_device(x.first, x.second);
-
-      if (x.first == l1_buffer_start && x.second->size() == l1_buffer_size) {
-        for (size_t i = 0; i < procs.size(); i++) {
-          tbus[i]->add_device(x.first, x.second);
-          nbus[i]->add_device(x.first, x.second);
-        }
-      }
-
-      if (x.first == im_buffer_start && x.second->size() == im_buffer_size)
-        for (size_t i = 0; i < procs.size(); i++) {
-          nbus[i]->add_device(x.first, x.second);
-        }
+        //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
+        //  add_debug_dev = 0;
+        //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
+        //  add_clint_dev = 0;
     }
   }
-  else {
-      for (auto& x : mems) {
-          bus.add_device(x.first, x.second);
-          //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
-          //  add_debug_dev = 0;
-          //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
-          //  add_clint_dev = 0;
-      }
+
+  for (size_t i = 0; i < procs.size(); i++) {
+    local_bus[i] = new bus_t();
+    local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
   }
 
   debug_module.add_device(&bus);
@@ -126,8 +108,7 @@ sim_t::~sim_t()
 {
   for (size_t i = 0; i < procs.size(); i++) {
     delete procs[i];
-    delete tbus[i];
-    delete nbus[i];
+    delete local_bus[i];
   }
   delete debug_mmu;
 }
@@ -402,39 +383,35 @@ void sim_t::make_dtb()
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {
-  bus_t *pbus = nullptr;
+  std::ostringstream err;
 
-  if (memory_layout) {
-    switch (aunit) {
-      case MCU:
-        pbus = &bus;
-        break;
-      case NCP:
-        pbus = nbus[aproc_id];
-        break;
-      case TCP:
-        pbus = tbus[aproc_id];
-        break;
-      default:
-        pbus = &bus;
+  // addr on local bus (l1 | im cache)
+  auto desc = local_bus[aproc_id]->find_device(addr);
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+    // MCU/TCP could not access im_buffer
+    if (unlikely(desc.first == im_buffer_start && (TCP == aunit))) {
+      err << "tcp access illegal address, addr=0x" << hex << addr << "(im cache)";
+      throw std::runtime_error(err.str());
     }
-  }
-  else {
-    pbus = &bus;
-  }
 
-  auto desc = pbus->find_device(addr);
-  if (auto mem = dynamic_cast<mem_t *>(desc.second))
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
-    
-  if (unlikely((NCP == aunit) || (TCP == aunit))) { 
-    const char *aname = (NCP == aunit) ? "ncp" : "tcp";
-    std::cout << aname << " can't access addr:" << hex << addr \
-      << " in aunit: " << aunit << std::endl;
-    throw std::runtime_error("ncp or tcp access illegal address.");
+    return NULL;
   }
-  
+
+  // addr on global bus (ddr)
+  desc = bus.find_device(addr);
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+    if (unlikely((NCP == aunit) || (TCP == aunit))) {
+      auto unit = NCP == aunit? "ncp": "tcp";
+      err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
+      throw std::runtime_error(err.str());
+    }
+    if (addr - desc.first < mem->size())
+        return mem->contents() + (addr - desc.first);
+    return NULL;
+  }
+
   return NULL;
 }
 
