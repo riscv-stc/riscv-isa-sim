@@ -19,9 +19,9 @@
 #undef STATE
 #define STATE state
 
-processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
+processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id,
         bool halt_on_reset)
-  : debug(false), halt_request(false), sim(sim), ext(NULL), id(id),
+  : debug(false), halt_request(false), sim(sim), ext(NULL), idx(idx), id(id),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
   parse_isa_string(isa);

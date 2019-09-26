@@ -83,7 +83,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, halted);
+      procs[i] = new processor_t(isa, this, i, i, halted);
     }
   }
   else {
@@ -92,7 +92,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
       exit(1);
     }
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, hartids[i], halted);
+      procs[i] = new processor_t(isa, this, i, hartids[i], halted);
     }
   }
 
@@ -386,7 +386,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   std::ostringstream err;
 
   // addr on local bus (l1 | im cache)
-  auto desc = local_bus[aproc_id]->find_device(addr);
+  auto desc = local_bus[aproc_idx]->find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
     // MCU/TCP could not access im_buffer
     if (unlikely(desc.first == im_buffer_start && (TCP == aunit))) {

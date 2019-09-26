@@ -205,10 +205,10 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
-  processor_t(const char* isa, simif_t* sim, uint32_t id, bool halt_on_reset=false);
+  processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id, bool halt_on_reset=false);
   ~processor_t();
   
-  inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit, this->id); };
+  inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit, this->idx); };
   inline void restore_aunit() { sim->set_aunit(MCU, 0); };
   void set_debug(bool value);
   void set_histogram(bool value);
@@ -221,6 +221,7 @@ public:
   simif_t* get_sim() { return sim; };
   uint32_t get_syncs() {return synctimes; };
   uint32_t set_syncs(uint32_t times) {return synctimes = times; };
+  uint32_t get_idx() {return idx; };
   uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
@@ -353,6 +354,7 @@ private:
   extension_t* ext;
   disassembler_t* disassembler;
   state_t state;
+  uint32_t idx;
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;

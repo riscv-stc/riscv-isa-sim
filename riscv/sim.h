@@ -49,7 +49,7 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
-  access_unit set_aunit(access_unit unit, unsigned id) {aunit = unit; aproc_id = id; return aunit; };
+  access_unit set_aunit(access_unit unit, unsigned idx) {aunit = unit; aproc_idx = idx; return aunit; };
   
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -72,7 +72,7 @@ private:
   bool debug;
   bool log;
   bool memory_layout;
-  unsigned aproc_id = 0;
+  unsigned aproc_idx = 0;
   access_unit aunit;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
