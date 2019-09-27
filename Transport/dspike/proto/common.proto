@@ -8,6 +8,8 @@ message Message {
       core2core = 0;
       core2llb = 1;
       llb2core = 2;
+      llb2ddr = 3;
+      ddr2llb = 4;
     }
     enum StreamType {
       message = 0;
@@ -23,18 +25,6 @@ message Message {
     int32 srcAddr = 8;
     int32 dstAddr = 9;
     int32 length = 10;
-}
-
-// DMAXferRequest present a request for DMA transfer
-message DMAXferRequest {
-    enum Direction {
-      llb2ddr = 0;
-      ddr2llb = 1;
-    }
-    Direction direction = 1;
-    int32 llbAddr = 3;
-    int64 ddrAddr = 4;
-    int32 length = 5;
 }
 
 // DMAXferPollResponse present a response from DMA transfer poll

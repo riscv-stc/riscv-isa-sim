@@ -2,8 +2,9 @@ auto trans = p->get_transport();
 if (trans == nullptr) return -1;
 
 //TCP_AUNIT();
-auto ddr = *((unsigned long long *)MMU.get_phy_addr(RS1));
-auto llb = RD;
-auto dataSize = RS2;
+auto addr = *((unsigned long long *)MMU.get_phy_addr(RS1));
+auto data = MMU.get_phy_addr(addr);
+auto dst = RD;
+auto len = RS2;
 
-trans->dmaXfer(ddr, llb, Transport::Interface::DDR2LLB, dataSize);
+trans->dmaXfer(0, dst, len, Transport::Interface::DDR2LLB, data);

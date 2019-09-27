@@ -13,9 +13,8 @@ using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
 using dspike::proto::Message;
-using dspike::proto::DMAXferRequest;
 using dspike::proto::DMAXferPollResponse;
-using proxy::TCPXferCbRequest;
+using proxy::RecvCbRequest;
 using proxy::Proxy;
 
 using namespace Transport;
@@ -38,7 +37,7 @@ bool GrpcTransport::init(int coreId, std::string serverAddr, int serverPort,
   this->mDmaXferPollStub = Proxy::NewStub(grpc::CreateChannel(
       this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  this->mTcpXferCbStub = Proxy::NewStub(grpc::CreateChannel(
+  this->mRecvCbStub = Proxy::NewStub(grpc::CreateChannel(
       this->serverAddr, grpc::InsecureChannelCredentials()));
 
   this->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
@@ -50,7 +49,7 @@ bool GrpcTransport::init(int coreId, std::string serverAddr, int serverPort,
   this->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
       this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  if (this->mTcpXferStub == nullptr || this->mTcpXferCbStub == nullptr ||
+  if (this->mTcpXferStub == nullptr || this->mRecvCbStub == nullptr ||
       this->mDumpStub == nullptr ||
       this->mWaitDumpStub == nullptr ||
       this->mSyncStub == nullptr) {
@@ -135,7 +134,7 @@ bool GrpcTransport::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool GrpcTransport::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) {
+bool GrpcTransport::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) {
   if (this->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -143,17 +142,30 @@ bool GrpcTransport::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint
   }
 
   // prepare message data
-  DMAXferRequest request;
-  request.set_llbaddr(llbAddr);
-  request.set_ddraddr(ddrAddr);
-  if (dir == LLB2DDR)
-    request.set_direction(DMAXferRequest::llb2ddr);
-  else
-    request.set_direction(DMAXferRequest::ddr2llb);
+  Message request;
+  switch (dir) {
+    case LLB2DDR:
+          request.set_target(mCoreId);
+          request.set_srcaddr(llbAddr);
+          request.set_dstaddr(ddrAddr);
+          request.set_direction(Message::llb2ddr);
+          request.set_length(len);
+          break;
+
+    case DDR2LLB:
+          request.set_source(mCoreId);
+          request.set_body(data, len);
+          request.set_dstaddr(llbAddr);
+          request.set_direction(Message::ddr2llb);
+          break;
+    default:
+          break;
+  }
+
   request.set_length(len);
 
   fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
-                        dir, request.ddraddr(), request.llbaddr(), len);
+                        dir, ddrAddr, llbAddr, len);
 
   google::protobuf::Empty reply;
 
@@ -206,13 +218,13 @@ bool GrpcTransport::dmaXferPoll() {
  * receive data from grpc server and store them in message queue
  */
 void GrpcTransport::loadToRecvQueue(void) {
-  if (this->mTcpXferCbStub == nullptr) {
+  if (this->mRecvCbStub == nullptr) {
     std::cout << "recv stub is null, since grpc doesn't initialize"
               << std::endl;
     return;
   }
 
-  proxy::TCPXferCbRequest request;
+  proxy::RecvCbRequest request;
   request.set_spikeid(mCoreId);
 
   dspike::proto::Message reply;
@@ -221,8 +233,8 @@ void GrpcTransport::loadToRecvQueue(void) {
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReaderWriter< proxy::TCPXferCbRequest, Message>> readWriter(
-      mTcpXferCbStub->TCPXferCb(&context));
+  std::unique_ptr<grpc::ClientReaderWriter< proxy::RecvCbRequest, Message>> readWriter(
+      mRecvCbStub->RecvCb(&context));
 
   readWriter->Write(request);
 
@@ -241,7 +253,7 @@ void GrpcTransport::loadToRecvQueue(void) {
 
     auto xdir = (reply.direction() == Message::llb2core)? StreamDir::LLB2CORE: StreamDir::CORE2CORE;
 
-    if (mCb->recv(reply.dstaddr(), reply.mutable_body()->data(),
+    if (!mCb->recv(reply.dstaddr(), reply.mutable_body()->data(),
                        reply.mutable_body()->size(), xdir)) {
       std::cout << "fail to post receive message" << std::endl;
     }

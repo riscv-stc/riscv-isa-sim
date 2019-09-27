@@ -49,10 +49,10 @@ class ServerContextServiceImpl final : public Proxy::Service {
     return Status::OK;
   }
 
-  Status TCPXferCb(ServerContext* context,
-              grpc::ServerReaderWriter< ::dspike::proto::Message, ::proxy::TCPXferCbRequest>*
+  Status RecvCb(ServerContext* context,
+              grpc::ServerReaderWriter< ::dspike::proto::Message, ::proxy::RecvCbRequest>*
                   stream) override {
-    proxy::TCPXferCbRequest request;
+    proxy::RecvCbRequest request;
     stream->Read(&request);
     while (1) {
       while (!bSent)
@@ -60,7 +60,7 @@ class ServerContextServiceImpl final : public Proxy::Service {
       if (count++ > 2) {
         break;
       } else {
-    std::cout << "TCPXferCb" << std::endl;
+    std::cout << "RecvCb" << std::endl;
         dspike::proto::Message msg;
         msg.set_body("recv:" + std::to_string(count));
 #if 0

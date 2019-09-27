@@ -54,7 +54,7 @@ class GrpcTransport : public Interface {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) override;
+  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) override;
 
   /**
    * @brief implement dmaXferPoll function
@@ -71,7 +71,7 @@ class GrpcTransport : public Interface {
  private:
   std::string serverAddr = "";  // address + port of grpc server
   std::unique_ptr<Proxy::Stub> mTcpXferStub = nullptr;  // stub for tcp Xfer service
-  std::unique_ptr<Proxy::Stub> mTcpXferCbStub = nullptr;  // stub for tcp Xfer callback service
+  std::unique_ptr<Proxy::Stub> mRecvCbStub = nullptr;  // stub for tcp Xfer callback service
   std::unique_ptr<Proxy::Stub> mDmaXferStub = nullptr;  // stub for dma Xfer service
   std::unique_ptr<Proxy::Stub> mDmaXferPollStub = nullptr;  // stub for dma xfer poll service
   std::unique_ptr<Proxy::Stub> mSyncStub = nullptr;  // stub for sync service

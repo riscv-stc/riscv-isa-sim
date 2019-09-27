@@ -31,7 +31,7 @@ bool Interface::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool Interface::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len)
+bool Interface::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data)
 {
   return false;
 };

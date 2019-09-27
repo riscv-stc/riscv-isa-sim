@@ -73,7 +73,7 @@ class Interface {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len);
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data);
 
   /**
    * @brief implement dmaXferPoll function

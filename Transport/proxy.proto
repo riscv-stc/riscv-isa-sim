@@ -7,18 +7,18 @@ import "dspike/proto/common.proto";
 
 // Proxy Interface for spike messages
 service Proxy {
-  // send a message
+  // do TCP transfer for Core <-> LLB
   rpc TCPXfer(dspike.proto.Message) returns (google.protobuf.Empty);
-  // receive messages via stream
-  rpc TCPXferCb(stream TCPXferCbRequest) returns (stream dspike.proto.Message);
-
   // do bsp sync
   rpc Sync(SyncRequest) returns (google.protobuf.Empty);
 
   // do DMA transfer for LLB <-> DDR
-  rpc DMAXfer(dspike.proto.DMAXferRequest) returns (google.protobuf.Empty);
+  rpc DMAXfer(dspike.proto.Message) returns (google.protobuf.Empty);
   // poll DMA transfer status
   rpc DMAXferPoll(google.protobuf.Empty) returns (dspike.proto.DMAXferPollResponse);
+
+  // receive messages via stream
+  rpc RecvCb(stream RecvCbRequest) returns (stream dspike.proto.Message);
 
   // upload dump data to proxy
   rpc Dump(DumpData) returns (google.protobuf.Empty);
@@ -26,8 +26,8 @@ service Proxy {
   rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam);
 }
 
-// TCPXferCbRequest present a request for spike to receive messages
-message TCPXferCbRequest {
+// RecvCbRequest present a request for spike to receive messages
+message RecvCbRequest {
   int32 spikeId = 1;
 }
 
