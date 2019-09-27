@@ -5,15 +5,14 @@
  *
  */
 
-#ifndef TRANSPORT_FRAMEWORK_GRPC_H
-#define TRANSPORT_FRAMEWORK_GRPC_H
+#ifndef TRANSPORT_GRPC_TRANSPORT_H
+#define TRANSPORT_GRPC_TRANSPORT_H
 
 #include <grpcpp/grpcpp.h>
 #include <mutex>
 #include <thread>
 #include "Interface.h"
 #include "Factory.h"
-#include "Stream.h"
 #include "proxy.grpc.pb.h"
 
 namespace Transport {
@@ -22,7 +21,7 @@ using proxy::Proxy;
 /**
  * @brief grpc framework
  */
-class FrameworkGrpc : public Interface {
+class GrpcTransport : public Interface {
  public:
   /**
    * @brief initialize grpc framework
@@ -40,14 +39,12 @@ class FrameworkGrpc : public Interface {
    * @param targetAddr: address of target
    * @param data: address of data
    * @param dataSize: size of data
-   * @param streamType: type of stream, default is STREAM_MESSAGE
    * @param streamDir: direction of stream, default is CORE2CORE
    * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
   bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
-            uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir, StreamType streamType, uint16_t tag,
-            uint8_t lut) override;
+            uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir) override;
 
   /**
    * @brief implement dmaXfer function
@@ -67,10 +64,9 @@ class FrameworkGrpc : public Interface {
 
   /**
    * @brief implement sync function of BSP module
-   * @param streamType: type of stream
    * @return true - success; false - fail
    */
-  bool sync(StreamType streamType) override;
+  bool sync() override;
 
  private:
   std::string serverAddr = "";  // address + port of grpc server
@@ -114,9 +110,9 @@ class FrameworkGrpc : public Interface {
 
   uint32_t mSyncCount = 0;  // count of done sync
 
-  static FactoryRegister<FrameworkGrpc> AddToFactory_;
+  static FactoryRegister<GrpcTransport> AddToFactory_;
 };
 
 }
 
-#endif  // TRANSPORT_FRAMEWORK_GRPC_H
+#endif  // TRANSPORT_GRPC_TRANSPORT_H

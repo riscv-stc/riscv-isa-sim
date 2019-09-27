@@ -11,17 +11,17 @@
 #include <unistd.h>
 #include <iostream>
 
-#include "FrameworkUdpLog.h"
+#include "LogTransport.h"
 
 using namespace Transport;
 
-FrameworkUdpLog::~FrameworkUdpLog() {
+LogTransport::~LogTransport() {
   if (mSockFd >= 0) close(mSockFd);
 }
 /**
  * initialize udp framework
  */
-bool FrameworkUdpLog::init(int coreId, std::string serverAddr, int serverPort,
+bool LogTransport::init(int coreId, std::string serverAddr, int serverPort,
       Callback *cb) {
   this->mCb = cb;
   this->mCoreId = coreId;
@@ -46,7 +46,7 @@ bool FrameworkUdpLog::init(int coreId, std::string serverAddr, int serverPort,
 /**
  * send log message to log server
  */
-bool FrameworkUdpLog::console(char *data, uint32_t size) {
+bool LogTransport::console(char *data, uint32_t size) {
   if (mSockFd < 0) return false;
 
   if (size > 0) {

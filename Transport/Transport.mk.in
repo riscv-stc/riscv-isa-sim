@@ -6,8 +6,8 @@ Transport_srcs = \
   proxy.grpc.pb.cc \
   proxy.pb.cc \
   Interface.cc \
-  FrameworkGrpc.cc \
-  FrameworkUdpLog.cc \
+  GrpcTransport.cc \
+  LogTransport.cc \
 
 Transport_gen_hdrs = \
   dspike/proto/common.grpc.pb.h \

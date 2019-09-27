@@ -23,7 +23,7 @@ bool Interface::init(int coreId, std::string serverAddr, int serverPort, Callbac
  */
 bool Interface::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                      uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
-                     StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut)
+                     StreamDir streamDir)
 {
   return false;
 };
@@ -47,7 +47,7 @@ bool Interface::dmaXferPoll()
 /**
  * implement sync function in BSP module
  */
-bool Interface::sync(StreamType streamType) { return false; };
+bool Interface::sync() { return false; };
 
 /**
  * send log message to log server

@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef TRANSPORT_FRAMEWORK_UDP_LOG_H
-#define TRANSPORT_FRAMEWORK_UDP_LOG_H
+#ifndef TRANSPORT_LOG_TRANSPORT_H
+#define TRANSPORT_LOG_TRANSPORT_H
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -18,9 +18,9 @@ namespace Transport {
 /**
  * @brief udp framework
  */
-class FrameworkUdpLog : public Interface {
+class LogTransport : public Interface {
  public:
-  ~FrameworkUdpLog() override;
+  ~LogTransport() override;
 
   /**
    * @brief initialize udp framework
@@ -47,4 +47,4 @@ class FrameworkUdpLog : public Interface {
 
 }
 
-#endif  // TRANSPORT_FRAMEWORK_UDP_LOG_H
+#endif  // TRANSPORT_LOG_TRANSPORT_H

@@ -15,12 +15,12 @@
 #include "../VERSION"
 
 #include "Transport/Factory.h"
-#include "Transport/FrameworkGrpc.h"
-#include "Transport/FrameworkUdpLog.h"
+#include "Transport/GrpcTransport.h"
+#include "Transport/LogTransport.h"
 
 // register transports to factory
-static Transport::FactoryRegister<Transport::FrameworkGrpc> gt("grpc", true);
-static Transport::FactoryRegister<Transport::FrameworkUdpLog> lt("udp_log");
+static Transport::FactoryRegister<Transport::GrpcTransport> gt("grpc", true);
+static Transport::FactoryRegister<Transport::LogTransport> lt("udp_log");
 
 static void help(int exit_code = 1)
 {

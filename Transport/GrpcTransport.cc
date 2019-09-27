@@ -7,7 +7,7 @@
 #include <iostream>
 #include "Interface.h"
 
-#include "FrameworkGrpc.h"
+#include "GrpcTransport.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -23,7 +23,7 @@ using namespace Transport;
 /**
  * initialize grpc framework
  */
-bool FrameworkGrpc::init(int coreId, std::string serverAddr, int serverPort,
+bool GrpcTransport::init(int coreId, std::string serverAddr, int serverPort,
         Callback *cb) {
   this->mCb = cb;
   this->mCoreId = coreId;
@@ -59,12 +59,12 @@ bool FrameworkGrpc::init(int coreId, std::string serverAddr, int serverPort,
   }
 
   // start a thread to receive data from grpc server
-  auto func = std::bind(&FrameworkGrpc::loadToRecvQueue, this);
+  auto func = std::bind(&GrpcTransport::loadToRecvQueue, this);
   this->mRecvThread = std::thread(func);
   this->mRecvThread.detach();
 
   // start a thread to dump memory of target
-  auto funcDump = std::bind(&FrameworkGrpc::waitDumpRequest, this);
+  auto funcDump = std::bind(&GrpcTransport::waitDumpRequest, this);
   this->mDumpMemThread = std::thread(funcDump);
   this->mDumpMemThread.detach();
 
@@ -74,9 +74,9 @@ bool FrameworkGrpc::init(int coreId, std::string serverAddr, int serverPort,
 /**
  * implement tcpXfer function of BSP module
  */
-bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
+bool GrpcTransport::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                          uint32_t targetAddr, char* data, uint32_t dataSize, uint32_t sourceAddr,
-                         StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut) {
+                         StreamDir streamDir) {
   if (this->mTcpXferStub == nullptr) {
     std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -91,11 +91,7 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
           request.set_target(targetCoreId);
           request.set_forwarding(false);
           request.set_body(data, dataSize);
-          request.set_tag(tag);
-          if (streamType == StreamType::STREAM_MESSAGE)
-            request.set_type(Message::message);
-          else
-            request.set_type(Message::rdma);
+          request.set_type(Message::rdma);
           request.set_dstaddr(targetAddr);
           break;
 
@@ -139,7 +135,7 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) {
+bool GrpcTransport::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) {
   if (this->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -177,7 +173,7 @@ bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint
 /**
  * implement dmaXferPoll function
  */
-bool FrameworkGrpc::dmaXferPoll() {
+bool GrpcTransport::dmaXferPoll() {
   if (this->mDmaXferPollStub == nullptr) {
     std::cout << "dmaXferPoll stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -209,7 +205,7 @@ bool FrameworkGrpc::dmaXferPoll() {
 /**
  * receive data from grpc server and store them in message queue
  */
-void FrameworkGrpc::loadToRecvQueue(void) {
+void GrpcTransport::loadToRecvQueue(void) {
   if (this->mTcpXferCbStub == nullptr) {
     std::cout << "recv stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -242,10 +238,6 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 
     fprintf(stdout, "[tcpXferCb] direction:%d, dst:0x%08x type:%d data size:%d\n",
                          reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
-    auto streamType = StreamType::STREAM_MESSAGE;
-    if (reply.type() != Message::message) {
-      streamType = StreamType::STREAM_RDMA;
-    }
 
     auto xdir = (reply.direction() == Message::llb2core)? StreamDir::LLB2CORE: StreamDir::CORE2CORE;
 
@@ -267,7 +259,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 /**
  * implement sync function of BSP module
  */
-bool FrameworkGrpc::sync(StreamType streamType) {
+bool GrpcTransport::sync() {
   if (this->mSyncStub == nullptr) {
     std::cout << "sync stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -310,7 +302,7 @@ bool FrameworkGrpc::sync(StreamType streamType) {
 /**
  * dump a block of memory in target
  */
-bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
+bool GrpcTransport::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
   if (this->mDumpStub == nullptr) {
     std::cout << "Dumpd stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -352,7 +344,7 @@ bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
 /**
  * wait for grpc request to dump memory in target
  */
-void FrameworkGrpc::waitDumpRequest(void) {
+void GrpcTransport::waitDumpRequest(void) {
   while (1) {
     proxy::WaitDumpRequest request;
     request.set_spikeid(mCoreId);

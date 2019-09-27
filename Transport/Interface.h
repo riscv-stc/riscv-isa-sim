@@ -24,22 +24,6 @@ typedef void SIM_S;
  */
 class Interface {
  public:
-  // type of framework
-  enum FrameworkType {
-    FRAMEWORK_GRPC = 0,  // grpc
-    FRAMEWORK_UDP_LOG,   // raw udp for logger
-  };
-
-  // type of stream used in GRPC framework
-  enum StreamType {
-    // public for user
-    STREAM_MESSAGE = 0,  // message
-    STREAM_RDMA    = 1,  // rdma
-
-    // private for user
-    STREAM_DUMP = 100,  // dump memory
-  };
-
   // direction of stream used in GRPC framework
   enum StreamDir {
     CORE2CORE  = 0,  // from a core(spike) to another core(spike)
@@ -74,14 +58,12 @@ class Interface {
    * @param targetAddr: address of target
    * @param data: address of data
    * @param dataSize: size of data
-   * @param streamType: type of stream, default is STREAM_MESSAGE
    * @param streamDir: direction of stream, default is CORE2CORE
    * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
   virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
-                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE,
-                     StreamType streamType = STREAM_MESSAGE, uint16_t tag = 0, uint8_t lut = LUT_DISABLE);
+                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE);
 
   /**
    * @brief implement dmaXfer function
@@ -101,10 +83,9 @@ class Interface {
 
   /**
    * @brief implement sync function in BSP module
-   * @param streamType: type of stream, defalut is STREAM_MESSAGE
    * @return true - success; false - fail
    */
-  virtual bool sync(StreamType streamType = STREAM_MESSAGE);
+  virtual bool sync();
 
   /**
    * @brief send log message to log server
