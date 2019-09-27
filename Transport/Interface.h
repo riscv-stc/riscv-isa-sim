@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include "Callback.h"
+
 /**
  * Transport namespace packages entire Transport module
  */
@@ -18,7 +20,7 @@ namespace Transport {
 typedef void SIM_S;
 
 /**
- * @brief abstract interface of Transport framework
+ * @brief abstract interface of Transport
  */
 class Interface {
  public:
@@ -54,30 +56,16 @@ class Interface {
   // pure virtual deconstructor, used for abstract class
   virtual ~Interface() = 0;
 
+#define LUT_DISABLE 0xff  // invalid lut means lut is not used
+
   /**
-   * @brief initialize Transport module
+   * @brief initialize transport
    * @param coreId: ID of core(spike)
-   * @param sim: pionter to sim_t
-   * @param grpcServerAddr: address of grpc server, default is localhost
-   * @param grpcServerPort: port of grpc server, default is 3291
-   * @param logServerAddr: address of log server, default is 127.0.0.1
-   * @param logServerPort: port of log server, default is 3291
+   * @param serverAddr: address of grpc server
+   * @param serverPort: port of grpc server
    * @return true - success; false - fail
    */
-  static bool init(uint16_t coreId, SIM_S *sim,
-                   std::string grpcServerAddr = "localhost",
-                   int grpcServerPort = 3291,
-                   std::string logServerAddr = "127.0.0.1",
-                   int logServerPort = 3291);
-
-  /**
-   * @brief get singleton instance of a framework
-   * @param frameworkType: type of framework, default is grpc framework
-   * @return pointer to interface of a framework
-   */
-  static Interface *getInstance(FrameworkType frameworkType = FRAMEWORK_GRPC);
-
-#define LUT_DISABLE 0xff  // invalid lut means lut is not used
+  virtual bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb);
 
   /**
    * @brief implement tcpXfer function in BSP module
@@ -127,6 +115,7 @@ class Interface {
   virtual bool console(char *data, uint32_t size);
 
  protected:
+  Callback *mCb;
   int mCoreId;  // ID of cores(pike)
 };
 }

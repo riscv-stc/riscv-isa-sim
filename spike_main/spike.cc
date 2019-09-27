@@ -13,7 +13,14 @@
 #include <string>
 #include <memory>
 #include "../VERSION"
-#include "Transport/Interface.h"
+
+#include "Transport/Factory.h"
+#include "Transport/FrameworkGrpc.h"
+#include "Transport/FrameworkUdpLog.h"
+
+// register transports to factory
+static Transport::FactoryRegister<Transport::FrameworkGrpc> gt("grpc", true);
+static Transport::FactoryRegister<Transport::FrameworkUdpLog> lt("udp_log");
 
 static void help(int exit_code = 1)
 {
@@ -254,9 +261,6 @@ int main(int argc, char** argv)
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
     if (extension) s.get_core(i)->register_extension(extension());
   }
-
-  if(coreId != INVALID_CORE_ID)
-    Transport::Interface::init(coreId, &s);
 
   s.set_debug(debug);
   s.set_log(log);

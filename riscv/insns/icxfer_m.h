@@ -1,4 +1,4 @@
-auto trans = Transport::Interface::getInstance();
+auto trans = p->get_transport();
 if (trans == nullptr) return -1;
 
 TCP_AUNIT();

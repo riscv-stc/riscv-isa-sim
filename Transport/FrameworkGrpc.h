@@ -11,7 +11,8 @@
 #include <grpcpp/grpcpp.h>
 #include <mutex>
 #include <thread>
-#include "Framework.h"
+#include "Interface.h"
+#include "Factory.h"
 #include "Stream.h"
 #include "proxy.grpc.pb.h"
 
@@ -21,10 +22,8 @@ using proxy::Proxy;
 /**
  * @brief grpc framework
  */
-class FrameworkGrpc : public Framework {
+class FrameworkGrpc : public Interface {
  public:
-  static FrameworkGrpc *gGrpcClient;  // singleton instance of this class
-
   /**
    * @brief initialize grpc framework
    * @param coreId: ID of core(spike)
@@ -32,7 +31,7 @@ class FrameworkGrpc : public Framework {
    * @param serverPort: port of grpc server
    * @return true - success; false - fail
    */
-  bool init(uint16_t coreId, std::string serverAddr, int serverPort) override;
+  bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb) override;
 
   /**
    * @brief implement tcpXfer function of BSP module
@@ -72,20 +71,6 @@ class FrameworkGrpc : public Framework {
    * @return true - success; false - fail
    */
   bool sync(StreamType streamType) override;
-
-  /**
-   * @brief garbage collection to clean gGrpcClient
-   */
-  class Gc {
-   public:
-    ~Gc() {
-      if (gGrpcClient != nullptr) {
-        delete gGrpcClient;
-      }
-    }
-  };
-
-  static Gc gc;
 
  private:
   std::string serverAddr = "";  // address + port of grpc server
@@ -128,7 +113,10 @@ class FrameworkGrpc : public Framework {
   std::mutex mDumpMutex;       // mutex for above data
 
   uint32_t mSyncCount = 0;  // count of done sync
+
+  static FactoryRegister<FrameworkGrpc> AddToFactory_;
 };
+
 }
 
 #endif  // TRANSPORT_FRAMEWORK_GRPC_H

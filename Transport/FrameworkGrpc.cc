@@ -4,9 +4,10 @@
  * @author Jiang,Bin
  *
  */
-#include "FrameworkGrpc.h"
 #include <iostream>
 #include "Interface.h"
+
+#include "FrameworkGrpc.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -19,70 +20,53 @@ using proxy::Proxy;
 
 using namespace Transport;
 
-FrameworkGrpc* FrameworkGrpc::gGrpcClient = nullptr;
-FrameworkGrpc::Gc FrameworkGrpc::gc;
-
-/*
- * create gGrpcClient singleton and register to framework map
- */
-static __attribute__((constructor)) void REGISTER_INSTANCE() {
-  if (FrameworkGrpc::gGrpcClient == nullptr) {
-    try {
-      FrameworkGrpc::gGrpcClient = new FrameworkGrpc;
-      FrameworkGrpc::gGrpcClient->registerInstance(Interface::FRAMEWORK_GRPC,
-                                                   FrameworkGrpc::gGrpcClient);
-    } catch (std::bad_alloc& e) {
-      std::cout << "fail to alloc:" << e.what();
-    }
-  }
-}
-
 /**
  * initialize grpc framework
  */
-bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
-                         int serverPort) {
-  gGrpcClient->mCoreId = coreId;
-  gGrpcClient->serverAddr = serverAddr + ":" + std::to_string(serverPort);
+bool FrameworkGrpc::init(int coreId, std::string serverAddr, int serverPort,
+        Callback *cb) {
+  this->mCb = cb;
+  this->mCoreId = coreId;
+  this->serverAddr = serverAddr + ":" + std::to_string(serverPort);
 
-  gGrpcClient->mTcpXferStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mTcpXferStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mDmaXferStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mDmaXferStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mDmaXferPollStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mDmaXferPollStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mTcpXferCbStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mTcpXferCbStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mDumpStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mDumpStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  gGrpcClient->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
-      gGrpcClient->serverAddr, grpc::InsecureChannelCredentials()));
+  this->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
+      this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  if (gGrpcClient->mTcpXferStub == nullptr || gGrpcClient->mTcpXferCbStub == nullptr ||
-      gGrpcClient->mDumpStub == nullptr ||
-      gGrpcClient->mWaitDumpStub == nullptr ||
-      gGrpcClient->mSyncStub == nullptr) {
+  if (this->mTcpXferStub == nullptr || this->mTcpXferCbStub == nullptr ||
+      this->mDumpStub == nullptr ||
+      this->mWaitDumpStub == nullptr ||
+      this->mSyncStub == nullptr) {
     std::cout << "failt to new stub" << std::endl;
     return false;
   }
 
   // start a thread to receive data from grpc server
-  auto func = std::bind(&FrameworkGrpc::loadToRecvQueue, gGrpcClient);
-  gGrpcClient->mRecvThread = std::thread(func);
-  gGrpcClient->mRecvThread.detach();
+  auto func = std::bind(&FrameworkGrpc::loadToRecvQueue, this);
+  this->mRecvThread = std::thread(func);
+  this->mRecvThread.detach();
 
   // start a thread to dump memory of target
-  auto funcDump = std::bind(&FrameworkGrpc::waitDumpRequest, gGrpcClient);
-  gGrpcClient->mDumpMemThread = std::thread(funcDump);
-  gGrpcClient->mDumpMemThread.detach();
+  auto funcDump = std::bind(&FrameworkGrpc::waitDumpRequest, this);
+  this->mDumpMemThread = std::thread(funcDump);
+  this->mDumpMemThread.detach();
 
   return true;
 }
@@ -93,7 +77,7 @@ bool FrameworkGrpc::init(uint16_t coreId, std::string serverAddr,
 bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                          uint32_t targetAddr, char* data, uint32_t dataSize, uint32_t sourceAddr,
                          StreamDir streamDir, StreamType streamType, uint16_t tag, uint8_t lut) {
-  if (gGrpcClient->mTcpXferStub == nullptr) {
+  if (this->mTcpXferStub == nullptr) {
     std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
@@ -156,7 +140,7 @@ bool FrameworkGrpc::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
  * implement dmaXfer function
  */
 bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint32_t len) {
-  if (gGrpcClient->mDmaXferStub == nullptr) {
+  if (this->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
@@ -194,7 +178,7 @@ bool FrameworkGrpc::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir, uint
  * implement dmaXferPoll function
  */
 bool FrameworkGrpc::dmaXferPoll() {
-  if (gGrpcClient->mDmaXferPollStub == nullptr) {
+  if (this->mDmaXferPollStub == nullptr) {
     std::cout << "dmaXferPoll stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
@@ -226,7 +210,7 @@ bool FrameworkGrpc::dmaXferPoll() {
  * receive data from grpc server and store them in message queue
  */
 void FrameworkGrpc::loadToRecvQueue(void) {
-  if (gGrpcClient->mTcpXferCbStub == nullptr) {
+  if (this->mTcpXferCbStub == nullptr) {
     std::cout << "recv stub is null, since grpc doesn't initialize"
               << std::endl;
     return;
@@ -246,7 +230,6 @@ void FrameworkGrpc::loadToRecvQueue(void) {
 
   readWriter->Write(request);
 
-  auto stream = Stream::getInstance(StreamType::STREAM_MESSAGE);
   while (readWriter->Read(&reply)) {
     // enqueue data to message queue
 
@@ -264,14 +247,10 @@ void FrameworkGrpc::loadToRecvQueue(void) {
       streamType = StreamType::STREAM_RDMA;
     }
 
-    auto streamDir = StreamDir::CORE2CORE;
-    if (reply.direction() == Message::llb2core)
-      streamDir = StreamDir::LLB2CORE;
+    auto xdir = (reply.direction() == Message::llb2core)? StreamDir::LLB2CORE: StreamDir::CORE2CORE;
 
-    if (stream &&
-        stream->recvPost(reply.source(), reply.dstaddr(), reply.mutable_body()->data(),
-                       reply.mutable_body()->size(), streamType, streamDir,
-                       reply.tag()) == false) {
+    if (mCb->recv(reply.dstaddr(), reply.mutable_body()->data(),
+                       reply.mutable_body()->size(), xdir)) {
       std::cout << "fail to post receive message" << std::endl;
     }
 
@@ -289,7 +268,7 @@ void FrameworkGrpc::loadToRecvQueue(void) {
  * implement sync function of BSP module
  */
 bool FrameworkGrpc::sync(StreamType streamType) {
-  if (gGrpcClient->mSyncStub == nullptr) {
+  if (this->mSyncStub == nullptr) {
     std::cout << "sync stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
@@ -332,7 +311,7 @@ bool FrameworkGrpc::sync(StreamType streamType) {
  * dump a block of memory in target
  */
 bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
-  if (gGrpcClient->mDumpStub == nullptr) {
+  if (this->mDumpStub == nullptr) {
     std::cout << "Dumpd stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
@@ -348,9 +327,11 @@ bool FrameworkGrpc::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
   request.set_allocated_info(info);
 
   auto data = request.mutable_data();
+
   // dump memory into data
-  auto stream = Stream::getInstance(STREAM_DUMP);
-  stream->dump(addr, size, data);
+  if (mCb->dump(data, addr, size)) {
+    std::cout << "fail to dump memory at" << std::hex << addr << std::endl;
+  }
 
   // container for the data we expect from the server
   google::protobuf::Empty reply;

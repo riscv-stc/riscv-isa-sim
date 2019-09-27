@@ -10,17 +10,16 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "Framework.h"
+#include "Interface.h"
+#include "Factory.h"
 
 namespace Transport {
 
 /**
  * @brief udp framework
  */
-class FrameworkUdpLog : public Framework {
+class FrameworkUdpLog : public Interface {
  public:
-  static FrameworkUdpLog *gUdpLogClient;  // singleton instance of this class
-
   ~FrameworkUdpLog() override;
 
   /**
@@ -30,7 +29,7 @@ class FrameworkUdpLog : public Framework {
    * @param serverPort: port of log udp server
    * @return true - success; false - fail
    */
-  bool init(uint16_t coreId, std::string serverAddr, int serverPort) override;
+  bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb) override;
 
   /**
    * @brief send log message to log server
@@ -40,25 +39,12 @@ class FrameworkUdpLog : public Framework {
    */
   bool console(char *data, uint32_t size) override;
 
-  /**
-   * @brief garbage collection to clean gUdpLogClient
-   */
-  class Gc {
-   public:
-    ~Gc() {
-      if (gUdpLogClient != nullptr) {
-        delete gUdpLogClient;
-      }
-    }
-  };
-
-  static Gc gc;
-
  private:
   int mSockFd = -1;
   struct sockaddr_in mSockAddr;
   socklen_t mSockAddrLen;
 };
+
 }
 
 #endif  // TRANSPORT_FRAMEWORK_UDP_LOG_H

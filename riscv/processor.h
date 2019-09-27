@@ -12,6 +12,9 @@
 #include "simif.h"
 #include "debug_rom_defines.h"
 
+#include "Transport/Callback.h"
+#include "Transport/Interface.h"
+
 class processor_t;
 class mmu_t;
 typedef reg_t (*insn_func_t)(processor_t*, insn_t, reg_t);
@@ -202,7 +205,7 @@ static int cto(reg_t val)
 }
 
 // this class represents one processor in a RISC-V machine.
-class processor_t : public abstract_device_t
+class processor_t : public abstract_device_t, public Transport::Callback
 {
 public:
   processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id, bool halt_on_reset=false);
@@ -210,6 +213,9 @@ public:
   
   inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit, this->idx); };
   inline void restore_aunit() { sim->set_aunit(MCU, 0); };
+
+  Transport::Interface* get_transport() { return transport; };
+
   void set_debug(bool value);
   void set_histogram(bool value);
   void reset();
@@ -258,6 +264,10 @@ public:
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
+
+  // Receive data from Transport module
+  bool recv(uint32_t dstaddr, const char* data, uint32_t size, bool set_active) override;
+  bool dump(std::string *data, uint64_t addr, uint32_t size) override;
 
   // When true, display disassembly of each instruction that's executed.
   bool debug;
@@ -366,6 +376,8 @@ private:
   std::string isa_string;
   bool histogram_enabled;
   bool halt_on_reset;
+
+  Transport::Interface* transport;
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;

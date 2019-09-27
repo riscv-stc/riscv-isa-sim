@@ -16,6 +16,8 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include "Transport/Factory.h"
+
 #undef STATE
 #define STATE state
 
@@ -35,6 +37,9 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t i
       disassembler->add_insn(disasm_insn);
 
   reset();
+
+  transport = Transport::Factory::createTransport();
+  transport->init(id, "localhost", 3291, this);
 }
 
 processor_t::~processor_t()
@@ -50,6 +55,8 @@ processor_t::~processor_t()
 
   delete mmu;
   delete disassembler;
+
+  delete transport;
 }
 
 static void bad_isa_string(const char* isa)
@@ -997,6 +1004,27 @@ bool processor_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   }
 
   return false;
+}
+
+bool processor_t::recv(uint32_t dstaddr, const char* data, uint32_t size, bool set_active) {
+  char *dst = sim->addr_to_mem(dstaddr);
+  memcpy(dst, data, size);
+
+  // TCP transfer
+  if (set_active) {
+    /*RDMA need set active bit in TCSR*/
+    this->set_rx_active();
+  }
+
+  return true;
+}
+
+bool processor_t::dump(std::string *data, uint64_t srcaddr, uint32_t size) {
+  char *src = sim->addr_to_mem(srcaddr);
+  data->clear();
+  data->append((char *)src, size);
+
+  return true;
 }
 
 void processor_t::trigger_updated()

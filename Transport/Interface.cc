@@ -5,29 +5,17 @@
  *
  */
 
-#include "Framework.h"
+#include "Interface.h"
 
 using namespace Transport;
 
 Interface::~Interface() {}
 
 /**
- * initialize Transport module
+ * implement init function in BSP module
  */
-bool Interface::init(uint16_t coreId, SIM_S *sim, std::string grpcServerAddr,
-                     int grpcServerPort, std::string logServerAddr,
-                     int logServerPort)
-{
-  return Framework::init(coreId, sim, grpcServerAddr, grpcServerPort,
-                         logServerAddr, logServerPort);
-}
+bool Interface::init(int coreId, std::string serverAddr, int serverPort, Callback *cb) {
 
-/**
- * get singleton instance of a framework
- */
-Interface *Interface::getInstance(FrameworkType frameworkType)
-{
-  return Framework::getInstance(frameworkType);
 }
 
 /**

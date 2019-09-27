@@ -5,32 +5,15 @@
  *
  */
 
-#include "FrameworkUdpLog.h"
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <iostream>
 
+#include "FrameworkUdpLog.h"
+
 using namespace Transport;
-
-FrameworkUdpLog *FrameworkUdpLog::gUdpLogClient = nullptr;
-FrameworkUdpLog::Gc FrameworkUdpLog::gc;
-
-/*
- * create gUdpLogClient singleton and register to framework map
- */
-static __attribute__((constructor)) void REGISTER_INSTANCE() {
-  if (FrameworkUdpLog::gUdpLogClient == nullptr) {
-    try {
-      FrameworkUdpLog::gUdpLogClient = new FrameworkUdpLog;
-      FrameworkUdpLog::gUdpLogClient->registerInstance(
-          Interface::FRAMEWORK_UDP_LOG, FrameworkUdpLog::gUdpLogClient);
-    } catch (std::bad_alloc &e) {
-      std::cout << "fail to alloc:" << e.what();
-    }
-  }
-}
 
 FrameworkUdpLog::~FrameworkUdpLog() {
   if (mSockFd >= 0) close(mSockFd);
@@ -38,9 +21,10 @@ FrameworkUdpLog::~FrameworkUdpLog() {
 /**
  * initialize udp framework
  */
-bool FrameworkUdpLog::init(uint16_t coreId, std::string serverAddr,
-                           int serverPort) {
-  gUdpLogClient->mCoreId = coreId;
+bool FrameworkUdpLog::init(int coreId, std::string serverAddr, int serverPort,
+      Callback *cb) {
+  this->mCb = cb;
+  this->mCoreId = coreId;
 
   /* build udp socket */
   mSockFd = socket(AF_INET, SOCK_DGRAM, 0);

@@ -13,7 +13,8 @@
 #include <sstream>
 #include <iostream>
 #include "eigen3_ops.h"
-#include "Transport/Interface.h"
+
+#include "Transport/Factory.h"
 
 using namespace std::placeholders;
 
@@ -86,6 +87,8 @@ syscall_t::syscall_t(htif_t* htif)
   fds.alloc(stdin_fd); // stdin -> stdin
   fds.alloc(stdout_fd0); // stdout -> stdout
   fds.alloc(stdout_fd1); // stderr -> stdout
+
+  logger.reset(Transport::Factory::createTransport("udp_log"));
 }
 
 std::string syscall_t::do_chroot(const char* fn)
@@ -157,8 +160,6 @@ reg_t syscall_t::sys_write(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, 
   memif->read(pbuf, len, &buf[0]);
 
   if (fd == 1) {  // only log stdout
-    auto logger = Transport::Interface::getInstance(
-        Transport::Interface::FRAMEWORK_UDP_LOG);
     if (logger) logger->console(&buf[0], len);
   }
 
