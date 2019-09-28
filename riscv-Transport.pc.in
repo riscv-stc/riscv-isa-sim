@@ -6,6 +6,6 @@ includedir=${prefix}/@includedir@
 Name: riscv-Transport
 Description: RISC-V Transport library
 Version: git
-Libs: -Wl,-rpath,${libdir} -L${libdir} -lTransport
+Libs: -Wl,-rpath,${libdir} -L${libdir} -Wl,--whole-archive -lTransport -Wl,--no-whole-archive
 Cflags: -I${includedir}
 URL: http://riscv.org/download.html#tab_spike

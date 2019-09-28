@@ -38,8 +38,8 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t i
 
   reset();
 
-  transport = Transport::Factory::createTransport();
-  transport->init(id, "localhost", 3291, this);
+  proxy = Transport::Factory<Transport::AbstractProxy>::create();
+  proxy->init(id, "localhost", 3291, this);
 }
 
 processor_t::~processor_t()
@@ -56,7 +56,7 @@ processor_t::~processor_t()
   delete mmu;
   delete disassembler;
 
-  delete transport;
+  delete proxy;
 }
 
 static void bad_isa_string(const char* isa)

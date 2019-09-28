@@ -1,29 +1,36 @@
 /**
  * See LICENSE for license details
  *
- * @author Jiang,Bin
+ * @author Pascal Ouyang
  *
  */
 
-#ifndef TRANSPORT_INTERFACE_H
-#define TRANSPORT_INTERFACE_H
+#ifndef TRANSPORT_ABSTRACT_PROXY_H
+#define TRANSPORT_ABSTRACT_PROXY_H
 
 #include <string>
-
-#include "Callback.h"
 
 /**
  * Transport namespace packages entire Transport module
  */
 namespace Transport {
 
-typedef void SIM_S;
-
 /**
- * @brief abstract interface of Transport
+ * @brief abstract class of Proxy
  */
-class Interface {
+class AbstractProxy {
  public:
+
+  /**
+   * @brief interface class for proxy callback
+   */
+  class Callback {
+  public:
+    // Receive data from Transport module
+    virtual bool recv(uint32_t dstaddr, const char* data, uint32_t size, bool set_active) = 0;
+    virtual bool dump(std::string *data, uint64_t addr, uint32_t size) = 0;
+  };
+
   // direction of stream used in GRPC framework
   enum StreamDir {
     CORE2CORE  = 0,  // from a core(spike) to another core(spike)
@@ -38,9 +45,7 @@ class Interface {
   };
 
   // pure virtual deconstructor, used for abstract class
-  virtual ~Interface() = 0;
-
-#define LUT_DISABLE 0xff  // invalid lut means lut is not used
+  virtual ~AbstractProxy() = 0;
 
   /**
    * @brief initialize transport
@@ -49,7 +54,7 @@ class Interface {
    * @param serverPort: port of grpc server
    * @return true - success; false - fail
    */
-  virtual bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb);
+  virtual bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb) = 0;
 
   /**
    * @brief implement tcpXfer function in BSP module
@@ -63,7 +68,7 @@ class Interface {
    * @return true - success; false - fail
    */
   virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
-                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE);
+                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE) = 0;
 
   /**
    * @brief implement dmaXfer function
@@ -73,27 +78,19 @@ class Interface {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data);
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) = 0;
 
   /**
    * @brief implement dmaXferPoll function
    * @return true - busy; false - done
    */
-  virtual bool dmaXferPoll();
+  virtual bool dmaXferPoll() = 0;
 
   /**
    * @brief implement sync function in BSP module
    * @return true - success; false - fail
    */
-  virtual bool sync();
-
-  /**
-   * @brief send log message to log server
-   * @param data: start address of log message
-   * @param size: size of log message
-   * @return true - success; false - fail
-   */
-  virtual bool console(char *data, uint32_t size);
+  virtual bool sync() = 0;
 
  protected:
   Callback *mCb;
@@ -101,4 +98,4 @@ class Interface {
 };
 }
 
-#endif  // TRANSPORT_INTERFACE_H
+#endif  // TRANSPORT_ABSTRACT_PROXY_H

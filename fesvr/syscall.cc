@@ -14,6 +14,7 @@
 #include <iostream>
 #include "eigen3_ops.h"
 
+#include "Transport/AbstractLogger.h"
 #include "Transport/Factory.h"
 
 using namespace std::placeholders;
@@ -88,7 +89,8 @@ syscall_t::syscall_t(htif_t* htif)
   fds.alloc(stdout_fd0); // stdout -> stdout
   fds.alloc(stdout_fd1); // stderr -> stdout
 
-  logger.reset(Transport::Factory::createTransport("udp_log"));
+  logger.reset(Transport::Factory<Transport::AbstractLogger>::create());
+  logger->init(0, "localhost", 3292);
 }
 
 std::string syscall_t::do_chroot(const char* fn)

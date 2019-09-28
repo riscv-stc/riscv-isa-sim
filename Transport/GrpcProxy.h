@@ -11,9 +11,9 @@
 #include <grpcpp/grpcpp.h>
 #include <mutex>
 #include <thread>
-#include "Interface.h"
-#include "Factory.h"
 #include "proxy.grpc.pb.h"
+
+#include "AbstractProxy.h"
 
 namespace Transport {
 using proxy::Proxy;
@@ -21,7 +21,7 @@ using proxy::Proxy;
 /**
  * @brief grpc framework
  */
-class GrpcTransport : public Interface {
+class GrpcProxy : public AbstractProxy {
  public:
   /**
    * @brief initialize grpc framework
@@ -109,8 +109,6 @@ class GrpcTransport : public Interface {
   std::mutex mDumpMutex;       // mutex for above data
 
   uint32_t mSyncCount = 0;  // count of done sync
-
-  static FactoryRegister<GrpcTransport> AddToFactory_;
 };
 
 }

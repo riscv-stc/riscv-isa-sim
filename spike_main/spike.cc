@@ -14,13 +14,7 @@
 #include <memory>
 #include "../VERSION"
 
-#include "Transport/Factory.h"
-#include "Transport/GrpcTransport.h"
-#include "Transport/LogTransport.h"
-
-// register transports to factory
-static Transport::FactoryRegister<Transport::GrpcTransport> gt("grpc", true);
-static Transport::FactoryRegister<Transport::LogTransport> lt("udp_log");
+#include "Transport/Transport.h"
 
 static void help(int exit_code = 1)
 {

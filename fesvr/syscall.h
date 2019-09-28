@@ -9,7 +9,7 @@
 #include <string>
 #include <memory>
 
-#include "Transport/Interface.h"
+#include "Transport/AbstractLogger.h"
 
 class syscall_t;
 typedef reg_t (syscall_t::*syscall_func_t)(reg_t, reg_t, reg_t, reg_t, reg_t, reg_t, reg_t);
@@ -42,7 +42,7 @@ class syscall_t : public device_t
   std::vector<syscall_func_t> table;
   fds_t fds;
 
-  std::unique_ptr<Transport::Interface> logger;
+  std::unique_ptr<Transport::AbstractLogger> logger;
 
   void handle_syscall(command_t cmd);
   void dispatch(addr_t mm);

@@ -10,17 +10,16 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "Interface.h"
-#include "Factory.h"
+#include "AbstractLogger.h"
 
 namespace Transport {
 
 /**
  * @brief udp framework
  */
-class LogTransport : public Interface {
+class UdpLogger : public AbstractLogger {
  public:
-  ~LogTransport() override;
+  virtual ~UdpLogger() override;
 
   /**
    * @brief initialize udp framework
@@ -29,7 +28,7 @@ class LogTransport : public Interface {
    * @param serverPort: port of log udp server
    * @return true - success; false - fail
    */
-  bool init(int coreId, std::string serverAddr, int serverPort, Callback *cb) override;
+  bool init(int coreId, std::string serverAddr, int serverPort) override;
 
   /**
    * @brief send log message to log server

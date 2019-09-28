@@ -10,22 +10,22 @@
 #include <unordered_map>
 #include <functional>
 #include <iostream>
-#include "Interface.h"
 
 namespace Transport {
 
 /**
  * @brief Transport factory
  */
+template<class T> 
 class Factory {
  public:
   // use this to instantiate the proper Derived class
-  static Interface * createTransport(const std::string& name = "") {
+  static T * create(const std::string& name = "") {
     auto it = Factory::registry().find(name);
     return it == Factory::registry().end() ? nullptr : (it->second)();
   }
 
-  typedef std::unordered_map<std::string, std::function<Interface*()>> registry_map;
+  typedef std::unordered_map<std::string, std::function<T*()>> registry_map;
 
   static registry_map& registry() {
     static registry_map impl;
@@ -33,13 +33,14 @@ class Factory {
   }
 };
 
-template<typename T> struct FactoryRegister
+template<class I, class T> 
+struct FactoryRegister
 {
     FactoryRegister(std::string name, bool is_default = false)
     {
-      Factory::registry()[name] = []() { return new T; };
+      Factory<I>::registry()[name] = []() { return new T; };
       if (is_default)
-        Factory::registry()[""] = []() { return new T; };
+        Factory<I>::registry()[""] = []() { return new T; };
       std::cout << "transport class '" << name << (is_default?"(default)":"") << "' registered.\n";
     }
 };

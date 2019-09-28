@@ -1,4 +1,4 @@
-auto trans = p->get_transport();
-if (trans == nullptr) return -1;
+auto proxy = p->get_proxy();
+if (proxy == nullptr) return -1;
 
-trans->dmaXferPoll();
+proxy->dmaXferPoll();

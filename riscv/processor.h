@@ -12,8 +12,7 @@
 #include "simif.h"
 #include "debug_rom_defines.h"
 
-#include "Transport/Callback.h"
-#include "Transport/Interface.h"
+#include "Transport/AbstractProxy.h"
 
 class processor_t;
 class mmu_t;
@@ -205,7 +204,7 @@ static int cto(reg_t val)
 }
 
 // this class represents one processor in a RISC-V machine.
-class processor_t : public abstract_device_t, public Transport::Callback
+class processor_t : public abstract_device_t, public Transport::AbstractProxy::Callback
 {
 public:
   processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id, bool halt_on_reset=false);
@@ -214,7 +213,7 @@ public:
   inline access_unit set_aunit(access_unit unit) { return sim->set_aunit(unit, this->idx); };
   inline void restore_aunit() { sim->set_aunit(MCU, 0); };
 
-  Transport::Interface* get_transport() { return transport; };
+  Transport::AbstractProxy* get_proxy() { return proxy; };
 
   void set_debug(bool value);
   void set_histogram(bool value);
@@ -377,7 +376,7 @@ private:
   bool histogram_enabled;
   bool halt_on_reset;
 
-  Transport::Interface* transport;
+  Transport::AbstractProxy* proxy;
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;

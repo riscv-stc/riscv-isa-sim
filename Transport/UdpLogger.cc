@@ -11,19 +11,17 @@
 #include <unistd.h>
 #include <iostream>
 
-#include "LogTransport.h"
+#include "UdpLogger.h"
 
 using namespace Transport;
 
-LogTransport::~LogTransport() {
+UdpLogger::~UdpLogger() {
   if (mSockFd >= 0) close(mSockFd);
 }
 /**
  * initialize udp framework
  */
-bool LogTransport::init(int coreId, std::string serverAddr, int serverPort,
-      Callback *cb) {
-  this->mCb = cb;
+bool UdpLogger::init(int coreId, std::string serverAddr, int serverPort) {
   this->mCoreId = coreId;
 
   /* build udp socket */
@@ -46,7 +44,7 @@ bool LogTransport::init(int coreId, std::string serverAddr, int serverPort,
 /**
  * send log message to log server
  */
-bool LogTransport::console(char *data, uint32_t size) {
+bool UdpLogger::console(char *data, uint32_t size) {
   if (mSockFd < 0) return false;
 
   if (size > 0) {
