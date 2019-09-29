@@ -39,7 +39,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t i
   reset();
 
   proxy = Transport::Factory<Transport::AbstractProxy>::create();
-  proxy->init(id, "localhost", 3291, this);
+  proxy->init(id, "127.0.0.1", 3291, this);
 }
 
 processor_t::~processor_t()
