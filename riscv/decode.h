@@ -95,7 +95,7 @@ public:
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
-  uint64_t ts() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t ts() { return x(14, 1); }
   uint64_t vm() { return x(25, 1); }
   uint64_t vlmul() {return x(20,2);}
   uint64_t vsew() { return x(22,3);}
@@ -236,39 +236,47 @@ private:
 #define VLMUL_I (insn.vlmul())
 #define VSEW_I (insn.vsew())
 #define VEDIV_I (insn.vediv())
-#define SHAPE1_COLUMN ((STATE.shape1 & 0xFFFF0000) >> 16)
-#define SHAPE1_ROW (STATE.shape1 & 0xFFFF)
-#define SHAPE2_COLUMN ((STATE.shape2 & 0xFFFF0000) >> 16)
-#define SHAPE2_ROW (STATE.shape2 & 0xFFFF)
-#define STRIDE_RD (STATE.stride1 & 0xFFFF)
-#define STRIDE_RS1 (STATE.stride2 & 0xFFFF)
-#define STRIDE_RS2 ((STATE.stride2 & 0xFFFF0000) >> 16)
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
 
-#define BC_SHAPE1_COLUMN ((STATE.bc_shape1 & 0xFFFF0000) >> 16)
-#define BC_SHAPE1_ROW (STATE.bc_shape1 & 0xFFFF)
-#define BC_SHAPE2_COLUMN ((STATE.bc_shape2 & 0xFFFF0000) >> 16)
-#define BC_SHAPE2_ROW (STATE.bc_shape2 & 0xFFFF)
-#define BC_STRIDE_RD (STATE.bc_stride1 & 0xFFFF)
-#define BC_STRIDE_RS1 (STATE.bc_stride2 & 0xFFFF)
-#define BC_STRIDE_RS2 ((STATE.bc_stride2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW (STATE.m_shape_s2 & 0xFFFF)
+#define BC_STRIDE_RD (STATE.m_stride_d & 0xFFFF)
+#define BC_STRIDE_RS1 (STATE.m_stride_s & 0xFFFF)
+#define BC_STRIDE_RS2 ((STATE.m_stride_s & 0xFFFF0000) >> 16)
 
-#define TMODE	(STATE.tmode)
+#define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
+#define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
+#define STRIDE_LLB        (STATE.mte_stride_llb & 0xFFFF)
 
-#define TCSR_RX_ACTIVE_MASK (0x2)
-#define TCSR_RX_READY_MASK (0x1)
+#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
+#define MTE_CORE_MAP    (STATE.mte_coremap)
 
-#define TPARA0_TAG_MASK (0xff)
-#define TPARA0_TAG_SHIFT (0)
-/*LUT 13-15*/
-#define TPARA0_LUT_MASK (0x7)
-#define TPARA0_LUT_SHIFT (13)
-/*Core ID 16-26*/
-#define TPARA0_CORE_MASK (0x7FF)
-#define TPARA0_CORE_SHIFT (16)
-/*Chip ID 27-31*/
-#define TPARA0_CHIP_MASK (0x1F)
-#define TPARA0_CHIP_SHIFT (27)
-#define TPARA0	(STATE.tpara0)
+//#define TMODE	(STATE.tmode)
+//
+//#define TCSR_RX_ACTIVE_MASK (0x2)
+//#define TCSR_RX_READY_MASK (0x1)
+//
+//#define TPARA0_TAG_MASK (0xff)
+//#define TPARA0_TAG_SHIFT (0)
+///*LUT 13-15*/
+//#define TPARA0_LUT_MASK (0x7)
+//#define TPARA0_LUT_SHIFT (13)
+///*Core ID 16-26*/
+//#define TPARA0_CORE_MASK (0x7FF)
+//#define TPARA0_CORE_SHIFT (16)
+///*Chip ID 27-31*/
+//#define TPARA0_CHIP_MASK (0x1F)
+//#define TPARA0_CHIP_SHIFT (27)
+//#define TPARA0	(STATE.tpara0)
 
 #define check_v0hmask(x) \
 	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;

@@ -145,31 +145,35 @@ struct state_t
 
   uint32_t fflags;
   uint32_t frm;
-  uint32_t shape1;
-  uint32_t shape2;
-  uint32_t stride1;
-  uint32_t stride2;
-  uint32_t bc_shape1;
-  uint32_t bc_shape2;
-  uint32_t bc_stride1;
-  uint32_t bc_stride2;
+  
+  uint32_t shape_s1;
+  uint32_t shape_s2;
+  uint32_t stride_d;
+  uint32_t stride_s;
+  uint32_t m_shape_s1;
+  uint32_t m_shape_s2;
+  uint32_t m_stride_d;
+  uint32_t m_stride_s;
+  
   uint32_t vstart;
   uint32_t vxsat;
   uint32_t vxrm;
   uint32_t vl;
   uint32_t vtype;
-  uint32_t tcsr;
-  uint32_t tpara0;
-  uint32_t tecause;
-  uint32_t trbase;
-  uint32_t trsz;
-  uint32_t trmmc;
-  uint32_t trqhead;
-  uint32_t trqsize;
-  uint32_t tmode;
-  uint32_t tmsgclr;
-  uint32_t tid; /*Need init by H/W */
-
+  
+  uint32_t conv_FM_in;
+  uint32_t conv_Depth_in;
+  uint32_t conv_FM_out;
+  uint32_t conv_Depth_out;
+  uint32_t conv_S_kernel;
+  uint32_t conv_kernel;
+  uint32_t conv_padding;
+  uint32_t ncp_busy;
+  uint32_t mte_coremap;
+  uint32_t mte_icdest;
+  uint32_t mte_shape; 
+  uint32_t mte_stride_llb;
+  
   bool serialized; // whether timer CSRs are in a well-defined state
 
   // When true, execute a single instruction and then enter debug mode.  This

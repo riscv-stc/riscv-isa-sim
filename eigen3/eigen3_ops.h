@@ -145,8 +145,9 @@ public:
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
 
-    int vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int vemmul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
+    int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
+    int memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss);
+    int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
 
     int vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
@@ -154,6 +155,8 @@ public:
     int veemul_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
+    int veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss);
+    int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
 
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
@@ -177,9 +180,11 @@ public:
 
     int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
-    int vemv_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vemv_f(half rs1, half *rd, struct ShapeStride *ss);
-    int vetr_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int mov_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim);
+    int mov_f(half rs1, half *rd, struct ShapeStride *ss);
+    int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vecvt_x8_hf_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
 };
 
 /**

@@ -32,7 +32,7 @@ const char* dim_name[]={
 };
 
 const char* ts_name[]={
-    " ","ts1","ts2", "td"
+    " ","ts"
 };
 
 const char* vm_name[]={

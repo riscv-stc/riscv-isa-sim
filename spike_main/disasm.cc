@@ -538,7 +538,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(remuw);
 
   DEFINE_RTYPE(sync);
-  DEFINE_RTYPE(icxfer_p);
+  //DEFINE_RTYPE(icxfer_p);
 
   DEFINE_NOARG(ecall);
   DEFINE_NOARG(ebreak);
@@ -668,6 +668,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R2TYPE(veadd_mv);
   DEFINE_R3TYPE(vecvt_hf_x8_m);
   DEFINE_R3TYPE(vecvt_hf_xu8_m);
+  DEFINE_R3TYPE(vecvt_x8_hf_m);
   DEFINE_CV2TYPE(veemacc_mf);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
@@ -685,16 +686,25 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(vemin_mm);
   DEFINE_CV2TYPE(vemin_mf);
   DEFINE_R2TYPE(vemin_mv);
-  DEFINE_RTYPE(vemul_mm);
-  DEFINE_RTYPE(vemul_mv);
-  DEFINE_R3TYPE(vemv_m);
-  DEFINE_FXTYPE(vemv_f);
+  //DEFINE_RTYPE(vemul_mm);
+  //DEFINE_RTYPE(vemul_mv);
+  
+  DEFINE_RTYPE(veemul_x32_mv);
+  DEFINE_CV2TYPE(veemul_x32_mf);
+  DEFINE_R3TYPE(mov_m);
+  DEFINE_R1TYPE(mov_v);
+  DEFINE_FXTYPE(mov_f);
+  DEFINE_R3TYPE(mov_llb_l1);
+  DEFINE_R3TYPE(mov_l1_llb);
   DEFINE_RTYPE(vesub_mm);
   DEFINE_CV2TYPE(vesub_mf);
   DEFINE_R2TYPE(vesub_mv);
-  DEFINE_R3TYPE(vetr_m);
-  DEFINE_R4TYPE(vemmul_mm);
-
+  DEFINE_R3TYPE(metr_m);
+  DEFINE_R4TYPE(memul_mm);
+  DEFINE_RTYPE(pld);
+  DEFINE_RTYPE(icmov);
+  DEFINE_RTYPE(memul_x8_mm);
+  
   DEFINE_RTYPE(vsetvl);
   DEFINE_SV8TYPE(vsetvli);
   DEFINE_SV1TYPE(vlb_v);

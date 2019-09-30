@@ -239,11 +239,6 @@ riscv_insn_list = \
 	fsub_q \
 	fsub_s \
 	fsw \
-	icxfer_p \
-	icxfer_m \
-	lcxfer_d \
-	lcxfer_u \
-	lcxfer_u_m \
 	dlxfer_d \
 	dlxfer_u \
 	dmapoll \
@@ -322,15 +317,22 @@ riscv_insn_list = \
 	vemin_m \
 	vemin_mm \
 	vemin_mv \
-	vemmul_mm \
-	vemul_mm \
-	vemul_mv \
-	vemv_f \
-	vemv_m \
+	memul_mm \
+	memul_x8_mm \
+	mov_f \
+	mov_m \
+	mov_v \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
-	vetr_m \
+	metr_m \
+	icmov \
+	mov_l1_llb \
+	mov_llb_l1 \
+	pld \
+	vecvt_x8_hf_m \
+	veemul_x32_mf \
+	veemul_x32_mv \
 	vid_v \
 	viota_m \
 	vlb_v \
