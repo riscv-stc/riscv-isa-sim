@@ -15,10 +15,14 @@ service Proxy {
   // do DMA transfer for LLB <-> DDR
   rpc DMAXfer(dspike.proto.Message) returns (google.protobuf.Empty);
   // poll DMA transfer status
-  rpc DMAXferPoll(google.protobuf.Empty) returns (dspike.proto.DMAXferPollResponse);
+  rpc DMAPoll(google.protobuf.Empty) returns (google.protobuf.Empty);
 
   // receive messages via stream
   rpc RecvCb(stream RecvCbRequest) returns (stream dspike.proto.Message);
+
+  // do load/store code/data for DDR
+  rpc DDRRead(dspike.proto.Message) returns (dspike.proto.Message);
+  rpc DDRWrite(dspike.proto.Message) returns (google.protobuf.Empty);
 
   // upload dump data to proxy
   rpc Dump(DumpData) returns (google.protobuf.Empty);

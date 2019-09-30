@@ -54,13 +54,13 @@ class GrpcProxy : public AbstractProxy {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) override;
+  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) override;
 
   /**
    * @brief implement dmaXferPoll function
    * @return true - busy; false - done
    */
-  bool dmaXferPoll() override;
+  bool dmaPoll() override;
 
   /**
    * @brief implement sync function of BSP module
@@ -73,7 +73,7 @@ class GrpcProxy : public AbstractProxy {
   std::unique_ptr<Proxy::Stub> mTcpXferStub = nullptr;  // stub for tcp Xfer service
   std::unique_ptr<Proxy::Stub> mRecvCbStub = nullptr;  // stub for tcp Xfer callback service
   std::unique_ptr<Proxy::Stub> mDmaXferStub = nullptr;  // stub for dma Xfer service
-  std::unique_ptr<Proxy::Stub> mDmaXferPollStub = nullptr;  // stub for dma xfer poll service
+  std::unique_ptr<Proxy::Stub> mDmaPollStub = nullptr;  // stub for dma xfer poll service
   std::unique_ptr<Proxy::Stub> mSyncStub = nullptr;  // stub for sync service
   std::unique_ptr<Proxy::Stub> mDumpStub = nullptr;  // stub for dump service
   std::unique_ptr<Proxy::Stub> mWaitDumpStub =

@@ -8,13 +8,12 @@
 
 #include "GrpcProxy.h"
 
+using dspike::proto::Message;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using dspike::proto::Message;
-using dspike::proto::DMAXferPollResponse;
-using proxy::RecvCbRequest;
 using proxy::Proxy;
+using proxy::RecvCbRequest;
 
 using namespace Transport;
 
@@ -22,7 +21,7 @@ using namespace Transport;
  * initialize grpc framework
  */
 bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
-        Callback *cb) {
+                     Callback *cb) {
   this->mCb = cb;
   this->mCoreId = coreId;
   this->serverAddr = serverAddr + ":" + std::to_string(serverPort);
@@ -33,7 +32,7 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
   this->mDmaXferStub = Proxy::NewStub(grpc::CreateChannel(
       this->serverAddr, grpc::InsecureChannelCredentials()));
 
-  this->mDmaXferPollStub = Proxy::NewStub(grpc::CreateChannel(
+  this->mDmaPollStub = Proxy::NewStub(grpc::CreateChannel(
       this->serverAddr, grpc::InsecureChannelCredentials()));
 
   this->mRecvCbStub = Proxy::NewStub(grpc::CreateChannel(
@@ -73,8 +72,8 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
  * implement tcpXfer function of BSP module
  */
 bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
-                         uint32_t targetAddr, char* data, uint32_t dataSize, uint32_t sourceAddr,
-                         StreamDir streamDir) {
+                        uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
+                        StreamDir streamDir) {
   if (this->mTcpXferStub == nullptr) {
     std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -84,35 +83,35 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   // prepare message data
   Message request;
   switch (streamDir) {
-    case CORE2CORE:
-          request.set_source(mCoreId);
-          request.set_target(targetCoreId);
-          request.set_forwarding(false);
-          request.set_body(data, dataSize);
-          request.set_type(Message::rdma);
-          request.set_dstaddr(targetAddr);
-          break;
+  case CORE2CORE:
+    request.set_source(mCoreId);
+    request.set_target(targetCoreId);
+    request.set_forwarding(false);
+    request.set_body(data, dataSize);
+    request.set_type(Message::rdma);
+    request.set_dstaddr(targetAddr);
+    break;
 
-    case LLB2CORE:
-          request.set_target(targetCoreId);
-          request.set_srcaddr(sourceAddr);
-          request.set_dstaddr(targetAddr);
-          request.set_direction(Message::llb2core);
-          request.set_length(dataSize);
-          break;
+  case LLB2CORE:
+    request.set_target(targetCoreId);
+    request.set_srcaddr(sourceAddr);
+    request.set_dstaddr(targetAddr);
+    request.set_direction(Message::llb2core);
+    request.set_length(dataSize);
+    break;
 
-    case CORE2LLB:
-          request.set_source(mCoreId);
-          request.set_body(data, dataSize);
-          request.set_dstaddr(targetAddr);
-          request.set_direction(Message::core2llb);
-          break;
-    default:
-          break;
+  case CORE2LLB:
+    request.set_source(mCoreId);
+    request.set_body(data, dataSize);
+    request.set_dstaddr(targetAddr);
+    request.set_direction(Message::core2llb);
+    break;
+  default:
+    break;
   }
 
   fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
-                           request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);
+          request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);
 
   // container for the data we expect from the server
   google::protobuf::Empty reply;
@@ -133,7 +132,7 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) {
+bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) {
   if (this->mDmaXferStub == nullptr) {
     std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
               << std::endl;
@@ -143,28 +142,26 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
   // prepare message data
   Message request;
   switch (dir) {
-    case LLB2DDR:
-          request.set_target(mCoreId);
-          request.set_srcaddr(llbAddr);
-          request.set_dstaddr(ddrAddr);
-          request.set_direction(Message::llb2ddr);
-          request.set_length(len);
-          break;
-
-    case DDR2LLB:
-          request.set_source(mCoreId);
-          request.set_body(data, len);
-          request.set_dstaddr(llbAddr);
-          request.set_direction(Message::ddr2llb);
-          break;
-    default:
-          break;
+  case LLB2DDR:
+    request.set_target(mCoreId);
+    request.set_srcaddr(llbAddr);
+    request.set_dstaddr(ddrAddr);
+    request.set_direction(Message::llb2ddr);
+    break;
+  case DDR2LLB:
+    request.set_source(mCoreId);
+    request.set_srcaddr(ddrAddr);
+    request.set_dstaddr(llbAddr);
+    request.set_direction(Message::ddr2llb);
+    break;
+  default:
+    break;
   }
 
   request.set_length(len);
 
   fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
-                        dir, ddrAddr, llbAddr, len);
+          dir, ddrAddr, llbAddr, len);
 
   google::protobuf::Empty reply;
 
@@ -182,35 +179,33 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
 }
 
 /**
- * implement dmaXferPoll function
+ * implement dmaPoll function
  */
-bool GrpcProxy::dmaXferPoll() {
-  if (this->mDmaXferPollStub == nullptr) {
+bool GrpcProxy::dmaPoll() {
+  if (this->mDmaPollStub == nullptr) {
     std::cout << "dmaXferPoll stub is null, since grpc doesn't initialize"
               << std::endl;
     return false;
   }
 
   google::protobuf::Empty request;
+  google::protobuf::Empty reply;
 
   fprintf(stdout, "[dmaXferPoll]\n");
-
-  // container for the data we expect from the server
-  DMAXferPollResponse reply;
 
   // context for the client
   ClientContext context;
 
   // actual RPC
-  Status status = mDmaXferPollStub->DMAXferPoll(&context, request, &reply);
+  Status status = mDmaPollStub->DMAPoll(&context, request, &reply);
 
   if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
     return true; // when fail, also return busy mode
   }
-  else
-    return reply.busy();
+
+  return true;
 }
 
 /**
@@ -232,7 +227,7 @@ void GrpcProxy::loadToRecvQueue(void) {
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReaderWriter< proxy::RecvCbRequest, Message>> readWriter(
+  std::unique_ptr<grpc::ClientReaderWriter<proxy::RecvCbRequest, Message>> readWriter(
       mRecvCbStub->RecvCb(&context));
 
   readWriter->Write(request);
@@ -248,12 +243,12 @@ void GrpcProxy::loadToRecvQueue(void) {
     }
 
     fprintf(stdout, "[tcpXferCb] direction:%d, dst:0x%08x type:%d data size:%d\n",
-                         reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
+            reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
 
     auto xdir = (reply.direction() == Message::llb2core)? StreamDir::LLB2CORE: StreamDir::CORE2CORE;
 
     if (!mCb->recv(reply.dstaddr(), reply.mutable_body()->data(),
-                       reply.mutable_body()->size(), xdir)) {
+                   reply.mutable_body()->size(), xdir)) {
       std::cout << "fail to post receive message" << std::endl;
     }
 

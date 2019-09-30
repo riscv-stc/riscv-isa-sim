@@ -78,13 +78,13 @@ class AbstractProxy {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir, char *data) = 0;
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) = 0;
 
   /**
    * @brief implement dmaXferPoll function
    * @return true - busy; false - done
    */
-  virtual bool dmaXferPoll() = 0;
+  virtual bool dmaPoll() = 0;
 
   /**
    * @brief implement sync function in BSP module

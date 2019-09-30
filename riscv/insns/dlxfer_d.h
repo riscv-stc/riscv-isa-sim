@@ -6,4 +6,4 @@ auto dst = *((unsigned long long *)MMU.get_phy_addr(RD));
 auto src = RS1;
 auto len = RS2;
 
-proxy->dmaXfer(dst, src, len, Transport::AbstractProxy::LLB2DDR, 0);
+proxy->dmaXfer(dst, src, len, Transport::AbstractProxy::LLB2DDR);
