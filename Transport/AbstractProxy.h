@@ -86,6 +86,9 @@ class AbstractProxy {
    */
   virtual bool dmaPoll() = 0;
 
+  virtual bool ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) = 0;
+  virtual bool ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) = 0;
+
   /**
    * @brief implement sync function in BSP module
    * @return true - success; false - fail

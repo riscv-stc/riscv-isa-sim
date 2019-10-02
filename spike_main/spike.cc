@@ -43,6 +43,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --progsize=<words>    Progsize for the debug module [default 2]\n");
+  fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0x100000, 1MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
   fprintf(stderr, "  --debug-auth          Debug module requires debugger to authenticate\n");
@@ -129,6 +130,7 @@ int main(int argc, char** argv)
   bool dump_dts = false;
   bool dtb_enabled = true;
   bool mem_layout = false;
+  uint32_t ddr_size = 0x100000;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -173,6 +175,7 @@ int main(int argc, char** argv)
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
+  parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0);});
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
@@ -217,7 +220,7 @@ int main(int argc, char** argv)
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
-  if (mems.empty()) {
+  if (ddr_size == 0 && mems.empty()) {
     mems = make_mems(DEFAULT_MEMORY_LAYOUT);
     mem_layout = DEFAULT_LAYOUT;
   }
@@ -228,7 +231,7 @@ int main(int argc, char** argv)
   if(hartids.size() == 1)
 	coreId = hartids[0];
 
-  sim_t s(isa, nprocs, halted, start_pc, mems, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
       abstract_rti, support_hasel, support_abstract_csr_access, mem_layout);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);

@@ -24,36 +24,9 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
                      Callback *cb) {
   this->mCb = cb;
   this->mCoreId = coreId;
-  this->serverAddr = serverAddr + ":" + std::to_string(serverPort);
 
-  this->mTcpXferStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mDmaXferStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mDmaPollStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mRecvCbStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mSyncStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mDumpStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  this->mWaitDumpStub = Proxy::NewStub(grpc::CreateChannel(
-      this->serverAddr, grpc::InsecureChannelCredentials()));
-
-  if (this->mTcpXferStub == nullptr || this->mRecvCbStub == nullptr ||
-      this->mDumpStub == nullptr ||
-      this->mWaitDumpStub == nullptr ||
-      this->mSyncStub == nullptr) {
-    std::cout << "failt to new stub" << std::endl;
-    return false;
-  }
+  auto addr = serverAddr + ":" + std::to_string(serverPort);
+  this->mChn = grpc::CreateChannel(addr, grpc::InsecureChannelCredentials());
 
   // start a thread to receive data from grpc server
   auto func = std::bind(&GrpcProxy::loadToRecvQueue, this);
@@ -74,12 +47,6 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
 bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                         uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
                         StreamDir streamDir) {
-  if (this->mTcpXferStub == nullptr) {
-    std::cout << "tcpXfer stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return false;
-  }
-
   // prepare message data
   Message request;
   switch (streamDir) {
@@ -119,8 +86,7 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   // context for the client
   ClientContext context;
 
-  // actual RPC
-  Status status = mTcpXferStub->TCPXfer(&context, request, &reply);
+  Status status = proxy()->TCPXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -133,12 +99,6 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
  * implement dmaXfer function
  */
 bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) {
-  if (this->mDmaXferStub == nullptr) {
-    std::cout << "dmaXfer stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return false;
-  }
-
   // prepare message data
   Message request;
   switch (dir) {
@@ -168,8 +128,7 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
   // context for the client
   ClientContext context;
 
-  // actual RPC
-  Status status = mDmaXferStub->DMAXfer(&context, request, &reply);
+  Status status = proxy()->DMAXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -182,12 +141,6 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
  * implement dmaPoll function
  */
 bool GrpcProxy::dmaPoll() {
-  if (this->mDmaPollStub == nullptr) {
-    std::cout << "dmaXferPoll stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return false;
-  }
-
   google::protobuf::Empty request;
   google::protobuf::Empty reply;
 
@@ -196,8 +149,7 @@ bool GrpcProxy::dmaPoll() {
   // context for the client
   ClientContext context;
 
-  // actual RPC
-  Status status = mDmaPollStub->DMAPoll(&context, request, &reply);
+  Status status = proxy()->DMAPoll(&context, request, &reply);
 
   if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
@@ -208,16 +160,57 @@ bool GrpcProxy::dmaPoll() {
   return true;
 }
 
+
+bool GrpcProxy::ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) {
+  // context for the client
+  ClientContext context;
+
+  Message request;
+  request.set_srcaddr(addr);
+  request.set_length(len);
+
+  Message reply;
+
+  Status status = proxy()->DDRRead(&context, request, &reply);
+
+  if (!status.ok()) {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return false;
+  }
+
+  auto data = reply.body();
+  memcpy(bytes, data.c_str(), data.length());
+
+  return true;
+}
+
+bool GrpcProxy::ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) {
+  // context for the client
+  ClientContext context;
+
+  Message request;
+  request.set_dstaddr(addr);
+  request.set_length(len);
+  request.set_body(bytes, len);
+
+  google::protobuf::Empty reply;
+
+  Status status = proxy()->DDRWrite(&context, request, &reply);
+
+  if (!status.ok()) {
+    std::cout << status.error_code() << ": " << status.error_message()
+              << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * receive data from grpc server and store them in message queue
  */
 void GrpcProxy::loadToRecvQueue(void) {
-  if (this->mRecvCbStub == nullptr) {
-    std::cout << "recv stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return;
-  }
-
   proxy::RecvCbRequest request;
   request.set_spikeid(mCoreId);
 
@@ -227,8 +220,7 @@ void GrpcProxy::loadToRecvQueue(void) {
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReaderWriter<proxy::RecvCbRequest, Message>> readWriter(
-      mRecvCbStub->RecvCb(&context));
+  std::unique_ptr<grpc::ClientReaderWriter<proxy::RecvCbRequest, Message>> readWriter(proxy()->RecvCb(&context));
 
   readWriter->Write(request);
 
@@ -266,11 +258,6 @@ void GrpcProxy::loadToRecvQueue(void) {
  * implement sync function of BSP module
  */
 bool GrpcProxy::sync() {
-  if (this->mSyncStub == nullptr) {
-    std::cout << "sync stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return false;
-  }
   proxy::SyncRequest request;
   request.set_spikeid(mCoreId);
 
@@ -279,8 +266,7 @@ bool GrpcProxy::sync() {
   // context for the client
   ClientContext context;
 
-  // actual RPC.
-  Status status = mSyncStub->Sync(&context, request, &reply);
+  Status status = proxy()->Sync(&context, request, &reply);
 
   mSyncCount++;
 
@@ -309,12 +295,6 @@ bool GrpcProxy::sync() {
  * dump a block of memory in target
  */
 bool GrpcProxy::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
-  if (this->mDumpStub == nullptr) {
-    std::cout << "Dumpd stub is null, since grpc doesn't initialize"
-              << std::endl;
-    return false;
-  }
-
   // prepare message data
   proxy::DumpData request;
   auto info = new dspike::proto::DumpInfo;
@@ -337,8 +317,7 @@ bool GrpcProxy::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
   // context for the client
   ClientContext context;
 
-  // actual RPC
-  Status status = mDumpStub->Dump(&context, request, &reply);
+  Status status = proxy()->Dump(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -359,9 +338,8 @@ void GrpcProxy::waitDumpRequest(void) {
     // context for the client
     ClientContext context;
 
-    // actual RPC
     std::unique_ptr<grpc::ClientReader<dspike::proto::DumpParam>> reader(
-        mWaitDumpStub->WaitDump(&context, request));
+        proxy()->WaitDump(&context, request));
     while (reader->Read(&reply)) {
       // request to dump in done sync
       if (reply.trigger_case() == dspike::proto::DumpParam::kOnsync) {

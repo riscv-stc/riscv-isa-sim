@@ -16,8 +16,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
-#define mcu_addr_start       (0x00000000)
-#define mcu_space_size       (0xc0000000)
+#define ddr_mem_start        (0x00000000)
 #define l1_buffer_start      (0xc0000000)
 #define l1_buffer_size       (0x00100000)
 #define im_buffer_start      (0xc0400000)
@@ -32,7 +31,7 @@ static void handle_signal(int sig)
 }
 
 sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
-             std::vector<std::pair<reg_t, mem_t*>> mems,
+             std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
@@ -61,6 +60,10 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
         //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
         //  add_clint_dev = 0;
     }
+  }
+
+  if (ddr_size > 0) {
+    bus.add_device(ddr_mem_start, new ddr_mem_t(procs, ddr_size));
   }
 
   for (size_t i = 0; i < procs.size(); i++) {
@@ -383,6 +386,7 @@ void sim_t::make_dtb()
 }
 
 char* sim_t::addr_to_mem(reg_t addr) {
+  addr = addr & 0x00000000ffffffff;
   std::ostringstream err;
 
   // addr on local bus (l1 | im cache)
@@ -402,6 +406,15 @@ char* sim_t::addr_to_mem(reg_t addr) {
   // addr on global bus (ddr)
   desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+    if (unlikely((NCP == aunit) || (TCP == aunit))) {
+      auto unit = NCP == aunit? "ncp": "tcp";
+      err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
+      throw std::runtime_error(err.str());
+    }
+    if (addr - desc.first < mem->size())
+        return mem->contents() + (addr - desc.first);
+    return NULL;
+  } else if (auto mem = dynamic_cast<ddr_mem_t *>(desc.second)) {
     if (unlikely((NCP == aunit) || (TCP == aunit))) {
       auto unit = NCP == aunit? "ncp": "tcp";
       err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";

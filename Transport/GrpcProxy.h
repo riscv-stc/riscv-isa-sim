@@ -62,6 +62,9 @@ class GrpcProxy : public AbstractProxy {
    */
   bool dmaPoll() override;
 
+  bool ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) override;
+  bool ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) override;
+
   /**
    * @brief implement sync function of BSP module
    * @return true - success; false - fail
@@ -70,14 +73,9 @@ class GrpcProxy : public AbstractProxy {
 
  private:
   std::string serverAddr = "";  // address + port of grpc server
-  std::unique_ptr<Proxy::Stub> mTcpXferStub = nullptr;  // stub for tcp Xfer service
-  std::unique_ptr<Proxy::Stub> mRecvCbStub = nullptr;  // stub for tcp Xfer callback service
-  std::unique_ptr<Proxy::Stub> mDmaXferStub = nullptr;  // stub for dma Xfer service
-  std::unique_ptr<Proxy::Stub> mDmaPollStub = nullptr;  // stub for dma xfer poll service
-  std::unique_ptr<Proxy::Stub> mSyncStub = nullptr;  // stub for sync service
-  std::unique_ptr<Proxy::Stub> mDumpStub = nullptr;  // stub for dump service
-  std::unique_ptr<Proxy::Stub> mWaitDumpStub =
-      nullptr;  // stub for wait dump service
+  std::shared_ptr<::grpc::Channel> mChn = nullptr;
+
+  std::unique_ptr<Proxy::Stub> proxy() { return Proxy::NewStub(mChn); };
 
   /**
    * @brief receive data from grpc server and store them in message queue

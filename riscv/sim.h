@@ -5,6 +5,7 @@
 
 #include "processor.h"
 #include "devices.h"
+#include "ddr_mem.h"
 #include "debug_module.h"
 #include "simif.h"
 #include <fesvr/htif.h>
@@ -22,7 +23,7 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, size_t _nprocs,  bool halted, reg_t start_pc,
-        std::vector<std::pair<reg_t, mem_t*>> mems,
+        std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
         bool require_authentication, suseconds_t abstract_delay_usec,
