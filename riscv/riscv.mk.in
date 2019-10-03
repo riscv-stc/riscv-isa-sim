@@ -48,6 +48,7 @@ riscv_srcs = \
 	rocc.cc \
 	regnames.cc \
 	devices.cc \
+	ddr_mem.cc \
 	rom.cc \
 	clint.cc \
 	debug_module.cc \

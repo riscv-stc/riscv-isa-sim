@@ -6,6 +6,8 @@
 ddr_mem_t::ddr_mem_t(std::vector<processor_t*>& procs, size_t size)
   : procs(procs), length(size)
 {
+  init();
+
   auto stloop = std::bind(&ddr_mem_t::store_loop, this);
   auto thread = new std::thread(stloop);
   thread->detach();
@@ -15,7 +17,13 @@ ddr_mem_t::ddr_mem_t(std::vector<processor_t*>& procs, size_t size)
 
 void ddr_mem_t::init() {
   data = (char*)calloc(1, length);
-  procs[0]->get_proxy()->ddrLoad(0, length, (uint8_t *)data);
+
+  int block_size = 0x100000;
+  for (int i = 0; i < length / block_size; i++) {
+    int offset = block_size * i;
+    int size = std::min(length - offset, (size_t)block_size);
+    procs[0]->get_proxy()->ddrLoad(offset, size, (uint8_t *)data + offset);
+  }
 }
 
 void ddr_mem_t::store_loop() {
