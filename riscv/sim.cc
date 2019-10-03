@@ -62,10 +62,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
     }
   }
 
-  if (ddr_size > 0) {
-    bus.add_device(ddr_mem_start, new ddr_mem_t(procs, ddr_size));
-  }
-
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
     local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
@@ -105,6 +101,10 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   /* the same with debug_module */
   //if (add_clint_dev)
   //  bus.add_device(CLINT_BASE, clint.get());
+
+  if (ddr_size > 0) {
+    bus.add_device(ddr_mem_start, new ddr_mem_t(procs, ddr_size));
+  }
 }
 
 sim_t::~sim_t()

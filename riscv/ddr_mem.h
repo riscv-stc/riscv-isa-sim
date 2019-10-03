@@ -4,6 +4,9 @@
 
 #include <cstdlib>
 #include <vector>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #include "devices.h"
 
@@ -14,14 +17,24 @@ class ddr_mem_t : public abstract_device_t {
   ddr_mem_t(std::vector<processor_t*>& procs, size_t size = 0x100000);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
-  char* contents() { if(!data) load_low_ddr(); return data; }
-  size_t size() { return len; }
+  char* contents() { if(!data) init(); return data; }
+  size_t size() { return length; }
  private:
   std::vector<processor_t*>& procs;
   char* data = NULL;
-  size_t len;
+  size_t length;
 
-  void load_low_ddr();
+  void init();
+
+  void store_loop();
+
+  std::unique_ptr<std::thread> store_thread;
+  std::condition_variable_any store_cond;
+  std::mutex store_mutex;
+
+  bool store_dirty = false;
+  reg_t store_dirty_start = UINT32_MAX;
+  reg_t store_dirty_end = 0;
 };
 
 #endif
