@@ -16,4 +16,4 @@ unsigned short stride = STRIDE_LLB ? STRIDE_LLB : col * 2;
 
 //llb --> l1, llb has stride, l1 no stride
 for (int i = 0; i < row; i++)
-  proxy->tcpXfer(0, 0, dst + i * col * 2, src + i * stride, col * 2, 0, Transport::AbstractProxy::LLB2CORE);
+  proxy->tcpXfer(0, 0, dst + i * col * 2, 0, col * 2, src + i * stride, Transport::AbstractProxy::LLB2CORE);
