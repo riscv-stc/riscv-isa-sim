@@ -16,6 +16,7 @@
 #include "eigen3_ops.h"
 #include "fp16a.c"
 #include "fp16m.c"
+#include "fp16ext.c"
 #include "fp16convfp32.c"
 
 /* dynamic stride for map */
@@ -76,6 +77,212 @@ void CustomInsns::shapestride_dbg(struct ShapeStride *ss)
     printf("stride rs1: %d\n", ss->stride_rs1);
     printf("stride rs2: %d\n", ss->stride_rs2);
     printf("stride rd : %d\n\n", ss->stride_rd);
+}
+
+/**
+ * meconv_mm() meconv.mm
+ *
+ * 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss)
+{
+    int pad_top, pad_bottom, pad_left, pad_right;
+    int kw, kh, kc, k_stride;
+    int in_w, in_h, in_c, in_stride;
+    int out_w, out_h, out_c, out_stride;
+    int w, h, c;
+    int dilation;
+    int valid;
+    int i, j, k;
+
+    //get the padding
+    pad_top = (ss->conv_padding >> 24) & 0xff;
+    pad_bottom = (ss->conv_padding >> 16) & 0xff;
+    pad_left = (ss->conv_padding >> 8) & 0xff;
+    pad_right = ss->conv_padding & 0xff;
+    valid = pad_top == 0 && pad_bottom == 0 &&
+            pad_left == 0 && pad_right == 0;
+
+    //get the kernel shape
+    kw = (ss->conv_kernel >> 24) & 0xff;
+    kh = (ss->conv_kernel >> 16) & 0xff;
+    dilation = (ss->conv_kernel >> 8) & 0xff;
+    k_stride = (ss->conv_kernel) & 0xff;
+    kc = ss->conv_s_kernel & 0xffff;
+
+    //get the input shape
+    in_w = (ss->conv_fm_in >> 16) & 0xffff;
+    in_h = (ss->conv_fm_in) & 0xffff;
+    in_c = (ss->conv_depth_in) & 0xffff;
+    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+
+    //get the output shape
+    out_w = (ss->conv_fm_out >> 16) & 0xffff;
+    out_h = (ss->conv_fm_out) & 0xffff;
+    out_c = (ss->conv_depth_out) * 0xffff;
+    out_stride = (ss->conv_depth_out >> 16) * 0xffff;
+
+    /*calculate the kernel shape*/
+    Map_half rs2_matrix(rs2, kh, kw * kc, DynStride(k_stride, 1));
+
+    h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
+    w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
+    half *kernel_dilation = (half *)malloc(h * w * kc * sizeof(half));
+    memset(kernel_dilation, 0, h * w * kc * sizeof(half));
+    Map_half kd_matrix(kernel_dilation, h, w * kc, DynStride(1, 1));
+
+    for (i = 0; i < kh; i ++) {
+        for (j = 0; j < kw; j ++) {
+            for (k = 0; k < kc; k ++)
+                kd_matrix(i * dilation, j * dilation + k) = rs2_matrix(i, j + k);
+        }
+    }
+    kh = h;
+    kw = w;
+
+    /*calculate the input shape*/
+    Map_half rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride, 1));
+    h += (pad_top + pad_bottom);
+    w += (pad_right + pad_left);
+
+    half *padding = (half *)malloc(h * w * in_c * sizeof(half));
+    memset(padding, 0, h * w * in_c * sizeof(half));
+    Map_half padding_matrix(padding, h, w * in_c, DynStride(1, 1));
+    padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix;
+    in_h = h;
+    in_w = w;
+
+    /*calculate the output shape*/
+    if (valid) {
+        h = (in_h - kh + 1 + k_stride - 1) /k_stride;
+        w = (in_w - kw + 1 + k_stride - 1) /k_stride;
+    }
+    else {
+        h = (in_h + k_stride - 1) /k_stride;
+        w = (in_w + k_stride - 1) /k_stride;
+    }
+
+    /*param check*/
+    assert(h == out_h && w == out_w);
+
+    /*calculate convolution*/
+    Map_half rd_matrix(rd, out_h, out_w * in_c, DynStride(out_stride, 1));
+    for (i = 0; i < out_h; i++) {
+        for (j = 0; j < out_w; j++) {
+            rd_matrix(i, j) = (padding_matrix.block(i * k_stride, j * k_stride * in_c, kh, kw * in_c).array() *
+			       kd_matrix.transpose().array()).sum();
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * meconv_x8_mm() meconv.x8.mm
+ *
+ * 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+{
+    int pad_top, pad_bottom, pad_left, pad_right;
+    int kw, kh, kc, k_stride;
+    int in_w, in_h, in_c, in_stride;
+    int out_w, out_h, out_c, out_stride;
+    int w, h, c;
+    int dilation;
+    int valid;
+    int i, j, k;
+
+    //get the padding
+    pad_top = (ss->conv_padding >> 24) & 0xff;
+    pad_bottom = (ss->conv_padding >> 16) & 0xff;
+    pad_left = (ss->conv_padding >> 8) & 0xff;
+    pad_right = ss->conv_padding & 0xff;
+    valid = pad_top == 0 && pad_bottom == 0 &&
+            pad_left == 0 && pad_right == 0;
+
+    //get the kernel shape
+    kw = (ss->conv_kernel >> 24) & 0xff;
+    kh = (ss->conv_kernel >> 16) & 0xff;
+    dilation = (ss->conv_kernel >> 8) & 0xff;
+    k_stride = (ss->conv_kernel) & 0xff;
+    kc = ss->conv_s_kernel & 0xffff;
+
+    //get the input shape
+    in_w = (ss->conv_fm_in >> 16) & 0xffff;
+    in_h = (ss->conv_fm_in) & 0xffff;
+    in_c = (ss->conv_depth_in) & 0xffff;
+    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+
+    //get the output shape
+    out_w = (ss->conv_fm_out >> 16) & 0xffff;
+    out_h = (ss->conv_fm_out) & 0xffff;
+    out_c = (ss->conv_depth_out) * 0xffff;
+    out_stride = (ss->conv_depth_out >> 16) * 0xffff;
+
+    /*calculate the kernel shape*/
+    Map_int8_t rs2_matrix(rs2, kh, kw * kc, DynStride(k_stride, 1));
+
+    h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
+    w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
+    int8_t *kernel_dilation = (int8_t *)malloc(h * w * kc * sizeof(int8_t));
+    memset(kernel_dilation, 0, h * w * kc * sizeof(int8_t));
+    Map_int8_t kd_matrix(kernel_dilation, h, w * kc, DynStride(1, 1));
+
+    for (i = 0; i < kh; i ++) {
+        for (j = 0; j < kw; j ++) {
+            for (k = 0; k < kc; k ++)
+                kd_matrix(i * dilation, j * dilation + k) = rs2_matrix(i, j + k);
+        }
+    }
+    kh = h;
+    kw = w;
+
+    /*calculate the input shape*/
+    Map_int8_t rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride, 1));
+    h += (pad_top + pad_bottom);
+    w += (pad_right + pad_left);
+
+    int8_t *padding = (int8_t *)malloc(h * w * in_c * sizeof(int8_t));
+    memset(padding, 0, h * w * in_c * sizeof(int8_t));
+    Map_int8_t padding_matrix(padding, h, w * in_c, DynStride(1, 1));
+    padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix;
+    in_h = h;
+    in_w = w;
+
+    /*calculate the output shape*/
+    if (valid) {
+        h = (in_h - kh + 1 + k_stride - 1) /k_stride;
+        w = (in_w - kw + 1 + k_stride - 1) /k_stride;
+    }
+    else {
+        h = (in_h + k_stride - 1) /k_stride;
+        w = (in_w + k_stride - 1) /k_stride;
+    }
+
+    /*param check*/
+    assert(h == out_h && w == out_w);
+
+    /*calculate convolution*/
+    Map_int32_t rd_matrix(rd, out_h, out_w * in_c, DynStride(out_stride, 1));
+    for (i = 0; i < out_h; i++) {
+        for (j = 0; j < out_w; j++) {
+            rd_matrix(i, j) = (padding_matrix.block(i * k_stride, j * k_stride * in_c, kh, kw * in_c).array() *
+			       kd_matrix.transpose().array()).sum();
+        }
+    }
+
+    return 0;
 }
 
 /**
@@ -147,6 +354,7 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
 
     return 0;
 }
+
 
 /**
  * veemul_mm() veemul.mm
@@ -265,6 +473,7 @@ int CustomInsns::veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeSt
 
     return 0;
 }
+
 
 /**
  * veemacc_mm() veemacc.mm
@@ -1211,6 +1420,111 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * verecip_m() verecip.m
+ * 
+ * 矩阵元素求倒运算，正常算术运算 M = 1/M1
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    half one = (half)1.0;
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+		  rd_matrix(row, col) =  one / rs1_matrix(row, col);
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+
+/**
+ * vesqrt_m() vesqrt.m
+ * 
+ * 矩阵元素求平方根，正常算术运算 M = sqrt(M2)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+		  rd_matrix(row, col) =  sqrt(rs1_matrix(row, col));
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * veexp_m() veexp.m
+ * 
+ * 矩阵元素指数运算，正常算术运算 M = e^Mij
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }

@@ -107,6 +107,30 @@ struct ShapeStride
 };
 
 /**
+ * @brief 矩阵形状描述结构
+ *
+ * 按照 CSR进行设计
+ * 用于提供输入矩阵和输出矩阵的形状和存储方式的描述
+ */
+struct ConvShapeStride
+{
+    /* CSR FM in */
+    unsigned short conv_fm_in;
+    unsigned short conv_depth_in;
+
+    /* CSR  FM out*/
+    unsigned short conv_fm_out;
+    unsigned short conv_depth_out;
+
+    /* CSR kernel */
+    unsigned short conv_s_kernel;
+    unsigned short conv_kernel;
+
+    /* CSR padding */
+    unsigned short conv_padding;
+};
+
+/**
  * @brief 返回值枚举
  */
 enum {
@@ -185,6 +209,13 @@ public:
     int mov_f(half rs1, half *rd, struct ShapeStride *ss);
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_x8_hf_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
+    
+    int verecip_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int veexp_m(half *rs1, half *rd, struct ShapeStride *ss);
+
+    int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
+    int meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss);
 };
 
 /**

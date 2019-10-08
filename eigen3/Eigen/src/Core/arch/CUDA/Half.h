@@ -47,6 +47,9 @@
 typedef unsigned short BIT16;
 extern BIT16 func_CS16FM (BIT16 a, BIT16 b);
 extern BIT16 func_CS16FA (BIT16 a, BIT16 b);
+extern BIT16 fp16_exp(BIT16 x); 
+extern BIT16 fp16_recip(BIT16 x);
+extern BIT16 fp16_sqrt(BIT16 x);
 extern "C" int fp16tofp32(int fp_data_in);
 extern "C" int fp32tofp16(int fp_data);
 #endif
@@ -294,7 +297,11 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half
 #endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator / (const half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  return a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
+#else
   return half(float(a) / float(b));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a) {
   half result;
@@ -326,7 +333,11 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator -= (half& a, const half& b)
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator /= (half& a, const half& b) {
+#ifdef USING_RISCV_FP16
+  a = a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
+#else
   a = half(float(a) / float(b));
+#endif
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator == (const half& a, const half& b) {
@@ -492,6 +503,8 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half abs(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
+#elif defined(USING_RISCV_FP16)
+  return Eigen::half_impl::raw_uint16_to_half(fp16_exp(a.x));
 #else
    return half(::expf(float(a)));
 #endif
@@ -512,6 +525,8 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half log10(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sqrt(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hsqrt(a));
+#elif defined(USING_RISCV_FP16)
+  return Eigen::half_impl::raw_uint16_to_half(fp16_sqrt(a.x));
 #else
     return half(::sqrtf(float(a)));
 #endif

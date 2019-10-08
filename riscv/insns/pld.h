@@ -13,7 +13,7 @@ unsigned int core_map = MTE_CORE_MAP;
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
-unsigned short stride = STRIDE_LLB;
+unsigned short stride = STRIDE_LLB ? STRIDE_LLB : col * 2;
 
 //llb --> l1; llb has stride, l1 no stride.
 for (int core_id = 0; core_id < 32; core_id++)

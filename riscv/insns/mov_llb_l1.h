@@ -12,7 +12,7 @@ unsigned long dst = RD;
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
-unsigned short stride = STRIDE_LLB;
+unsigned short stride = STRIDE_LLB ? STRIDE_LLB : col * 2;
 
 //l1 --> llb, l1 no stride, llb has stride.
 for (int i = 0; i < row; i++)

@@ -34,6 +34,9 @@ typedef int                                     BIT32;
 
 BIT16 func_CS16FM (BIT16 a, BIT16 b);
 BIT16 func_CS16FA (BIT16 a, BIT16 b);
+BIT16 fp16_exp(BIT16 x); 
+BIT16 fp16_recip(BIT16 x);
+BIT16 fp16_sqrt(BIT16 x);
 //BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK);
 
 //#ifdef __cplusplus

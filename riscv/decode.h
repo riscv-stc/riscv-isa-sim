@@ -260,6 +260,14 @@ private:
 #define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
 #define MTE_CORE_MAP    (STATE.mte_coremap)
 
+#define CONV_INFM_WH    (STATE.conv_FM_in)
+#define CONV_DEPTH_IN   (STATE.conv_Depth_in)
+#define CONV_OUTFM_WH   (STATE.conv_FM_out)
+#define CONV_DEPTH_OUT  (STATE.conv_Depth_out)
+#define CONV_S_KERNEL   (STATE.conv_S_kernel)
+#define CONV_KERNEL     (STATE.conv_kernel)
+#define CONV_PADDING    (STATE.conv_padding)
+
 //#define TMODE	(STATE.tmode)
 //
 //#define TCSR_RX_ACTIVE_MASK (0x2)
@@ -314,6 +322,14 @@ private:
 					 (x).stride_rd = BC_STRIDE_RD>>1; \
 					 (x).stride_rs1 = BC_STRIDE_RS1>>1; \
 					 (x).stride_rs2 = BC_STRIDE_RS2>>1;})
+
+#define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
+					 (x).conv_depth_in = CONV_DEPTH_IN; \
+					 (x).conv_fm_out = CONV_OUTFM_WH; \
+					 (x).conv_depth_out = CONV_DEPTH_OUT; \
+					 (x).conv_s_kernel = CONV_S_KERNEL; \
+					 (x).conv_kernel = CONV_KERNEL; \
+					 (x).conv_padding = CONV_PADDING;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
