@@ -3153,7 +3153,210 @@ class Vfclass
     }
 };
 
-#endif
+/**
+ * @brief 单宽度向量除法指令
+ *
+ * 目的元素的宽度和源操作数中的元素宽度保持一致， 可以通过Type指定数据类型
+ *
+ */
+template <typename Type, typename MaskType>
+class Vdiv
+{
+  public:
+    int debug;
 
+    Vdiv(): debug(GLOBAL_DBG)
+    {
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VdivVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VdivMaskVecMap;
+
+    /**
+     * vdiv_vf() vfdiv.vf
+     * @param vs2 源操作向量基地址
+     * @param rs1 源标量操作数
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vdiv_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VdivVecMap vector_vs2(vs2, vl);
+        VdivVecMap vector_vd(vd, vl);
+        VdivMaskVecMap vector_v0(v0, vl);
+
+        if (!vm) {
+            for (int i = 0; i < vl; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) / rs1;
+            }
+        } else
+            vector_vd = vector_vs2.array() / rs1;
+
+        DBG_VECTOR_VF;
+
+        return 0;
+    }
+
+    /**
+     * vrdiv_vf() vfrdiv.vf
+     * @param vs2 源操作向量基地址
+     * @param rs1 源标量操作数
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vrdiv_vf(Type *vs2, Type rs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VdivVecMap vector_vs2(vs2, vl);
+        VdivVecMap vector_vd(vd, vl);
+        VdivMaskVecMap vector_v0(v0, vl);
+
+        if (!vm) {
+            for (int i = 0; i < vl; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = rs1 / vector_vs2(i);
+            }
+        } else
+            vector_vd = rs1 / vector_vs2.array();
+
+        DBG_VECTOR_VF;
+
+        return 0;
+    }
+
+    /**
+     * vdiv_vv() vfdiv.vv
+     * @param vs2 源操作向量二基地址
+     * @param vs1 源操作向量一基地址
+     * @param vd 目的向量基地址
+     * @param vm 不可屏蔽标识， vm=0 可屏蔽， vm=1不可屏蔽
+     * @param v0 mask向量基地址
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vdiv_vv(Type *vs2, Type *vs1, Type *vd, int vm, MaskType *v0, int vl)
+    {
+        VdivVecMap vector_vs2(vs2, vl);
+        VdivVecMap vector_vs1(vs1, vl);
+        VdivVecMap vector_vd(vd, vl);
+        VdivMaskVecMap vector_v0(v0, vl);
+
+        if (!vm) {
+            for (int i = 0; i < vl; i++) {
+                if (vector_v0(i) & 0x1)
+                    vector_vd(i) = vector_vs2(i) / vector_vs1(i);
+            }
+        } else
+            vector_vd = vector_vs2.array() / vector_vs1.array();
+
+        DBG_VECTOR_VV;
+
+        return 0;
+    }
+};
+
+/**
+ * @brief 向量平方根运算
+ *
+ * 一元向量-向量指令，用于求向量元素的平方根, 即：x^0.5，其中x为向量元素.
+ * 
+ *
+ */
+template <typename Type, typename MaskType>
+class Vfsqrt
+{
+  public:
+    int debug;
+
+    Vfsqrt(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VfsqrtVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfsqrtMaskVecMap;
+
+    /**
+     * vfsqrt_v()  vfsqrt.v vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfsqrt_v(Type *vs2, Type *vd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VfsqrtVecMap vector_vs2(vs2, vl);
+        VfsqrtVecMap vector_vd(vd, vl);
+        VfsqrtMaskVecMap vector_mask(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_mask(i) & 0x1)) {
+                vector_vd(i) = sqrt(vector_vs2(i));
+            }
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_mask, number, vl);
+        return 0;
+    }
+};
+
+/**
+ * @brief 向量指数运算
+ *
+ * 一元向量-向量指令，用于求向量元素指数运算, 即：e^x，其中x为向量元素.
+ * 
+ *
+ */
+template <typename Type, typename MaskType>
+class Vfexp
+{
+  public:
+    int debug;
+
+    Vfexp(): debug(GLOBAL_DBG)
+    {
+
+    }
+
+    typedef Map<Matrix<Type, 1, Dynamic>> VfexpVecMap;
+    typedef Map<Matrix<MaskType, 1, Dynamic>> VfexpMaskVecMap;
+
+    /**
+     * vfexp_v()  vfexp.v vd, vs2, vm
+     *
+     * @param vs2 源操作向量基地址
+     * @param vd 目的向量存放地址
+     * @param vm mask 使能标记，0使能
+     * @param mask 元素mask标记，最低位有效
+     * @param vl 向量长度(准确的说应该是个数)
+     * @return 执行结果
+     */
+    int vfexp_v(Type *vs2, Type *vd, int vm, MaskType *mask, int vl)
+    {
+        int number = 0;
+        VfexpVecMap vector_vs2(vs2, vl);
+        VfexpVecMap vector_vd(vd, vl);
+        VfexpMaskVecMap vector_mask(mask, vl);
+        
+        for (int i=0; i < vl; i++)
+            if (vm || (vector_mask(i) & 0x1)) {
+                vector_vd(i) = exp(vector_vs2(i));
+            }
+
+        DBG_INFO5(debug, vector_vs2, vector_vd, vector_mask, number, vl);
+        return 0;
+    }
+};
+
+#endif
 
 

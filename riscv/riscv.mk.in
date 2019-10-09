@@ -456,6 +456,15 @@ riscv_insn_list = \
 	wfi \
 	xor \
 	xori \
+        vfdiv_vf \
+	vfdiv_vv \
+	vfexp_v  \
+	vfrdiv_vf \
+	vfsqrt_v  \
+	vlepi_v   \
+	vlsepi_v  \
+	vsepi_v   \
+	vssepi_v  \
 
 riscv_gen_srcs = \
 	$(addsuffix .cc,$(riscv_insn_list))

@@ -717,12 +717,16 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV1TYPE(vlh_v);
   DEFINE_SV1TYPE(vlhu_v);
   DEFINE_SV1TYPE(vle_v);
+  DEFINE_SV1TYPE(vlepi_v);
+  
   //DEFINE_SV1TYPE(vleu_v);
   DEFINE_SV9TYPE(vlsb_v);
   DEFINE_SV9TYPE(vlsbu_v);
   DEFINE_SV9TYPE(vlsh_v);
   DEFINE_SV9TYPE(vlshu_v);
   DEFINE_SV9TYPE(vlse_v);
+  DEFINE_SV9TYPE(vlsepi_v);
+  
   //DEFINE_SV9TYPE(vlseu_v);
   DEFINE_SV2TYPE(vlxb_v);
   DEFINE_SV2TYPE(vlxbu_v);
@@ -741,12 +745,16 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV3TYPE(vsh_v);
   //DEFINE_SV3TYPE(vshu_v);
   DEFINE_SV3TYPE(vse_v);
+  DEFINE_SV3TYPE(vsepi_v);
+  
   //DEFINE_SV3TYPE(vseu_v);
   DEFINE_SV9TYPE(vssb_v);
   //DEFINE_SV9TYPE(vssbu_v);
   DEFINE_SV9TYPE(vssh_v);
   //DEFINE_SV9TYPE(vsshu_v);
   DEFINE_SV10TYPE(vsse_v);
+  DEFINE_SV10TYPE(vssepi_v);
+  
   //DEFINE_SV10TYPE(vsseu_v);
   DEFINE_SV10TYPE(vsxb_v);
   //DEFINE_SV10TYPE(vsxbu_v);
@@ -759,6 +767,11 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV4TYPE(vfsub_vf);
   DEFINE_SV4TYPE(vfrsub_vf);
   DEFINE_SV6TYPE(vfsub_vv);
+
+  DEFINE_SV4TYPE(vfdiv_vf);
+  DEFINE_SV4TYPE(vfrdiv_vf);
+  DEFINE_SV6TYPE(vfdiv_vv);
+  
   DEFINE_SV14TYPE(vfmacc_vf);
   DEFINE_SV13TYPE(vfmacc_vv);
   DEFINE_SV14TYPE(vfnmacc_vf);
@@ -842,6 +855,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV19TYPE(vpopc_m);
   DEFINE_SV16TYPE(vfclass_v);
 
+  DEFINE_SV16TYPE(vfexp_v);
+  DEFINE_SV16TYPE(vfsqrt_v);
+  
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));
   DISASM_INSN("c.jr", c_jr, mask_rvc_imm, {&rvc_rs1});

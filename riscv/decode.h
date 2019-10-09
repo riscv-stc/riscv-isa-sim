@@ -167,6 +167,8 @@ private:
 #define RS2 READ_REG(insn.rs2())
 #define RD READ_REG(insn.rd())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
+#define WRITE_RS1(value) WRITE_REG(insn.rs1(), value)
+#define WRITE_RS2(value) WRITE_REG(insn.rs2(), value)
 
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
