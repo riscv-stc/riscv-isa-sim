@@ -144,6 +144,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
   if (!fname)
     return;
 
+  set_aunit(NCP, 0);
   std::cout << "Load heap off 0x" << std::hex << off
             << " len 0x" << std::hex << len
             << " to file " << fname << std::endl;
@@ -154,7 +155,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
     std::ifstream ifs(fname, std::ios::in);
     if (!ifs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        goto out;;
     }
 
     char buf[512];
@@ -172,7 +173,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
     std::ifstream ifs(fname, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        goto out;
     std::cout << "ERROR: unsupport load bin file now......" << std::endl;
     exit(1);
     }
@@ -180,6 +181,9 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
       std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
       exit(1);
   }
+  
+out:
+  set_aunit(MCU, 0);
 }
 
 void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
@@ -188,6 +192,7 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
   if (!fname)
     return;
 
+  set_aunit(NCP, 0);
   std::cout << "Dump heap off 0x" << std::hex << off
             << " len 0x" << std::hex << len
             << " to file " << fname << std::endl;
@@ -198,7 +203,7 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
     std::ofstream ofs(fname, std::ios::out);
     if (!ofs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        goto out;
     }
 
     uint16_t data;
@@ -216,7 +221,7 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
     std::ifstream ifs(fname, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        goto out;
     std::cout << "ERROR: unsupport load bin file now......" << std::endl;
     exit(1);
     }
@@ -224,6 +229,9 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
       std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
       exit(1);
   }
+  
+out:
+  set_aunit(MCU, 0);
 }
 
 int sim_t::run(const char *fname_load, const char *fname_dump, addr_t off, size_t len)
