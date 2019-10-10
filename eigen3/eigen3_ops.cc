@@ -1830,7 +1830,7 @@ int CustomInsns::mov_m(half *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_half rd_matrix(rd, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1839,12 +1839,12 @@ int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 
     switch (dim) {
         case 0:
-            for (int row = 0; row < rs1_matrix.rows(); row++)
-                rd_matrix.row(row) = rs1_matrix.row(row);
+            for (int row = 0; row < rd_matrix.rows(); row++)
+                rd_matrix.row(row) = rs1_matrix;
             break;
         case 1:
-            for (int col = 0; col < rs1_matrix.cols(); col++)
-                rd_matrix.col(col) = rs1_matrix.col(col);
+            for (int col = 0; col < rd_matrix.cols(); col++)
+                rd_matrix.col(col) = rs1_matrix;
             break;
         default:
             cout << __FUNCTION__ << "error dim" << endl;
