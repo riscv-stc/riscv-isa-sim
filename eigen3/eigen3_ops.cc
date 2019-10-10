@@ -1435,15 +1435,10 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
  */
 int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
 
     half one = (half)1.0;
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1472,14 +1467,9 @@ int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
  */
 int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1506,14 +1496,9 @@ int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
  */
 int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1521,8 +1506,10 @@ int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
     }
 
     for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  cout << "rs1_matrix(" << row << "," << col << ")" << "= " << rs1_matrix(row, col) << endl;
 		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
+	   }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
 
