@@ -8,6 +8,22 @@ BIT16 fp16_exp(BIT16 x)
 {
   // get exp part
   int e = (int)((x >> 10) & 0x1f) - 14;
+  int sign_x  =  (x>>15)  & 0x1;
+  int exp_x   =  (x>>10) & 0x1f;
+  int frac_x  =  (x>>0) & 0x3ff;
+  
+  if (exp_x==0x1f && frac_x!=0) {
+      return 0x7c01; //nan
+  }
+  else if (exp_x==0x1f && frac_x==0) { //inf
+    if(sign_x==1)  
+        return 0;
+    else  
+        return 0x7c00;
+  }
+  else if (exp_x==0) { //0 or subnormal
+      return 0x3c00;  
+  }
 
   if (e > 4) return (x & 0x8000) ? 0 : 0x7c00 /* +inf */;
   if (e > 0) {
@@ -64,19 +80,68 @@ BIT16 fp16_rsqrt(BIT16 x)
 BIT16 fp16_recip(BIT16 x)
 {
   BIT16 value;
+  BIT16 t;
+  int sign_x  =  (x>>15)  & 0x1;
+  int exp_x   =  (x>>10) & 0x1f;
+  int frac_x  =  (x>>0) & 0x3ff;
 
-  value = fp16_rsqrt(x);
-  return fp16_mul(value, value);
+  if (exp_x == 0x1f && frac_x != 0) { //nan
+      if(sign_x==1) 
+          return 0xfc01;
+      return 0x7c01; 
+  }
+  else if (exp_x == 0x1f && frac_x == 0) { //inf
+    if (sign_x == 1)  
+        return 0x8000 ;
+    else
+        return 0x0;
+  }
+  else if (exp_x == 0 && frac_x != 0) { //subnormal
+    if(sign_x == 1)    
+        return 0xfc00;
+    else 
+        return 0x7c00;  
+  }
+  else if (exp_x == 0 && frac_x == 0) { //0
+    if (sign_x==1)    
+        return 0xfc01;
+    else  
+        return 0x7c01;  
+  }
+
+  t = x & 0x7fff;  
+  value = fp16_rsqrt(t);
+  t = fp16_mul(value, value);
+  return t | (sign_x << 15);
 }
 
 //count x ^ 0.5 for fp16
 BIT16 fp16_sqrt(BIT16 x)
 {
   BIT16 value;
+  // get exp part
+  int sign_x  =  (x>>15)  & 0x1;
+  int exp_x   =  (x>>10) & 0x1f;
+  int frac_x   =  (x>>0) & 0x3ff;
+  
+  if (sign_x == 1) { //sqrt(-) is nan
+     return 0x7c01;
+  }
+
+  if (exp_x == 0x1f && frac_x != 0) { //nan
+      return 0x7c01; 
+  }
+  else if (exp_x == 0x1f && frac_x == 0){ //inf
+      return 0x7c00;
+  }
+  else if (exp_x == 0) { //0 or subnormal
+     return 0;  
+  }
 
   value = fp16_rsqrt(x);
-  return fp16_recip(value);
+  return fp16_mul(x, value);
 }
+
 
 
 

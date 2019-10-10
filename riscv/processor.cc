@@ -74,8 +74,8 @@ void processor_t::parse_isa_string(const char* str)
   const char* p = lowercase.c_str();
   const char* all_subsets = "imafdqcv";
 
-  slen = 256;
-  vlen = 256;
+  slen = VECTOR_STRIP_LEN;
+  vlen = VECTOR_REG_LEN;
   elen = 32;
   max_xlen = 64;
   state.misa = reg_t(2) << 62;

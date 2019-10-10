@@ -444,11 +444,11 @@ inline freg_t f128_negate(freg_t a)
 #define DEBUG_START             (0x100)
 #define DEBUG_END               (0x40001000 - 1)
 
-
+#define VREG_LENGTH (128)
 /*Vector instruction support*/
 union vreg_t{
-	unsigned char vb[32];
-	unsigned short vh[16];
+	unsigned char vb[VREG_LENGTH];
+	unsigned short vh[VREG_LENGTH / 2];
 }; //vector reg length 256bit
 //typedef int64_t vreg_t; //vector reg length 256bit
 

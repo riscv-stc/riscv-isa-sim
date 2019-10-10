@@ -22,6 +22,9 @@ class trap_t;
 class extension_t;
 class disassembler_t;
 
+#define VECTOR_REG_LEN    (VREG_LENGTH * 8)
+#define VECTOR_STRIP_LEN  (VREG_LENGTH * 8)
+
 #ifndef NO_MEMORY_LIMIT
 #define RESTORE_AUNIT() p->restore_aunit()
 #define NCP_AUNIT()     p->set_aunit(NCP)

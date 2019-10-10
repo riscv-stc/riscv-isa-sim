@@ -283,18 +283,27 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
 void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::string>& args)
 {
   vreg_t r = get_vreg(args);
-  for(int i=0; i<32; i++){
+  
+  for(int i=0; i<VREG_LENGTH; i++){
 	fprintf(stderr, "0x%02" PRIx8, r.vb[i]);
-	fprintf(stderr, "\n");
+    if (!((i + 1) % 8) && (i != 0))
+	  fprintf(stderr, "\n");
+    else
+      fprintf(stderr, " ");
   }
+  
+  fprintf(stderr, "\n");
 }
 
 void sim_t::interactive_vregh(const std::string& cmd, const std::vector<std::string>& args)
 {
   vreg_t r = get_vreg(args);
-  for(int i=0; i<16; i++){
+  for(int i=0; i<VREG_LENGTH / 2; i++){
 	fprintf(stderr, "0x%04" PRIx16, r.vh[i]);
-	fprintf(stderr, "\n");
+	if (!((i + 1) % 8) && (i != 0))
+	  fprintf(stderr, "\n");
+    else
+      fprintf(stderr, " ");
   }
 }
 
