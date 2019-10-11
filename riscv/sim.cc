@@ -36,7 +36,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
-             bool support_abstract_csr_access, bool layout)
+             bool support_abstract_csr_access, bool mac_enabled)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
@@ -49,17 +49,15 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   //char add_clint_dev = 1;
 
   signal(SIGINT, &handle_signal);
-  memory_layout = layout;
+  mem_ac_enabled = mac_enabled;
   aunit = MCU;
 
-  if (layout) {
-    for (auto& x : mems) {
-        bus.add_device(x.first, x.second);
-        //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
-        //  add_debug_dev = 0;
-        //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
-        //  add_clint_dev = 0;
-    }
+  for (auto& x : mems) {
+      bus.add_device(x.first, x.second);
+      //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
+      //  add_debug_dev = 0;
+      //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
+      //  add_clint_dev = 0;
   }
 
   for (size_t i = 0; i < procs.size(); i++) {
@@ -294,32 +292,12 @@ void sim_t::set_procs_debug(bool value)
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
   bool result = false;
-  //bus_t *pbus = nullptr;
   
   if (addr + len < addr)
     return false;
-
-  //if (memory_layout) {
-  //  switch (aunit) {
-  //    case MCU:
-  //      pbus = &bus;
-  //      break;
-  //    case NCP:
-  //      pbus = &nbus;
-  //      break;
-  //    case TCP:
-  //      pbus = &tbus;
-  //      break;
-  //    default:
-  //      pbus = &bus;
-  //  }
-  //}
-  //else {
-  //  pbus = &bus;
-  //}
   
   result = bus.load(addr, len, bytes);
-  if (unlikely(!result && (MCU == aunit)))  
+  if (mem_ac_enabled && unlikely(!result && (MCU == aunit)))  
     std::cout << "mcu can't load addr:" << hex << addr \
       << " in aunit: " << aunit << std::endl;
   
@@ -329,32 +307,12 @@ bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   bool result = false;
-  //bus_t *pbus = nullptr;
 
   if (addr + len < addr)
     return false;
-
-  //if (memory_layout) {
-  //  switch (aunit) {
-  //    case MCU:
-  //      pbus = &bus;
-  //      break;
-  //    case NCP:
-  //      pbus = &nbus;
-  //      break;
-  //    case TCP:
-  //      pbus = &tbus;
-  //      break;
-  //    default:
-  //      pbus = &bus;
-  //  }
-  //}
-  //else {
-  //  pbus = &bus;
-  //}
   
   result = bus.store(addr, len, bytes);
-  if (unlikely(!result && (MCU == aunit)))  
+  if (mem_ac_enabled && unlikely(!result && (MCU == aunit)))
     std::cout << "mcu can't store addr:" << hex << addr \
       << " in aunit: " << aunit << std::endl;
   
@@ -401,7 +359,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = local_bus[aproc_idx]->find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
     // MCU/TCP could not access im_buffer
-    if (unlikely(desc.first == im_buffer_start && (TCP == aunit))) {
+    if (mem_ac_enabled && unlikely(desc.first == im_buffer_start && (TCP == aunit))) {
       err << "tcp access illegal address, addr=0x" << hex << addr << "(im cache)";
       throw std::runtime_error(err.str());
     }
@@ -414,7 +372,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   // addr on global bus (ddr)
   desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (unlikely((NCP == aunit) || (TCP == aunit))) {
+    if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
       auto unit = NCP == aunit? "ncp": "tcp";
       err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
       throw std::runtime_error(err.str());
@@ -423,7 +381,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
         return mem->contents() + (addr - desc.first);
     return NULL;
   } else if (auto mem = dynamic_cast<ddr_mem_t *>(desc.second)) {
-    if (unlikely((NCP == aunit) || (TCP == aunit))) {
+    if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
       auto unit = NCP == aunit? "ncp": "tcp";
       err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
       throw std::runtime_error(err.str());

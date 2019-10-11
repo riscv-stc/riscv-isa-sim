@@ -72,7 +72,7 @@ private:
   size_t current_proc;
   bool debug;
   bool log;
-  bool memory_layout;
+  bool mem_ac_enabled;
   unsigned aproc_idx = 0;
   access_unit aunit;
   bool histogram_enabled; // provide a histogram of PCs
