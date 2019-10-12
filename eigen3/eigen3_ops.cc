@@ -143,7 +143,8 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     sk = (ss->conv_kernel) & 0xff;
     assert(sk > 0);
     k_stride = ss->conv_s_kernel & 0xffff ;
-    k_stride = k_stride > 0 ? k_stride : 1;
+    assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride >> 1 : 1;
 
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
@@ -151,21 +152,23 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     in_c = (ss->conv_depth_in) & 0xffff;
     in_c = in_c > 0 ? in_c : 1;
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    in_stride = in_stride > 0 ? in_stride : 1;
+    assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride >> 1 : 1;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     out_c = (ss->conv_depth_out) * 0xffff;
     out_stride = (ss->conv_depth_out >> 16) * 0xffff;
-    out_stride = out_stride > 0 ? out_stride : 1;
+    assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride >> 1 : 1;
 
     /*calculate the kernel shape*/
     dilation = dilation > 0 ? dilation : 1;
     h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
     w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
-    half *kernel_dilation = (half *)malloc(h * w * in_c * sizeof(half));
-    memset(kernel_dilation, 0, h * w * in_c * sizeof(half));
+    half *kernel_dilation = (half *)malloc(h * w * in_c * sizeof(int8_t));
+    memset(kernel_dilation, 0, h * w * in_c * sizeof(int8_t));
 
     Map_half rs2_matrix(rs2, kh, kw * in_c, DynStride(k_stride * kw, 1)); // the depth is same as in_c
     Map_half kd_matrix(kernel_dilation, h, w * in_c, DynStride(in_c * w, 1));
@@ -184,17 +187,17 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     h = in_h + (pad_top + pad_bottom);
     w = in_w + (pad_right + pad_left);
 
-    half *padding = (half *)malloc(h * w * in_c * sizeof(half));
-    memset(padding, 0, h * w * in_c * sizeof(half));
+    half *padding = (half *)malloc(h * w * in_c * sizeof(int8_t));
+    memset(padding, 0, h * w * in_c * sizeof(int8_t));
     Map_half padding_matrix(padding, h, w * in_c, DynStride(in_c * w, 1));
     padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix.block(0, 0, in_h, in_w * in_c);
 
     if (debug) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
-	cout << "kd_matrix:" << endl << kd_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
 	cout << "padding_matrix:" << endl << padding_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+	cout << "kd_matrix:" << endl << kd_matrix << endl;
     }
 
     /*calculate the output shape*/
@@ -239,7 +242,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
 int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
-    int kw, kh, kc, sk;
+    int kw, kh, k_stride, sk;
     int in_w, in_h, in_c, in_stride;
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
@@ -260,32 +263,41 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     kh = (ss->conv_kernel >> 16) & 0xff;
     dilation = (ss->conv_kernel >> 8) & 0xff;
     sk = (ss->conv_kernel) & 0xff;
-    kc = ss->conv_s_kernel & 0xffff;
+    assert(sk > 0);
+    k_stride = ss->conv_s_kernel & 0xffff ;
+    assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : 1;
 
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
     in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = in_c > 0 ? in_c : 1;
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride : 1;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     out_c = (ss->conv_depth_out) * 0xffff;
     out_stride = (ss->conv_depth_out >> 16) * 0xffff;
+    assert(out_stride % 4 == 0);
+    out_stride = out_stride > 0 ? out_stride >> 2 : 1;
 
     /*calculate the kernel shape*/
-    Map_int8_t rs2_matrix(rs2, kh, kw * kc, DynStride(sk, 1));
-
+    dilation = dilation > 0 ? dilation : 1;
     h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
     w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
-    int8_t *kernel_dilation = (int8_t *)malloc(h * w * kc * sizeof(int8_t));
-    memset(kernel_dilation, 0, h * w * kc * sizeof(int8_t));
-    Map_int8_t kd_matrix(kernel_dilation, h, w * kc, DynStride(1, 1));
+    int8_t *kernel_dilation = (int8_t *)malloc(h * w * in_c * sizeof(int8_t));
+    memset(kernel_dilation, 0, h * w * in_c * sizeof(int8_t));
+
+    Map_int8_t rs2_matrix(rs2, kh, kw * in_c, DynStride(k_stride * kw, 1)); // the depth is same as in_c
+    Map_int8_t kd_matrix(kernel_dilation, h, w * in_c, DynStride(in_c * w, 1));
 
     for (i = 0; i < kh; i ++) {
         for (j = 0; j < kw; j ++) {
-            for (k = 0; k < kc; k ++)
+            for (k = 0; k < in_c; k ++)
                 kd_matrix(i * dilation, j * dilation + k) = rs2_matrix(i, j + k);
         }
     }
@@ -293,16 +305,22 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     kw = w;
 
     /*calculate the input shape*/
-    Map_int8_t rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride, 1));
-    h += (pad_top + pad_bottom);
-    w += (pad_right + pad_left);
+    Map_int8_t rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride * in_w, 1));
+    h = in_h + (pad_top + pad_bottom);
+    w = in_w + (pad_right + pad_left);
 
     int8_t *padding = (int8_t *)malloc(h * w * in_c * sizeof(int8_t));
     memset(padding, 0, h * w * in_c * sizeof(int8_t));
-    Map_int8_t padding_matrix(padding, h, w * in_c, DynStride(1, 1));
-    padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix;
-    in_h = h;
-    in_w = w;
+    Map_int8_t padding_matrix(padding, h, w * in_c, DynStride(in_c * w, 1));
+    padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix.block(0, 0, in_h, in_w * in_c);
+
+    if (debug) {
+        MECONV_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix.cast<int32_t>() << endl;
+	cout << "padding_matrix:" << endl << padding_matrix.cast<int32_t>() << endl;
+        cout << "rs2:" << endl << rs2_matrix.cast<int32_t>() << endl;
+	cout << "kd_matrix:" << endl << kd_matrix.cast<int32_t>() << endl;
+    }
 
     /*calculate the output shape*/
     if (valid) {
@@ -315,16 +333,20 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     }
 
     /*param check*/
+    printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     assert(h == out_h && w == out_w);
 
     /*calculate convolution*/
-    Map_int32_t rd_matrix(rd, out_h, out_w * in_c, DynStride(out_stride, 1));
+    Map_int32_t rd_matrix(rd, out_h, out_w * in_c, DynStride(out_stride * out_w, 1));
     for (i = 0; i < out_h; i++) {
         for (j = 0; j < out_w; j++) {
-            rd_matrix(i, j) = (padding_matrix.block(i * sk, j * sk * in_c, kh, kw * in_c).array() *
-			       kd_matrix.transpose().array()).sum();
+            rd_matrix(i, j) = (padding_matrix.block(i * sk, j * sk * in_c, kh, kw * in_c).array().cast<int32_t>() *
+			       kd_matrix.array().cast<int32_t>()).cast<int32_t>().sum();
         }
     }
+
+    if (debug)
+        cout << "rd:" << endl << rd_matrix << endl;
 
     return 0;
 }
