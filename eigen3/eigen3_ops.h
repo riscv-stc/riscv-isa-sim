@@ -115,19 +115,19 @@ struct ShapeStride
 struct ConvShapeStride
 {
     /* CSR FM in */
-    unsigned short conv_fm_in;
-    unsigned short conv_depth_in;
+    unsigned int conv_fm_in;
+    unsigned int conv_depth_in;
 
     /* CSR  FM out*/
-    unsigned short conv_fm_out;
-    unsigned short conv_depth_out;
+    unsigned int conv_fm_out;
+    unsigned int conv_depth_out;
 
     /* CSR kernel */
-    unsigned short conv_s_kernel;
-    unsigned short conv_kernel;
+    unsigned int conv_s_kernel;
+    unsigned int conv_kernel;
 
     /* CSR padding */
-    unsigned short conv_padding;
+    unsigned int conv_padding;
 };
 
 /**
@@ -148,6 +148,7 @@ class CustomInsns
 {
 private:
     void shapestride_dbg(struct ShapeStride *ss);
+    void meconv_dbg(struct ConvShapeStride *ss);
 public:
     int debug;
 
