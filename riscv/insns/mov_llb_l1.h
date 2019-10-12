@@ -8,6 +8,7 @@ TCP_AUNIT();
 //sst_fill(sst);
 unsigned long src = MMU.get_phy_addr(RS1);
 unsigned long dst = RD;
+dst -= 0xf8000000;
 
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;

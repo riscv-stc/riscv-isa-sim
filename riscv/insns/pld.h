@@ -10,6 +10,7 @@ unsigned long src = RS1;
 unsigned long dst = RD;
 unsigned int core_map = MTE_CORE_MAP;
 
+src -= 0xf8000000;
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
