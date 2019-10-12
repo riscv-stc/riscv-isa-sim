@@ -209,7 +209,7 @@ public:
     int mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim);
     int mov_f(half rs1, half *rd, struct ShapeStride *ss);
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vecvt_x8_hf_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
+    int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);
     
     int verecip_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss);

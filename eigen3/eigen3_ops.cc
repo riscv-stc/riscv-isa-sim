@@ -2042,13 +2042,13 @@ int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::vecvt_x8_hf_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
+int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
 {
-    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_half   rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
+    rd_matrix = rs1_matrix.cast<int8_t>();
 
     if (debug) {
         cout << "rs1:" << endl << rs1_matrix << endl;
