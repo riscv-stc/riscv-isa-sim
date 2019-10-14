@@ -167,8 +167,8 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     dilation = dilation > 0 ? dilation : 1;
     h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
     w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
-    half *kernel_dilation = (half *)malloc(h * w * in_c * sizeof(int8_t));
-    memset(kernel_dilation, 0, h * w * in_c * sizeof(int8_t));
+    half *kernel_dilation = (half *)malloc(h * w * in_c * sizeof(half));
+    memset(kernel_dilation, 0, h * w * in_c * sizeof(half));
 
     Map_half rs2_matrix(rs2, kh, kw * in_c, DynStride(k_stride * kw, 1)); // the depth is same as in_c
     Map_half kd_matrix(kernel_dilation, h, w * in_c, DynStride(in_c * w, 1));
@@ -187,8 +187,8 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     h = in_h + (pad_top + pad_bottom);
     w = in_w + (pad_right + pad_left);
 
-    half *padding = (half *)malloc(h * w * in_c * sizeof(int8_t));
-    memset(padding, 0, h * w * in_c * sizeof(int8_t));
+    half *padding = (half *)malloc(h * w * in_c * sizeof(half));
+    memset(padding, 0, h * w * in_c * sizeof(half));
     Map_half padding_matrix(padding, h, w * in_c, DynStride(in_c * w, 1));
     padding_matrix.block(pad_top, pad_left, in_h, in_w * in_c) = rs1_matrix.block(0, 0, in_h, in_w * in_c);
 
