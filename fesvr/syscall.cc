@@ -172,20 +172,33 @@ reg_t syscall_t::sys_write(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, 
 reg_t syscall_t::sys_log(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, reg_t a5, reg_t a6)
 {
   int i;
-  half v;
   reg_t ret = 0;
   char s[16];
+  int type;
 
-  len = len >> 1;
-  std::vector<uint16_t> buf(len);
-  memif->read(pbuf, len*2, &buf[0]);
+  type = (len >> 31) & 1;
+  len = (len & 0x7FFFFFFF);
+  if (type == 0) {
+    half v;
+    len = len >> 1;
+    std::vector<uint16_t> buf(len);
+    memif->read(pbuf, len*2, &buf[0]);
 
-  for (i=0; i<len; i++) {
-    v.x = buf[i];
-    sprintf(s, "%10.3f,", (float)v);
-    ret |= sysret_errno(write(fds.lookup(fd), s, strlen(s)));
+    for (i = 0; i < len; i++) {
+        v.x = buf[i];
+        sprintf(s, "%10.3f\n", (float)v);
+        ret |= sysret_errno(write(fds.lookup(fd), s, strlen(s)));
+    }
+  } else if (type == 1) {
+    len = len >> 2;
+    std::vector<float> buf(len);
+    memif->read(pbuf, len * 4, &buf[0]);
+
+    for (i = 0; i < len; i++) {
+        sprintf(s, "%10.3f\n", buf[i]);
+        ret |= sysret_errno(write(fds.lookup(fd), s, strlen(s)));
+    }
   }
-
   return ret;
 }
 
