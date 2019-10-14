@@ -2070,7 +2070,18 @@ int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
     Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<int8_t>();
+    for (int row = 0; row < ss->shape1_row; row++)
+    {
+        for (int col = 0; col < ss->shape1_column; col++)
+	{
+	    if (rs1_matrix(row, col) > (half)127)
+		rd_matrix(row, col) = 127;
+	    else if (rs1_matrix(row, col) < (half)-128)
+		rd_matrix(row, col) = -128;
+	    else
+		rd_matrix(row, col) = (int8_t)rs1_matrix(row, col);
+	}
+    }
 
     if (debug) {
         cout << "rs1:" << endl << rs1_matrix << endl;
