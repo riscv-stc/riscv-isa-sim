@@ -159,7 +159,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     out_c = (ss->conv_depth_out) & 0xffff;
-    out_stride = (ss->conv_depth_out >> 16) * 0xffff;
+    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
     assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride >> 1 : 1;
 
@@ -279,7 +279,7 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     out_c = (ss->conv_depth_out) & 0xffff;
-    out_stride = (ss->conv_depth_out >> 16) * 0xffff;
+    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride >> 2 : 1;
 
     /*calculate the kernel shape*/
