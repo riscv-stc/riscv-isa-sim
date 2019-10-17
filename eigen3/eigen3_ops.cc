@@ -145,17 +145,6 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
 
-    //get the kernel shape
-    kw = (ss->conv_kernel >> 24) & 0xff;
-    kh = (ss->conv_kernel >> 16) & 0xff;
-    dilation = (ss->conv_kernel >> 8) & 0xff;
-    sk = (ss->conv_kernel) & 0xff;
-    assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_s_kernel & 0xffff ;
-    assert(k_stride > 0 && k_stride % 2 == 0);
-    k_stride = k_stride >> 1;
-
-
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
@@ -164,6 +153,16 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
     assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+
+    //get the kernel shape
+    kw = (ss->conv_kernel >> 24) & 0xff;
+    kh = (ss->conv_kernel >> 16) & 0xff;
+    dilation = (ss->conv_kernel >> 8) & 0xff;
+    sk = (ss->conv_kernel) & 0xff;
+    assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
+    k_stride = ss->conv_s_kernel & 0xffff;
+    assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
 
     /*calculate the kernel shape*/
     Map_half rs2_matrix(rs2, kh * kw * in_c, out_c, DynStride(k_stride, 1)); // the depth is same as in_c
@@ -328,16 +327,6 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
-    //get the kernel shape
-    kw = (ss->conv_kernel >> 24) & 0xff;
-    kh = (ss->conv_kernel >> 16) & 0xff;
-    dilation = (ss->conv_kernel >> 8) & 0xff;
-    sk = (ss->conv_kernel) & 0xff;
-    assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_s_kernel & 0xffff ;
-    assert(k_stride > 0);
-
-
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
@@ -346,6 +335,15 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
     assert(out_stride % 4 == 0);
     out_stride = out_stride > 0 ? out_stride >> 2 : out_c;
+
+    //get the kernel shape
+    kw = (ss->conv_kernel >> 24) & 0xff;
+    kh = (ss->conv_kernel >> 16) & 0xff;
+    dilation = (ss->conv_kernel >> 8) & 0xff;
+    sk = (ss->conv_kernel) & 0xff;
+    assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
+    k_stride = ss->conv_s_kernel & 0xffff ;
+    k_stride = k_stride > 0 ? k_stride : out_c;
 
     /*calculate the kernel shape*/
     Map_int8_t rs2_matrix(rs2, kh * kw * in_c, out_c, DynStride(k_stride, 1)); // the depth is same as in_c
