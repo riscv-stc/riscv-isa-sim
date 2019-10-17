@@ -46,7 +46,8 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
  */
 bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                         uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
-                        StreamDir streamDir) {
+                        StreamDir streamDir,
+                        uint32_t column, uint32_t dstStride, uint32_t srcStride) {
   // prepare message data
   Message request;
   switch (streamDir) {
@@ -76,6 +77,10 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   default:
     break;
   }
+
+  request.set_column(column);
+  request.set_dststride(dstStride);
+  request.set_srcstride(srcStride);
 
   fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
           request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);

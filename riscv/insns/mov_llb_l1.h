@@ -13,8 +13,7 @@ dst -= 0xf8000000;
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
-unsigned short stride = STRIDE_LLB ? STRIDE_LLB : col * 2;
+unsigned short stride = STRIDE_LLB ? STRIDE_LLB : 0;
 
-//l1 --> llb, l1 no stride, llb has stride.
-for (int i = 0; i < row; i++)
-  proxy->tcpXfer(0, p->get_id(), dst + stride * i, src + i * col * 2, col * 2, 0, Transport::AbstractProxy::CORE2LLB);
+proxy->tcpXfer(0, 0, dst, src, col * row * 2, 0,
+               Transport::AbstractProxy::CORE2LLB, col * 2, stride, 0);

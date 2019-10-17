@@ -40,11 +40,11 @@ class GrpcProxy : public AbstractProxy {
    * @param data: address of data
    * @param dataSize: size of data
    * @param streamDir: direction of stream, default is CORE2CORE
-   * @param lut: index of lookup table for boradcast, default is disabled
    * @return true - success; false - fail
    */
   bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
-            uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir) override;
+            uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir,
+            uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) override;
 
   /**
    * @brief implement dmaXfer function

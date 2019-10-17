@@ -29,6 +29,11 @@ message Message {
     int64 srcAddr = 8;
     int64 dstAddr = 9;
     int32 length = 10;
+
+    // extras
+    int32 column = 11;
+    int32 srcStride = 12;
+    int32 dstStride = 13;
 }
 
 message DumpInfo {

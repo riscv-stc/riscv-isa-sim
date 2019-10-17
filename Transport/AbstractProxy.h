@@ -68,7 +68,9 @@ class AbstractProxy {
    * @return true - success; false - fail
    */
   virtual bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr,
-                    char *data, uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir = CORE2CORE) = 0;
+                    char *data, uint32_t dataSize, uint32_t sourceAddr,
+                    StreamDir streamDir = CORE2CORE,
+                    uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) = 0;
 
   /**
    * @brief implement dmaXfer function
