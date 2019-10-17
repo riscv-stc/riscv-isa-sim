@@ -125,16 +125,18 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int dilation;
-    int valid;
-    int i, j, k;
+    int i, j, k, ii, jj, kk;
+    int row, col;
+    half *rs1_start;
+    half *left_val;
+    half *start;
+    half val;
 
     //get the padding
     pad_top = (ss->conv_padding >> 24) & 0xff;
     pad_bottom = (ss->conv_padding >> 16) & 0xff;
     pad_left = (ss->conv_padding >> 8) & 0xff;
     pad_right = ss->conv_padding & 0xff;
-    valid = pad_top == 0 && pad_bottom == 0 &&
-            pad_left == 0 && pad_right == 0;
 
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
@@ -176,8 +178,6 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
 
     /*calculate the input shape*/
     Map_half rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride * in_w, 1));
-    h = in_h + (pad_top + pad_bottom);
-    w = in_w + (pad_right + pad_left);
 
     if (debug) {
         MECONV_INFO(ss);
@@ -185,94 +185,51 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    int ii, jj, kk;
-    half *rs1_start;
-    half *left_val;
-    half *start;
-    half val;
-
     /*calculate the output shape*/
-    if (valid) {
-        h = (in_h - kh + 1 + sk - 1) /sk;
-        w = (in_w - kw + 1 + sk - 1) /sk;
-	left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
+    h = (in_h + pad_top + pad_bottom - kh + 1 + sk - 1) / sk;
+    w = (in_w + pad_left + pad_right - kw + 1 + sk - 1) / sk;
+    left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
-	for (i = 0; i < h; i++) {
-	    for (j = 0; j < w; j++) {
-		rs1_start = rs1 + i * sk * in_w * in_stride + j * sk * in_stride;
-		start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
-		if (debug)
-		    printf("rs1 offset = %d start = %d\n", i * sk * in_w * in_stride + j * sk * in_stride, i * w * okh * okw * in_c + j * okh * okw * in_c);
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
+            rs1_start = rs1;
 
-		for (ii = 0; ii < kh; ii++) {
-		    for (jj = 0; jj < kw; jj ++) {
-			for (kk = 0; kk < in_c; kk ++) {
-			    if (ii % dilation)
-			        continue;
-			    else {
-			        if (jj % dilation)
-				    continue;
-				else {
-				    *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = *(rs1_start + ii * in_w * in_stride + jj * in_stride + kk);
-				    if (debug) {
-				        val = *(rs1_start + ii * in_w * in_stride + jj * in_stride + kk);
-				        printf("rd offset= %d val = 0x%x ",ii/dilation * okw * in_c + jj/dilation * in_c + kk, val.x);
-				        val = *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk);
-				        printf("rd val = 0x%x\n", val.x);
-				    }
-				}
-			    }
-			}//kk
-		    }//jj
-		}//ii
-	    }//j
-	}//i
-    }
-    else {
-	int row, col;
-        h = (in_h + sk - 1) /sk;
-        w = (in_w + sk - 1) /sk;
-	left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
+            for (ii = 0; ii < kh; ii++) {
+                for (jj = 0; jj < kw; jj++) {
+                    for (kk = 0; kk < in_c; kk++) {
+                        row = i * sk + ii;
+                        col = j * sk + jj;
 
-	for (i = 0; i < h; i++) {
-	    for (j = 0; j < w; j++) {
-		start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
-		rs1_start = rs1;
+                        if (ii % dilation)
+                            continue;
+                        else {
+                            if (jj % dilation)
+                                continue;
+                            else {
+				int start_offset = ii/dilation * okw * in_c + jj/dilation * in_c + kk;
+				int rs1_offset = (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk;
+                                if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
+                                    *(start + start_offset) = *(rs1_start + rs1_offset);
+                                    val = *(rs1_start + rs1_offset);
+                                }
+                                else {
+                                    *(start + start_offset) = (half)0;
+                                    val =  (half)0;
+                                }
 
-	        for (ii = 0; ii < kh; ii++) {
-		    for (jj = 0; jj < kw; jj++) {
-			for (kk = 0; kk < in_c; kk++) {
-			    row = i * sk + ii;
-			    col = j * sk + jj;
-
-			    if (ii % dilation)
-			        continue;
-			    else {
-			        if (jj % dilation)
-				    continue;
-				else {
-				    if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
-				        *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = *(rs1_start + (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk);
-				        val = *(rs1_start + (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk);
-				    }
-				    else {
-				        *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = (half)0;
-					val =  (half)0;
-				    }
-				    if (debug) {
-				        printf("rd offset= %d val = 0x%x ",ii/dilation * okw * in_c + jj/dilation * in_c + kk, val.x);
-				        val = *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk);
-				        printf("rd val = 0x%x\n", val.x);
-				    }
-				}
-			    }
-			}//kk
-		    }//jj
-		}//ii
-	    }//j
-	}//i
-
-    }
+                                if (debug) {
+                                    printf("rd offset= %d val = 0x%x ",start_offset, val.x);
+                                    val = *(start + start_offset);
+                                    printf("rd val = 0x%x\n", val.x);
+                                }
+                            }//jj % dilation
+                        }//i % dilation
+                    }//kk
+                }//jj
+            }//ii
+        }//j
+    }//i
 
     /*param check*/
     printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
@@ -308,16 +265,18 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int dilation;
-    int valid;
-    int i, j, k;
+    int i, j, k, ii, jj, kk;
+    int row, col;
+    int8_t *rs1_start;
+    int8_t *left_val;
+    int8_t *start;
+    int8_t val;
 
     //get the padding
     pad_top = (ss->conv_padding >> 24) & 0xff;
     pad_bottom = (ss->conv_padding >> 16) & 0xff;
     pad_left = (ss->conv_padding >> 8) & 0xff;
     pad_right = ss->conv_padding & 0xff;
-    valid = pad_top == 0 && pad_bottom == 0 &&
-            pad_left == 0 && pad_right == 0;
 
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
@@ -366,94 +325,53 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
         cout << "rs2:" << endl << rs2_matrix.cast<int32_t>() << endl;
     }
 
-    int ii, jj, kk;
-    int8_t *rs1_start;
-    int8_t *left_val;
-    int8_t *start;
-    int8_t val;
 
     /*calculate the output shape*/
-    if (valid) {
-        h = (in_h - kh + 1 + sk - 1) /sk;
-        w = (in_w - kw + 1 + sk - 1) /sk;
-	left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
+    h = (in_h + pad_top + pad_bottom - kh + 1 + sk - 1) / sk;
+    w = (in_w + pad_left + pad_right - kw + 1 + sk - 1) / sk;
+    left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
 
-	for (i = 0; i < h; i++) {
-	    for (j = 0; j < w; j++) {
-		rs1_start = rs1 + i * sk * in_w * in_stride + j * sk * in_stride;
-		start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
-		if (debug)
-		    printf("rs1 offset = %d start = %d\n", i * sk * in_w * in_stride + j * in_stride, i * w * okh * okw * in_c + j * okh * okw * in_c);
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
+            rs1_start = rs1;
 
-		for (ii = 0; ii < kh; ii++) {
-		    for (jj = 0; jj < kw; jj ++) {
-			for (kk = 0; kk < in_c; kk ++) {
-			    if (ii % dilation)
-			        continue;
-			    else {
-			        if (jj % dilation)
-				    continue;
-				else {
-				    *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = *(rs1_start + ii * in_w * in_stride + jj * in_stride + kk);
-				    if (debug) {
-				        val = *(rs1_start + ii * in_w * in_stride + jj * in_stride + kk);
-				        printf("rd offset= %d val = 0x%x ",ii/dilation * okw * in_c + jj/dilation * in_c + kk, val);
-				        val = *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk);
-				        printf("rd val = 0x%x\n", val);
-				    }
-				}
-			    }
-			}//kk
-		    }//jj
-		}//ii
-	    }//j
-	}//i
-    }
-    else {
-	int row, col;
-        h = (in_h + sk - 1) /sk;
-        w = (in_w + sk - 1) /sk;
-	left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
+            for (ii = 0; ii < kh; ii++) {
+                for (jj = 0; jj < kw; jj++) {
+                    for (kk = 0; kk < in_c; kk++) {
+                        row = i * sk + ii;
+                        col = j * sk + jj;
 
-	for (i = 0; i < h; i++) {
-	    for (j = 0; j < w; j++) {
-		start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
-		rs1_start = rs1;
+                        if (ii % dilation)
+                            continue;
+                        else {
+                            if (jj % dilation)
+                                continue;
+                            else {
+				int start_offset = ii/dilation * okw * in_c + jj/dilation * in_c + kk;
+				int rs1_offset = (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk;
+                                if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
+                                    *(start + start_offset) = *(rs1_start + rs1_offset);
+                                    val = *(rs1_start + rs1_offset);
+                                }
+                                else {
+                                    *(start + start_offset) = 0;
+                                    val =  0;
+                                }
 
-	        for (ii = 0; ii < kh; ii++) {
-		    for (jj = 0; jj < kw; jj++) {
-			for (kk = 0; kk < in_c; kk++) {
-			    row = i * sk + ii;
-			    col = j * sk + jj;
+                                if (debug) {
+                                    printf("rd offset= %d val = 0x%x ",start_offset, val);
+                                    val = *(start + start_offset);
+                                    printf("rd val = 0x%x\n", val);
+                                }
+                            }//jj % dilation
+                        }//i % dilation
+                    }//kk
+                }//jj
+            }//ii
+        }//j
+    }//i
 
-			    if (ii % dilation)
-			        continue;
-			    else {
-			        if (jj % dilation)
-				    continue;
-				else {
-				    if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
-				        *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = *(rs1_start + (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk);
-				        val = *(rs1_start + (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk);
-				    }
-				    else {
-				        *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk) = 0;
-					val =  0;
-				    }
-				    if (debug) {
-				        printf("rd offset= %d val = 0x%x ",ii/dilation * okw * in_c + jj/dilation * in_c + kk, val);
-				        val = *(start + ii/dilation * okw * in_c + jj/dilation * in_c + kk);
-				        printf("rd val = 0x%x\n", val);
-				    }
-				}
-			    }
-			}//kk
-		    }//jj
-		}//ii
-	    }//j
-	}//i
-
-    }
 
     /*param check*/
     printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
