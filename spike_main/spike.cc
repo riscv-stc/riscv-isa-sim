@@ -116,8 +116,8 @@ static std::pair<reg_t, size_t> make_mem2(const char* arg)
   if (!*p || *p != ':')
       help(); // help will exit
   auto size = strtoull(p + 1, &p, 0);
-  if ((size | first) % PGSIZE != 0)
-      help();
+  //if ((size | first) % PGSIZE != 0)
+  //    help();
   return std::make_pair((reg_t)first, (size_t)size);
 }
 
