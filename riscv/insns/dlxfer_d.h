@@ -6,4 +6,7 @@ auto dst = *((unsigned int *)MMU.get_phy_addr(RD));
 auto src = RS1 - 0xf8000000;
 auto len = RS2;
 
-proxy->dmaXfer(dst, src, len, Transport::AbstractProxy::LLB2DDR);
+for (int times = 0; times < 5; times++) {
+  if (likely(proxy->dmaXfer(dst, src, len, Transport::AbstractProxy::LLB2DDR)))
+    break;
+}
