@@ -232,9 +232,9 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     }//i
 
     /*param check*/
-    printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
+    if (debug)
+        printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     assert(h == out_h && w == out_w);
-
 
     /*calculate convolution*/
     Map_half left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
@@ -374,7 +374,8 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
 
 
     /*param check*/
-    printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
+    if (debug)
+        printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     assert(h == out_h && w == out_w);
 
     /*calculate convolution*/
@@ -1479,7 +1480,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
         }
 
         Map_half rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
-	rd_matrix = rs1_matrix.transpose() * rs2_matrix;
+        rd_matrix = rs1_matrix.transpose() * rs2_matrix;
 
         if (debug)
             cout << "rd:\n" << rd_matrix << endl;
@@ -1615,7 +1616,7 @@ int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
 
     for (int row = 0; row < rs1_matrix.rows(); row ++)
 	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  cout << "rs1_matrix(" << row << "," << col << ")" << "= " << rs1_matrix(row, col) << endl;
+		  //cout << "rs1_matrix(" << row << "," << col << ")" << "= " << rs1_matrix(row, col) << endl;
 		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
 	   }
     if (debug)
