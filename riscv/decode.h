@@ -314,16 +314,16 @@ private:
 					 (x).shape2_column = SHAPE2_COLUMN; \
 					 (x).shape2_row = SHAPE2_ROW; \
 					 (x).stride_rd = STRIDE_RD>>1; \
-					 (x).stride_rs1 = STRIDE_RS1>>1; \
-					 (x).stride_rs2 = STRIDE_RS2>>1;})
+					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1>>1 : SHAPE1_COLUMN; \
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2>>1 : SHAPE2_COLUMN;})
 
 #define bc_sst_fill(x) ({(x).shape1_column = BC_SHAPE1_COLUMN; \
 					 (x).shape1_row = BC_SHAPE1_ROW; \
 					 (x).shape2_column = BC_SHAPE2_COLUMN; \
 					 (x).shape2_row = BC_SHAPE2_ROW; \
 					 (x).stride_rd = BC_STRIDE_RD>>1; \
-					 (x).stride_rs1 = BC_STRIDE_RS1>>1; \
-					 (x).stride_rs2 = BC_STRIDE_RS2>>1;})
+					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1>>1 : BC_SHAPE1_COLUMN; \
+					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2>>1 : BC_SHAPE2_COLUMN;})
 
 #define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
 					 (x).conv_depth_in = CONV_DEPTH_IN; \

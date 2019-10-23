@@ -389,6 +389,16 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     return 0;
 }
 
+#define STRIDE_DEFAULT
+#ifdef STRIDE_DEFAULT
+#define SET_DEFAULT_STRIDE(stride, value) do { \
+	if (!stride)        \
+	    stride = value; \
+} while (0)
+#else 
+#define SET_DEFAULT_STRIDE(stride, value)
+#endif
+
 /**
  * veemul_mf() veemul.mf
  * 
@@ -408,6 +418,7 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
     }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -444,6 +455,7 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
 
     ss->stride_rs1 = ss->stride_rs1 >> 1;
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -486,6 +498,7 @@ int CustomInsns::veemul_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *s
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -516,6 +529,7 @@ int CustomInsns::veemul_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *s
 int CustomInsns::veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
@@ -561,6 +575,7 @@ int CustomInsns::veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeSt
 {
     ss->stride_rs1 = ss->stride_rs1 >> 1;
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
     
@@ -625,7 +640,8 @@ int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-    Map_half vector_dim1(rd, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half vector_dim1(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     Map_half vector_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
@@ -671,6 +687,7 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half vec_rs2_dim1(rs2, 1, ss->shape1_column, DynStride(1, 1));
     Map_half vec_rs2_dim0(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     Map_half vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
     Matrix_half rd_matrix(ss->shape1_row, ss->shape1_column);
@@ -730,7 +747,8 @@ int CustomInsns::veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *
 int CustomInsns::veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half vec_rd_dim1(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     Map_half vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
@@ -778,6 +796,7 @@ int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -824,6 +843,7 @@ int CustomInsns::veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -855,7 +875,8 @@ int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
     
     switch (dim) {
@@ -978,6 +999,7 @@ int CustomInsns::vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1014,6 +1036,7 @@ int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1045,6 +1068,7 @@ int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
@@ -1172,6 +1196,7 @@ int CustomInsns::vemin_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1209,6 +1234,7 @@ int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1240,6 +1266,7 @@ int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
@@ -1301,6 +1328,7 @@ int CustomInsns::vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1335,6 +1363,7 @@ int CustomInsns::vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
@@ -1394,6 +1423,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1434,6 +1464,7 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
     ss->stride_rs2 = ss->stride_rs2 << 1;
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_int32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1479,6 +1510,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
             return -BR_EPARAM;
         }
 
+        SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
         Map_half rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
         rd_matrix = rs1_matrix.transpose() * rs2_matrix;
 
@@ -1509,6 +1541,7 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
     }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1547,6 +1580,7 @@ int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
 
     half one = (half)1.0;
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1578,6 +1612,7 @@ int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1607,6 +1642,7 @@ int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1646,6 +1682,7 @@ int CustomInsns::vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1706,7 +1743,8 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
-    Map_half rd_row_sum(rd, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1772,6 +1810,7 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1802,6 +1841,7 @@ int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *
 int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
@@ -1855,6 +1895,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
 int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss)
 {
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1884,6 +1925,7 @@ int CustomInsns::velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct Shap
 int CustomInsns::metr_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_row);
     Map_half rd_matrix(rd, ss->shape1_column, ss->shape1_row, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1911,6 +1953,7 @@ int CustomInsns::metr_m(half *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::mov_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -1939,6 +1982,7 @@ int CustomInsns::mov_m(half *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     
     if (debug) {
@@ -1977,6 +2021,7 @@ int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
  */
 int CustomInsns::mov_f(half rs1, half *rd, struct ShapeStride *ss)
 {
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
@@ -2004,6 +2049,7 @@ int CustomInsns::mov_f(half rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
@@ -2029,6 +2075,7 @@ int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
@@ -2054,6 +2101,7 @@ int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
@@ -2079,6 +2127,7 @@ int CustomInsns::vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss)
 int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
@@ -2105,6 +2154,7 @@ int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss
 int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
 {
     Map_half   rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
