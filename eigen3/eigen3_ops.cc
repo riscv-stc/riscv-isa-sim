@@ -44,10 +44,8 @@ MY_MATRIX_DEFINE(float)
 #undef MY_MATRIX_DEFINE
 
 #define SHAPE_STRIDE_INFO(ss) do {\
-        if (debug) {\
-            cout << endl << __FUNCTION__ << endl;\
-            shapestride_dbg(ss);\
-        }\
+        cout << endl << __FUNCTION__ << endl;\
+        shapestride_dbg(ss);\
     } while(0)
 
 #define MECONV_INFO(ss) do {\
@@ -96,9 +94,6 @@ void CustomInsns::meconv_dbg(struct ConvShapeStride *ss)
  */
 void CustomInsns::shapestride_dbg(struct ShapeStride *ss)
 {
-    if (!debug)
-        return;
-
     printf("\nShapeStride:\n");
     printf("shape1: (%d:%d)\n", ss->shape1_row, ss->shape1_column);
     printf("shape2: (%d:%d)\n", ss->shape2_row, ss->shape2_column);
@@ -412,10 +407,6 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
 int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
     /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -425,6 +416,10 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     rd_matrix = rs1_matrix * rs2;
@@ -447,11 +442,6 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
  */
 int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
-    /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     ss->stride_rs1 = ss->stride_rs1 >> 1;
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -462,6 +452,11 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    /* param check */
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     rd_matrix = (rs1_matrix.cast<float>() * static_cast<float>(rs2)).cast<half>();
@@ -789,11 +784,6 @@ int CustomInsns::veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *s
  */
 int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
-    /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -803,6 +793,11 @@ int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    /* param check */
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
@@ -1029,11 +1024,6 @@ int CustomInsns::vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
  */
 int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
-    /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -1043,6 +1033,11 @@ int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    /* param check */
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     rd_matrix = (rs1_matrix.array() > rs2).select(rs1_matrix, rs2);
@@ -1227,11 +1222,6 @@ int CustomInsns::vemin_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
  */
 int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
-    /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -1241,6 +1231,11 @@ int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    /* param check */
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     rd_matrix = (rs1_matrix.array() < rs2).select(rs1_matrix, rs2);
@@ -1534,11 +1529,6 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
  */
 int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
-    /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
-        return -BR_EPARAM;
-    }
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -1548,6 +1538,11 @@ int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
+    }
+    /* param check */
+    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+        return -BR_EPARAM;
     }
 
     /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
