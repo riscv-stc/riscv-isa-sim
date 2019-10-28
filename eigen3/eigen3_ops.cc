@@ -1778,13 +1778,15 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
 
-    *rd = rs1_matrix.sum();
+    rd_col_sum = rs1_matrix.colwise().sum();
+    *rd = rd_col_sum.sum();
 
     if (debug)
         cout << "rd:\n" << *rd << endl;
