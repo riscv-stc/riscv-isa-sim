@@ -52,6 +52,7 @@ extern BIT16 fp16_recip(BIT16 x);
 extern BIT16 fp16_sqrt(BIT16 x);
 extern "C" int fp16tofp32(int fp_data_in);
 extern "C" int fp32tofp16(int fp_data);
+extern int int32xfp16(int a, int w); 
 #endif
 
 namespace Eigen {
@@ -289,6 +290,15 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half& a, const half
   return half(float(a) * float(b));
 #endif
 }
+
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half&  a, int b) {
+#ifdef USING_RISCV_FP16
+  return Eigen::half_impl::raw_uint16_to_half(int32xfp16(b, a.x) && 0xffff);
+#else
+  return half(float(a) * float(b));
+#endif
+}
+
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   return Eigen::half_impl::raw_uint16_to_half(func_CS16FA(a.x, -b.x));
@@ -324,6 +334,15 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, const half& b)
 #endif
   return a;
 }
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, int b) {
+#ifdef USING_RISCV_FP16
+  a.x = int32xfp16(b, a.x) && 0xffff;
+#else
+  a = half(float(a) * float(b));
+#endif
+  return a;
+}
+
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator -= (half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   a.x = func_CS16FA(a.x, -b.x);

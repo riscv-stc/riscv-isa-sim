@@ -31,19 +31,24 @@ BIT16 fp16_exp(BIT16 x)
     x &= 0x83ff;
     x |= 0x3800;
   }
-  
-   // taylor expansion at x = 0.5
-  BIT16 c4 = 0x2c66;
-  BIT16 c3 = 0x3066;
-  BIT16 c2 = 0x381f;
-  BIT16 c1 = 0x3bf8;
-  BIT16 c0 = 0x3c00;
+
+  BIT16 c1 = 0x3c00; //1.0
+  BIT16 c2 = 0x3800; //1.0/2
+  BIT16 c3 = 0x3166; //1.0/6
+  BIT16 c4 = 0x2955; //1.0/24
+
+  // taylor expansion at x = 0.5
+  //BIT16 c4 = 0x2c66;
+  //BIT16 c3 = 0x3066;
+  //BIT16 c2 = 0x381f;
+  //BIT16 c1 = 0x3bf8;
+  //BIT16 c0 = 0x3c00;
   BIT16 r;
 
   r = fp16_add(fp16_mul(x, c4), c3);
   r = fp16_add(fp16_mul(r, x), c2);
   r = fp16_add(fp16_mul(r, x), c1);
-  r = fp16_add(fp16_mul(r, x), c0);
+  r = fp16_add(fp16_mul(r, x), c1);
 
   if (e == 4) {
     r = fp16_mul(r, r);

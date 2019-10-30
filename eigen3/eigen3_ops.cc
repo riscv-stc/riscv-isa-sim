@@ -17,6 +17,7 @@
 #include "fp16a.c"
 #include "fp16m.c"
 #include "fp16ext.c"
+#include "int32xfp16.c"
 #include "fp16convfp32.c"
 
 /* dynamic stride for map */
@@ -459,8 +460,10 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
         return -BR_EPARAM;
     }
 
-    rd_matrix = (rs1_matrix.cast<float>() * static_cast<float>(rs2)).cast<half>();
-
+    for (int row = 0; row < rs1_matrix.rows(); row++)
+        for (int col = 0; col < rs1_matrix.cols(); col++)
+            rd_matrix(row, col) = rs2 * rs1_matrix(row, col);
+ 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -581,8 +584,8 @@ int CustomInsns::veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeSt
     }
 
     for (int row = 0; row < rs1_matrix.rows(); row++)
-        rd_matrix.row(row) = (rs1_matrix.row(row).array().cast<float>() *  \
-			vector_dim0.array().cast<float>()).cast<half>();
+        for (int col = 0; col < rs1_matrix.cols(); col++)
+            rd_matrix(row, col) = vector_dim0(0, col) * rs1_matrix(row, col);
    
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
