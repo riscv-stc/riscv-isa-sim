@@ -74,8 +74,7 @@ class GrpcProxy : public AbstractProxy {
  private:
   std::string serverAddr = "";  // address + port of grpc server
   std::shared_ptr<::grpc::Channel> mChn = nullptr;
-
-  std::unique_ptr<Proxy::Stub> proxy() { return Proxy::NewStub(mChn); };
+  std::unique_ptr<Proxy::Stub> mProxy;
 
   /**
    * @brief receive data from grpc server and store them in message queue

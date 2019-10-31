@@ -27,6 +27,7 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
 
   auto addr = serverAddr + ":" + std::to_string(serverPort);
   this->mChn = grpc::CreateChannel(addr, grpc::InsecureChannelCredentials());
+  this->mProxy = Proxy::NewStub(mChn);
 
   // start a thread to receive data from grpc server
   auto func = std::bind(&GrpcProxy::loadToRecvQueue, this);
@@ -91,7 +92,7 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   // context for the client
   ClientContext context;
 
-  Status status = proxy()->TCPXfer(&context, request, &reply);
+  Status status = mProxy->TCPXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -133,7 +134,7 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
   // context for the client
   ClientContext context;
 
-  Status status = proxy()->DMAXfer(&context, request, &reply);
+  Status status = mProxy->DMAXfer(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -154,7 +155,7 @@ bool GrpcProxy::dmaPoll() {
   // context for the client
   ClientContext context;
 
-  Status status = proxy()->DMAPoll(&context, request, &reply);
+  Status status = mProxy->DMAPoll(&context, request, &reply);
 
   if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
@@ -176,7 +177,7 @@ bool GrpcProxy::ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) {
 
   Message reply;
 
-  Status status = proxy()->DDRRead(&context, request, &reply);
+  Status status = mProxy->DDRRead(&context, request, &reply);
 
   if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
@@ -201,7 +202,7 @@ bool GrpcProxy::ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) {
 
   google::protobuf::Empty reply;
 
-  Status status = proxy()->DDRWrite(&context, request, &reply);
+  Status status = mProxy->DDRWrite(&context, request, &reply);
 
   if (!status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
@@ -225,7 +226,7 @@ void GrpcProxy::loadToRecvQueue(void) {
   ClientContext context;
 
   // actual RPC
-  std::unique_ptr<grpc::ClientReaderWriter<proxy::RecvCbRequest, Message>> readWriter(proxy()->RecvCb(&context));
+  std::unique_ptr<grpc::ClientReaderWriter<proxy::RecvCbRequest, Message>> readWriter(mProxy->RecvCb(&context));
 
   readWriter->Write(request);
 
@@ -271,7 +272,7 @@ bool GrpcProxy::sync() {
   // context for the client
   ClientContext context;
 
-  Status status = proxy()->Sync(&context, request, &reply);
+  Status status = mProxy->Sync(&context, request, &reply);
 
   mSyncCount++;
 
@@ -322,7 +323,7 @@ bool GrpcProxy::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
   // context for the client
   ClientContext context;
 
-  Status status = proxy()->Dump(&context, request, &reply);
+  Status status = mProxy->Dump(&context, request, &reply);
 
   if (!status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
@@ -344,7 +345,7 @@ void GrpcProxy::waitDumpRequest(void) {
     ClientContext context;
 
     std::unique_ptr<grpc::ClientReader<dspike::proto::DumpParam>> reader(
-        proxy()->WaitDump(&context, request));
+        mProxy->WaitDump(&context, request));
     while (reader->Read(&reply)) {
       // request to dump in done sync
       if (reply.trigger_case() == dspike::proto::DumpParam::kOnsync) {

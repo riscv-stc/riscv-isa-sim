@@ -13,8 +13,25 @@
 #include <string>
 #include <memory>
 #include "../VERSION"
-
+#include <execinfo.h>
 #include "Transport/Transport.h"
+
+
+void show_backtrace()
+{
+    int n;
+    void *buffer[10];
+    char **strings;
+
+    n = backtrace(buffer, 10);
+    strings = backtrace_symbols(buffer, n);
+
+    std::cout << "\nspike Backstrace :\n";
+    for (int i = 0; i < n; i++)
+        std::cout << "\t" << strings[i] << std::endl;
+
+    return;
+}
 
 static void help(int exit_code = 1)
 {
@@ -155,6 +172,7 @@ int main(int argc, char** argv)
   bool support_abstract_csr_access = true;
   std::vector<int> hartids;
 
+  atexit(show_backtrace);
   auto const hartids_parser = [&](const char *s) {
     std::string const str(s);
     std::stringstream stream(str);
