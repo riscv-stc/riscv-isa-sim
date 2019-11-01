@@ -301,9 +301,9 @@ private:
 					 else
 
 #define check_vl() if(VL == 0) return;
-
-#define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VLMAX; (x)++)
-#define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VLMAX; (x)++)
+//don't modify elment of big than vl
+#define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
+#define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VL; (x)++)
 #define vector_for_each_no_lmlu(x) for(unsigned int (x) = 0; (x) < VLMAX_NO_LMUL; (x)++)
 
 #define vdh_clear_exceed(idx) if(idx >= VL) {WRITE_VRD_H(0,idx); continue;} \
