@@ -293,7 +293,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half& a, const half
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator * (const half&  a, int b) {
 #ifdef USING_RISCV_FP16
-  return Eigen::half_impl::raw_uint16_to_half(int32xfp16(b, a.x) && 0xffff);
+  return Eigen::half_impl::raw_uint16_to_half(int32xfp16(b, a.x) & 0xffff);
 #else
   return half(float(a) * float(b));
 #endif
@@ -336,7 +336,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, const half& b)
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator *= (half& a, int b) {
 #ifdef USING_RISCV_FP16
-  a.x = int32xfp16(b, a.x) && 0xffff;
+  a.x = int32xfp16(b, a.x) & 0xffff;
 #else
   a = half(float(a) * float(b));
 #endif
