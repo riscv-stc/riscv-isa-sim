@@ -14,6 +14,7 @@ using grpc::ClientContext;
 using grpc::Status;
 using proxy::Proxy;
 using proxy::RecvCbRequest;
+using proxy::InitRequest;
 
 using namespace Transport;
 
@@ -28,6 +29,15 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
   auto addr = serverAddr + ":" + std::to_string(serverPort);
   this->mChn = grpc::CreateChannel(addr, grpc::InsecureChannelCredentials());
   this->mProxy = Proxy::NewStub(mChn);
+
+  ClientContext context;
+  proxy::InitRequest request;
+  request.set_spikeid(coreId);
+  google::protobuf::Empty reply;
+  Status status = mProxy->Init(&context, request, &reply);
+  if (!status.ok())
+    std::cout << "grpc proxy init failed: " << status.error_code() << ": " << status.error_message()
+              << std::endl;
 
   // start a thread to receive data from grpc server
   auto func = std::bind(&GrpcProxy::loadToRecvQueue, this);

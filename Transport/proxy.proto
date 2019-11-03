@@ -7,6 +7,8 @@ import "dspike/proto/common.proto";
 
 // Proxy Interface for spike messages
 service Proxy {
+  rpc Init(InitRequest) returns (google.protobuf.Empty);
+
   // do TCP transfer for Core <-> LLB
   rpc TCPXfer(dspike.proto.Message) returns (google.protobuf.Empty);
   // do bsp sync
@@ -28,6 +30,11 @@ service Proxy {
   rpc Dump(DumpData) returns (google.protobuf.Empty);
   // wait for proxy send a DumpParam to get dump data or turn on/off sync dump
   rpc WaitDump(WaitDumpRequest) returns (stream dspike.proto.DumpParam);
+}
+
+// InitRequest present a request for spike to init with proxy
+message InitRequest {
+  int32 spikeId = 1;
 }
 
 // RecvCbRequest present a request for spike to receive messages
