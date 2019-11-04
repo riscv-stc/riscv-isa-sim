@@ -38,6 +38,8 @@ BIT16 fp16_exp(BIT16 x);
 BIT16 fp16_recip(BIT16 x);
 BIT16 fp16_sqrt(BIT16 x);
 //BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK);
+int fp16tofp32(int fp_data_in);
+int fp32tofp16(int fp_data);
 
 //#ifdef __cplusplus
 //}

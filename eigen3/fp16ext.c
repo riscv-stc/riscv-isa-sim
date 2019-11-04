@@ -3,62 +3,58 @@
 #define fp16_add(a, b) func_CS16FA(a, b)
 #define fp16_mul(a, b) func_CS16FM(a, b)
 #define fp16_sub(a, b) func_CS16FA(a, (b) ^ 0x8000)
+int fp16tofp32(int fp_data_in);
+int fp32tofp16(int fp_data);
 
-BIT16 fp16_exp(BIT16 x) 
+int fp16_to_int(BIT16 x)
 {
-  // get exp part
-  int e = (int)((x >> 10) & 0x1f) - 14;
-  int sign_x  =  (x>>15)  & 0x1;
-  int exp_x   =  (x>>10) & 0x1f;
-  int frac_x  =  (x>>0) & 0x3ff;
-  
-  if (exp_x==0x1f && frac_x!=0) {
-      return 0x7c01; //nan
-  }
-  else if (exp_x==0x1f && frac_x==0) { //inf
-    if(sign_x==1)  
-        return 0;
-    else  
-        return 0x7c00;
-  }
-  else if (exp_x==0) { //0 or subnormal
-      return 0x3c00;  
+    float result;
+    *(int *)&result = fp16tofp32(x);
+    return (int)result;
+}
+
+BIT16 int_to_fp16(int x)
+{
+    int f;
+    *(float*)&f = (float)x;
+    return fp32tofp16(f);
+}
+
+BIT16 fp16_exp(BIT16 x) {
+  int shift = 0;
+  int i = fp16_to_int(x); //round down
+  if (i > 0) {
+    shift = i + ((i + 1) >> 1);
+  } else if (i < 0) {
+    shift = i + ((i - 1) >> 1);
+  } else {
+    if (x < 0x8000) shift = 1;
+    else shift = -1;
   }
 
-  if (e > 4) return (x & 0x8000) ? 0 : 0x7c00 /* +inf */;
-  if (e > 0) {
-    // set exp part to 0
-    x &= 0x83ff;
-    x |= 0x3800;
-  }
+  BIT16 sub = 0;
+  sub = fp16_mul(0x398c, int_to_fp16(shift));
+  x = fp16_sub(x, sub);
 
+  // taylor expansion at x = 0
+  BIT16 c0 = 0x3c00;
   BIT16 c1 = 0x3c00; //1.0
   BIT16 c2 = 0x3800; //1.0/2
   BIT16 c3 = 0x3166; //1.0/6
   BIT16 c4 = 0x2955; //1.0/24
   BIT16 r;
-
   r = fp16_add(fp16_mul(x, c4), c3);
   r = fp16_add(fp16_mul(r, x), c2);
   r = fp16_add(fp16_mul(r, x), c1);
-  r = fp16_add(fp16_mul(r, x), c1);
+  r = fp16_add(fp16_mul(r, x), c0);
 
-  if (e == 4) {
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-  } else if (e == 3) {
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-  } else if (e == 2) {
-    r = fp16_mul(r, r);
-    r = fp16_mul(r, r);
-  } else if (e == 1) {
-    r = fp16_mul(r, r);
-  }
-
+  // get exp part
+  int e = (int)((r >> 10) & 0x1f);
+  e += shift;
+  if (e < 0) return 0;
+  if (e > 30) return 0x7c00;
+  r &= 0x83ff;
+  r |= (e << 10);
   return r;
 }
 
