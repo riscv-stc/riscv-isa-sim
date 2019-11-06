@@ -16,16 +16,19 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
+//L1 buffer size adjust to 1.25M
+//im buffer size adjust to 256K
 #define ddr_mem_start        (0x00000000)
 #define l1_buffer_start      (0xc0000000)
-#define l1_buffer_size       (0x00100000)
+#define l1_buffer_size       (0x00140000)
 #define im_buffer_start      (0xc0400000)
-#define im_buffer_size       (0x00080000)
+#define im_buffer_size       (0x00040000)
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed)
     exit(-1);
+  
   ctrlc_pressed = true;
   signal(sig, &handle_signal);
 }

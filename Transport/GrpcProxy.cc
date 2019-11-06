@@ -5,8 +5,11 @@
  *
  */
 #include <iostream>
-
 #include "GrpcProxy.h"
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
 
 using dspike::proto::Message;
 using grpc::Channel;
@@ -35,7 +38,7 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
   request.set_spikeid(coreId);
   google::protobuf::Empty reply;
   Status status = mProxy->Init(&context, request, &reply);
-  if (!status.ok())
+  if (DEBUG && !status.ok())
     std::cout << "grpc proxy init failed: " << status.error_code() << ": " << status.error_message()
               << std::endl;
 
@@ -104,7 +107,7 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 
   Status status = mProxy->TCPXfer(&context, request, &reply);
 
-  if (!status.ok())
+  if (DEBUG && !status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
 
@@ -146,7 +149,7 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
 
   Status status = mProxy->DMAXfer(&context, request, &reply);
 
-  if (!status.ok())
+  if (DEBUG && !status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
 
@@ -168,8 +171,9 @@ bool GrpcProxy::dmaPoll() {
   Status status = mProxy->DMAPoll(&context, request, &reply);
 
   if (!status.ok()) {
-    std::cout << status.error_code() << ": " << status.error_message()
-              << std::endl;
+    if (DEBUG)
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
     return true; // when fail, also return busy mode
   }
 
@@ -190,8 +194,9 @@ bool GrpcProxy::ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) {
   Status status = mProxy->DDRRead(&context, request, &reply);
 
   if (!status.ok()) {
-    std::cout << status.error_code() << ": " << status.error_message()
-              << std::endl;
+    if (DEBUG)
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
     return false;
   }
 
@@ -215,8 +220,9 @@ bool GrpcProxy::ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) {
   Status status = mProxy->DDRWrite(&context, request, &reply);
 
   if (!status.ok()) {
-    std::cout << status.error_code() << ": " << status.error_message()
-              << std::endl;
+    if (DEBUG)
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
     return false;
   }
 
@@ -264,7 +270,7 @@ void GrpcProxy::loadToRecvQueue(void) {
   }
   Status status = readWriter->Finish();
 
-  if (!status.ok()) {
+  if (DEBUG && !status.ok()) {
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
   }
@@ -300,7 +306,7 @@ bool GrpcProxy::sync() {
     if (size != 0) addr = dump(addr, size, mSyncCount);
   }
 
-  if (!status.ok())
+  if (DEBUG && !status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
 
@@ -335,7 +341,7 @@ bool GrpcProxy::dump(uint32_t addr, uint32_t size, int32_t syncCount) {
 
   Status status = mProxy->Dump(&context, request, &reply);
 
-  if (!status.ok())
+  if (DEBUG && !status.ok())
     std::cout << status.error_code() << ": " << status.error_message()
               << std::endl;
 
@@ -378,8 +384,9 @@ void GrpcProxy::waitDumpRequest(void) {
     Status status = reader->Finish();
 
     if (!status.ok()) {
-      std::cout << status.error_code() << ": " << status.error_message()
-                << std::endl;
+        if (DEBUG)
+          std::cout << status.error_code() << ": " << status.error_message()
+                  << std::endl;
       break;
     }
   }
