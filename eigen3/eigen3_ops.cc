@@ -614,8 +614,9 @@ int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
-
-    rd[0] = (rs1_matrix.array() * rs2_matrix.array()).sum();
+    
+    //first get the sum of col elment, then get the sum of row.
+    rd[0] = ((rs1_matrix.array() * rs2_matrix.array()).colwise().sum()).sum();
 
     if (debug)
         cout << "rd:" << endl << rd[0] << endl;
@@ -872,9 +873,9 @@ int CustomInsns::veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
     
     switch (dim) {
@@ -925,7 +926,8 @@ int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    Map_half rd_row_max(rd, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1122,7 +1124,8 @@ int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    Map_half rd_row_max(rd, ss->shape1_row, 1, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
     
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
