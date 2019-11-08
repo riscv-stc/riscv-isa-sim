@@ -117,7 +117,7 @@ class debug_module_t : public abstract_device_t
     void proc_reset(unsigned id);
 
   private:
-    static const unsigned datasize = 2;
+    static const unsigned datasize = 8;
     unsigned nprocs;
     // Size of program_buffer in 32-bit words, as exposed to the rest of the
     // world.

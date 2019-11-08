@@ -671,7 +671,22 @@ bool debug_module_t::perform_abstract_command()
           }
         }
 
-      } else if (regno >= 0xc000 && (regno & 1) == 1) {
+      } else if(regno >= 0xc000 && regno< 0xc000+32){
+     	unsigned vprnum = regno - 0xc000;
+		abstractcs.cmderr = CMDERR_NONE;
+        if (write) {
+			//no write
+        } else {
+			vreg_t reg_t = sim->get_core(dmcontrol.hartsel)->get_state()->VPR[vprnum];
+			uint32_t *values =(uint32_t *) reg_t.vb;
+			for(int i=0; i<8; ++i){
+			write32(dmdata, i,values[i]);
+			}
+
+			
+          }
+		return true;
+      }else if (regno >= 0xc000 && (regno & 1) == 1) {
         // Support odd-numbered custom registers, to allow for debugger testing.
         unsigned custom_number = regno - 0xc000;
         abstractcs.cmderr = CMDERR_NONE;
