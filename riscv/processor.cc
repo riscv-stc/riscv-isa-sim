@@ -790,6 +790,10 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return state.mte_stride_llb;
+    case CSR_TID:
+      if(!supports_extension('V'))
+        break;
+      return id;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)

@@ -96,8 +96,8 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   request.set_dststride(dstStride);
   request.set_srcstride(srcStride);
 
-  fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
-          request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);
+  // fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
+  //        request.direction(), request.dstaddr(), request.srcaddr(), request.type(), dataSize);
 
   // container for the data we expect from the server
   google::protobuf::Empty reply;
@@ -139,8 +139,8 @@ bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir
 
   request.set_length(len);
 
-  fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
-          dir, ddrAddr, llbAddr, len);
+  // fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
+  //        dir, ddrAddr, llbAddr, len);
 
   google::protobuf::Empty reply;
 
@@ -163,7 +163,7 @@ bool GrpcProxy::dmaPoll() {
   google::protobuf::Empty request;
   google::protobuf::Empty reply;
 
-  fprintf(stdout, "[dmaXferPoll]\n");
+  // fprintf(stdout, "[dmaXferPoll]\n");
 
   // context for the client
   ClientContext context;
@@ -256,8 +256,8 @@ void GrpcProxy::loadToRecvQueue(void) {
       continue;
     }
 
-    fprintf(stdout, "[tcpXferCb] direction:%d, dst:0x%08x type:%d data size:%d\n",
-            reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
+    // fprintf(stdout, "[tcpXferCb] direction:%d, dst:0x%08x type:%d data size:%d\n",
+    //        reply.direction(), reply.dstaddr(), reply.type(), reply.mutable_body()->size());
 
     auto xdir = (reply.direction() == Message::llb2core)? StreamDir::LLB2CORE: StreamDir::CORE2CORE;
 

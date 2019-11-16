@@ -12,8 +12,9 @@
 #include <mutex>
 #include <thread>
 #include "proxy.grpc.pb.h"
-
 #include "AbstractProxy.h"
+#include <unistd.h>
+
 
 namespace Transport {
 using proxy::Proxy;
