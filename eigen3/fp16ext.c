@@ -28,6 +28,22 @@ BIT16 int_to_fp16(int x)
 }
 
 BIT16 fp16_exp(BIT16 x) {
+  int sign_x = (x>>15) & 0x1;
+  int exp_x  = (x>>10) & 0x1f;
+  int frac_x  = (x&0x3ff);
+  int frac_x_a  = (0x1<<10) | (x&0x3ff);
+
+  if(exp_x==0x1f && frac_x!=0){
+       return 0x7c01; //nan
+  }
+  else if(exp_x==0x1f && frac_x==0){ //inf
+     if(sign_x==1)  return 0;
+     else  return 0x7c00;
+  }
+  else if(exp_x==0 && frac_x==0){ //0
+       return 0x3c00;
+  }
+  
   int index = fp16_to_int_floor(x) + 12;
   if (index < 0) return 0;
   if (index > 23) return 0x7c00;
@@ -44,9 +60,8 @@ BIT16 fp16_exp(BIT16 x) {
 #else
   BIT16 sub = fp16_mul(0x398c, int_to_fp16(shift));
 #endif
-
+   
   x = fp16_sub(x, sub);
-
   // taylor expansion at x = 0
   BIT16 c0 = 0x3c00;
   BIT16 c1 = 0x3c00; //1.0
@@ -64,44 +79,6 @@ BIT16 fp16_exp(BIT16 x) {
   int adds[] = {0, 10, 2, -4, -1, -3, -3, 1, -2, -1, 0, 0, 0, 1, 1, 2, 2, 2, 6, 1, 4, -1, 2, 7};
   r += adds[index];
 #endif
-
-  // get exp part
-  int e = (int)((r >> 10) & 0x1f);
-  e += shift;
-  if (e < 0) return 0;
-  if (e > 30) return 0x7c00;
-  r &= 0x83ff;
-  r |= (e << 10);
-  return r;
-}
-
-BIT16 fp16_exp_o(BIT16 x) {
-  int shift = 0;
-  int i = fp16_to_int(x); //round down
-  if (i > 0) {
-    shift = i + ((i + 1) >> 1);
-  } else if (i < 0) {
-    shift = i + ((i - 1) >> 1);
-  } else {
-    if (x < 0x8000) shift = 1;
-    else shift = -1;
-  }
-
-  BIT16 sub = 0;
-  sub = fp16_mul(0x398c, int_to_fp16(shift));
-  x = fp16_sub(x, sub);
-
-  // taylor expansion at x = 0
-  BIT16 c0 = 0x3c00;
-  BIT16 c1 = 0x3c00; //1.0
-  BIT16 c2 = 0x3800; //1.0/2
-  BIT16 c3 = 0x3166; //1.0/6
-  BIT16 c4 = 0x2955; //1.0/24
-  BIT16 r;
-  r = fp16_add(fp16_mul(x, c4), c3);
-  r = fp16_add(fp16_mul(r, x), c2);
-  r = fp16_add(fp16_mul(r, x), c1);
-  r = fp16_add(fp16_mul(r, x), c0);
 
   // get exp part
   int e = (int)((r >> 10) & 0x1f);
