@@ -117,30 +117,34 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
 /**
  * implement dmaXfer function
  */
-bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) {
+bool GrpcProxy::dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir,
+        uint32_t column, uint32_t row, uint32_t ddrStride) {
   // prepare message data
   Message request;
+  if (ddrStride == 0)
+    ddrStride =  column * 2;
   switch (dir) {
   case LLB2DDR:
     request.set_target(mCoreId);
     request.set_srcaddr(llbAddr);
     request.set_dstaddr(ddrAddr);
     request.set_direction(Message::llb2ddr);
+    request.set_dststride(ddrStride);
     break;
   case DDR2LLB:
     request.set_source(mCoreId);
     request.set_srcaddr(ddrAddr);
     request.set_dstaddr(llbAddr);
     request.set_direction(Message::ddr2llb);
+    request.set_srcstride(ddrStride);
     break;
   default:
     break;
   }
-
-  request.set_length(len);
-
-  // fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d\n",
-  //        dir, ddrAddr, llbAddr, len);
+  request.set_length(column * row * 2);
+  request.set_column(column);
+  //fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d, stride %d\n",
+  //        dir, ddrAddr, llbAddr, column * row * 2, ddrStride);
 
   google::protobuf::Empty reply;
 

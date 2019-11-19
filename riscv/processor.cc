@@ -458,6 +458,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MTE_STRIDE_LLB:
       state.mte_stride_llb = val;
       break;
+    case CSR_DMA_SHAPE:
+      state.dma_shape = val;
+      break;
+    case CSR_DMA_STRIDE_DDR:
+      state.dma_stride_ddr = val;
+      break;
     case CSR_MSTATUS: {
       if ((val ^ state.mstatus) &
           (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR))
@@ -794,6 +800,14 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return id;
+    case CSR_DMA_SHAPE:
+      if(!supports_extension('V'))
+        break;
+      return state.dma_shape;
+    case CSR_DMA_STRIDE_DDR:
+      if(!supports_extension('V'))
+        break;
+      return state.dma_stride_ddr;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)

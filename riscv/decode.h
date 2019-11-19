@@ -258,6 +258,10 @@ private:
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
 #define STRIDE_LLB        (STATE.mte_stride_llb & 0xFFFF)
 
+#define DMA_SHAPE_COLUMN  ((STATE.dma_shape & 0xFFFF0000) >> 16)
+#define DMA_SHAPE_ROW     (STATE.dma_shape & 0xFFFF)
+#define STRIDE_DDR        (STATE.dma_stride_ddr)
+
 #define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
 #define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
 #define MTE_CORE_MAP    (STATE.mte_coremap)

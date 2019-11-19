@@ -77,10 +77,10 @@ class AbstractProxy {
    * @param ddrAddr: address of target
    * @param llbAddr: address of source
    * @param streamDir: direction of dma
-   * @param len: size of data
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) = 0;
+  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir,
+    uint32_t column, uint32_t len, uint32_t ddrStride) = 0;
 
   /**
    * @brief implement dmaXferPoll function

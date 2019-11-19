@@ -55,7 +55,8 @@ class GrpcProxy : public AbstractProxy {
    * @param len: size of data
    * @return true - success; false - fail
    */
-  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, uint32_t len, DmaDir dir) override;
+  bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir,
+    uint32_t column, uint32_t row, uint32_t ddrStride) override;
 
   /**
    * @brief implement dmaXferPoll function
