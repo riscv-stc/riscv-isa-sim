@@ -38,6 +38,17 @@ class rom_device_t : public abstract_device_t {
   std::vector<char> data;
 };
 
+class uart_device_t : public abstract_device_t {
+ public:
+  uart_device_t();
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  // const std::vector<char>& contents() { return data; }
+  ~uart_device_t();
+ private:
+  std::vector<char> data;
+};
+
 class mem_t : public abstract_device_t {
  public:
   mem_t(size_t size) : len(size) {
