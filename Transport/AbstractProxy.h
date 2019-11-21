@@ -88,9 +88,9 @@ class AbstractProxy {
    */
   virtual bool dmaPoll() = 0;
 
-  virtual bool llbLoad(uint64_t addr, size_t len, uint8_t* bytes,
+  virtual bool llbLoad(uint32_t addr, size_t len, uint8_t* bytes,
                     uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) = 0;
-  virtual bool llbStore(uint64_t addr, size_t len, const uint8_t* bytes,
+  virtual bool llbStore(uint32_t addr, size_t len, const uint8_t* bytes,
                     uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) = 0;
   virtual bool ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) = 0;
   virtual bool ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) = 0;

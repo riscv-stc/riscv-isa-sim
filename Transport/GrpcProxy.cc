@@ -180,14 +180,14 @@ bool GrpcProxy::dmaPoll() {
   return true;
 }
 
-bool GrpcProxy::llbLoad(uint64_t addr, size_t len, uint8_t* bytes,
+bool GrpcProxy::llbLoad(uint32_t addr, size_t len, uint8_t* bytes,
       uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) {
   // context for the client
   ClientContext context;
 
   Message request;
 
-  request.set_srcaddr(addr);
+  request.set_srcaddr(addr & 0xffffffff);
   request.set_length(len);
 
   request.set_column(column);
@@ -211,13 +211,13 @@ bool GrpcProxy::llbLoad(uint64_t addr, size_t len, uint8_t* bytes,
   return true;
 }
 
-bool GrpcProxy::llbStore(uint64_t addr, size_t len, const uint8_t* bytes,
+bool GrpcProxy::llbStore(uint32_t addr, size_t len, const uint8_t* bytes,
       uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) {
   // context for the client
   ClientContext context;
 
   Message request;
-  request.set_dstaddr(addr);
+  request.set_dstaddr(addr & 0xffffffff);
   request.set_length(len);
   request.set_body(bytes, len);
 
