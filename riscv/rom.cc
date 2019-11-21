@@ -24,7 +24,8 @@ uart_device_t::uart_device_t()
 
 bool uart_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {  
-  return false;
+  memset(bytes, 0x5a, len);
+  return true;
 }
 
 bool uart_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
