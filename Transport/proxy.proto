@@ -22,6 +22,10 @@ service Proxy {
   // receive messages via stream
   rpc RecvCb(stream RecvCbRequest) returns (stream dspike.proto.Message);
 
+  // do load/store code/data for LLB
+  rpc LLBRead(dspike.proto.Message) returns (dspike.proto.Message);
+  rpc LLBWrite(dspike.proto.Message) returns (google.protobuf.Empty);
+
   // do load/store code/data for DDR
   rpc DDRRead(dspike.proto.Message) returns (dspike.proto.Message);
   rpc DDRWrite(dspike.proto.Message) returns (google.protobuf.Empty);

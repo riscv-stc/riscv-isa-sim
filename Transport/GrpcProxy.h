@@ -63,6 +63,10 @@ class GrpcProxy : public AbstractProxy {
    */
   bool dmaPoll() override;
 
+  bool llbLoad(uint64_t addr, size_t len, uint8_t* bytes,
+            uint32_t column, uint32_t dstStride, uint32_t srcStride) override;
+  bool llbStore(uint64_t addr, size_t len, const uint8_t* bytes,
+            uint32_t column, uint32_t dstStride, uint32_t srcStride) override;
   bool ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) override;
   bool ddrStore(uint64_t addr, size_t len, const uint8_t* bytes) override;
 

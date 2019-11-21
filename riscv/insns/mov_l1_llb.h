@@ -16,7 +16,6 @@ unsigned short row = MTE_SHAPE_ROW;
 unsigned short stride = STRIDE_LLB ? STRIDE_LLB : 0;
 
 for (int times = 0; times < 5; times++) {
-  if (likely(proxy->tcpXfer(0, p->get_id(), dst, 0, col * row * 2, src,
-               Transport::AbstractProxy::LLB2CORE, col * 2, 0, stride)))
+  if (likely(proxy->llbLoad(src, col * row * 2, dst, col * 2, 0, stride)))
     break;
 }

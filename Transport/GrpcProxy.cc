@@ -180,6 +180,65 @@ bool GrpcProxy::dmaPoll() {
   return true;
 }
 
+bool GrpcProxy::llbLoad(uint64_t addr, size_t len, uint8_t* bytes,
+      uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) {
+  // context for the client
+  ClientContext context;
+
+  Message request;
+
+  request.set_srcaddr(addr);
+  request.set_length(len);
+
+  request.set_column(column);
+  request.set_dststride(dstStride);
+  request.set_srcstride(srcStride);
+
+  Message reply;
+
+  Status status = mProxy->LLBRead(&context, request, &reply);
+
+  if (!status.ok()) {
+    if (DEBUG)
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    return false;
+  }
+
+  auto data = reply.body();
+  memcpy(bytes, data.c_str(), data.length());
+
+  return true;
+}
+
+bool GrpcProxy::llbStore(uint64_t addr, size_t len, const uint8_t* bytes,
+      uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) {
+  // context for the client
+  ClientContext context;
+
+  Message request;
+  request.set_dstaddr(addr);
+  request.set_length(len);
+  request.set_body(bytes, len);
+
+  request.set_column(column);
+  request.set_dststride(dstStride);
+  request.set_srcstride(srcStride);
+
+  google::protobuf::Empty reply;
+
+  Status status = mProxy->LLBWrite(&context, request, &reply);
+
+  if (!status.ok()) {
+    if (DEBUG)
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
 
 bool GrpcProxy::ddrLoad(uint64_t addr, size_t len, uint8_t* bytes) {
   // context for the client
