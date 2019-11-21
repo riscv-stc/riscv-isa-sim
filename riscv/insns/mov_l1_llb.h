@@ -6,8 +6,8 @@ TCP_AUNIT();
 //class CustomInsns CusIns;
 //struct ShapeStride sst;
 //sst_fill(sst);
-unsigned long src = RS1;
-unsigned long dst = RD;
+uint64_t src = RS1 & 0xffffffff;
+uint8_t* dst = (uint8_t*)MMU.get_phy_addr(RD);
 src -= 0xf8000000;
 
 //src shape

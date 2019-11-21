@@ -7,12 +7,6 @@ ddr_mem_t::ddr_mem_t(std::vector<processor_t*>& procs, size_t size)
   : procs(procs), length(size)
 {
   init();
-
-  auto stloop = std::bind(&ddr_mem_t::store_loop, this);
-  auto thread = new std::thread(stloop);
-  thread->detach();
-
-  store_thread.reset(thread);
 }
 
 void ddr_mem_t::init() {
