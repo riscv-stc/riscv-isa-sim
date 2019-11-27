@@ -1784,7 +1784,8 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
+    half *pcol_sum = malloc(1 * ss->shape1_column * sizeof(half));
+    Map_half rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);

@@ -162,7 +162,7 @@ BIT16 fp16_sqrt(BIT16 x)
   else if (exp_x == 0x1f && frac_x == 0){ //inf
       return 0x7c00;
   }
-  else if (exp_x == 0) { //0 or subnormal
+  else if ((exp_x == 0) && (frac_x == 0)) { //0
      return 0;  
   }
 
