@@ -173,7 +173,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     kw = w;
 
     /*calculate the input shape*/
-    Map_half rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride * in_w, 1));
+    Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
     if (debug) {
         MECONV_INFO(ss);

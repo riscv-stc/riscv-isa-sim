@@ -177,7 +177,8 @@ struct state_t
   uint32_t mte_shape; 
   uint32_t mte_stride_llb;
 
-  uint32_t dma_shape;
+  uint32_t dma_shape_row;
+  uint32_t dma_shape_col;
   uint32_t dma_stride_ddr;
   
   bool serialized; // whether timer CSRs are in a well-defined state

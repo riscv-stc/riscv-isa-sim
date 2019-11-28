@@ -458,8 +458,11 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MTE_STRIDE_LLB:
       state.mte_stride_llb = val;
       break;
-    case CSR_DMA_SHAPE:
-      state.dma_shape = val;
+    case CSR_DMA_SHAPE_ROW:
+      state.dma_shape_row = val;
+      break;
+    case CSR_DMA_SHAPE_COL:
+      state.dma_shape_col = val;
       break;
     case CSR_DMA_STRIDE_DDR:
       state.dma_stride_ddr = val;
@@ -800,10 +803,14 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return id;
-    case CSR_DMA_SHAPE:
+    case CSR_DMA_SHAPE_ROW:
       if(!supports_extension('V'))
         break;
-      return state.dma_shape;
+      return state.dma_shape_row;
+    case CSR_DMA_SHAPE_COL:
+      if(!supports_extension('V'))
+        break;
+      return state.dma_shape_col;
     case CSR_DMA_STRIDE_DDR:
       if(!supports_extension('V'))
         break;
