@@ -54,7 +54,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   signal(SIGINT, &handle_signal);
   mem_ac_enabled = mac_enabled;
   aunit = MCU;
-
+  
+  bus.add_device(0xc07f3000, new uart_device_t());
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
       //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
