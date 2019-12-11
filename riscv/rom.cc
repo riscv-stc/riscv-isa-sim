@@ -30,16 +30,21 @@ bool uart_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool uart_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (!bytes || addr >= 0x1000)
+  if (unlikely(!bytes || addr >= 0x1000))
     return false;
 
-  if (addr = 0x100) {
+  if (addr == 0x100) {
     for (size_t index = 0; index < len; index++) {
-      data.push_back(*bytes);
-      if (0 == *bytes) {
-        std::cout << static_cast<char*>(&data[0]) << std::ends;
+      if (unlikely(0 == *bytes)) {
+        for (int index = 0; index < data.size(); index++)
+          std::cout << data[index];
+        std::cout << std::flush;
         data.clear();
       }
+      else {
+        data.push_back(*bytes);
+      }
+      
       bytes++;
     }
   }
