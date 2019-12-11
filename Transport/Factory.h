@@ -41,7 +41,7 @@ struct FactoryRegister
       Factory<I>::registry()[name] = []() { return new T; };
       if (is_default)
         Factory<I>::registry()[""] = []() { return new T; };
-      std::cout << "transport class '" << name << (is_default?"(default)":"") << "' registered.\n";
+      //std::cout << "transport class '" << name << (is_default?"(default)":"") << "' registered.\n";
     }
 };
 
