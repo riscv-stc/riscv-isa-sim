@@ -416,6 +416,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_M_STRIDE_S:
       state.m_stride_s = val;
       break;
+    case CSR_TMISC:
+      state.tmisc = val; 
+      break;
+    case CSR_TCSR:
+      state.tcsr = val;
+      break;
     case CSR_VTYPE:
       // state.vtype = val;
       // vtype is fix in current version
@@ -803,6 +809,14 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return id;
+    case CSR_TMISC:
+      if(!supports_extension('V'))
+        break;
+      return state.tmisc; 
+    case CSR_TCSR:
+      if(!supports_extension('V'))
+        break;
+      return state.tcsr;
     case CSR_DMA_SHAPE_ROW:
       if(!supports_extension('V'))
         break;

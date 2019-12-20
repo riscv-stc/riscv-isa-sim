@@ -1146,9 +1146,9 @@
 #define MATCH_MOV_F 0x2c00307b
 #define MASK_MOV_F  0xfff0707f
 #define MATCH_DLXFER_D 0x6c00007b
-#define MASK_DLXFER_D  0xfe00707f
+#define MASK_DLXFER_D  0xfff0707f
 #define MATCH_DLXFER_U 0x6e00007b
-#define MASK_DLXFER_U  0xfe00707f
+#define MASK_DLXFER_U  0xfff0707f
 #define MATCH_ICMOV 0x3400007b
 #define MASK_ICMOV  0xfe00707f
 #define MATCH_SYNC 0x3800007b
