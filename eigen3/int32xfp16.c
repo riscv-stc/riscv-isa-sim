@@ -3,7 +3,7 @@
   int w_frac;
   int w_exp;
   int res_pos_int; //result integer start pos 
-  int a_abs;    //|a|
+  unsigned int a_abs;    //|a|
   long long res_mul;  //a * w_frac
   int tmp;  
   int pos;
