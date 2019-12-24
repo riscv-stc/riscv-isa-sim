@@ -44,7 +44,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --progsize=<words>    Progsize for the debug module [default 2]\n");
-  fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0x100000, 1MB]\n");
+  fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
   fprintf(stderr, "  --debug-auth          Debug module requires debugger to authenticate\n");
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
   bool dump_dts = false;
   bool dtb_enabled = true;
   bool mem_ac_enabled = true;
-  uint32_t ddr_size = 0x100000;
+  uint32_t ddr_size = 0xa00000;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
