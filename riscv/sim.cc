@@ -55,6 +55,15 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   mem_ac_enabled = mac_enabled;
   aunit = MCU;
   
+  bus.add_device(SYSDMA0_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA1_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA2_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA3_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA4_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA5_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA6_BASE, new sysdma_device_t(procs));
+  bus.add_device(SYSDMA7_BASE, new sysdma_device_t(procs));
+
   bus.add_device(0xc07f3000, new uart_device_t());
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
@@ -379,7 +388,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
     if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
       auto unit = NCP == aunit? "ncp": "tcp";
       err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
-      throw std::runtime_error(err.str());
+      // throw std::runtime_error(err.str()); FIXME, maybe multi-thread has problem to check aunit
     }
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
@@ -388,7 +397,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
     if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
       auto unit = NCP == aunit? "ncp": "tcp";
       err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
-      throw std::runtime_error(err.str());
+      // throw std::runtime_error(err.str()); FIXME, maybe multi-thread has problem to check aunit
     }
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);

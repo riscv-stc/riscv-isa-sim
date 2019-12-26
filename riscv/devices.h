@@ -6,6 +6,9 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 class processor_t;
 
@@ -47,6 +50,82 @@ class uart_device_t : public abstract_device_t {
   ~uart_device_t();
  private:
   std::vector<char> data;
+};
+
+/**
+ * @brief The sysdma_device_t class
+ */
+class sysdma_device_t : public abstract_device_t {
+ public:
+  sysdma_device_t(std::vector<processor_t*>&);
+  ~sysdma_device_t();
+
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+
+  // dma descriptor
+  struct dma_desc_t {
+    union {
+      struct {
+        uint32_t desc_en : 1;  // descriptor mode enabled
+        uint32_t reserved : 1;
+        uint32_t blk_en : 1;      // block mode enabled
+        uint32_t burst_size : 3;  // burst size
+        uint32_t burst_len : 4;   // burst length
+        uint32_t xfer_len : 22;    // transfer length
+      } bits;
+      uint32_t full;
+    } ctlr;
+
+    uint32_t dsar;  // source address
+    uint32_t ddar;  // destination address
+
+    union {
+      struct {
+        uint32_t height : 16;  // block Height in rows
+        uint32_t width : 16;   // block Width in bytes
+      } bits;
+      uint32_t full;
+    } bkmr0;
+
+    union {
+      struct {
+        uint32_t reserved : 16;
+        uint32_t stride : 16;  // block stride in bytes
+      } bits;
+      uint32_t full;
+    } bkmr1;
+
+    uint32_t llpr;  // next llp addr
+  };
+
+ private:
+
+  void dma_core(int ch);
+  std::vector<processor_t*>& procs_;
+
+  // dma direction
+  enum direction_t {
+    SYSDMA_DDR2LLB = 0,
+    SYSDMA_LLB2DDR,
+  };
+
+  // dma thread
+  #define DMA_MAX_CHANNEL_NUMER 2
+  std::thread dma_ch_thread_[DMA_MAX_CHANNEL_NUMER];
+  std::mutex thread_lock_[DMA_MAX_CHANNEL_NUMER];
+  std::condition_variable thread_cond_[DMA_MAX_CHANNEL_NUMER];
+
+  // dma feature
+  bool dma_enabled_;
+  struct {
+    bool enabled;
+    bool desc_mode_enabled;
+    unsigned long llp;
+    bool xfer_complete = false;
+    bool busy = false;
+
+  } dma_channel_[DMA_MAX_CHANNEL_NUMER];
 };
 
 class mem_t : public abstract_device_t {

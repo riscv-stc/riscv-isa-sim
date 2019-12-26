@@ -50,6 +50,7 @@ riscv_srcs = \
 	devices.cc \
 	ddr_mem.cc \
 	rom.cc \
+	sysdma.cc \
 	clint.cc \
 	debug_module.cc \
 	remote_bitbang.cc \

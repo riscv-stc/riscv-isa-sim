@@ -156,6 +156,16 @@
 #define EXT_IO_BASE        0x40000000
 #define DRAM_BASE          0x80000000
 
+#define SYSDMA0_BASE       0xC9F00000
+#define SYSDMA1_BASE       0xD1F00000
+#define SYSDMA2_BASE       0xCFF00000
+#define SYSDMA3_BASE       0xD7F00000
+#define SYSDMA4_BASE       0xD9F00000
+#define SYSDMA5_BASE       0xE1F00000
+#define SYSDMA6_BASE       0xDFF00000
+#define SYSDMA7_BASE       0xE7F00000
+
+
 /* page table entry (PTE) fields */
 #define PTE_V     0x001 /* Valid */
 #define PTE_R     0x002 /* Read */
