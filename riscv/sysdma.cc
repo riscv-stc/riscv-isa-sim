@@ -25,10 +25,22 @@
 #define DMA_C1_BKMR1_OFFSET 0X210
 #define DMA_C1_LLPR_OFFSET 0X214
 
+// base of DDR address
+static uint64_t dma_ddr_base[] = {
+  0x800000000, // DMA0
+  0x800000000, // DMA1
+  0x900000000, // DMA2
+  0x900000000, // DMA3
+  0xA00000000, // DMA4
+  0xA00000000, // DMA5
+  0xB00000000, // DMA6
+  0xB00000000, // DMA7
+};
+
 /**
  * @brief constructor
  */
-sysdma_device_t::sysdma_device_t(std::vector<processor_t*>& procs)
+sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     : procs_(procs) {
   // create thread for each dma channel
   for (int ch = 0; ch < DMA_MAX_CHANNEL_NUMER; ch++) {
@@ -43,6 +55,9 @@ sysdma_device_t::sysdma_device_t(std::vector<processor_t*>& procs)
     dma_channel_[i].enabled = false;
     dma_channel_[i].desc_mode_enabled = false;
     dma_channel_[i].llp = 0;
+    if(dma_idx >= sizeof(dma_ddr_base)/sizeof(dma_ddr_base[0]))
+        throw dma_idx;
+    dma_channel_[i].ddr_base = dma_ddr_base[dma_idx];
   }
 }
 
@@ -100,9 +115,7 @@ void sysdma_device_t::dma_core(int ch) {
         // dma transfer from ddr to llb
         case SYSDMA_DDR2LLB: {
           auto dst = desc->ddar - LLB_BUFFER_START;
-          auto src = *((unsigned long long*)procs_[0]->get_mmu()->get_phy_addr(
-              (desc->dsar)));
-
+          auto src = desc->dsar;
           unsigned int col = desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
           unsigned int stride = desc->bkmr1.bits.stride;
@@ -121,8 +134,7 @@ void sysdma_device_t::dma_core(int ch) {
 
         // dma transfer from llb to ddr
         case SYSDMA_LLB2DDR: {
-          auto dst = *((unsigned long long*)procs_[0]->get_mmu()->get_phy_addr(
-              (desc->ddar)));
+          auto dst = desc->ddar;
           auto src = desc->dsar - LLB_BUFFER_START;
           unsigned int col = desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;

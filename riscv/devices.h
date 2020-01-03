@@ -57,7 +57,7 @@ class uart_device_t : public abstract_device_t {
  */
 class sysdma_device_t : public abstract_device_t {
  public:
-  sysdma_device_t(std::vector<processor_t*>&);
+  sysdma_device_t(int dma_idx, std::vector<processor_t*>&);
   ~sysdma_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -124,7 +124,7 @@ class sysdma_device_t : public abstract_device_t {
     unsigned long llp;
     bool xfer_complete = false;
     bool busy = false;
-
+    uint64_t ddr_base;
   } dma_channel_[DMA_MAX_CHANNEL_NUMER];
 };
 
