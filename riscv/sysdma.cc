@@ -116,7 +116,7 @@ void sysdma_device_t::dma_core(int ch) {
         case SYSDMA_DDR2LLB: {
           auto dst = desc->ddar - LLB_BUFFER_START;
           auto src = desc->dsar;
-          unsigned int col = desc->bkmr0.bits.width;
+          unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
           unsigned int stride = desc->bkmr1.bits.stride;
 
@@ -136,7 +136,7 @@ void sysdma_device_t::dma_core(int ch) {
         case SYSDMA_LLB2DDR: {
           auto dst = desc->ddar;
           auto src = desc->dsar - LLB_BUFFER_START;
-          unsigned int col = desc->bkmr0.bits.width;
+          unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
           unsigned int stride = desc->bkmr1.bits.stride;
 

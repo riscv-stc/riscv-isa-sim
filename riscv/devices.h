@@ -83,15 +83,17 @@ class sysdma_device_t : public abstract_device_t {
     union {
       struct {
         uint32_t height : 16;  // block Height in rows
-        uint32_t width : 16;   // block Width in bytes
+        uint32_t width : 16;   // block Width low 16-bits in bytes
       } bits;
       uint32_t full;
     } bkmr0;
 
     union {
       struct {
-        uint32_t reserved : 16;
-        uint32_t stride : 16;  // block stride in bytes
+        uint32_t width_high_reserved : 2;
+        uint32_t width_high : 6; // block Width high 6 bits in bytes
+        uint32_t stride_reserved : 2;
+        uint32_t stride : 22;  // block stride in bytes
       } bits;
       uint32_t full;
     } bkmr1;
