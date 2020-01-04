@@ -9,6 +9,7 @@ TCP_AUNIT();
 unsigned long src = RS1;
 unsigned long dst = RD;
 unsigned int core_map = MTE_CORE_MAP;
+//2020-01-04: the bit of current core is no need to set but the data will send
 core_map |= 0x1 << p->get_csr(CSR_TID);
 
 src -= 0xf8000000;
