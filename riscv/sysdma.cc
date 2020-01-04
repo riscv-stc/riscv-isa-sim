@@ -14,6 +14,7 @@
 #define DMA_CISR_OFFSET 0X014
 #define DMA_CIER_OFFSET 0X018
 #define DMA_CABR_OFFSET 0X01C
+#define DMA_BUF_OFFSET 0X020
 #define DMA_C0_CTLR_OFFSET 0X100
 #define DMA_C0_DSAR_OFFSET 0X104
 #define DMA_C0_BKMR0_OFFSET 0X10C
@@ -85,11 +86,13 @@ void sysdma_device_t::dma_core(int ch) {
     }
 
     while (dma_channel_[ch].llp) {
+      if(dma_channel_[ch].llp < SYSDMA0_BASE + DMA_BUF_OFFSET ||
+              dma_channel_[ch].llp >= SYSDMA0_BASE + DMA_BUF_OFFSET+DMA_BUF_SIZE)
+          throw std::runtime_error("sysdma:wrong llp");
+
       // FIXME, need to check MCU/TCP
       procs_[0]->get_sim()->set_aunit(MCU, 0);
-      struct dma_desc_t* desc =
-          (struct dma_desc_t*)((procs_[0]->get_sim())
-                                   ->addr_to_mem(dma_channel_[ch].llp));
+      struct dma_desc_t* desc = (struct dma_desc_t*)&dma_buf_[dma_channel_[ch].llp - SYSDMA0_BASE - DMA_BUF_OFFSET];
 
       // std::cout << "desc:" << hex << desc << "desc next:" << desc->llpr
       //           << "sysdma: ctlr:" << desc->ctlr.full << std::endl;
@@ -190,7 +193,11 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     }
 
     default:
-      std::cout << "sysdma: unsupported load address " << addr << std::endl;
+      if (DMA_BUF_OFFSET<=addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
+          *((uint32_t*)bytes) = *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]);
+      }else {
+          std::cout << "sysdma: unsupported load address " << addr << std::endl;
+      }
       break;
   }
   return true;
@@ -302,8 +309,12 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
     }
 
     default:
-      std::cout << "sysdma: unsupported store register offset: " << addr
+      if (DMA_BUF_OFFSET<=addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
+          *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]) = val;
+      } else {
+          std::cout << "sysdma: unsupported store register offset: " << addr
                 << std::endl;
+      }
       break;
   }
 

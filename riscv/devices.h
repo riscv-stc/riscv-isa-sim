@@ -92,8 +92,7 @@ class sysdma_device_t : public abstract_device_t {
       struct {
         uint32_t width_high_reserved : 2;
         uint32_t width_high : 6; // block Width high 6 bits in bytes
-        uint32_t stride_reserved : 2;
-        uint32_t stride : 22;  // block stride in bytes
+        uint32_t stride : 24;  // block stride in bytes
       } bits;
       uint32_t full;
     } bkmr1;
@@ -120,6 +119,9 @@ class sysdma_device_t : public abstract_device_t {
 
   // dma feature
   bool dma_enabled_;
+  // size of dma buffer
+  #define DMA_BUF_SIZE 0x1000
+  char dma_buf_[DMA_BUF_SIZE];
   struct {
     bool enabled;
     bool desc_mode_enabled;
