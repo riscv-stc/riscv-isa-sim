@@ -829,6 +829,13 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return state.dma_stride_ddr;
+    case CSR_MICM_CFG:
+    case CSR_MDCM_CFG:
+    case CSR_MCCTLBEGINADDR:
+    case CSR_MCCTLCOMMAND:
+      return 0;//Return 0 since it is not truely supported yet.
+    case CSR_MCCTLDATA:
+      return 1;//Return 1 to avoid cache set failure report in application.
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (ctr_ok)
