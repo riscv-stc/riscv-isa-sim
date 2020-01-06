@@ -55,15 +55,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   mem_ac_enabled = mac_enabled;
   aunit = MCU;
   
-  bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, procs));
-  bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, procs));
-  bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, procs));
-  bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, procs));
-  bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, procs));
-  bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, procs));
-  bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, procs));
-  bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, procs));
-
   bus.add_device(0xc07f3000, new uart_device_t());
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
@@ -104,6 +95,28 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
     for (size_t i = 0; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, i, hartids[i], halted);
     }
+  }
+
+  int cluster_id = hartids[0]/8;
+  switch (cluster_id) {
+    case 0:
+      bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, procs));
+      bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, procs));
+      break;
+    case 1:
+      bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, procs));
+      bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, procs));
+      break;
+    case 2:
+      bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, procs));
+      bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, procs));
+      break;
+    case 3:
+      bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, procs));
+      bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, procs));
+      break;
+  default:
+      throw std::runtime_error("supported core id");
   }
 
   clint.reset(new clint_t(procs));

@@ -8,7 +8,7 @@ TCP_AUNIT();
 //sst_fill(sst);
 uint32_t src = RS1;
 uint8_t* dst = (uint8_t*)MMU.get_phy_addr(RD);
-src -= 0xf8000000;
+GET_LLB_OFF(src, src);
 
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;

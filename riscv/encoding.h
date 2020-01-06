@@ -1481,6 +1481,21 @@
 #define CAUSE_LOAD_PAGE_FAULT 0xd
 #define CAUSE_STORE_PAGE_FAULT 0xf
 #endif
+
+// two axi bus access same llb buffer
+#define LLB_AXI0_BUFFER_START 0xf8000000
+#define LLB_AXI1_BUFFER_START 0xfa000000
+#define LLB_BUFFER_SIZE 0x800000
+
+#define GET_LLB_OFF(src, dst) do {                                                 \
+    if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
+        dst = src - LLB_AXI0_BUFFER_START;                                         \
+    else if  (LLB_AXI1_BUFFER_START <= src < LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE)\
+        dst = src - LLB_AXI1_BUFFER_START;                                         \
+    else                                                                           \
+        throw std::runtime_error("wrong llb address");                             \
+} while(0)
+
 #ifdef DECLARE_INSN
 DECLARE_INSN(slli_rv32, MATCH_SLLI_RV32, MASK_SLLI_RV32)
 DECLARE_INSN(srli_rv32, MATCH_SRLI_RV32, MASK_SRLI_RV32)

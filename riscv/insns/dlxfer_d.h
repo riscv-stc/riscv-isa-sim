@@ -3,7 +3,8 @@ if (proxy == nullptr) return -1;
 
 //TCP_AUNIT();
 auto dst = *((unsigned int *)MMU.get_phy_addr(RD));
-auto src = RS1 - 0xf8000000;
+unsigned int src;
+GET_LLB_OFF(RS1, src);
 unsigned int col = DMA_SHAPE_COLUMN;
 unsigned int row = DMA_SHAPE_ROW;
 unsigned int stride = STRIDE_DDR;

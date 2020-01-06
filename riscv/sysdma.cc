@@ -4,6 +4,7 @@
 #include "mmu.h"
 #include "processor.h"
 #include "simif.h"
+#include "encoding.h"
 
 // offset of dma registers
 #define DMA_CTLR_OFFSET 0X000
@@ -104,20 +105,27 @@ void sysdma_device_t::dma_core(int ch) {
       }
       direction_t direction;
 
-#define LLB_BUFFER_START 0xf8000000
-#define LLB_BUFFER_END 0xf8800000
+      uint32_t llb_base;
       // only do simple address check
-      if (desc->ddar >= LLB_BUFFER_START && desc->ddar <= LLB_BUFFER_END)
+      if (desc->ddar >= LLB_AXI1_BUFFER_START && desc->ddar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
         direction = SYSDMA_DDR2LLB;
-      else if (desc->dsar >= LLB_BUFFER_START && desc->dsar <= LLB_BUFFER_END)
+        llb_base = LLB_AXI1_BUFFER_START;
+      } else if (desc->dsar >= LLB_AXI1_BUFFER_START && desc->dsar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
         direction = SYSDMA_LLB2DDR;
-      else
+        llb_base = LLB_AXI1_BUFFER_START;
+      } else if (desc->ddar >= LLB_AXI0_BUFFER_START && desc->ddar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
+          direction = SYSDMA_DDR2LLB;
+          llb_base = LLB_AXI0_BUFFER_START;
+      } else if (desc->dsar >= LLB_AXI0_BUFFER_START && desc->dsar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
+          direction = SYSDMA_LLB2DDR;
+          llb_base = LLB_AXI0_BUFFER_START;
+      } else
         std::cout << "sysdma: wrong direction" << std::endl;
 
       switch (direction) {
         // dma transfer from ddr to llb
         case SYSDMA_DDR2LLB: {
-          auto dst = desc->ddar - LLB_BUFFER_START;
+          auto dst = desc->ddar - llb_base;
           auto src = desc->dsar;
           unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
@@ -138,7 +146,7 @@ void sysdma_device_t::dma_core(int ch) {
         // dma transfer from llb to ddr
         case SYSDMA_LLB2DDR: {
           auto dst = desc->ddar;
-          auto src = desc->dsar - LLB_BUFFER_START;
+          auto src = desc->dsar - llb_base;
           unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
           unsigned int stride = desc->bkmr1.bits.stride;
