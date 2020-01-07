@@ -67,12 +67,12 @@ class sysdma_device_t : public abstract_device_t {
   struct dma_desc_t {
     union {
       struct {
-        uint32_t desc_en : 1;  // descriptor mode enabled
-        uint32_t reserved : 1;
-        uint32_t blk_en : 1;      // block mode enabled
-        uint32_t burst_size : 3;  // burst size
+        uint32_t xfer_len : 22;   // transfer length
         uint32_t burst_len : 4;   // burst length
-        uint32_t xfer_len : 22;    // transfer length
+        uint32_t burst_size : 3;  // burst size
+        uint32_t blk_en : 1;      // block mode enabled
+        uint32_t reserved : 1;
+        uint32_t desc_en : 1;  // descriptor mode enabled
       } bits;
       uint32_t full;
     } ctlr;
@@ -82,17 +82,17 @@ class sysdma_device_t : public abstract_device_t {
 
     union {
       struct {
-        uint32_t height : 16;  // block Height in rows
         uint32_t width : 16;   // block Width low 16-bits in bytes
+        uint32_t height : 16;  // block Height in rows
       } bits;
       uint32_t full;
     } bkmr0;
 
     union {
       struct {
-        uint32_t width_high_reserved : 2;
-        uint32_t width_high : 6; // block Width high 6 bits in bytes
         uint32_t stride : 24;  // block stride in bytes
+        uint32_t width_high : 6; // block Width high 6 bits in bytes
+        uint32_t width_high_reserved : 2;
       } bits;
       uint32_t full;
     } bkmr1;
