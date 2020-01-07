@@ -97,6 +97,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
     }
   }
 
+  // a cluster has 8 cores
   int cluster_id = hartids[0]/8;
   switch (cluster_id) {
     case 0:
@@ -116,7 +117,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
       bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, procs));
       break;
   default:
-      throw std::runtime_error("supported core id");
+      throw std::runtime_error("unsupported core id");
   }
 
   clint.reset(new clint_t(procs));
