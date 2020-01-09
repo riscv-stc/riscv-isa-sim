@@ -15,7 +15,7 @@
 #define DMA_CISR_OFFSET 0X014
 #define DMA_CIER_OFFSET 0X018
 #define DMA_CABR_OFFSET 0X01C
-#define DMA_BUF_OFFSET 0X020
+#define DMA_BUF_OFFSET 0X1000
 #define DMA_C0_CTLR_OFFSET 0X100
 #define DMA_C0_DSAR_OFFSET 0X104
 #define DMA_C0_BKMR0_OFFSET 0X10C
@@ -26,18 +26,6 @@
 #define DMA_C1_BKMR0_OFFSET 0X20C
 #define DMA_C1_BKMR1_OFFSET 0X210
 #define DMA_C1_LLPR_OFFSET 0X214
-
-// base of DDR address
-static uint64_t dma_ddr_base[] = {
-  0x800000000, // DMA0
-  0x800000000, // DMA1
-  0x900000000, // DMA2
-  0x900000000, // DMA3
-  0xA00000000, // DMA4
-  0xA00000000, // DMA5
-  0xB00000000, // DMA6
-  0xB00000000, // DMA7
-};
 
 /**
  * @brief constructor
@@ -57,9 +45,7 @@ sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     dma_channel_[i].enabled = false;
     dma_channel_[i].desc_mode_enabled = false;
     dma_channel_[i].llp = 0;
-    if(dma_idx >= sizeof(dma_ddr_base)/sizeof(dma_ddr_base[0]))
-        throw dma_idx;
-    dma_channel_[i].ddr_base = dma_ddr_base[dma_idx];
+    dma_channel_[i].ddr_base = 0;
   }
 }
 
@@ -126,14 +112,13 @@ void sysdma_device_t::dma_core(int ch) {
         // dma transfer from ddr to llb
         case SYSDMA_DDR2LLB: {
           auto dst = desc->ddar - llb_base;
-          auto src = desc->dsar;
+          auto src = desc->dsar + dma_channel_[ch].ddr_base;
           unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
           unsigned int stride = desc->bkmr1.bits.stride;
 
-          // std::cout << "dst:" << hex << (unsigned int)dst << "src:" << hex <<
-          // (unsigned int)desc->dsar << "col:" << col/2 << "row:" << row <<
-          // "stride:" << stride << std::endl;
+//          std::cout << "dst:" << hex << dst << "src:" << hex <<
+//          src << "col:" << col/2 << "row:" << row <<"stride:" << stride << std::endl;
           for (int times = 0; times < 5; times++) {
             if (proxy->dmaXfer(src, dst, Transport::AbstractProxy::DDR2LLB,
                                col / 2,  // FIXME: sew
@@ -145,7 +130,7 @@ void sysdma_device_t::dma_core(int ch) {
 
         // dma transfer from llb to ddr
         case SYSDMA_LLB2DDR: {
-          auto dst = desc->ddar;
+          auto dst = desc->ddar + dma_channel_[ch].ddr_base;;
           auto src = desc->dsar - llb_base;
           unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
           unsigned int row = desc->bkmr0.bits.height;
@@ -281,6 +266,11 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
         ch = 1;
         dma_channel_[ch].xfer_complete = false;
       }
+      break;
+
+    case DMA_CABR_OFFSET:
+      dma_channel_[SYSDMA_DDR2LLB].ddr_base = (uint64_t)(val&0xff) << 32;
+      dma_channel_[SYSDMA_LLB2DDR].ddr_base = (uint64_t)(val>>24) << 32;
       break;
 
     // DMA Channel x Control Register
