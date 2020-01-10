@@ -14,6 +14,7 @@ message Message {
       ddr2core = 6;     // DDR  -> Core, RISCV I/D load with Cache
       ddr2host = 7;     // DDR  -> Host, output data to host
       host2ddr = 8;     // Host -> DDR , input data from host
+      ddr2ddr = 9;      // DDR -> DDR , move data in DDR
     }
     enum StreamType {
       message = 0;

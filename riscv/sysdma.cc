@@ -45,7 +45,8 @@ sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     dma_channel_[i].enabled = false;
     dma_channel_[i].desc_mode_enabled = false;
     dma_channel_[i].llp = 0;
-    dma_channel_[i].ddr_base = 0;
+    dma_channel_[i].ddr_base[DDR_DIR_SRC] = 0;
+    dma_channel_[i].ddr_base[DDR_DIR_DST] = 0;
   }
 }
 
@@ -89,61 +90,42 @@ void sysdma_device_t::dma_core(int ch) {
         dma_channel_[ch].llp = desc->llpr;
         continue;
       }
-      direction_t direction;
+      Transport::AbstractProxy::DmaDir dir;
 
-      uint32_t llb_base;
+      uint64_t dst_base, src_base;
       // only do simple address check
       if (desc->ddar >= LLB_AXI1_BUFFER_START && desc->ddar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
-        direction = SYSDMA_DDR2LLB;
-        llb_base = LLB_AXI1_BUFFER_START;
+        dir = Transport::AbstractProxy::DDR2LLB;
+        dst_base = LLB_AXI1_BUFFER_START;
+        src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
       } else if (desc->dsar >= LLB_AXI1_BUFFER_START && desc->dsar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
-        direction = SYSDMA_LLB2DDR;
-        llb_base = LLB_AXI1_BUFFER_START;
+        dir = Transport::AbstractProxy::LLB2DDR;
+        src_base = LLB_AXI1_BUFFER_START;
+        dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
       } else if (desc->ddar >= LLB_AXI0_BUFFER_START && desc->ddar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
-          direction = SYSDMA_DDR2LLB;
-          llb_base = LLB_AXI0_BUFFER_START;
+          dir = Transport::AbstractProxy::DDR2LLB;
+          dst_base = LLB_AXI0_BUFFER_START;
+          src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
       } else if (desc->dsar >= LLB_AXI0_BUFFER_START && desc->dsar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
-          direction = SYSDMA_LLB2DDR;
-          llb_base = LLB_AXI0_BUFFER_START;
-      } else
-        std::cout << "sysdma: wrong direction" << std::endl;
+          dir = Transport::AbstractProxy::LLB2DDR;
+          src_base = LLB_AXI0_BUFFER_START;
+          dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
+      } else {
+          dir = Transport::AbstractProxy::DDR2DDR;
+          src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
+          dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
+      }
 
-      switch (direction) {
-        // dma transfer from ddr to llb
-        case SYSDMA_DDR2LLB: {
-          auto dst = desc->ddar - llb_base;
-          auto src = desc->dsar + dma_channel_[ch].ddr_base;
-          unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
-          unsigned int row = desc->bkmr0.bits.height;
-          unsigned int stride = desc->bkmr1.bits.stride;
+      auto dst = desc->ddar - dst_base;
+      auto src = desc->dsar + src_base;
+      unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
+      unsigned int row = desc->bkmr0.bits.height;
+      unsigned int stride = desc->bkmr1.bits.stride;
 
-//          std::cout << "dst:" << hex << dst << "src:" << hex <<
-//          src << "col:" << col/2 << "row:" << row <<"stride:" << stride << std::endl;
-          for (int times = 0; times < 5; times++) {
-            if (proxy->dmaXfer(src, dst, Transport::AbstractProxy::DDR2LLB,
-                               col / 2,  // FIXME: sew
+      for (int times = 0; times < 5; times++) {
+            if (proxy->dmaXfer(dst, src, dir, col / 2,  // FIXME: sew
                                row, stride))
               break;
-          }
-          break;
-        }
-
-        // dma transfer from llb to ddr
-        case SYSDMA_LLB2DDR: {
-          auto dst = desc->ddar + dma_channel_[ch].ddr_base;;
-          auto src = desc->dsar - llb_base;
-          unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
-          unsigned int row = desc->bkmr0.bits.height;
-          unsigned int stride = desc->bkmr1.bits.stride;
-
-          for (int times = 0; times < 5; times++) {
-            if (proxy->dmaXfer(dst, src, Transport::AbstractProxy::LLB2DDR,
-                               col / 2, row, stride))
-              break;
-          }
-
-          break;
-        }
       }
 
       dma_channel_[ch].llp = desc->llpr;
@@ -269,8 +251,10 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
       break;
 
     case DMA_CABR_OFFSET:
-      dma_channel_[SYSDMA_DDR2LLB].ddr_base = (uint64_t)(val&0xff) << 32;
-      dma_channel_[SYSDMA_LLB2DDR].ddr_base = (uint64_t)(val>>24) << 32;
+      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
+      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
+      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
+      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
       break;
 
     // DMA Channel x Control Register

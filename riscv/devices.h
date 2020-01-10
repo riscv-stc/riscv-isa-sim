@@ -117,8 +117,8 @@ class sysdma_device_t : public abstract_device_t {
 
   // dma direction
   enum direction_t {
-    SYSDMA_DDR2LLB = 0,
-    SYSDMA_LLB2DDR,
+    SYSDMA_CHAN0   = 0,
+    SYSDMA_CHAN1   = 1,
   };
 
   // dma thread
@@ -132,13 +132,19 @@ class sysdma_device_t : public abstract_device_t {
   // size of dma buffer
   #define DMA_BUF_SIZE 0x1000
   char dma_buf_[DMA_BUF_SIZE];
+  typedef enum {
+    DDR_DIR_SRC = 0,
+    DDR_DIR_DST,
+    DDR_DIR_MAX,
+  };
+
   struct {
     bool enabled;
     bool desc_mode_enabled;
     unsigned long llp;
     bool xfer_complete = false;
     bool busy = false;
-    uint64_t ddr_base;
+    uint64_t ddr_base[DDR_DIR_MAX];
   } dma_channel_[DMA_MAX_CHANNEL_NUMER];
 };
 

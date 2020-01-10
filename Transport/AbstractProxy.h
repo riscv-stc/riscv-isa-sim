@@ -40,8 +40,9 @@ class AbstractProxy {
 
   // direction of DMA
   enum DmaDir {
-    LLB2DDR  = 0,   // from LLB to DDR
-    DDR2LLB   = 1,  // from DDR to LLB
+    LLB2DDR  = 0,  // from LLB to DDR
+    DDR2LLB  = 1,  // from DDR to LLB
+    DDR2DDR  = 2,  // from DDR to DDR
   };
 
   // pure virtual deconstructor, used for abstract class
@@ -79,7 +80,7 @@ class AbstractProxy {
    * @param streamDir: direction of dma
    * @return true - success; false - fail
    */
-  virtual bool dmaXfer(uint64_t ddrAddr, uint32_t llbAddr, DmaDir dir,
+  virtual bool dmaXfer(uint64_t dstaddr, uint64_t srcaddr, DmaDir dir,
     uint32_t column, uint32_t len, uint32_t ddrStride) = 0;
 
   /**
