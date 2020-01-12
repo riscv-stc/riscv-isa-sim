@@ -81,7 +81,7 @@ class AbstractProxy {
    * @return true - success; false - fail
    */
   virtual bool dmaXfer(uint64_t dstaddr, uint64_t srcaddr, DmaDir dir,
-    uint32_t column, uint32_t len, uint32_t ddrStride) = 0;
+    uint32_t column, uint32_t len, uint32_t srcStride) = 0;
 
   /**
    * @brief implement dmaXferPoll function
