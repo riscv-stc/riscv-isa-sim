@@ -123,7 +123,7 @@ void sysdma_device_t::dma_core(int ch) {
       unsigned int stride = desc->bkmr1.bits.stride;
 
       for (int times = 0; times < 5; times++) {
-            if (proxy->dmaXfer(dst, src, dir, col / 2,  // FIXME: sew
+            if (proxy->dmaXfer(dst, src, dir, col,
                                row, stride))
               break;
       }

@@ -25,7 +25,7 @@ for (int core_id = 0; core_id < 32; core_id++)
     if (core_map & (0x1 << core_id)) {
         for (int times = 0; times < 5; times++) {
             if (likely(proxy->tcpXfer(0, core_id, dst, 0, col * row * 2, src,
-                   Transport::AbstractProxy::LLB2CORE, col * 2, 0, stride)))
+                   Transport::AbstractProxy::LLB2CORE, col * 2, stride)))
             break;
         }
     }

@@ -61,7 +61,7 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
 bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                         uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
                         StreamDir streamDir,
-                        uint32_t column, uint32_t dstStride, uint32_t srcStride) {
+                        uint32_t column, uint32_t srcStride) {
   // prepare message data
   Message request;
   switch (streamDir) {
@@ -93,7 +93,6 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
   }
 
   request.set_column(column);
-  request.set_dststride(dstStride);
   request.set_srcstride(srcStride);
 
   // fprintf(stdout, "[tcpXfer] direction:%d, dst:0x%08x src:0x%08x type:%d data size:%d\n",
@@ -124,7 +123,7 @@ bool GrpcProxy::dmaXfer(uint64_t dstaddr, uint64_t srcaddr, DmaDir dir,
 
   // FIXME: need remove and use line xfer
   if (srcStride == 0)
-    srcStride =  column * 2;
+    srcStride =  column;
 
   switch (dir) {
   case LLB2DDR:
@@ -142,7 +141,7 @@ bool GrpcProxy::dmaXfer(uint64_t dstaddr, uint64_t srcaddr, DmaDir dir,
   request.set_srcaddr(srcaddr);
   request.set_dstaddr(dstaddr);
   request.set_srcstride(srcStride);
-  request.set_length(column * row * 2); // FIXME: add sew
+  request.set_length(column * row);
   request.set_column(column);
   //fprintf(stdout, "[dmaXfer] direction:%d ddr addr:0x%lx llb addr:0x%x data size:%d, stride %d\n",
   //        dir, ddrAddr, llbAddr, column * row * 2, ddrStride);

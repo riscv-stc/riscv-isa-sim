@@ -12,6 +12,6 @@ unsigned int stride = STRIDE_DDR;
 
 for (int times = 0; times < 5; times++) {
   if (likely(proxy->dmaXfer(dst, src, Transport::AbstractProxy::DDR2LLB,
-    col, row, stride)))
+    col*2, row, stride)))
     break;
 }
