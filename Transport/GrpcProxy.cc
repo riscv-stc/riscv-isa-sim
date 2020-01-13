@@ -64,6 +64,10 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                         uint32_t column, uint32_t srcStride) {
   // prepare message data
   Message request;
+
+  if (srcStride == 0)
+    srcStride = column;
+
   switch (streamDir) {
   case CORE2CORE:
     request.set_source(mCoreId);
@@ -121,9 +125,8 @@ bool GrpcProxy::dmaXfer(uint64_t dstaddr, uint64_t srcaddr, DmaDir dir,
   // prepare message data
   Message request;
 
-  // FIXME: need remove and use line xfer
   if (srcStride == 0)
-    srcStride =  column;
+    srcStride = column;
 
   switch (dir) {
   case LLB2DDR:
