@@ -118,15 +118,22 @@ void sysdma_device_t::dma_core(int ch) {
 
       auto dst = desc->ddar - dst_base;
       auto src = desc->dsar + src_base;
-      unsigned int col = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
-      unsigned int row = desc->bkmr0.bits.height;
-      unsigned int stride = desc->bkmr1.bits.stride;
+      // for linear mode, row is 1, col is xfer len, stride is 0
+      unsigned int col = desc->ctlr.bits.blk_en?
+                  desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width : desc->ctlr.bits.xfer_len;
+      unsigned int row =  desc->ctlr.bits.blk_en? desc->bkmr0.bits.height : 1;
+      unsigned int stride =  desc->ctlr.bits.blk_en? desc->bkmr1.bits.stride : 0;
 
-      for (int times = 0; times < 5; times++) {
-            if (proxy->dmaXfer(dst, src, dir, col,
-                               row, stride))
+      if(stride && stride < col)
+          throw std::runtime_error("stride is smaller than col");
+
+      int times;
+      for (times = 0; times < 5; times++) {
+            if (proxy->dmaXfer(dst, src, dir, col, row, stride))
               break;
       }
+      if(times == 5)
+          throw std::runtime_error("dmaXfer retry 5 times and fail");
 
       dma_channel_[ch].llp = desc->llpr;
     }
@@ -168,7 +175,7 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     }
 
     default:
-      if (DMA_BUF_OFFSET<=addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
+      if (addr >=DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
           *((uint32_t*)bytes) = *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]);
       }else {
           std::cout << "sysdma: unsupported load address " << addr << std::endl;
@@ -291,7 +298,7 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
     }
 
     default:
-      if (DMA_BUF_OFFSET<=addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
+      if (addr >= DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
           *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]) = val;
       } else {
           std::cout << "sysdma: unsupported store register offset: " << addr
