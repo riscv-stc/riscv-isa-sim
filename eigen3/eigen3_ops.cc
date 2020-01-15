@@ -124,7 +124,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     int i, j, k, ii, jj, kk;
     int row, col;
     half *rs1_start;
-    half *left_val;
+    half *left_val, *row_val, *col_val;
     half *start;
     half val;
 
@@ -235,10 +235,35 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     /*calculate convolution*/
     Map_half left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
-    rd_matrix = left_matrix * rs2_matrix;
+    row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
+    col_val = (half *)malloc(okh * okw * in_c * sizeof(half));
+    Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_half col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    half odd;
+    half even;
+    //rd_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < out_c; j++) {
+            row_matrix = left_matrix.row(i);
+            col_matrix = rs2_matrix.col(j).transpose();
+            odd =(half) 0;
+            even =(half) 0;
+            for (k = 0; k < okh * okw * in_c; k++) {
+                if (k / 2)
+                    even += row_matrix(0, k) * col_matrix(0, k);
+                else
+                    odd += row_matrix(0, k) * col_matrix(0, k);
+            }
+            rd_matrix(i, j) = even + odd;
+        }
+    }
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
+
+    free(row_val);
+    free(col_val);
+    free(left_val);
 
     return 0;
 }
@@ -1416,6 +1441,10 @@ int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
  */
 int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
 {
+    half *row_val;
+    half *col_val;
+    int i, j, k;
+    half odd, even;
     /* param check */
     if (ss->shape1_column != ss->shape2_row) {
         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
@@ -1426,6 +1455,11 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    row_val = (half *)malloc(ss->shape1_column * sizeof(half));
+    col_val = (half *)malloc(ss->shape1_column * sizeof(half));
+    Map_half row_matrix(row_val, 1, ss->shape1_column, DynStride(ss->shape1_column, 1));
+    Map_half col_matrix(col_val, 1, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1434,10 +1468,27 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_matrix = rs1_matrix * rs2_matrix;
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            even = (half)0;
+            odd = (half)0;
+            row_matrix = rs1_matrix.row(i);
+            col_matrix = rs2_matrix.col(j).transpose();
+            for (k = 0; k < ss->shape1_column; k++) {
+                if (k / 2)
+                    even += row_matrix(0, k) * col_matrix(0, k);
+                else
+                    odd += row_matrix(0, k) * col_matrix(0, k);
+            }
+            rd_matrix(i, j) = even + odd;
+        }
+    }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
 
+    free(row_val);
+    free(col_val);
     return 0;
 }
 
