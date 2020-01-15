@@ -98,7 +98,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   }
 
   // a cluster has 8 cores
-  int cluster_id = hartids[0]/8;
+  int cluster_id;
+  if (hartids.size() == 0)
+      cluster_id = 0;
+  else
+     cluster_id = hartids[0]/8;
   switch (cluster_id) {
     case 0:
       bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, procs));
