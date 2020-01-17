@@ -249,7 +249,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
             odd =(half) 0;
             even =(half) 0;
             for (k = 0; k < okh * okw * in_c; k++) {
-                if (k / 2)
+                if (! (k % 2))
                     even += row_matrix(0, k) * col_matrix(0, k);
                 else
                     odd += row_matrix(0, k) * col_matrix(0, k);
@@ -1476,7 +1476,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
             row_matrix = rs1_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
             for (k = 0; k < ss->shape1_column; k++) {
-                if (k / 2)
+                if (!(k % 2))
                     even += row_matrix(0, k) * col_matrix(0, k);
                 else
                     odd += row_matrix(0, k) * col_matrix(0, k);
