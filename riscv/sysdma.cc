@@ -92,32 +92,30 @@ void sysdma_device_t::dma_core(int ch) {
       }
       Transport::AbstractProxy::DmaDir dir;
 
-      uint64_t dst_base, src_base;
+      uint64_t dst, src;
       // only do simple address check
       if (desc->ddar >= LLB_AXI1_BUFFER_START && desc->ddar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
         dir = Transport::AbstractProxy::DDR2LLB;
-        dst_base = LLB_AXI1_BUFFER_START;
-        src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
+        dst = desc->ddar - LLB_AXI1_BUFFER_START;
+        src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
       } else if (desc->dsar >= LLB_AXI1_BUFFER_START && desc->dsar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
         dir = Transport::AbstractProxy::LLB2DDR;
-        src_base = LLB_AXI1_BUFFER_START;
-        dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
+        src = desc->dsar - LLB_AXI1_BUFFER_START;
+        dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
       } else if (desc->ddar >= LLB_AXI0_BUFFER_START && desc->ddar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
           dir = Transport::AbstractProxy::DDR2LLB;
-          dst_base = LLB_AXI0_BUFFER_START;
-          src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
+          dst = desc->ddar - LLB_AXI0_BUFFER_START;
+          src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
       } else if (desc->dsar >= LLB_AXI0_BUFFER_START && desc->dsar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
           dir = Transport::AbstractProxy::LLB2DDR;
-          src_base = LLB_AXI0_BUFFER_START;
-          dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
+          src = desc->dsar - LLB_AXI0_BUFFER_START;
+          dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
       } else {
           dir = Transport::AbstractProxy::DDR2DDR;
-          src_base = dma_channel_[ch].ddr_base[DDR_DIR_SRC];
-          dst_base = dma_channel_[ch].ddr_base[DDR_DIR_DST];
+          src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
+          dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
       }
 
-      auto dst = desc->ddar - dst_base;
-      auto src = desc->dsar + src_base;
       // for linear mode, row is 1, col is xfer len, stride is 0
       unsigned int col = desc->ctlr.bits.blk_en?
                   desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width : desc->ctlr.bits.xfer_len;
