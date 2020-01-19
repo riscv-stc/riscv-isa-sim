@@ -256,10 +256,11 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
       break;
 
     case DMA_CABR_OFFSET:
-      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
-      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
-      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
-      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
+      // don't set ddr base address, since local address is enough
+      // dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
+      // dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
+      // dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
+      // dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
       break;
 
     // DMA Channel x Control Register
