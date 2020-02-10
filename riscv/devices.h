@@ -82,16 +82,6 @@ class sysdma_device_t : public abstract_device_t {
 
     union {
       struct {
-        uint32_t c0_sa : 8;  // source address Base for Ccannel 0
-        uint32_t c0_da : 8;  // destination address Base for Ccannel 0
-        uint32_t c1_sa : 8;  // source address Base for Ccannel 1
-        uint32_t c1_da : 8;  // destination address Base for Ccannel 1
-      } bits;
-      uint32_t full;
-    } cabr;
-
-    union {
-      struct {
         uint32_t width : 16;   // block Width low 16-bits in bytes
         uint32_t height : 16;  // block Height in rows
       } bits;
