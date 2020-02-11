@@ -21,11 +21,13 @@
 #define DMA_C0_BKMR0_OFFSET 0X10C
 #define DMA_C0_BKMR1_OFFSET 0X110
 #define DMA_C0_LLPR_OFFSET 0X114
+#define DMA_C0_PCNT_OFFSET 0X118
 #define DMA_C1_CTLR_OFFSET 0X200
 #define DMA_C1_DSAR_OFFSET 0X204
 #define DMA_C1_BKMR0_OFFSET 0X20C
 #define DMA_C1_BKMR1_OFFSET 0X210
 #define DMA_C1_LLPR_OFFSET 0X214
+#define DMA_C1_PCNT_OFFSET 0X218
 
 /**
  * @brief constructor
@@ -171,6 +173,12 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
       *((uint32_t*)bytes) = ret;
       return true;
     }
+
+    //DMA performance counter, fake return 0
+    case DMA_C0_PCNT_OFFSET:
+    case DMA_C1_PCNT_OFFSET:
+      *((uint32_t*)bytes) = 0;
+      return true;
 
     default:
       if (addr >=DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
