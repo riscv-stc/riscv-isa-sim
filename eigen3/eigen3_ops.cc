@@ -45,8 +45,10 @@ MY_MATRIX_DEFINE(float)
 #undef MY_MATRIX_DEFINE
 
 #define SHAPE_STRIDE_INFO(ss) do {\
-        cout << endl << __FUNCTION__ << endl;\
-        shapestride_dbg(ss);\
+        if (debug) {\
+           cout << endl << __FUNCTION__ << endl;\
+           shapestride_dbg(ss);\
+        } \
     } while(0)
 
 #define MECONV_INFO(ss) do {\
