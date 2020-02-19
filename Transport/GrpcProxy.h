@@ -45,7 +45,7 @@ class GrpcProxy : public AbstractProxy {
    */
   bool tcpXfer(uint16_t targetChipId, uint16_t targetCoreId, uint32_t targetAddr, char *data,
             uint32_t dataSize, uint32_t sourceAddr, StreamDir streamDir,
-            uint32_t column = 0, uint32_t srcStride = 0) override;
+            uint32_t column = 0, uint32_t srcStride = 0, uint32_t coremap = 0) override;
 
   /**
    * @brief implement dmaXfer function

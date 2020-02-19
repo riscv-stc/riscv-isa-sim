@@ -61,7 +61,7 @@ bool GrpcProxy::init(int coreId, std::string serverAddr, int serverPort,
 bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
                         uint32_t targetAddr, char *data, uint32_t dataSize, uint32_t sourceAddr,
                         StreamDir streamDir,
-                        uint32_t column, uint32_t srcStride) {
+                        uint32_t column, uint32_t srcStride, uint32_t coremap) {
   // prepare message data
   Message request;
 
@@ -79,11 +79,12 @@ bool GrpcProxy::tcpXfer(uint16_t targetChipId, uint16_t targetCoreId,
     break;
 
   case LLB2CORE:
-    request.set_target(targetCoreId);
+    request.set_source(mCoreId);
     request.set_srcaddr(sourceAddr);
     request.set_dstaddr(targetAddr);
     request.set_direction(Message::llb2core);
     request.set_length(dataSize);
+    request.set_coremap(coremap);
     break;
 
   case CORE2LLB:
