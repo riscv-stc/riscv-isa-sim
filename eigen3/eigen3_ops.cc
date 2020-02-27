@@ -482,8 +482,8 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
         cout << "rs2:" << endl << rs2 << endl;
     }
     /* param check */
-    if ((rs1 == rd) && (ss->stride_rs1 != ss->stride_rd)) {
-        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must equal stride_rd" << endl;
+    if ((rs1 == rd) && ((ss->stride_rs1 << 1) < ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must larger or equal stride_rd" << endl;
         return -BR_EPARAM;
     }
 
