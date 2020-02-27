@@ -5,6 +5,7 @@
 #include "processor.h"
 #include "simif.h"
 #include "encoding.h"
+#include "unistd.h"
 
 // offset of dma registers
 #define DMA_CTLR_OFFSET 0X000
@@ -131,6 +132,7 @@ void sysdma_device_t::dma_core(int ch) {
       for (times = 0; times < 5; times++) {
             if (proxy->dmaXfer(dst, src, dir, col, row, stride))
               break;
+          sleep(1);
       }
       if(times == 5)
           throw std::runtime_error("dmaXfer retry 5 times and fail");
