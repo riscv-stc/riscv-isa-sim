@@ -273,6 +273,8 @@ private:
 #define CONV_S_KERNEL   (STATE.conv_S_kernel)
 #define CONV_KERNEL     (STATE.conv_kernel)
 #define CONV_PADDING    (STATE.conv_padding)
+#define M_DEQUANT_COEFF (STATE.m_dequant_coeff)
+#define CONV_DEQUANT_COEFF (STATE.conv_dequant_coeff)
 
 //#define TMODE	(STATE.tmode)
 //

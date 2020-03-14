@@ -450,6 +450,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_CONV_PADDING:
       state.conv_padding = val;
       break;
+    case CSR_M_DEQUANT_COEFF:
+      state.m_dequant_coeff = val;
+      break;
+    case CSR_CONV_DEQUANT_COEFF:
+      state.conv_dequant_coeff = val;
+      break;
     case CSR_NCP_BUSY:
         break; //read only
     case CSR_MTE_COREMAP:
@@ -785,6 +791,14 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return state.conv_padding;
+    case CSR_M_DEQUANT_COEFF:
+      if(!supports_extension('V'))
+        break;
+      return state.m_dequant_coeff;
+    case CSR_CONV_DEQUANT_COEFF:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_dequant_coeff;
     case CSR_NCP_BUSY:
       if(!supports_extension('V'))
         break;

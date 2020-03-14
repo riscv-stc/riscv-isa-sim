@@ -171,6 +171,8 @@ struct state_t
   uint32_t conv_S_kernel;
   uint32_t conv_kernel;
   uint32_t conv_padding;
+  uint32_t  m_dequant_coeff;
+  uint32_t  conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_coremap;
   uint32_t mte_icdest;
