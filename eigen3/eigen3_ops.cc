@@ -497,6 +497,54 @@ int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStr
     return 0;
 }
 
+/**
+ * veemul_x8_hf_mf() veemul.x8_hf_mf
+ *
+ * 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veemul_x8_hf_mf(half *rs1, int8_t *rd, half rs2, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    half val;
+
+    if (debug)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul x8_hf" << rs2 << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    /* TODO: param check */
+    if ((rs1 == rd) && ((ss->stride_rs1 << 1) < ss->stride_rd)) {
+        cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must larger or equal stride_rd" << endl;
+        return -BR_EPARAM;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            val = rs2 * rs1_matrix(row, col);
+            if (val > (half)127)
+                rd_matrix(row, col) = 127;
+            else if (val < (half)-128)
+                rd_matrix(row, col) = -128;
+            else
+                rd_matrix(row, col) = (int8_t)val;
+        }
+    }
+    if (debug)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
 
 /**
  * veemul_mm() veemul.mm

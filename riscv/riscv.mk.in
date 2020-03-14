@@ -340,6 +340,7 @@ riscv_insn_list = \
 	vecvt_x8_hf_m \
 	veemul_x32_mf \
 	veemul_x32_mv \
+	veemul_x8_hf_mf \
 	vid_v \
 	viota_m \
 	vlb_v \

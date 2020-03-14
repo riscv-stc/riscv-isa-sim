@@ -182,6 +182,7 @@ public:
     int veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
     int veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss);
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
+    int veemul_x8_hf_mf(half *rs1, int8_t *rd, half rs2, struct ShapeStride *ss);
 
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
