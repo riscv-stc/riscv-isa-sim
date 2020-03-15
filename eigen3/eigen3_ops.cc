@@ -271,16 +271,17 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
 }
 
 /**
- * meconv_x8_mm() meconv.x8.mm
+ * meconv_x8_mm_base() meconv.x8.mm
  *
  * 标量和矩阵元素广播乘 M = M1 * f
  * @param rs1 M1,源操作矩阵基地址
  * @param rd M,目的矩阵基地址
  * @param rs2 f,源标量操作数
  * @param ss 矩阵形状描述
+ * @param outputfp16, 1 output as fp16, 0 output as int32
  * @return 执行结果
  */
-int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk;
@@ -315,8 +316,14 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    assert(out_stride % 4 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 2 : out_c;
+    if (outfp16 == 0) { /*Int 32*/
+        assert(out_stride % 4 == 0);
+        out_stride = out_stride > 0 ? out_stride >> 2 : out_c;
+    }  else {
+        assert(out_stride % 2 == 0);
+        out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    }
+    
 
     //get the kernel shape
     kw = (ss->conv_kernel >> 24) & 0xff;
@@ -403,13 +410,62 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
 
     /*calculate convolution*/
     Map_int8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int32_t rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+    int32_t *rd_buf;
+    int out_stride_int32;
+    if (outfp16 == 0) {
+        rd_buf =  (int32_t *)rd;
+        out_stride_int32 = out_stride;
+    } else {
+        rd_buf = (int32_t *)malloc(out_h * out_w *out_c * sizeof(int32_t));
+        out_stride_int32 = out_c;
+    }
+    Map_int32_t rd_matrix(rd_buf, out_h * out_w, out_c, DynStride(out_stride_int32, 1));
     rd_matrix = left_matrix.cast<int32_t>() * rs2_matrix.cast<int32_t>();
-
+       
     if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;        
 
+    if (outfp16) {
+        Map_half rd_fp_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+        for (int row = 0; row < out_h * out_w; row++)
+            for (int col = 0; col < out_c; col++)
+                rd_fp_matrix(row, col) = ss->dequant_coeff * rd_matrix(row, col);
+        free(rd_buf);
+    }
+
+    free(left_val);
     return 0;
+}
+
+/**
+ * meconv_x8_mm() meconv.x8.mm
+ *
+ * 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+
+int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+{
+    return meconv_x8_mm_base(rs1, rd, rs2, ss, 0);
+}
+
+/**
+ * meconv_x8_mm() meconv.x8.mm
+ *
+ * 标量和矩阵元素广播乘 M = M1 * f
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 f,源标量操作数
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::meconv_hf_x8_mm(const int8_t *rs1, half *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+{
+    return meconv_x8_mm_base(rs1, rd, rs2, ss, 1);
 }
 
 #define STRIDE_DEFAULT
@@ -522,8 +578,8 @@ int CustomInsns::veemul_x8_hf_mf(half *rs1, int8_t *rd, half rs2, struct ShapeSt
         cout << "rs2:" << endl << rs2 << endl;
     }
 
-    /* TODO: param check */
-    if ((rs1 == rd) && ((ss->stride_rs1 << 1) < ss->stride_rd)) {
+    /*  param check */
+    if ((rs1 == rd) && ((ss->stride_rs1) < ss->stride_rd)) {
         cout << __FUNCTION__ << ": when rs1 equal rs2, stride_rs1 must larger or equal stride_rd" << endl;
         return -BR_EPARAM;
     }
@@ -1581,6 +1637,56 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
         cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
+}
+
+/**
+ * memul_hf_x8_mm() memul.x8.mm
+ *
+ * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
+ * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 M2,源操作矩阵二基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStride *ss, half dequant_coeff)
+{
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    ss->stride_rs1 = ss->stride_rs1 << 1;
+    ss->stride_rs2 = ss->stride_rs2 << 1;
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+
+    int32_t *rd_buf = malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
+    Map_int32_t rd_matrix(rd_buf, ss->shape1_row, ss->shape2_column, DynStride(ss->shape2_column , 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
+    }
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    rd_matrix = rs1_matrix.cast<int32_t>() * rs2_matrix.cast<int32_t>();
+
+    Map_half rd_fp_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd , 1));
+    for (int row = 0; row < ss->shape1_row; row++)
+        for (int col = 0; col < ss->shape2_column; col++)
+            rd_fp_matrix(row, col) = dequant_coeff * rd_matrix(row, col);
+    free(rd_buf);
+
+    if (debug)
+        cout << "rd:\n" << rd_fp_matrix << endl;
+
+    return 0;
+     
 }
 
 /**

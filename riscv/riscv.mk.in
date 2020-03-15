@@ -321,11 +321,13 @@ riscv_insn_list = \
 	vemin_mv \
 	memul_mm \
 	memul_x8_mm \
+	memul_hf_x8_mm \
 	mov_f \
 	mov_m \
 	mov_v \
 	meconv_mm \
 	meconv_x8_mm \
+	meconv_hf_x8_mm \
         veexp_m \
 	verecip_m \
 	vesqrt_m  \

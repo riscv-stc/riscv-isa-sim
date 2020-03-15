@@ -705,11 +705,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(pld);
   DEFINE_RTYPE(icmov);
   DEFINE_RTYPE(memul_x8_mm);
+  DEFINE_RTYPE(memul_hf_x8_mm);
   DEFINE_R3TYPE(verecip_m);
   DEFINE_R3TYPE(vesqrt_m);
   DEFINE_R3TYPE(veexp_m);
-  DEFINE_R4TYPE(meconv_mm);
-  DEFINE_R4TYPE(meconv_x8_mm);
+  DEFINE_RTYPE(meconv_mm);
+  DEFINE_RTYPE(meconv_x8_mm);
+  DEFINE_RTYPE(meconv_hf_x8_mm);
   
   DEFINE_RTYPE(vsetvl);
   DEFINE_SV8TYPE(vsetvli);

@@ -128,6 +128,8 @@ struct ConvShapeStride
 
     /* CSR padding */
     unsigned int conv_padding;
+
+    half dequant_coeff;
 };
 
 /**
@@ -149,6 +151,7 @@ class CustomInsns
 private:
     void shapestride_dbg(struct ShapeStride *ss);
     void meconv_dbg(struct ConvShapeStride *ss);
+    int meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
 public:
     int debug;
 
@@ -172,6 +175,7 @@ public:
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss);
+    int memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStride *ss, half dequant_coeff);
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
 
     int vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
@@ -218,6 +222,7 @@ public:
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_hf_x8_mm(const int8_t *rs1, half *rd, const int8_t *rs2, struct ConvShapeStride *ss);
 };
 
 /**
