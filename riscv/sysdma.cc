@@ -65,7 +65,7 @@ void sysdma_device_t::dma_core(int ch) {
   Transport::AbstractProxy* proxy = nullptr;
 
   while (1) {
-    std::unique_lock<std::mutex> lock(thread_lock_[ch]);
+    std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
     thread_cond_[ch].wait(lock);
 
     if (proxy == nullptr) {
@@ -161,8 +161,20 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     // get status of dma transfer
     case DMA_CISR_OFFSET: {
       uint32_t ret = 0;
-      if (dma_channel_[0].xfer_complete) ret |= 0x1;
-      if (dma_channel_[1].xfer_complete) ret |= 0x4;
+      std::unique_lock<std::mutex> lock0(thread_lock_[0], std::defer_lock);
+      if (lock0.try_lock()) {
+        if (dma_channel_[0].xfer_complete) {
+          ret |= 0x1;
+        }
+        lock0.unlock();
+      }
+      std::unique_lock<std::mutex> lock1(thread_lock_[1], std::defer_lock);
+      if (lock1.try_lock()) {
+        if (dma_channel_[1].xfer_complete) {
+          ret |= 0x4;
+        }
+        lock1.unlock();
+      }
       *((uint32_t*)bytes) = ret;
       return true;
     }
@@ -170,8 +182,24 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     // get status of dma channel busy
     case DMA_CSTAT_OFFSET: {
       uint32_t ret = 0;
-      if (dma_channel_[0].busy) ret |= 0x1;
-      if (dma_channel_[1].busy) ret |= 0x2;
+      std::unique_lock<std::mutex> lock0(thread_lock_[0], std::defer_lock);
+      if (lock0.try_lock()) {
+        if (dma_channel_[0].busy) {
+          ret |= 0x1;
+        }
+        lock0.unlock();
+      } else {
+        ret |= 0x1;
+      }
+      std::unique_lock<std::mutex> lock1(thread_lock_[1], std::defer_lock);
+      if (lock1.try_lock()) {
+        if (dma_channel_[1].busy) {
+          ret |= 0x2;
+        }
+        lock1.unlock();
+      } else {
+        ret |= 0x2;
+      }
       *((uint32_t*)bytes) = ret;
       return true;
     }
