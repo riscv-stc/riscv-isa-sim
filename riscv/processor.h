@@ -163,6 +163,7 @@ struct state_t
   uint32_t vxrm;
   uint32_t vl;
   uint32_t vtype;
+  const uint32_t vlenb = VREG_LENGTH;
   
   uint32_t conv_FM_in;
   uint32_t conv_Depth_in;

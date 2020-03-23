@@ -165,6 +165,19 @@
 #define SYSDMA6_BASE       0xDFF00000
 #define SYSDMA7_BASE       0xE7F00000
 
+// two axi bus access same llb buffer
+#define LLB_AXI0_BUFFER_START 0xf8000000
+#define LLB_AXI1_BUFFER_START 0xfa000000
+#define LLB_BUFFER_SIZE 0x800000
+
+#define GET_LLB_OFF(src, dst) do {                                                 \
+    if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
+        dst = src - LLB_AXI0_BUFFER_START;                                         \
+    else if  (LLB_AXI1_BUFFER_START <= src < LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE)\
+        dst = src - LLB_AXI1_BUFFER_START;                                         \
+    else                                                                           \
+        throw std::runtime_error("wrong llb address");                             \
+} while(0)
 
 /* page table entry (PTE) fields */
 #define PTE_V     0x001 /* Valid */
@@ -1080,11 +1093,11 @@
 #define MATCH_VFEXP_V 0x8c009057
 #define MASK_VFEXP_V  0xfc0ff07f
 #define MATCH_VLEPI_V 0xfc00007b
-#define MASK_VLEPI_V  0xfdf0707f
+#define MASK_VLEPI_V  0xfc00707f
 #define MATCH_VLSEPI_V 0xfc00107b
 #define MASK_VLSEPI_V  0xfc00707f
 #define MATCH_VSEPI_V 0xf800007b
-#define MASK_VSEPI_V  0xfdf0707f
+#define MASK_VSEPI_V  0xfc00707f
 #define MATCH_VSSEPI_V 0xf800107b
 #define MASK_VSSEPI_V  0xfc00707f
 #define MATCH_VECVT_HF_X8_M 0x3000107b
@@ -1209,6 +1222,7 @@
 #define CSR_VXRM 0xa
 #define CSR_VL 0xc20
 #define CSR_VTYPE 0xc21
+#define CSR_VLENB 0xc22
 #define CSR_SHAPE_S1 0x400
 #define CSR_SHAPE_S2 0x401
 #define CSR_STRIDE_D 0x402
@@ -1224,7 +1238,7 @@
 #define CSR_CONV_S_KERNEL 0x40c
 #define CSR_CONV_KERNEL 0x40d
 #define CSR_CONV_PADDING 0x40e
-#define CSR_M_DEQUANT_COEFF    0x410
+#define CSR_M_DEQUANT_COEFF 0x410
 #define CSR_CONV_DEQUANT_COEFF 0x411
 #define CSR_NCP_BUSY 0x41f
 #define CSR_MTE_COREMAP 0x420
@@ -1494,21 +1508,6 @@
 #define CAUSE_LOAD_PAGE_FAULT 0xd
 #define CAUSE_STORE_PAGE_FAULT 0xf
 #endif
-
-// two axi bus access same llb buffer
-#define LLB_AXI0_BUFFER_START 0xf8000000
-#define LLB_AXI1_BUFFER_START 0xfa000000
-#define LLB_BUFFER_SIZE 0x800000
-
-#define GET_LLB_OFF(src, dst) do {                                                 \
-    if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
-        dst = src - LLB_AXI0_BUFFER_START;                                         \
-    else if  (LLB_AXI1_BUFFER_START <= src < LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE)\
-        dst = src - LLB_AXI1_BUFFER_START;                                         \
-    else                                                                           \
-        throw std::runtime_error("wrong llb address");                             \
-} while(0)
-
 #ifdef DECLARE_INSN
 DECLARE_INSN(slli_rv32, MATCH_SLLI_RV32, MASK_SLLI_RV32)
 DECLARE_INSN(srli_rv32, MATCH_SRLI_RV32, MASK_SRLI_RV32)
@@ -2007,6 +2006,7 @@ DECLARE_CSR(vxsat, CSR_VXSAT)
 DECLARE_CSR(vxrm, CSR_VXRM)
 DECLARE_CSR(vl, CSR_VL)
 DECLARE_CSR(vtype, CSR_VTYPE)
+DECLARE_CSR(vlenb, CSR_VLENB)
 DECLARE_CSR(shape_s1, CSR_SHAPE_S1)
 DECLARE_CSR(shape_s2, CSR_SHAPE_S2)
 DECLARE_CSR(stride_d, CSR_STRIDE_D)
@@ -2035,8 +2035,8 @@ DECLARE_CSR(tcsr, CSR_TCSR)
 DECLARE_CSR(dma_shape_col, CSR_DMA_SHAPE_COL)
 DECLARE_CSR(dma_shape_row, CSR_DMA_SHAPE_ROW)
 DECLARE_CSR(dma_stride_ddr, CSR_DMA_STRIDE_DDR)
-DECLARE_CSR(micm_cfg, CSR_MICM_CFG)
 DECLARE_CSR(mdcm_cfg, CSR_MDCM_CFG)
+DECLARE_CSR(micm_cfg, CSR_MICM_CFG)
 DECLARE_CSR(mcctlbeginaddr, CSR_MCCTLBEGINADDR)
 DECLARE_CSR(mcctlcommand, CSR_MCCTLCOMMAND)
 DECLARE_CSR(mcctldata, CSR_MCCTLDATA)

@@ -12,5 +12,5 @@ check_vstart{
 		break;
 	}
 
-	WRITE_RS1(RS1 + VL * (SEW / 8));
+	WRITE_RS1(RS1 + RS2);
 }

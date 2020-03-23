@@ -37,7 +37,6 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t i
       disassembler->add_insn(disasm_insn);
 
   reset();
-
   proxy = Transport::Factory<Transport::AbstractProxy>::create();
   proxy->init(id, "127.0.0.1", 3291, this);
 }
@@ -429,6 +428,8 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_VL:
       state.vl = val;
       break;
+    case CSR_VLENB:
+        break;
     case CSR_CONV_FM_IN:
       state.conv_FM_in = val;
       break;
@@ -759,6 +760,10 @@ reg_t processor_t::get_csr(int which)
       if(!supports_extension('V'))
         break;
       return state.vtype;
+    case CSR_VLENB:
+      if(!supports_extension('V'))
+        break;
+      return state.vlenb;
     case CSR_VSTART:
       if(!supports_extension('V'))
         break;
