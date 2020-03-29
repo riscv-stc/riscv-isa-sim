@@ -189,7 +189,8 @@ bool GrpcProxy::dmaPoll() {
 }
 
 bool GrpcProxy::llbLoad(uint32_t addr, size_t len, uint8_t* bytes,
-      uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0) {
+      uint32_t column = 0, uint32_t dstStride = 0, uint32_t srcStride = 0,
+      uint32_t coremap = 0) {
   // context for the client
   ClientContext context;
 
@@ -201,6 +202,9 @@ bool GrpcProxy::llbLoad(uint32_t addr, size_t len, uint8_t* bytes,
   request.set_column(column);
   request.set_dststride(dstStride);
   request.set_srcstride(srcStride);
+
+  request.set_target(mCoreId);
+  request.set_coremap(coremap);
 
   Message reply;
 

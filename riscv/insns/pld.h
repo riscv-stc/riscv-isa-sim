@@ -7,7 +7,7 @@ TCP_AUNIT();
 //struct ShapeStride sst;
 //sst_fill(sst);
 unsigned long src = RS1;
-unsigned long dst = RD;
+uint8_t* dst = (uint8_t*)MMU.get_phy_addr(RD);
 unsigned int core_map = MTE_CORE_MAP;
 #if 0
 //2020-01-04: the bit of current core is no need to set but the data will send
@@ -17,14 +17,12 @@ GET_LLB_OFF(src, src);
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
-//tcpXfer will deal with stride while stride is 0
-unsigned short stride = STRIDE_LLB;
+unsigned short stride = STRIDE_LLB ? STRIDE_LLB : 0;
 
-//llb --> l1; llb has stride, l1 no stride.
-for (int times = 0; times < 5; times++) {
-    if (likely(proxy->tcpXfer(0, 0, dst, 0, col * row * 2, src,
-            Transport::AbstractProxy::LLB2CORE, col * 2, stride, core_map)))
-    break;
+unsigned int core_id = p->get_csr(CSR_TID);
+if (core_map & (1 << core_id)) {
+    for (int times = 0; times < 5; times++) {
+    if (likely(proxy->llbLoad(src, col * row * 2, dst, col * 2, 0, stride, core_map)))
+        break;
+    }
 }
-
-
