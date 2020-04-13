@@ -102,9 +102,9 @@ void processor_t::step(size_t n)
 
   while (n > 0) {
     size_t instret = 0;
-    reg_t pc = state.pc;
+    reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;
     mmu_t* _mmu = mmu;
-
+    
     #define advance_pc() \
      if (unlikely(invalid_pc(pc))) { \
        switch (pc) { \
@@ -113,7 +113,12 @@ void processor_t::step(size_t n)
          case PC_SERIALIZE_WFI: n = ++instret; break; \
          default: abort(); \
        } \
-       pc = state.pc; \
+       if (PC_SERIALIZE_WFI == pc && !state.wfi_flag) { \
+         n = --instret;         \
+       }                        \
+       else {                   \
+         pc = state.pc; \
+       }                \
        break; \
      } else { \
        state.pc = pc; \
@@ -123,84 +128,96 @@ void processor_t::step(size_t n)
     try
     {
       take_pending_interrupt();
-
+      if (state.interrupt_flag && state.wfi_flag) {
+        pc = state.pc;
+        state.wfi_flag = 0;
+        state.interrupt_flag = 0;
+      }
+      
       if (unlikely(slow_path()))
       {
         while (instret < n)
         {
-          if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
-            state.single_step = state.STEP_NONE;
-            if (state.dcsr.cause == DCSR_CAUSE_NONE) {
-              enter_debug_mode(DCSR_CAUSE_STEP);
-              // enter_debug_mode changed state.pc, so we can't just continue.
-              break;
+          if (0 == state.wfi_flag) {
+            if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
+              state.single_step = state.STEP_NONE;
+              if (state.dcsr.cause == DCSR_CAUSE_NONE) {
+                enter_debug_mode(DCSR_CAUSE_STEP);
+                // enter_debug_mode changed state.pc, so we can't just continue.
+                break;
+              }
             }
-          }
 
-          if (unlikely(state.single_step == state.STEP_STEPPING)) {
-            state.single_step = state.STEP_STEPPED;
-          }
+            if (unlikely(state.single_step == state.STEP_STEPPING)) {
+              state.single_step = state.STEP_STEPPED;
+            }
 
-          insn_fetch_t fetch = mmu->load_insn(pc);
-          if (debug && !state.serialized)
-            disasm(fetch.insn);
-          pc = execute_insn(this, pc, fetch);
+            insn_fetch_t fetch = mmu->load_insn(pc);
+            if (debug && !state.serialized)
+              disasm(fetch.insn);
+            pc = execute_insn(this, pc, fetch);
+          }
 
           advance_pc();
         }
       }
       else while (instret < n)
       {
-        // This code uses a modified Duff's Device to improve the performance
-        // of executing instructions. While typical Duff's Devices are used
-        // for software pipelining, the switch statement below primarily
-        // benefits from separate call points for the fetch.func function call
-        // found in each execute_insn. This function call is an indirect jump
-        // that depends on the current instruction. By having an indirect jump
-        // dedicated for each icache entry, you improve the performance of the
-        // host's next address predictor. Each case in the switch statement
-        // allows for the program flow to contine to the next case if it
-        // corresponds to the next instruction in the program and instret is
-        // still less than n.
-        //
-        // According to Andrew Waterman's recollection, this optimization
-        // resulted in approximately a 2x performance increase.
+        if (0 == state.wfi_flag) {
+          // This code uses a modified Duff's Device to improve the performance
+          // of executing instructions. While typical Duff's Devices are used
+          // for software pipelining, the switch statement below primarily
+          // benefits from separate call points for the fetch.func function call
+          // found in each execute_insn. This function call is an indirect jump
+          // that depends on the current instruction. By having an indirect jump
+          // dedicated for each icache entry, you improve the performance of the
+          // host's next address predictor. Each case in the switch statement
+          // allows for the program flow to contine to the next case if it
+          // corresponds to the next instruction in the program and instret is
+          // still less than n.
+          //
+          // According to Andrew Waterman's recollection, this optimization
+          // resulted in approximately a 2x performance increase.
 
-        // This figures out where to jump to in the switch statement
-        size_t idx = _mmu->icache_index(pc);
+          // This figures out where to jump to in the switch statement
+          size_t idx = _mmu->icache_index(pc);
 
-        // This gets the cached decoded instruction from the MMU. If the MMU
-        // does not have the current pc cached, it will refill the MMU and
-        // return the correct entry. ic_entry->data.func is the C++ function
-        // corresponding to the instruction.
-        auto ic_entry = _mmu->access_icache(pc);
+          // This gets the cached decoded instruction from the MMU. If the MMU
+          // does not have the current pc cached, it will refill the MMU and
+          // return the correct entry. ic_entry->data.func is the C++ function
+          // corresponding to the instruction.
+          auto ic_entry = _mmu->access_icache(pc);
 
-        // This macro is included in "icache.h" included within the switch
-        // statement below. The indirect jump corresponding to the instruction
-        // is located within the execute_insn() function call.
-        #define ICACHE_ACCESS(i) { \
-          insn_fetch_t fetch = ic_entry->data; \
-          pc = execute_insn(this, pc, fetch); \
-          ic_entry = ic_entry->next; \
-          if (i == mmu_t::ICACHE_ENTRIES-1) break; \
-          if (unlikely(ic_entry->tag != pc)) break; \
-          if (unlikely(instret+1 == n)) break; \
-          instret++; \
-          state.pc = pc; \
+          // This macro is included in "icache.h" included within the switch
+          // statement below. The indirect jump corresponding to the instruction
+          // is located within the execute_insn() function call.
+          #define ICACHE_ACCESS(i) { \
+            insn_fetch_t fetch = ic_entry->data; \
+            pc = execute_insn(this, pc, fetch); \
+            ic_entry = ic_entry->next; \
+            if (i == mmu_t::ICACHE_ENTRIES-1) break; \
+            if (unlikely(ic_entry->tag != pc)) break; \
+            if (unlikely(instret+1 == n)) break; \
+            instret++; \
+            state.pc = pc; \
+          }
+
+          // This switch statement implements the modified Duff's device as
+          // explained above.
+          switch (idx) {
+            // "icache.h" is generated by the gen_icache script
+            #include "icache.h"
+          }
         }
-
-        // This switch statement implements the modified Duff's device as
-        // explained above.
-        switch (idx) {
-          // "icache.h" is generated by the gen_icache script
-          #include "icache.h"
-        }
-
+        
         advance_pc();
       }
     }
     catch(trap_t& t)
     {
+      if (state.wfi_flag)
+        pc = state.pc;
+        
       take_trap(t, pc);
       n = instret;
 
@@ -246,6 +263,7 @@ void processor_t::step(size_t n)
       // allows us to switch to other threads only once per idle loop in case
       // there is activity.
       n = instret;
+      state.wfi_flag = 1;
     }
 
     state.minstret += instret;

@@ -193,7 +193,7 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
   // M-ints have highest priority; consider S-ints only if no M-ints pending
   if (enabled_interrupts == 0)
     enabled_interrupts = pending_interrupts & state.mideleg & -s_enabled;
-
+  
   if (state.dcsr.cause == 0 && enabled_interrupts) {
     // nonstandard interrupts have highest priority
     if (enabled_interrupts >> IRQ_M_EXT)
@@ -214,8 +214,12 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
     else
       abort();
 
+    state.mip = 0;
     throw trap_t(((reg_t)1 << (max_xlen-1)) | ctz(enabled_interrupts));
   }
+
+  if (pending_interrupts)
+	state.interrupt_flag = 1;
 }
 
 static int xlen_to_uxl(int xlen)
@@ -258,7 +262,7 @@ void processor_t::enter_debug_mode(uint8_t cause)
 
 void processor_t::take_trap(trap_t& t, reg_t epc)
 {
-  if (debug) {
+  if (1) {
     fprintf(stderr, "core %3d: exception %s, epc 0x%016" PRIx64 "\n",
             id, t.name(), epc);
     if (t.has_tval())
@@ -352,7 +356,7 @@ void processor_t::set_csr(int which, reg_t val)
   val = zext_xlen(val);
   reg_t delegable_ints = MIP_SSIP | MIP_STIP | MIP_SEIP
                        | ((ext != NULL) << IRQ_COP);
-  reg_t all_ints = delegable_ints | MIP_MSIP | MIP_MTIP;
+  reg_t all_ints = delegable_ints | MIP_MSIP | MIP_MTIP | MIP_MEIP;
 
   if (which >= CSR_PMPADDR0 && which < CSR_PMPADDR0 + state.n_pmp) {
     size_t i = which - CSR_PMPADDR0;

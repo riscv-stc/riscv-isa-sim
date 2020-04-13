@@ -29,6 +29,7 @@ riscv_hdrs = \
 	debug_rom_defines.h \
 	remote_bitbang.h \
 	jtag_dtm.h \
+	pcie_driver.h \
 
 riscv_precompiled_hdrs = \
 	insn_template.h \
@@ -49,6 +50,7 @@ riscv_srcs = \
 	regnames.cc \
 	devices.cc \
 	ddr_mem.cc \
+	pcie_driver.cc \
 	rom.cc \
 	sysdma.cc \
 	clint.cc \

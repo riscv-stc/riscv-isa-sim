@@ -23,6 +23,9 @@
 #define l1_buffer_size       (0x00140000)
 #define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00040000)
+#define SRAM_START           (0xc1000000)
+#define SRAM_SIZE            (0x80000)
+#define MBOX_START           (0xc07f4000)
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
@@ -54,8 +57,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   signal(SIGINT, &handle_signal);
   mem_ac_enabled = mac_enabled;
   aunit = MCU;
-  
+
+  pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(0xc07f3000, new uart_device_t());
+  bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
+  bus.add_device(MBOX_START, new mbox_device_t(pcie_driver));
+  
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
       //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
@@ -143,6 +150,7 @@ sim_t::~sim_t()
     delete local_bus[i];
   }
   delete debug_mmu;
+  delete pcie_driver;
 }
 
 void sim_thread_main(void* arg)
@@ -397,7 +405,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
 
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
-    return NULL;
+    // return NULL;
   }
 
   // addr on global bus (ddr)

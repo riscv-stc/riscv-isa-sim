@@ -11,7 +11,7 @@
 #include <map>
 #include "simif.h"
 #include "debug_rom_defines.h"
-
+#include "ddr_mem.h"
 #include "Transport/AbstractProxy.h"
 
 class processor_t;
@@ -186,6 +186,8 @@ struct state_t
   uint32_t dma_shape_row;
   uint32_t dma_shape_col;
   uint32_t dma_stride_ddr;
+  reg_t wfi_flag;
+  reg_t interrupt_flag;
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
@@ -412,6 +414,7 @@ private:
   friend class mmu_t;
   friend class clint_t;
   friend class extension_t;
+  friend class pcie_driver_t;
 
   void parse_isa_string(const char* isa);
   void build_opcode_map();

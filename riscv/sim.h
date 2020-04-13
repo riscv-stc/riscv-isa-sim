@@ -6,6 +6,7 @@
 #include "processor.h"
 #include "devices.h"
 #include "ddr_mem.h"
+#include "pcie_driver.h"
 #include "debug_module.h"
 #include "simif.h"
 #include <fesvr/htif.h>
@@ -62,6 +63,7 @@ private:
   std::unique_ptr<clint_t> clint;
   bus_t bus;
   std::vector<bus_t*> local_bus;
+  pcie_driver_t *pcie_driver;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
