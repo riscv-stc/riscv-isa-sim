@@ -1,27 +1,39 @@
 require_extension('V');
 NCP_AUNIT();
 
-if ((0 == insn.rs1()) && (0 == insn.rd())) {
-    p->set_csr(CSR_VTYPE, RS2);
-}
-else if ((0 == insn.rs1()) && (0 != insn.rd())) {
-    p->set_csr(CSR_VL, VLMAX);
-    WRITE_RD(p->get_csr(VLMAX));
-}
-else{
-    //spec 0.18 19/10/10, vsetvl{i}指令当rs1指定为x0寄存器时，
-    //vl不再被设置成VLMAX, 而是保持原值保持不变
-    if (insn.rs1()) {
-        if(RS1 <= VLMAX){
-        	p->set_csr(CSR_VL, RS1);
-        }
-        else if((RS1 > VLMAX) && (RS1) <= 2*VLMAX){ //TODO
-        	p->set_csr(CSR_VL, RS1/2);
-        }
-        else if(RS1 > 2*VLMAX){
-        	p->set_csr(CSR_VL, VLMAX);
-        }
-    }
+reg_t rd = insn.rd();
+reg_t rs1 = insn.rs1();
 
-    WRITE_RD(p->get_csr(CSR_VL));
+// check if vtype supported
+if ((8<<((RS2>>VTYPE_SEW_SHIFT) & VTYPE_VSEW) != 16) ||
+    (1<<((RS2>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL) != 1)) {
+    // not support, set vill bit, and clear others
+    p->set_vtype(1 << (p->get_xlen()-1));
+    if (rd != 0) WRITE_RD(0);
+} else {
+    // we only support VSEW=16(SEW=1), VLMUL=1(LMUL=0)
+
+    // set vtype
+    p->set_vtype(RS2);
+
+    // set vl
+    reg_t vl = p->get_csr(CSR_VL);
+    if (VLMAX == 0) {
+        vl = 0;
+    } else if (rd == 0 && rs1 == 0) {
+        vl = vl > VLMAX ? VLMAX : vl;
+    } else if (rd != 0 && rs1 == 0) {
+        vl = VLMAX;
+    } else if (rs1 != 0) {
+        if (RS1 <= VLMAX)
+            vl = RS1;
+        else if (RS1 <= VLMAX * 2)
+            vl = RS1 / 2;
+        else
+            vl = VLMAX;
+    }
+    p->set_csr(CSR_VL, vl);
+
+    // set rd
+    if (rd != 0) WRITE_RD(vl);
 }

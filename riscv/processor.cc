@@ -351,6 +351,10 @@ void processor_t::set_rx_active() {
   //state.tcsr = tcsr | TCSR_RX_ACTIVE_MASK;
 }
 
+void processor_t::set_vtype(reg_t val) {
+  state.vtype = val;
+}
+
 void processor_t::set_csr(int which, reg_t val)
 {
   val = zext_xlen(val);

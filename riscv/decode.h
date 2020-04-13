@@ -88,6 +88,7 @@ public:
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
   uint64_t v_uimm() { return x(15, 5); }
+  uint64_t z_imm() { return x(20, 11); }
   uint64_t rd() { return x(7, 5); }
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
