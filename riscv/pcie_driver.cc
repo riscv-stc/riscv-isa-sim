@@ -168,7 +168,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 
 	if (auto host_addr = mPSim->addr_to_mem(addr)) {
   	// low addr use local caches
-  	if (addr + len < LOCAL_DDR_SIZE)
+  	// if (addr + len < LOCAL_DDR_SIZE)
   		memcpy(bytes, host_addr, len);
   	return true;
   } else if (!mPSim->mmio_load(addr, len, bytes)) {
@@ -189,7 +189,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 
 	if (auto host_addr = mPSim->addr_to_mem(addr)) {
   	// low addr use local caches
-  	if (addr + len < LOCAL_DDR_SIZE)
+  	// if (addr + len < LOCAL_DDR_SIZE)
   		memcpy(host_addr, bytes, len);
   } else if (!mPSim->mmio_store(addr, len, bytes)) {
     throw trap_store_access_fault(addr);
