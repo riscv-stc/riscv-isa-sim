@@ -61,7 +61,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(0xc07f3000, new uart_device_t());
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
-  bus.add_device(MBOX_START, new mbox_device_t(pcie_driver));
+  bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
   
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);

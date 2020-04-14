@@ -1,4 +1,5 @@
 #include "devices.h"
+#include "processor.h"
 #include "pcie_driver.h"
 
 rom_device_t::rom_device_t(std::vector<char> data)
@@ -61,35 +62,64 @@ uart_device_t::~uart_device_t()
   }
 }
 
-mbox_device_t::mbox_device_t(pcie_driver_t *pcie) : pcie_driver(pcie) 
+mbox_device_t::mbox_device_t(pcie_driver_t *pcie, std::vector<processor_t*>& p) 
+  : pcie_driver(pcie), procs(p)
 {
+  cmd_count = 0;
 }
 
+#define RX_CFIFO_VAL 0x2
+#define MBOX_MTXCFG 0x0
+#define MBOX_MTXCMD 0x4
+#define PCIE0_MBOX_MRXCMD (0xC60A100C)
+#define MBOX_MRXCMD_ADDR  (0x0c)
+#define MBOX_INT_PEND     (0x20)
 bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {  
   if (unlikely(!bytes || addr >= 0x1000))
     return false;
   
+  if (MBOX_MRXCMD_ADDR == addr) {
+    if (cmd_value.empty())
+      return false;
+    
+    uint32_t value = cmd_value.front();
+    cmd_value.pop();
+    cmd_count--;
+
+    memcpy(bytes, &value, 4);
+    if (cmd_value.empty()) {
+      procs[0]->state.mextip &= ~(1 << RX_CFIFO_VAL);
+      *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
+    }
+    return true;
+  }
+
   memcpy(bytes, data + addr, len);
   return true;
 }
 
-#define MBOX_MTXCFG 0x0
-#define MBOX_MTXCMD 0x4
-#define PCIE0_MBOX_MRXCMD 0xC60A100C
 bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   if (unlikely(!bytes || addr >= 0x1000))
     return false;
 
   memcpy(data + addr, bytes, len);
-  if (MBOX_MTXCMD == addr && PCIE0_MBOX_MRXCMD == *(unsigned int*)data) {
+  if (MBOX_MTXCMD == addr && PCIE0_MBOX_MRXCMD == *(uint32_t *)data) {
     command_head_t cmd;
     cmd.code = CODE_INTERRUPT;
     cmd.addr = 0;
     cmd.len = 4;
-    *(unsigned int *)cmd.data = *(unsigned int *)bytes;
-    pcie_driver->send((const unsigned char *)&cmd, sizeof(cmd));
+    *(uint32_t *)cmd.data = *(uint32_t *)bytes;
+    pcie_driver->send((const uint8_t *)&cmd, sizeof(cmd));
+  }
+
+  if (MBOX_MRXCMD_ADDR == addr) {
+    cmd_count++;
+    cmd_value.push(*(uint32_t*)bytes);
+    procs[0]->state.mextip = procs[0]->state.mextip | (1 << RX_CFIFO_VAL);
+    *(uint32_t *)(data + MBOX_INT_PEND) |= 1 << RX_CFIFO_VAL;
+    //procs[0]->state.mip = procs[0]->state.mip | (1 << IRQ_M_EXT);
   }
   
   return true;

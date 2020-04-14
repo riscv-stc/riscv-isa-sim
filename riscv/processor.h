@@ -188,6 +188,7 @@ struct state_t
   uint32_t dma_stride_ddr;
   reg_t wfi_flag;
   reg_t interrupt_flag;
+  reg_t mextip;
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
@@ -403,7 +404,7 @@ private:
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];
 
-  void take_pending_interrupt() { take_interrupt(state.mip & state.mie); }
+  void take_pending_interrupt() { take_interrupt((state.mip | (state.mextip ? (1 << IRQ_M_EXT) : 0)) & state.mie); }
   void take_interrupt(reg_t mask); // take first enabled interrupt in mask
   void take_trap(trap_t& t, reg_t epc); // take an exception
   void disasm(insn_t insn); // disassemble and print an instruction
@@ -415,7 +416,8 @@ private:
   friend class clint_t;
   friend class extension_t;
   friend class pcie_driver_t;
-
+  friend class mbox_device_t;
+  
   void parse_isa_string(const char* isa);
   void build_opcode_map();
   void register_base_instructions();

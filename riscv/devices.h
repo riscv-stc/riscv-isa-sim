@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <queue>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -55,12 +56,15 @@ class uart_device_t : public abstract_device_t {
 
 class mbox_device_t : public abstract_device_t {
  public:
-  mbox_device_t(pcie_driver_t * pcie);
+  mbox_device_t(pcie_driver_t * pcie, std::vector<processor_t*>& p);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   // const std::vector<char>& contents() { return data; }
   ~mbox_device_t();
  private:
+  uint32_t cmd_count;
+  queue<uint32_t> cmd_value;
+  std::vector<processor_t*>& procs;
   uint8_t data[4096];
   pcie_driver_t *pcie_driver;
 };

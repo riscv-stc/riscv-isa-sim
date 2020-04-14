@@ -23,44 +23,12 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs)
 {
   mStatus = PCIE_UNINIT;
   init();
-}
-
-void pcie_driver_t::init()
-{
-  int rv = 0;
-
-	// Create a socket
-	mSockFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
-	if (mSockFd == -1) {
-    printf("driver init error getting socket: %s.\n", strerror(errno));
-    mStatus = ERROR_SOCK;
-	}
-
-	// To prepare binding
-	memset(&mSrcAddr, 0, sizeof(mSrcAddr));
-	mSrcAddr.nl_family = AF_NETLINK;
-	mSrcAddr.nl_pid = NL_PID;
-	mSrcAddr.nl_groups = NL_GROUPS;
-
-    // Bind src addr
-	rv = bind(mSockFd, (struct sockaddr*)&mSrcAddr, sizeof(mSrcAddr));
-	if (rv < 0) {
-    printf("driver init bind failed: %s", strerror(errno));
-    close(mSockFd);
-    mSockFd = -1;
-    mStatus = ERROR_BIND;
-	}
-
-  memset(&mDestAddr, 0, sizeof(mDestAddr));
-  mDestAddr.nl_family = AF_NETLINK;
-  mDestAddr.nl_pid = 0;
-  mDestAddr.nl_groups = 0;
 
   // To prepare create mssage head
   mSendBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
   if (!mSendBuffer) {
     std::cout << "driver init malloc send buffer error!" << std::endl;
-    return;
+    // return;
   }
 
   memset(mSendBuffer, 0, sizeof(mSendBuffer));
@@ -71,12 +39,47 @@ void pcie_driver_t::init()
   mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
   if (!mRecvBuffer) {
     std::cout << "driver init malloc recv buffer error!" << std::endl;
-    return;
+    // return;
   }
 
   memset(mRecvBuffer, 0, sizeof(mRecvBuffer));
-  mStatus = PCIE_OK;
+}
 
+void pcie_driver_t::init()
+{
+  int rv = 0;
+
+	// Create a socket
+	mSockFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+	if (mSockFd == -1) {
+    std::cout << "driver init error getting socket: " \
+      << strerror(errno) << std::endl;
+    mStatus = ERROR_SOCK;
+    return;
+	}
+
+	// To prepare binding
+	memset(&mSrcAddr, 0, sizeof(mSrcAddr));
+	mSrcAddr.nl_family = AF_NETLINK;
+	mSrcAddr.nl_pid = NL_PID;
+	mSrcAddr.nl_groups = NL_GROUPS;
+
+  // Bind src addr
+	rv = bind(mSockFd, (struct sockaddr*)&mSrcAddr, sizeof(mSrcAddr));
+	if (rv < 0) {
+    std::cout << "driver init bind failed: " << strerror(errno) << std::endl;
+    close(mSockFd);
+    mSockFd = -1;
+    mStatus = ERROR_BIND;
+    return;
+	}
+
+  memset(&mDestAddr, 0, sizeof(mDestAddr));
+  mDestAddr.nl_family = AF_NETLINK;
+  mDestAddr.nl_pid = 0;
+  mDestAddr.nl_groups = 0;
+
+  mStatus = PCIE_OK;
   auto mainloop = std::bind(&pcie_driver_t::transfer_loop, this);
   auto thread = new std::thread(mainloop);
   thread->detach();
@@ -98,7 +101,7 @@ int pcie_driver_t::send(const uint8_t* data, size_t len)
   rv = sendto(mSockFd, mSendBuffer, NLMSG_LENGTH(len), 0, \
       (struct sockaddr*)(&mDestAddr), sizeof(mDestAddr));
   if (-1 == rv)
-    std::cout << "driver send data error: " << strerror(errno) << std::endl;
+    std::cout << "pcie send data error: " << strerror(errno) << std::endl;
 
   return rv;
 }
@@ -127,7 +130,7 @@ int pcie_driver_t::read(reg_t addr, size_t length)
     rv = sendto(mSockFd, mSendBuffer, NLMSG_LENGTH(size + COMMAND_HEAD_SIZE), \
         0, (struct sockaddr*)(&mDestAddr), sizeof(mDestAddr));
     if (-1 == rv) {
-      std::cout << "driver send data error: " << strerror(errno) << std::endl;
+      std::cout << "pcie send data error: " << strerror(errno) << std::endl;
       return rv;
     }
 
@@ -147,7 +150,7 @@ int pcie_driver_t::recv()
   //recv message
   rv = recvfrom(mSockFd, mRecvBuffer, NLMSG_LENGTH(MAX_PAYLOAD), 0, NULL, NULL);
   if (-1 == rv)
-    std::cout << "driver recv data error: " << strerror(errno) << std::endl;
+    std::cout << "pcie recv data error: " << strerror(errno) << std::endl;
 
   return rv;
 }
@@ -163,11 +166,16 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
     return true;
 	}
 
-	auto host_addr = mPSim->addr_to_mem(addr);
-	// low addr use local caches
-	if (addr + len < LOCAL_DDR_SIZE)
-		memcpy(bytes, host_addr, len);
-	return true;
+	if (auto host_addr = mPSim->addr_to_mem(addr)) {
+  	// low addr use local caches
+  	if (addr + len < LOCAL_DDR_SIZE)
+  		memcpy(bytes, host_addr, len);
+  	return true;
+  } else if (!mPSim->mmio_load(addr, len, bytes)) {
+    throw trap_load_access_fault(addr);
+  }
+
+  return true;
 }
 
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
@@ -179,15 +187,19 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     return status;
 	}
 
-	auto host_addr = mPSim->addr_to_mem(addr);
-	// low addr use local caches
-	if (addr + len < LOCAL_DDR_SIZE) {
-		memcpy(host_addr, bytes, len);
-	}
-	return true;
+	if (auto host_addr = mPSim->addr_to_mem(addr)) {
+  	// low addr use local caches
+  	if (addr + len < LOCAL_DDR_SIZE)
+  		memcpy(host_addr, bytes, len);
+  } else if (!mPSim->mmio_store(addr, len, bytes)) {
+    throw trap_store_access_fault(addr);
+  }
+
+  return true;
 }
 
 #define INTERRUPT_ADDR (0xc60a100c)
+#define MBOX_MRXCMD_ADDR (0xc07f400c)
 void pcie_driver_t::transfer_loop()
 {
   command_head_t *pCmd = NULL;
@@ -203,11 +215,12 @@ void pcie_driver_t::transfer_loop()
       	  read(pCmd->addr, pCmd->len);
       	  break;
       	case CODE_WRITE:
-      	  store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
           if (INTERRUPT_ADDR == pCmd->addr) {
             unsigned int value = *(unsigned int *)pCmd->data;
-            procs[0]->state.mip = procs[0]->state.mip | (1 << IRQ_M_EXT);
+            store_data(MBOX_MRXCMD_ADDR, pCmd->len, pCmd->data);
             std::cout << "interrupt has occur " << value << std::endl;
+          } else {
+            store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
           }
       	  break;
         case CODE_INTERRUPT:
