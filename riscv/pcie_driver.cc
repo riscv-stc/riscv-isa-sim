@@ -199,7 +199,9 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 #define INTERRUPT_ADDR (0xc60a100c)
+#define INTERRUPT_EXT_ADDR (0xc60a1010)
 #define MBOX_MRXCMD_ADDR (0xc07f400c)
+#define MBOX_MRXCMDEXT_ADDR (0xc07f4010)
 void pcie_driver_t::transfer_loop()
 {
   command_head_t *pCmd = NULL;
@@ -218,6 +220,10 @@ void pcie_driver_t::transfer_loop()
           if (INTERRUPT_ADDR == pCmd->addr) {
             unsigned int value = *(unsigned int *)pCmd->data;
             store_data(MBOX_MRXCMD_ADDR, pCmd->len, pCmd->data);
+            std::cout << "interrupt has occur " << value << std::endl;
+          } else if (INTERRUPT_EXT_ADDR == pCmd->addr) {
+            unsigned int value = *(unsigned int *)pCmd->data;
+            store_data(MBOX_MRXCMDEXT_ADDR, pCmd->len, pCmd->data);
             std::cout << "interrupt has occur " << value << std::endl;
           } else {
             store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);

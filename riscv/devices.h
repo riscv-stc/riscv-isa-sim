@@ -64,6 +64,8 @@ class mbox_device_t : public abstract_device_t {
  private:
   uint32_t cmd_count;
   queue<uint32_t> cmd_value;
+  uint32_t cmdext_count;
+  queue<uint32_t> cmdext_value;
   std::vector<processor_t*>& procs;
   uint8_t data[4096];
   pcie_driver_t *pcie_driver;
