@@ -218,7 +218,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
       std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
       exit(1);
   }
-  
+
 out:
   set_aunit(MCU, 0);
 }
@@ -235,6 +235,11 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
             << " to file " << fname << std::endl;
   std::string name = std::string(fname);
   std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str != "dat" && suffix_str != "bin") {
+    std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+    exit(1);
+  }
 
   if (suffix_str == "dat") {
     std::ofstream ofs(fname, std::ios::out);
@@ -255,16 +260,17 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
 
     ofs.close();
   } else if (suffix_str == "bin") {
-    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
-    if (!ifs.is_open()) {
+    std::ofstream ofs(fname, std::ios::out | std::ios::binary);
+    if (!ofs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
         goto out;
-    std::cout << "ERROR: unsupport load bin file now......" << std::endl;
-    exit(1);
     }
-  } else {
-      std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
-      exit(1);
+
+    char buf[2];
+    for (addr_t addr = 0; addr < len; addr += 2) {
+      mem.read(off + addr, 2, buf);
+      ofs.write(buf, sizeof(buf));
+    }
   }
   
 out:
