@@ -3,7 +3,7 @@ NCP_AUNIT();
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
-bc_sst_fill(sst);
+bc_sst_fill(sst, 1, 4);
 
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rs2 = MMU.get_phy_addr(RS2);

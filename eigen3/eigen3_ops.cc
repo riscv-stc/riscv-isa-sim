@@ -1617,9 +1617,6 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
         return -BR_EPARAM;
     }
 
-    ss->stride_rd = ss->stride_rd >> 1;
-    ss->stride_rs1 = ss->stride_rs1 << 1;
-    ss->stride_rs2 = ss->stride_rs2 << 1;
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
@@ -1658,8 +1655,6 @@ int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStri
         return -BR_EPARAM;
     }
 
-    ss->stride_rs1 = ss->stride_rs1 << 1;
-    ss->stride_rs2 = ss->stride_rs2 << 1;
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
