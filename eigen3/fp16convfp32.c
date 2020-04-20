@@ -69,10 +69,10 @@ int fp32tofp16(int fp_data){
     int fp_conv_exp;
     int fp_conv_fraction;
 
-    fp_is_subnormal           = (((fp_data>>23)&0xff) == 0x0) & (fp_data&0x7fffff != 0x0);
-    fp_is_infinite            = (((fp_data>>23)&0xff) == 0xff) & (fp_data&0x7fffff == 0x0);
+    fp_is_subnormal           = (((fp_data>>23)&0xff) == 0x0) & ((fp_data&0x7fffff) != 0x0);
+    fp_is_infinite            = (((fp_data>>23)&0xff) == 0xff) & ((fp_data&0x7fffff) == 0x0);
     fp_is_zero                = ((fp_data&0x7fffffff) == 0x0);
-    fp_is_nan                 = (((fp_data>>23)&0xff) == 0xff) & (fp_data&0x7fffff != 0x0);
+    fp_is_nan                 = (((fp_data>>23)&0xff) == 0xff) & ((fp_data&0x7fffff) != 0x0);
     fp_is_of                  = (((fp_data>>23)&0xff) > 142) & ~fp_is_infinite & ~fp_is_nan;
     fp_exact_subnormal_value  = (((fp_data>>23)&0xff) == 112) & ((fp_data&0x3fff) == 0)
                                 | (((fp_data>>23)&0xff) == 111) & ((fp_data&0x7fff) == 0)
