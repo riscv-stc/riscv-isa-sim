@@ -5,7 +5,7 @@ check_vstart{
 	case 16:
 		vector_for_each(idx){
 			check_v0hmask(idx);
-			WRITE_VRD_H(MMU.load_int16(RS1+idx*VRS2.vh[idx]), idx);
+			WRITE_VRD_H(MMU.load_int16(RS1+VRS2.vh[idx]), idx);
 		}
 		break;
 	default:
