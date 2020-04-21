@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 
 uint32_t start = VSTART > VUIMM ? VSTART : VUIMM;
 

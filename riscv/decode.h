@@ -308,6 +308,106 @@ private:
 					 else
 
 #define check_vl() if(VL == 0) return;
+
+// throw trap if rvv inst access out of l1&im buffer
+#define check_rvv_access(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+            throw trap_ncp_rvv_access(x); \
+        }
+
+// throw trap if rvv load/store inst access misaligned base address
+#define check_rvv_misaligned_base(x, type) \
+        if (unlikely(x & (sizeof(type##_t)-1))) { \
+            throw trap_ncp_rvv_misaligned_base(x); \
+        }
+
+// throw trap if rvv load/store inst access with misaligned stride/index
+#define check_rvv_misaligned_offset(x, type) \
+        if (unlikely(x & (sizeof(type##_t)-1))) { \
+            throw trap_ncp_rvv_misaligned_offset(x); \
+        }
+
+// throw trap if cust inst access out of l1&im buffer
+#define check_cust_access(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x); \
+        }
+
+// throw trap if cust inst access out of l1 buffer
+#define check_cust_access_l1(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER))) { \
+            throw trap_ncp_cust_access(x); \
+        }
+
+// throw trap if cust inst access out of im buffer
+#define check_cust_access_im(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x); \
+        }
+
+// throw trap if cust inst access misaligned base address
+#define check_cust_misaligned_base(x) \
+        if (unlikely(x & (sizeof(int16_t)-1))) { \
+            throw trap_ncp_cust_misaligned_base(x); \
+        }
+
+// throw trap if cust inst source address access with misaligned stride
+#define check_cust_misaligned_stride_src(x, stride) \
+        if (unlikely(stride && (stride & (sizeof(int16_t)-1)))) { \
+            throw trap_ncp_cust_misaligned_stride(x); \
+        }
+
+// throw trap if cust inst dest access with misaligned stride, or stride < width
+#define check_cust_misaligned_stride_dst(x, stride, col) \
+        if (unlikely(stride && (stride & (sizeof(int16_t)-1) || stride < col*sizeof(int16_t)))) { \
+            throw trap_ncp_cust_misaligned_stride(x); \
+        }
+
+// throw trap if cust inst use invalid shape, col=0 or row=0
+#define check_cust_invalid_shape(col, row) \
+        if (unlikely(col == 0 || row == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        }
+
+//  throw trap if conv inst use invalid param
+#define check_cust_invalid_conv_param(fm_in, depth_in, kernel) ({\
+        int in_w = (fm_in >> 16) & 0xffff; \
+        int in_h = (fm_in) & 0xffff; \
+        int in_c = (depth_in) & 0xffff; \
+        if (unlikely(in_w == 0 || in_h == 0 || inc_c == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        int dilation = (kernel >> 8) & 0xff; \
+        int kw = (ss->conv_kernel >> 24) & 0xff; \
+        int kh = (ss->conv_kernel >> 16) & 0xff; \
+        int sk = (kernel) & 0xff; \
+        if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+  })
+
+// check traps for ve***.mm instructions
+#define check_traps_vexxx_mm ({ \
+        check_cust_misaligned_base(RS1); \
+        check_cust_misaligned_base(RS2); \
+        check_cust_misaligned_base(RD); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_src(RS1, STRIDE_RS1); \
+        check_cust_misaligned_stride_src(RS2, STRIDE_RS2); \
+        check_cust_misaligned_stride_dst(RD, STRIDE_RD, SHAPE1_COLUMN); \
+        check_cust_access(RS1, STRIDE_RS1 * SHAPE1_ROW); \
+        check_cust_access(RS2, STRIDE_RS2 * SHAPE1_ROW); \
+        check_cust_access(RD, STRIDE_RD * SHAPE1_ROW); \
+  })
+
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
 #define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VL; (x)++)

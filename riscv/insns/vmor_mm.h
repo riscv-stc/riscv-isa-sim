@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 check_vstart{
 	vector_for_each(idx){
 		switch(SEW){

@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 
 reg_t sum = 0;
 check_vstart{

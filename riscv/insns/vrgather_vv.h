@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 
 /* TODO: VS1 byte or half ? */
 check_vstart{

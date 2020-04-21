@@ -81,8 +81,6 @@ void sysdma_device_t::dma_core(int ch) {
               dma_channel_[ch].llp >= SYSDMA0_BASE + DMA_BUF_OFFSET+DMA_BUF_SIZE)
           throw std::runtime_error("sysdma:wrong llp");
 
-      // FIXME, need to check MCU/TCP
-      procs_[0]->get_sim()->set_aunit(MCU, 0);
       struct dma_desc_t* desc = (struct dma_desc_t*)&dma_buf_[dma_channel_[ch].llp - SYSDMA0_BASE - DMA_BUF_OFFSET];
 
       // std::cout << "desc:" << hex << desc << "desc next:" << desc->llpr

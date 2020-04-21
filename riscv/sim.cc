@@ -42,7 +42,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
-             bool support_abstract_csr_access, bool mac_enabled)
+             bool support_abstract_csr_access)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
@@ -55,8 +55,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   //char add_clint_dev = 1;
 
   signal(SIGINT, &handle_signal);
-  mem_ac_enabled = mac_enabled;
-  aunit = MCU;
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(0xc07f3000, new uart_device_t());
@@ -181,7 +179,6 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
   if (!fname)
     return;
 
-  set_aunit(NCP, 0);
   std::cout << "Load heap off 0x" << std::hex << off
             << " len 0x" << std::hex << len
             << " to file " << fname << std::endl;
@@ -192,7 +189,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
     std::ifstream ifs(fname, std::ios::in);
     if (!ifs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        goto out;;
+        return;
     }
 
     char buf[512];
@@ -210,7 +207,7 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
     std::ifstream ifs(fname, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        goto out;
+        return;
     std::cout << "ERROR: unsupport load bin file now......" << std::endl;
     exit(1);
     }
@@ -218,9 +215,6 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
       std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
       exit(1);
   }
-
-out:
-  set_aunit(MCU, 0);
 }
 
 void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
@@ -229,7 +223,6 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
   if (!fname)
     return;
 
-  set_aunit(NCP, 0);
   std::cout << "Dump heap off 0x" << std::hex << off
             << " len 0x" << std::hex << len
             << " to file " << fname << std::endl;
@@ -245,7 +238,7 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
     std::ofstream ofs(fname, std::ios::out);
     if (!ofs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        goto out;
+        return;
     }
 
     uint16_t data;
@@ -263,7 +256,7 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
     std::ofstream ofs(fname, std::ios::out | std::ios::binary);
     if (!ofs.is_open()) {
         std::cout << __FUNCTION__ << ": Error opening file";
-        goto out;
+        return;
     }
 
     char buf[2];
@@ -272,9 +265,6 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
       ofs.write(buf, sizeof(buf));
     }
   }
-  
-out:
-  set_aunit(MCU, 0);
 }
 
 int sim_t::run(const char *fname_load, const char *fname_dump, addr_t off, size_t len)
@@ -342,9 +332,6 @@ bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
     return false;
   
   result = bus.load(addr, len, bytes);
-  if (mem_ac_enabled && unlikely(!result && (MCU == aunit)))  
-    std::cout << "mcu can't load addr:" << hex << addr \
-      << " in aunit: " << aunit << std::endl;
   
   return result;
 }
@@ -357,9 +344,6 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
     return false;
   
   result = bus.store(addr, len, bytes);
-  if (mem_ac_enabled && unlikely(!result && (MCU == aunit)))
-    std::cout << "mcu can't store addr:" << hex << addr \
-      << " in aunit: " << aunit << std::endl;
   
   return result;
 }
@@ -396,41 +380,43 @@ void sim_t::make_dtb()
   bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
 }
 
+bool sim_t::in_local_mem(reg_t addr, memory_type type) {
+  auto desc = local_bus[0]->find_device(addr);
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+
+    reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
+    if (desc.first == start_addr && addr - desc.first < mem->size()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 char* sim_t::addr_to_mem(reg_t addr) {
-  addr = addr & 0x00000000ffffffff;
   std::ostringstream err;
 
-  // addr on local bus (l1 | im cache)
-  auto desc = local_bus[aproc_idx]->find_device(addr);
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    // MCU/TCP could not access im_buffer
-    if (mem_ac_enabled && unlikely(desc.first == im_buffer_start && (TCP == aunit))) {
-      err << "tcp access illegal address, addr=0x" << hex << addr << "(im cache)";
-      throw std::runtime_error(err.str());
-    }
-
-    if (addr - desc.first < mem->size())
-        return mem->contents() + (addr - desc.first);
-    // return NULL;
-  }
-
   // addr on global bus (ddr)
-  desc = bus.find_device(addr);
+  auto desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
-      auto unit = NCP == aunit? "ncp": "tcp";
-      err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
-      // throw std::runtime_error(err.str()); FIXME, maybe multi-thread has problem to check aunit
-    }
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
     return NULL;
   } else if (auto mem = dynamic_cast<ddr_mem_t *>(desc.second)) {
-    if (mem_ac_enabled && unlikely((NCP == aunit) || (TCP == aunit))) {
-      auto unit = NCP == aunit? "ncp": "tcp";
-      err << unit << " access illegal address, addr=0x" << hex << addr << "(ddr)";
-      // throw std::runtime_error(err.str()); FIXME, maybe multi-thread has problem to check aunit
-    }
+    if (addr - desc.first < mem->size())
+        return mem->contents() + (addr - desc.first);
+    return NULL;
+  }
+
+  return NULL;
+}
+
+
+char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
+  std::ostringstream err;
+
+  // addr on local bus (l1 | im cache)
+  auto desc = local_bus[idx]->find_device(addr);
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
     return NULL;

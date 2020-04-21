@@ -1071,7 +1071,7 @@ bool processor_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 bool processor_t::recv(uint32_t dstaddr, const char* data, uint32_t size, bool set_active) {
-  char *dst = sim->addr_to_mem(dstaddr);
+  char *dst = sim->local_addr_to_mem(dstaddr, idx);
   memcpy(dst, data, size);
 
   // TCP transfer
@@ -1084,7 +1084,7 @@ bool processor_t::recv(uint32_t dstaddr, const char* data, uint32_t size, bool s
 }
 
 bool processor_t::dump(std::string *data, uint64_t srcaddr, uint32_t size) {
-  char *src = sim->addr_to_mem(srcaddr);
+  char *src = sim->local_addr_to_mem(srcaddr, idx);
   data->clear();
   data->append((char *)src, size);
 

@@ -28,7 +28,7 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
         bool require_authentication, suseconds_t abstract_delay_usec,
-        bool support_hasel, bool support_abstract_csr_access, bool layout);
+        bool support_hasel, bool support_abstract_csr_access);
   ~sim_t();
 
   // run the simulation to completion
@@ -51,7 +51,6 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
-  access_unit set_aunit(access_unit unit, unsigned idx) {aunit = unit; aproc_idx = idx; return aunit; };
   
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -74,15 +73,14 @@ private:
   size_t current_proc;
   bool debug;
   bool log;
-  bool mem_ac_enabled;
-  unsigned aproc_idx = 0;
-  access_unit aunit;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
   remote_bitbang_t* remote_bitbang;
 
   // memory-mapped I/O routines
   char* addr_to_mem(reg_t addr);
+  char* local_addr_to_mem(reg_t addr, uint32_t idx);
+  bool in_local_mem(reg_t addr, memory_type type);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   void make_dtb();

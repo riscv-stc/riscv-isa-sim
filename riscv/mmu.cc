@@ -67,6 +67,8 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     return refill_tlb(vaddr, paddr, host_addr, FETCH);
+  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
+    return refill_tlb(vaddr, paddr, host_addr, FETCH);
   } else {
     if (!sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
       throw trap_instruction_access_fault(vaddr);
@@ -111,6 +113,12 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes)
       tracer.trace(paddr, len, LOAD);
     else
       refill_tlb(addr, paddr, host_addr, LOAD);
+  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
+    memcpy(bytes, host_addr, len);
+    if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
+      tracer.trace(paddr, len, LOAD);
+    else
+      refill_tlb(addr, paddr, host_addr, LOAD);
   } else if (!sim->mmio_load(paddr, len, bytes)) {
     throw trap_load_access_fault(addr);
   }
@@ -140,6 +148,12 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes)
       tracer.trace(paddr, len, STORE);
     else
       refill_tlb(addr, paddr, host_addr, STORE);
+  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
+    memcpy(host_addr, bytes, len);
+    if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
+      tracer.trace(paddr, len, STORE);
+    else
+      refill_tlb(addr, paddr, host_addr, STORE);
   } else if (!sim->mmio_store(paddr, len, bytes)) {
     throw trap_store_access_fault(addr);
   }
@@ -147,7 +161,10 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes)
 
 size_t mmu_t::get_phy_addr(reg_t paddr)
 {
-  return (size_t)sim->addr_to_mem(paddr);
+  if (proc->get_xlen() == 32) {
+    paddr &= 0xffffffff;
+  }
+  return (size_t)sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0);
 }
 
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)

@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 check_vstart{
 	Vfclass<unsigned short, unsigned short> vfclass;
 	vfclass.vfclass_v((half*)&VRS2.vh[VSTART], (unsigned short*)&VRD.vh[VSTART], VM, VR0.vh, VL);

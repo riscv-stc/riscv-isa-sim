@@ -1,5 +1,5 @@
 require_extension('V');
-NCP_AUNIT();
+// FIXME: should implement ncp access trap
 
 int sum = 0;
 vector_for_each_from_zero(idx) {
