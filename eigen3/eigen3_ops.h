@@ -1424,15 +1424,20 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (vector_vs1(i) >= (Type)0)
-                        vector_vd(i) = xxabs(vector_vs2(i));
-                    else
+                    if (*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1))
                         vector_vd(i) = -xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = xxabs(vector_vs2(i));
                 }
             }
         } else
-            vector_vd = (vector_vs1.array() >= (Type)0).select(
-                vector_vs2.array().abs(), -vector_vs2.array().abs());
+            for (int i = 0; i < vl; i++) {
+                if (*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1))
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = xxabs(vector_vs2(i));
+            }
+
 
         DBG_VECTOR_VV;
 
