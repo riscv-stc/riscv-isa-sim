@@ -1463,18 +1463,19 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (rs1 > (Type)0)
-                        vector_vd(i) = xxabs(vector_vs2(i));
-                    else
+                    if (*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1))
                         vector_vd(i) = -xxabs(vector_vs2(i));
+                    else
+                        vector_vd(i) = xxabs(vector_vs2(i));
                 }
             }
-        } else {
-            if (rs1 > (Type)0)
-                vector_vd = vector_vs2.array().abs();
-            else
-                vector_vd = -vector_vs2.array().abs();
-        }
+        } else
+            for (int i = 0; i < vl; i++) {
+                if (*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1))
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = xxabs(vector_vs2(i));
+            }
 
         DBG_VECTOR_VF;
 
@@ -1501,15 +1502,20 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (vector_vs1(i) < (Type)0)
+                    if (*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1))
                         vector_vd(i) = xxabs(vector_vs2(i));
                     else
                         vector_vd(i) = -xxabs(vector_vs2(i));
                 }
             }
         } else
-            vector_vd = (vector_vs1.array() < (Type)0).select(
-                vector_vs2.array().abs(), -vector_vs2.array().abs());
+            for (int i = 0; i < vl; i++) {
+                if (*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1))
+                    vector_vd(i) = xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+            }
+
 
         DBG_VECTOR_VV;
 
@@ -1535,18 +1541,20 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (rs1 < (Type)0)
+                    if (*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1))
                         vector_vd(i) = xxabs(vector_vs2(i));
                     else
                         vector_vd(i) = -xxabs(vector_vs2(i));
                 }
             }
-        } else {
-            if (rs1 < (Type)0)
-                vector_vd = vector_vs2.array().abs();
-            else
-                vector_vd = -vector_vs2.array().abs();
-        }
+        } else
+            for (int i = 0; i < vl; i++) {
+                if (*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1))
+                    vector_vd(i) = xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+            }
+
 
         DBG_VECTOR_VF;
 
@@ -1573,15 +1581,21 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if ((vector_vs1(i) * vector_vs2(i)) > (Type)0)
+                    if ((*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1)) == 
+                        (*((MaskType *)&vector_vs2(i)) & (1<<(sizeof(Type)*8)-1)))
                         vector_vd(i) = xxabs(vector_vs2(i));
                     else
                         vector_vd(i) = -xxabs(vector_vs2(i));
                 }
             }
         } else
-            vector_vd = ((vector_vs1.array() * vector_vs2.array()) > (Type)0).select(
-                vector_vs2.array().abs(), -vector_vs2.array().abs());
+            for (int i = 0; i < vl; i++) {
+                if ((*((MaskType *)&vector_vs1(i)) & (1<<(sizeof(Type)*8)-1)) == 
+                    (*((MaskType *)&vector_vs2(i)) & (1<<(sizeof(Type)*8)-1)))
+                    vector_vd(i) = xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+            }
 
         DBG_VECTOR_VV;
 
@@ -1607,15 +1621,21 @@ public:
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if ((vector_vs2(i) * rs1) > (Type)0)
+                    if ((*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1)) == 
+                        (*((MaskType *)&vector_vs2(i)) & (1<<(sizeof(Type)*8)-1)))
                         vector_vd(i) = xxabs(vector_vs2(i));
                     else
                         vector_vd(i) = -xxabs(vector_vs2(i));
                 }
             }
         } else
-            vector_vd = ((vector_vs2.array() * rs1) > (Type)0).select(
-                vector_vs2.array().abs(), -vector_vs2.array().abs());
+            for (int i = 0; i < vl; i++) {
+                if ((*((MaskType *)&rs1) & (1<<(sizeof(Type)*8)-1)) == 
+                    (*((MaskType *)&vector_vs2(i)) & (1<<(sizeof(Type)*8)-1)))
+                    vector_vd(i) = xxabs(vector_vs2(i));
+                else
+                    vector_vd(i) = -xxabs(vector_vs2(i));
+            }
 
         DBG_VECTOR_VF;
 
