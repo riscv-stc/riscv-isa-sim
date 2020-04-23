@@ -1,5 +1,5 @@
 require_extension('V');
-// FIXME: should implement ncp access trap
+check_traps_vexxx_m_convert(int8, int16);
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
