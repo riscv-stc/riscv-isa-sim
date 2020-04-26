@@ -138,7 +138,7 @@ void processor_t::step(size_t n)
       {
         while (instret < n)
         {
-          if (0 == state.wfi_flag) {
+          if (likely(0 == state.wfi_flag)) {
             if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
               state.single_step = state.STEP_NONE;
               if (state.dcsr.cause == DCSR_CAUSE_NONE) {
@@ -163,7 +163,7 @@ void processor_t::step(size_t n)
       }
       else while (instret < n)
       {
-        if (0 == state.wfi_flag) {
+        if (likely(0 == state.wfi_flag)) {
           // This code uses a modified Duff's Device to improve the performance
           // of executing instructions. While typical Duff's Devices are used
           // for software pipelining, the switch statement below primarily
@@ -215,9 +215,6 @@ void processor_t::step(size_t n)
     }
     catch(trap_t& t)
     {
-      if (state.wfi_flag)
-        pc = state.pc;
-        
       take_trap(t, pc);
       n = instret;
 
@@ -263,7 +260,8 @@ void processor_t::step(size_t n)
       // allows us to switch to other threads only once per idle loop in case
       // there is activity.
       n = instret;
-      state.wfi_flag = 1;
+      if (!unlikely(IS_EXECUTE_IN_DEBUGROM(pc)))
+        state.wfi_flag = 1;
     }
 
     state.minstret += instret;

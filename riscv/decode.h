@@ -160,7 +160,16 @@ private:
 // helpful macros, etc
 #define MMU (*p->get_mmu())
 #define STATE (*p->get_state())
-#define READ_REG(reg) (unlikely((((0x40000800 <= pc) && (0x40000884 >= pc)) || ((0x40000360 <= pc) && (0x40000374 > pc))) && (reg == 0)) ? 0x40000000 : STATE.XPR[reg])
+
+// Seems that 0x0 doesn't work.
+#define DEBUG_BASE              (0x40000000)
+#define DEBUG_START             (0x100)
+#define DEBUG_END               (0x40001000 - 1)
+#define DEBUG_ROM_BASE          (DEBUG_BASE)
+#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (pc)) \
+  && ((DEBUG_ROM_BASE + 0x884) >= (pc))) || (((DEBUG_ROM_BASE + 0x360) <= (pc)) \
+  && ((DEBUG_ROM_BASE + 0x374) > (pc))))
+#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
 
 #define READ_FREG(reg) STATE.FPR[reg]
 #define READ_VREG(reg) STATE.VPR[reg]
@@ -675,11 +684,6 @@ inline freg_t f128_negate(freg_t a)
   if (((write) && csr_read_only) || STATE.prv < csr_priv) \
     throw trap_illegal_instruction(0); \
   (which); })
-
-// Seems that 0x0 doesn't work.
-#define DEBUG_BASE              (0x40000000)
-#define DEBUG_START             (0x100)
-#define DEBUG_END               (0x40001000 - 1)
 
 #define VREG_LENGTH (128)
 /*Vector instruction support*/
