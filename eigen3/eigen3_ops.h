@@ -3168,7 +3168,7 @@ class Vfclass
                 if (isinf(vector_vs2(i)))                     //isinf 无穷大
                     bit = vector_vs2(i).x & 0x8000 ? 0 : 7;
                 else if (isnan(vector_vs2(i)))                //isnan
-                    bit = vector_vs2(i).x & 0x400 ? 9 : 8;
+                    bit = vector_vs2(i).x & 0x200 ? 9 : 8;
                 else if (0 == (vector_vs2(i).x & 0x7fff))     //+-0
                     bit = vector_vs2(i).x & 0x8000 ? 3 : 4;
                 else if (!(vector_vs2(i).x & 0x7c00) && (vector_vs2(i).x & 0x3ff))
@@ -3176,7 +3176,7 @@ class Vfclass
                 else
                     bit = vector_vs2(i).x & 0x8000 ? 1 : 6;   //规格化数
 
-                SET_BIT(vector_vd(i), bit);
+                vector_vd(i) = 1 << bit;
             }
         }
 
