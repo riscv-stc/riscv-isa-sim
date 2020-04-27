@@ -2190,8 +2190,8 @@ int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     //mov.v 使用shape1的行数和列数，输入vector使用行数或者列数，列数或者行数为1，输出使用shape1的行数和列数
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_half rs1_matrix(rs1, dim ? ss->shape1_row : 1, dim ? 1 : ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    
+    Map_half rs1_matrix(rs1, dim ? ss->shape1_row : 1, dim ? 1 : ss->shape1_column, DynStride(1, 1));
+
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
