@@ -2,6 +2,8 @@ require_extension('V');
 // FIXME: should implement ncp access trap
 
 uint32_t start = VSTART > VUIMM ? VSTART : VUIMM;
+if (unlikely((insn.rs2() == insn.rd()) || (insn.vm() == 0 && ((p->get_csr(CSR_VTYPE) & 0x3) > 0) && insn.vm() == insn.rd())))
+  throw trap_ncp_rvv_invalid_same_rdrs();
 
 check_vstart{
 	switch(SEW) {

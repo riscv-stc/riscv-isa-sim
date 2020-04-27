@@ -1,5 +1,7 @@
 require_extension('V');
 // FIXME: should implement ncp access trap
+if (unlikely((insn.rs1() == insn.rd()) || (insn.rs2() == insn.rd()) || (insn.vm() == 0 && insn.vm() == insn.rd())))
+  throw trap_ncp_rvv_invalid_same_rdrs();
 
 /* TODO: VS1 byte or half ? */
 check_vstart{
