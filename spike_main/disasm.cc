@@ -720,7 +720,6 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV1TYPE(vlh_v);
   DEFINE_SV1TYPE(vlhu_v);
   DEFINE_SV1TYPE(vle_v);
-  DEFINE_SV1TYPE(vlepi_v);
   
   //DEFINE_SV1TYPE(vleu_v);
   DEFINE_SV9TYPE(vlsb_v);
@@ -729,6 +728,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_SV9TYPE(vlshu_v);
   DEFINE_SV9TYPE(vlse_v);
   DEFINE_SV9TYPE(vlsepi_v);
+  DEFINE_SV9TYPE(vlepi_v);
   
   //DEFINE_SV9TYPE(vlseu_v);
   DEFINE_SV2TYPE(vlxb_v);

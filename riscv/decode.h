@@ -334,11 +334,18 @@ private:
 #define check_vl() if(VL == 0) return;
 
 // throw trap if rvv inst access out of l1&im buffer
+#define check_rvv_access_without_exception(x, len) \
+        (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, IM_BUFFER)))
+
+// throw trap if rvv inst access out of l1&im buffer
 #define check_rvv_access(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER)) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
             !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, IM_BUFFER))) { \
             throw trap_ncp_rvv_access(x); \
         }
 
