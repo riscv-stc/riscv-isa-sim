@@ -286,6 +286,21 @@ private:
 #define M_DEQUANT_COEFF (STATE.m_dequant_coeff)
 #define CONV_DEQUANT_COEFF (STATE.conv_dequant_coeff)
 
+#define CONV_IN_COLUMN	((STATE.conv_FM_in & 0xFFFF0000) >> 16)
+#define CONV_IN_ROW	(STATE.conv_FM_in & 0xFFFF)
+#define CONV_OUT_COLUMN	((STATE.conv_FM_out & 0xFFFF0000) >> 16)
+#define CONV_OUT_ROW	(STATE.conv_FM_out & 0xFFFF)
+#define CONV_CIN	(STATE.conv_Depth_in & 0xFFFF)
+#define CONV_COUT	(STATE.conv_Depth_out & 0xFFFF)
+#define CONV_IN_STRIDE	((STATE.conv_Depth_in & 0xFFFF0000) >> 16)
+#define CONV_W_STRIDE	(STATE.conv_S_kernel & 0xFF)
+#define CONV_OUT_STRIDE	((STATE.conv_Depth_out & 0xFFFF0000) >> 16)
+#define CONV_KW 	((STATE.conv_kernel & 0xFF000000) >> 24)
+#define CONV_KH 	((STATE.conv_kernel & 0xFF0000) >> 16)
+#define CONV_DL 	((STATE.conv_kernel & 0xFF00) >> 8)
+#define CONV_SK 	(STATE.conv_kernel & 0xFF)
+
+
 //#define TMODE	(STATE.tmode)
 //
 //#define TCSR_RX_ACTIVE_MASK (0x2)
@@ -342,23 +357,23 @@ private:
 // throw trap if cust inst access out of l1&im buffer
 #define check_cust_access(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER)) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
             !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(x); \
         }
 
 // throw trap if cust inst access out of l1 buffer
 #define check_cust_access_l1(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, L1_BUFFER))) { \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
             throw trap_ncp_cust_access(x); \
         }
 
 // throw trap if cust inst access out of im buffer
 #define check_cust_access_im(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len, IM_BUFFER))) { \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(x); \
         }
 
@@ -543,6 +558,63 @@ private:
         check_cust_access(RD, STRIDE_RD * SHAPE1_ROW); \
   })
 
+// check traps for memul.mm instructions
+#define check_traps_memul_mm(in_type, out_type, ts) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
+        check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
+        check_cust_misaligned_stride_src(RS1, in_type, BC_STRIDE_RS1); \
+        check_cust_misaligned_stride_src(RS2, in_type, BC_STRIDE_RS2); \
+        check_cust_misaligned_stride_dst(RD, out_type, BC_STRIDE_RD, BC_SHAPE2_COLUMN); \
+        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) * BC_SHAPE1_ROW; \
+        int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : (BC_SHAPE2_COLUMN * sizeof(in_type##_t))) * BC_SHAPE2_ROW; \
+        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE2_COLUMN * sizeof(out_type##_t))) * \
+                      (ts ? BC_SHAPE1_COLUMN : BC_SHAPE1_ROW); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+
+// check traps for metr.m instruction
+#define check_traps_metr_m ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
+        check_cust_misaligned_stride_src(RS1, int16, BC_STRIDE_RS1); \
+        check_cust_misaligned_stride_dst(RD, int16, BC_STRIDE_RD, BC_SHAPE1_ROW); \
+        int rs_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(int16_t))) * BC_SHAPE1_ROW; \
+        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE1_ROW * sizeof(int16_t))) * BC_SHAPE1_COLUMN; \
+        check_cust_access(RS1, rs_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+
+// check traps for meconv.mm instructions
+#define check_traps_meconv_mm(in_type, out_type) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(CONV_IN_ROW, CONV_IN_COLUMN); \
+        check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
+        check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
+        check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        check_cust_misaligned_stride_src(RS1, in_type, CONV_IN_STRIDE); \
+        check_cust_misaligned_stride_src(RS2, in_type, CONV_W_STRIDE); \
+        check_cust_misaligned_stride_dst(RD, out_type, CONV_OUT_STRIDE, CONV_COUT); \
+        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : (CONV_CIN * sizeof(in_type##_t))) * \
+                       (CONV_IN_COLUMN * CONV_IN_ROW); \
+        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : (CONV_COUT * sizeof(in_type##_t))) * \
+                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : (CONV_COUT * sizeof(out_type##_t))) * \
+                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
 
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
