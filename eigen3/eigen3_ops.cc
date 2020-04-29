@@ -523,7 +523,6 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
 int CustomInsns::veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss)
 {
 
-    ss->stride_rs1 = ss->stride_rs1 >> 1;
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
@@ -677,7 +676,6 @@ int CustomInsns::veemul_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *s
  */
 int CustomInsns::veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss)
 {
-    ss->stride_rs1 = ss->stride_rs1 >> 1;
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));

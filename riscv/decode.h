@@ -716,13 +716,13 @@ private:
 #define vdh_clear_exceed(idx) if(idx >= VL) {WRITE_VRD_H(0,idx); continue;} \
 								else
 
-#define sst_fill(x) ({(x).shape1_column = SHAPE1_COLUMN; \
+#define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
 					 (x).shape1_row = SHAPE1_ROW; \
 					 (x).shape2_column = SHAPE2_COLUMN; \
 					 (x).shape2_row = SHAPE2_ROW; \
-					 (x).stride_rd = STRIDE_RD>>1; \
-					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1>>1 : SHAPE1_COLUMN; \
-					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2>>1 : SHAPE1_COLUMN;})
+					 (x).stride_rd = STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
                                          (x).shape1_column = BC_SHAPE1_COLUMN; \

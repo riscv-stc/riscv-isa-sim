@@ -5,7 +5,7 @@ if (proxy == nullptr) return -1;
 // FIXME: should implement tcp access trap
 //class CustomInsns CusIns;
 //struct ShapeStride sst;
-//sst_fill(sst);
+//sst_fill(sst, 2, 2);
 uint8_t* src = (uint8_t*)MMU.get_phy_addr(RS1);
 uint32_t dst = RD;
 GET_LLB_OFF(dst, dst);

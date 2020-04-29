@@ -4,7 +4,7 @@ check_traps_vexxx_mf_x8out;
 class CustomInsns CusIns;
 struct ShapeStride sst;
 
-sst_fill(sst);
+sst_fill(sst, 2, 1);
 sst.stride_rd = STRIDE_RD;
 
 unsigned long rs1 = MMU.get_phy_addr(RS1);
