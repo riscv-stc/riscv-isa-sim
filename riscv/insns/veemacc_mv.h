@@ -1,5 +1,5 @@
 require_extension('V');
-check_traps_vexxx_mv_x32;
+check_traps_vexxx_mv;
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
