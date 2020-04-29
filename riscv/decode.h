@@ -440,6 +440,71 @@ private:
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access(RD, rd_size); \
+    })
+
+// check traps for ve***.mm reduce with float result instructions
+#define check_traps_vexxx_mm_reduce_all ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
+    })
+
+// check traps for ve***.mm reduce with vector result instructions
+#define check_traps_vexxx_mm_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+    })
+
+// check traps for ve***.mv reduce with vector result instructions
+#define check_traps_vexxx_mv_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+    })
+
+// check traps for ve***.mf reduce with vector result instructions
+#define check_traps_vexxx_mf_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
   })
 
 // check traps for ve***.mv instructions
@@ -509,7 +574,6 @@ private:
 // check traps for ve***.mf instructions, .x8.hf.mf
 #define check_traps_vexxx_mf_x8out ({ \
         check_cust_misaligned_base(RS1, int16); \
-        check_cust_misaligned_base(RD, int8); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
         check_cust_misaligned_stride_dst(RD, int8, STRIDE_RD, SHAPE1_COLUMN); \
