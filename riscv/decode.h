@@ -652,6 +652,30 @@ private:
         check_cust_access(RD, rd_size); \
   })
 
+// check traps for mov.f instructions
+#define check_traps_mov_f ({ \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for mov.v instructions
+#define check_traps_mov_v ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        if (DIM_DM == 0) { \
+          check_cust_access(RS1, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+          check_cust_access(RS1, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+        check_cust_access(RD, rd_size); \
+  })
+
 // check traps for memul.mm instructions
 #define check_traps_memul_mm(in_type, out_type, ts) ({ \
         check_cust_misaligned_base(RS1, in_type); \
@@ -773,6 +797,7 @@ private:
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_icmov(RD) \
         check_tcp_access_end_l1(RS1 + RS2) \
+        check_tcp_access_end_l1(RD + RS2) \
 })
 
 // check traps for pld instruction
@@ -781,7 +806,27 @@ private:
         check_tcp_access_start_l1(RD) \
         check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
         check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
 })
+
+// check traps for mov.l1.llb instruction
+#define check_traps_mov_l1_llb ({ \
+        check_tcp_access_start_llb(RS1) \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+})
+
+// check traps for mov.llb.l instruction
+#define check_traps_mov_llb_l1 ({ \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_llb(RD) \
+        check_tcp_access_end_l1(RS1 + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_access_end_llb(RD + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+})
+
 
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)

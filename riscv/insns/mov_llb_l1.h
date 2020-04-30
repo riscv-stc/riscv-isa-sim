@@ -2,7 +2,8 @@ using namespace Transport;
 auto proxy = p->get_proxy();
 if (proxy == nullptr) return -1;
 
-// FIXME: should implement tcp access trap
+check_traps_mov_llb_l1;
+
 //class CustomInsns CusIns;
 //struct ShapeStride sst;
 //sst_fill(sst, 2, 2);
