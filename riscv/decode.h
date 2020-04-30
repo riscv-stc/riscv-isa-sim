@@ -73,6 +73,8 @@ const int NCSR = 4096;
 #define VTYPE_VSEW  7
 #define VTYPE_VLMUL 3
 
+#define CORE_COUNT 32
+
 typedef uint64_t insn_bits_t;
 class insn_t
 {
@@ -707,6 +709,79 @@ private:
         check_cust_access_l1(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
   })
+
+// tcp traps
+
+// throw trap if tcp icmov's target core id not exist
+#define check_tcp_icmov_invalid_core_id(core_id, max_id) \
+        if (core_id > max_id) { \
+            throw trap_tcp_icmov_invalid_core(); \
+        }
+
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_icmov(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start_icmov(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_end_l1(x); \
+        }
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_llb(x) \
+        if (x < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_start(x); \
+        } \
+        if (x >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && x < LLB_AXI1_BUFFER_START) { \
+            throw trap_tcp_access_start(x); \
+        } \
+        if (x >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_llb(x) \
+        if (x < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_end_llb(x); \
+        } \
+        if (x >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && x < LLB_AXI1_BUFFER_START) { \
+            throw trap_tcp_access_end_llb(x); \
+        } \
+        if (x >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_end_llb(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_invalid_param(col, row, llb_sstride) \
+        if (unlikely(col == 0 || row == 0)) { \
+            throw trap_tcp_invalid_param(); \
+        }
+
+// check traps for icmov instruction
+#define check_traps_icmov ({ \
+        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_icmov(RD) \
+        check_tcp_access_end_l1(RS1 + RS2) \
+})
+
+// check traps for pld instruction
+#define check_traps_pld ({ \
+        check_tcp_access_start_llb(RS1) \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+})
 
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
