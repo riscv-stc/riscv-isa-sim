@@ -28,7 +28,7 @@ if ((8<<((RS2>>VTYPE_SEW_SHIFT) & VTYPE_VSEW) != 16) ||
         if (RS1 <= VLMAX)
             vl = RS1;
         else if (RS1 <= VLMAX * 2)
-            vl = RS1 / 2;
+            vl = (RS1 + 1)/ 2;
         else
             vl = VLMAX;
     }
