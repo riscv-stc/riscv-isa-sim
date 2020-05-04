@@ -1,8 +1,7 @@
 require_extension('V');
-// FIXME: should implement ncp access trap
 
-//check_rvv_access(RS1, VL * SEW/8);
-check_rvv_misaligned_base(RS1, int16);
+check_rvv_misaligned_base(RS1, int16)
+check_rvv_access(RS1, VL * SEW/8)
 
 check_vstart{
 	switch(SEW){
