@@ -15,6 +15,13 @@ check_vstart{
 				    WRITE_VRD_B(0, idx);
 				}
 			}
+			if (flag==0){
+				vector_for_each_from_zero(idx) {
+					check_v0bmask(idx);
+					if (idx < VL)
+						WRITE_VRD_B(1, idx);
+				}
+			}
 		break;
 
 		case 16:
@@ -26,6 +33,13 @@ check_vstart{
 				}
 				else {
 				    WRITE_VRD_H(0, idx);
+				}
+			}
+			if (flag==0){
+				vector_for_each_from_zero(idx) {
+					check_v0hmask(idx);
+					if (idx < VL)
+						WRITE_VRD_H(1, idx);
 				}
 			}
 		break;
