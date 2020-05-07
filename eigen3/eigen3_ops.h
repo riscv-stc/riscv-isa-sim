@@ -1261,14 +1261,14 @@ class Vma
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (vector_vs2(i) > rs1)
-                        vector_vd(i) = vector_vs2(i);
-                    else
-                        vector_vd(i) = rs1;
+                    vector_vd(i) = max(vector_vs2(i), rs1);
                 }
             }
-        } else
-            vector_vd = (vector_vs2.array() > rs1).select(vector_vs2, rs1);
+        } else {
+            for (int i = 0; i < vl; i++) {
+                vector_vd(i) = max(vector_vs2(i), rs1);
+            }
+        }
 
         DBG_VECTOR_VF;
 
@@ -1295,15 +1295,14 @@ class Vma
         if (!vm) {
             for (int i = 0; i < vl; i++) {
                 if (vector_v0(i) & 0x1) {
-                    if (vector_vs2(i) > vector_vs1(i))
-                        vector_vd(i) = vector_vs2(i);
-                    else
-                        vector_vd(i) = vector_vs1(i);
+                    vector_vd(i) = max(vector_vs2(i), vector_vs1(i));
                 }
             }
-        } else
-            vector_vd = (vector_vs2.array() > vector_vs1.array()).select(vector_vs2, vector_vs1);
-
+        } else {
+            for (int i = 0; i < vl; i++) {
+                vector_vd(i) = max(vector_vs2(i), vector_vs1(i));
+            }
+        }
         DBG_VECTOR_VV;
 
         return 0;

@@ -212,6 +212,32 @@ namespace Eigen {
 
 namespace half_impl {
 
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isinf)(const half& a) {
+  return (a.x & 0x7fff) == 0x7c00;
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (ispinf)(const half& a) {
+  return (a.x & 0xffff) == 0x7c00;
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isninf)(const half& a) {
+  return (a.x & 0xffff) == 0xfc00;
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isnan)(const half& a) {
+#if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
+  return __hisnan(a);
+#else
+  return (a.x & 0x7fff) > 0x7c00;
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isfinite)(const half& a) {
+  return !(isinf EIGEN_NOT_A_MACRO (a)) && !(isnan EIGEN_NOT_A_MACRO (a));
+}
+
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half abs(const half& a) {
+  half result;
+  result.x = a.x & 0x7FFF;
+  return result;
+}
+
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
 
 // Intrinsics for native fp16 support. Note that on current hardware,
@@ -360,22 +386,46 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator /= (half& a, const half& b)
   return a;
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator == (const half& a, const half& b) {
+  if( isnan(a)||isnan(b))
+    return false;
+  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+    return true;
+  if((isinf(a)||isinf(b)))
+    return false;
   return numext::equal_strict(float(a),float(b));
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator != (const half& a, const half& b) {
+  if( isnan(a) ||  isnan(b))
+    return true;
   return numext::not_equal_strict(float(a), float(b));
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator < (const half& a, const half& b) {
+  if( isnan(a) ||  isnan(b))
+    return false;
+  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+    return false;
+  if( ispinf(a) || isninf(b))
+    return true;
+  if( isninf(a) || ispinf(b))
+    return false;
   return float(a) < float(b);
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator <= (const half& a, const half& b) {
-  return float(a) <= float(b);
+  return Eigen::half_impl::operator<(a,b) || Eigen::half_impl::operator==(a,b);
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator > (const half& a, const half& b) {
+  if( isnan(a) ||  isnan(b))
+    return false;
+  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+    return false;
+  if( ispinf(a) || isninf(b))
+    return true;
+  if( isninf(a) || ispinf(b))
+    return false;
   return float(a) > float(b);
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator >= (const half& a, const half& b) {
-  return float(a) >= float(b);
+  return Eigen::half_impl::operator>(a,b) || Eigen::half_impl::operator==(a,b);
 }
 
 #endif  // Emulate support for half floats
@@ -500,25 +550,6 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float half_to_float(__half_raw h) {
 
 // --- standard functions ---
 
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isinf)(const half& a) {
-  return (a.x & 0x7fff) == 0x7c00;
-}
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isnan)(const half& a) {
-#if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
-  return __hisnan(a);
-#else
-  return (a.x & 0x7fff) > 0x7c00;
-#endif
-}
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isfinite)(const half& a) {
-  return !(isinf EIGEN_NOT_A_MACRO (a)) && !(isnan EIGEN_NOT_A_MACRO (a));
-}
-
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half abs(const half& a) {
-  half result;
-  result.x = a.x & 0x7FFF;
-  return result;
-}
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
@@ -584,6 +615,8 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (min)(const half& a, const half& b) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return __hlt(b, a) ? b : a;
 #else
+  if ( isnan(a) ||  isnan(b))
+    return  isnan(a)? a:b;
   const float f1 = static_cast<float>(a);
   const float f2 = static_cast<float>(b);
   return f2 < f1 ? b : a;
@@ -593,6 +626,8 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (max)(const half& a, const half& b) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return __hlt(a, b) ? b : a;
 #else
+  if ( isnan(a) ||  isnan(b))
+    return  isnan(a)? a:b;
   const float f1 = static_cast<float>(a);
   const float f2 = static_cast<float>(b);
   return f1 < f2 ? b : a;
