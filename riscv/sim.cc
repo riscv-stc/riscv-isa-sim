@@ -385,7 +385,7 @@ bool sim_t::in_local_mem(reg_t addr, memory_type type) {
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
 
     reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
-    if (desc.first == start_addr && addr - desc.first < mem->size()) {
+    if (desc.first == start_addr && addr - desc.first <= mem->size()) {
       return true;
     }
   }
