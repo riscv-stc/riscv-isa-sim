@@ -405,9 +405,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator < (const half& a, const half
   if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
     return false;
   if( ispinf(a) || isninf(b))
-    return true;
-  if( isninf(a) || ispinf(b))
     return false;
+  if( isninf(a) || ispinf(b))
+    return true;
   return float(a) < float(b);
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator <= (const half& a, const half& b) {
