@@ -764,25 +764,25 @@ private:
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_llb(x) \
         if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
-            throw trap_tcp_access_start(x); \
+            throw trap_tcp_illegal_encoding(); \
         } \
         if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START) { \
-            throw trap_tcp_access_start(x); \
+            throw trap_tcp_illegal_encoding(); \
         } \
         if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
-            throw trap_tcp_access_start(x); \
+            throw trap_tcp_illegal_encoding(); \
         }
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_llb(x) \
         if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
-            throw trap_tcp_access_end_llb(x); \
+            throw trap_tcp_illegal_encoding(); \
         } \
         if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START) { \
-            throw trap_tcp_access_end_llb(x); \
+            throw trap_tcp_illegal_encoding(); \
         } \
         if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
-            throw trap_tcp_access_end_llb(x); \
+            throw trap_tcp_illegal_encoding(); \
         }
 
 // throw trap if tcp source end address in L1Buffer
@@ -802,10 +802,10 @@ private:
 
 // check traps for pld instruction
 #define check_traps_pld ({ \
-        check_tcp_access_start_llb(RS1) \
         check_tcp_access_start_l1(RD) \
-        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_access_start_llb(RS1) \
         check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
         check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
 })
 
