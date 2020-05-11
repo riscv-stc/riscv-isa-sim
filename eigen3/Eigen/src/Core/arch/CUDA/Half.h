@@ -221,6 +221,12 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (ispinf)(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isninf)(const half& a) {
   return (a.x & 0xffff) == 0xfc00;
 }
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isPositive)(const half& a) {
+  return (a.x & 0x8000) == 0x0;
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (iszero)(const half& a) {
+  return (a.x & 0x7fff) == 0x0;
+}
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isnan)(const half& a) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return __hisnan(a);
@@ -228,6 +234,26 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isnan)(const half& a) {
   return (a.x & 0x7fff) > 0x7c00;
 #endif
 }
+
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half highest() {
+  return half_impl::raw_uint16_to_half(0x7bff);
+}
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half lowest() {
+  return half_impl::raw_uint16_to_half(0xfbff);
+}
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half pinf() {
+  return half_impl::raw_uint16_to_half(0x7c00);
+}
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half ninf() {
+  return half_impl::raw_uint16_to_half(0xfc00);
+}
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half quiet_NaN() {
+  return half_impl::raw_uint16_to_half(0x7c01);
+}
+EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE half NaN() {
+  return half_impl::raw_uint16_to_half(0x7e00);
+}
+
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool (isfinite)(const half& a) {
   return !(isinf EIGEN_NOT_A_MACRO (a)) && !(isnan EIGEN_NOT_A_MACRO (a));
 }
@@ -334,6 +360,12 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator / (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
+  if(isnan(a) ||  isnan(b))
+    return NaN();
+  if(iszero(b)&& iszero(a))
+    return NaN();
+  if(iszero(b)&& !iszero(a))
+    return isPositive(b)==isPositive(a)?pinf():ninf();
   return a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
 #else
   return half(float(a) / float(b));
