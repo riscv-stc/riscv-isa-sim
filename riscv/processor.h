@@ -18,6 +18,7 @@ class processor_t;
 class mmu_t;
 typedef reg_t (*insn_func_t)(processor_t*, insn_t, reg_t);
 class simif_t;
+class hwsync_t;
 class trap_t;
 class extension_t;
 class disassembler_t;
@@ -180,6 +181,9 @@ struct state_t
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
+  bool sync_entered;
+  bool sync_exited;
+
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
   enum {
@@ -215,7 +219,7 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t, public Transport::AbstractProxy::Callback
 {
 public:
-  processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id, bool halt_on_reset=false);
+  processor_t(const char* isa, simif_t* sim, hwsync_t *hs, uint32_t idx, uint32_t id, bool halt_on_reset=false);
   ~processor_t();
 
   Transport::AbstractProxy* get_proxy() { return proxy; };
@@ -265,6 +269,9 @@ public:
 
   void register_insn(insn_desc_t);
   void register_extension(extension_t*);
+
+  void sync_start();
+  bool sync_done();
 
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -365,6 +372,7 @@ public:
 
 private:
   simif_t* sim;
+  hwsync_t *hwsync;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;

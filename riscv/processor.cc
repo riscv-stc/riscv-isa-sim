@@ -5,6 +5,7 @@
 #include "common.h"
 #include "config.h"
 #include "simif.h"
+#include "hwsync.h"
 #include "mmu.h"
 #include "disasm.h"
 #include <cinttypes>
@@ -21,10 +22,12 @@
 #undef STATE
 #define STATE state
 
-processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t id,
+processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
+        uint32_t idx, uint32_t id,
         bool halt_on_reset)
-  : debug(false), halt_request(false), sim(sim), ext(NULL), idx(idx), id(id),
-  halt_on_reset(halt_on_reset), last_pc(1), executions(1)
+  : debug(false), halt_request(false), sim(sim), hwsync(hs),
+  ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset),
+  last_pc(1), executions(1)
 {
   parse_isa_string(isa);
   register_base_instructions();
@@ -39,6 +42,8 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t idx, uint32_t i
   reset();
   proxy = Transport::Factory<Transport::AbstractProxy>::create();
   proxy->init(id, "127.0.0.1", 3291, this);
+
+  hwsync->join(0);
 }
 
 processor_t::~processor_t()
@@ -51,6 +56,8 @@ processor_t::~processor_t()
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
 #endif
+
+  hwsync->leave(0);
 
   delete mmu;
   delete disassembler;
@@ -1038,6 +1045,29 @@ void processor_t::register_base_instructions()
 
   register_insn({0, 0, &illegal_instruction, &illegal_instruction});
   build_opcode_map();
+}
+
+void processor_t::sync_start() {
+  hwsync->enter(0);
+  state.sync_entered = true;
+}
+
+bool processor_t::sync_done() {
+  if (state.sync_entered) {
+    if (hwsync->done(0)) {
+      hwsync->exit(0);
+      state.sync_entered = false;
+      state.sync_exited = true;
+    }
+  }
+  if (state.sync_exited) {
+    if (hwsync->exited(0)) {
+      state.sync_exited = false;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool processor_t::load(reg_t addr, size_t len, uint8_t* bytes)

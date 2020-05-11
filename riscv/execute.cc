@@ -133,6 +133,11 @@ void processor_t::step(size_t n)
         state.wfi_flag = 0;
         state.interrupt_flag = 0;
       }
+
+      if (sync_done()) {
+        pc = state.pc;
+        state.wfi_flag = 0;
+      }
       
       if (unlikely(slow_path()))
       {

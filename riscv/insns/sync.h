@@ -1,8 +1,7 @@
-auto proxy = p->get_proxy();
-if (proxy == nullptr) return -1;//FIXME?
 
-proxy->sync();
-proxy->sync();
+p->sync_start();
+
+wfi();
 
 ////after sync done then dump memory. 
 // simif_t* sim = p->get_sim();

@@ -2,6 +2,7 @@
 
 #include "sim.h"
 #include "mmu.h"
+#include "hwsync.h"
 #include "dts.h"
 #include "remote_bitbang.h"
 #include <map>
@@ -56,6 +57,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   signal(SIGINT, &handle_signal);
 
+  hwsync_t *hwsync = new hwsync_t();
+
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(0xc07f3000, new uart_device_t());
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
@@ -89,7 +92,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, i, halted);
+      procs[i] = new processor_t(isa, this, hwsync, i, i, halted);
     }
   }
   else {
@@ -98,7 +101,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
       exit(1);
     }
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, i, hartids[i], halted);
+      procs[i] = new processor_t(isa, this, hwsync, i, hartids[i], halted);
     }
   }
 
