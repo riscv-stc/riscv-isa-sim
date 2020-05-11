@@ -795,23 +795,17 @@ private:
         if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
             throw trap_tcp_illegal_encoding(); \
         } \
-        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START) { \
-            throw trap_tcp_illegal_encoding(); \
-        } \
-        if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
             throw trap_tcp_illegal_encoding(); \
         }
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_llb(x) \
         if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
-            throw trap_tcp_illegal_encoding(); \
+            throw trap_tcp_access_end_llb(x); \
         } \
-        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START) { \
-            throw trap_tcp_illegal_encoding(); \
-        } \
-        if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
-            throw trap_tcp_illegal_encoding(); \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_end_llb(x); \
         }
 
 // throw trap if tcp source end address in L1Buffer

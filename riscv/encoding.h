@@ -168,7 +168,7 @@
 // two axi bus access same llb buffer
 #define LLB_AXI0_BUFFER_START 0xf8000000
 #define LLB_AXI1_BUFFER_START 0xfa000000
-#define LLB_BUFFER_SIZE 0x800000
+#define LLB_BUFFER_SIZE 0x2000000
 
 #define GET_LLB_OFF(src, dst) do {                                                 \
     if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
