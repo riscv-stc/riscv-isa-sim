@@ -209,10 +209,14 @@ void sim_t::load_heap(const char *fname, reg_t off, size_t len)
   } else if (suffix_str == "bin") {
     std::ifstream ifs(fname, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
-        std::cout << __FUNCTION__ << ": Error opening file";
-        return;
-    std::cout << "ERROR: unsupport load bin file now......" << std::endl;
-    exit(1);
+      std::cout << __FUNCTION__ << ": Error opening file";
+      return;
+    }
+
+    char buf[2];
+    for (addr_t addr = 0; addr < len; addr += 2) {
+      ifs.read(buf, sizeof(buf));
+      mem.write(off + addr, 2, buf);
     }
   } else {
       std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
