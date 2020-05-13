@@ -1,5 +1,4 @@
 #include <iostream>
-#include "../Transport/AbstractProxy.h"
 #include "devices.h"
 #include "mmu.h"
 #include "processor.h"
@@ -62,19 +61,11 @@ sysdma_device_t::~sysdma_device_t() {}
  * @brief dma core function to transfer data between LLB and DDR
  */
 void sysdma_device_t::dma_core(int ch) {
-  Transport::AbstractProxy* proxy = nullptr;
+  simif_t *sim = procs_[0]->get_sim();
 
   while (1) {
     std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
     thread_cond_[ch].wait(lock);
-
-    if (proxy == nullptr) {
-      proxy = procs_[0]->get_proxy();
-    }
-    if (proxy == nullptr) {
-      std::cout << "sysdma: fail to get proxy" << std::endl;
-      return;
-    }
 
     while (dma_channel_[ch].llp) {
       if(dma_channel_[ch].llp < SYSDMA0_BASE + DMA_BUF_OFFSET ||
@@ -93,30 +84,6 @@ void sysdma_device_t::dma_core(int ch) {
       }
       Transport::AbstractProxy::DmaDir dir;
 
-      uint64_t dst, src;
-      // only do simple address check
-      if (desc->ddar >= LLB_AXI1_BUFFER_START && desc->ddar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
-        dir = Transport::AbstractProxy::DDR2LLB;
-        dst = desc->ddar - LLB_AXI1_BUFFER_START;
-        src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
-      } else if (desc->dsar >= LLB_AXI1_BUFFER_START && desc->dsar <= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) {
-        dir = Transport::AbstractProxy::LLB2DDR;
-        src = desc->dsar - LLB_AXI1_BUFFER_START;
-        dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
-      } else if (desc->ddar >= LLB_AXI0_BUFFER_START && desc->ddar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
-          dir = Transport::AbstractProxy::DDR2LLB;
-          dst = desc->ddar - LLB_AXI0_BUFFER_START;
-          src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
-      } else if (desc->dsar >= LLB_AXI0_BUFFER_START && desc->dsar <= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) {
-          dir = Transport::AbstractProxy::LLB2DDR;
-          src = desc->dsar - LLB_AXI0_BUFFER_START;
-          dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
-      } else {
-          dir = Transport::AbstractProxy::DDR2DDR;
-          src = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
-          dst = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
-      }
-
       // for linear mode, row is 1, col is xfer len, stride is 0
       unsigned int col = desc->ctlr.bits.blk_en?
                   desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width : desc->ctlr.bits.xfer_len;
@@ -124,21 +91,22 @@ void sysdma_device_t::dma_core(int ch) {
       unsigned int stride =  desc->ctlr.bits.blk_en? desc->bkmr1.bits.stride : 0;
 
       if(stride && stride < col)
-          throw std::runtime_error("stride is smaller than col");
+        throw std::runtime_error("stride is smaller than col");
 
-      int times;
-      for (times = 0; times < 5; times++) {
-            if (proxy->dmaXfer(dst, src, dir, col, row, stride))
-              break;
-          sleep(1);
+      char *dst = sim->addr_to_mem(desc->ddar);
+      char *src = sim->addr_to_mem(desc->dsar);
+
+      if (stride == 0) {
+        memcpy(dst, src, col * row * 2);
+      } else {
+        for (int i = 0; i < row; i++) {
+          memcpy(dst + i * col, src + i * stride, col);
+        }
       }
-      if(times == 5)
-          throw std::runtime_error("dmaXfer retry 5 times and fail");
 
       dma_channel_[ch].llp = desc->llpr;
     }
 
-    proxy->dmaPoll();
     // Q&A: one complete status include both channels?
     dma_channel_[ch].xfer_complete = true;
     // clear context

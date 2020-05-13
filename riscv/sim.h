@@ -5,7 +5,6 @@
 
 #include "processor.h"
 #include "devices.h"
-#include "ddr_mem.h"
 #include "pcie_driver.h"
 #include "debug_module.h"
 #include "simif.h"

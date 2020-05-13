@@ -11,7 +11,6 @@
 #include <map>
 #include "simif.h"
 #include "debug_rom_defines.h"
-#include "ddr_mem.h"
 #include "Transport/AbstractProxy.h"
 
 class processor_t;

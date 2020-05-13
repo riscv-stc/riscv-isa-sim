@@ -140,8 +140,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   //  bus.add_device(CLINT_BASE, clint.get());
 
   if (ddr_size > 0) {
-    bus.add_device(ddr_mem_start, new ddr_mem_t(procs, ddr_size));
+    bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
+
+  mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+  bus.add_device(LLB_AXI0_BUFFER_START, llb);
+  bus.add_device(LLB_AXI1_BUFFER_START, llb);
 }
 
 sim_t::~sim_t()
@@ -402,13 +406,8 @@ bool sim_t::in_local_mem(reg_t addr, memory_type type) {
 char* sim_t::addr_to_mem(reg_t addr) {
   std::ostringstream err;
 
-  // addr on global bus (ddr)
   auto desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (addr - desc.first < mem->size())
-        return mem->contents() + (addr - desc.first);
-    return NULL;
-  } else if (auto mem = dynamic_cast<ddr_mem_t *>(desc.second)) {
     if (addr - desc.first < mem->size())
         return mem->contents() + (addr - desc.first);
     return NULL;

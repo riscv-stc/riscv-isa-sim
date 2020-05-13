@@ -51,7 +51,6 @@ riscv_srcs = \
 	rocc.cc \
 	regnames.cc \
 	devices.cc \
-	ddr_mem.cc \
 	pcie_driver.cc \
 	rom.cc \
 	sysdma.cc \

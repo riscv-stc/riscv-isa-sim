@@ -130,7 +130,7 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
-  uint32_t ddr_size = 0xa00000;
+  uint32_t ddr_size = 0x10000000;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
