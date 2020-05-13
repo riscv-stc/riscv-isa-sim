@@ -159,13 +159,6 @@ int pcie_driver_t::recv()
 #define DDR_SIZE (0xc0000000)
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
-	auto proxy = procs[0]->get_proxy();
-
-	if (addr > LOCAL_DDR_SIZE && addr < DDR_SIZE) {
-		proxy->ddrLoad(addr, len, bytes);
-    return true;
-	}
-
 	if (auto host_addr = mPSim->addr_to_mem(addr)) {
   	// low addr use local caches
   	// if (addr + len < LOCAL_DDR_SIZE)
@@ -180,13 +173,6 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
-	auto proxy = procs[0]->get_proxy();
-
-	if (addr > LOCAL_DDR_SIZE && addr < DDR_SIZE) {
-		auto  status = proxy->ddrStore(addr, len, bytes);
-    return status;
-	}
-
 	if (auto host_addr = mPSim->addr_to_mem(addr)) {
   	// low addr use local caches
   	// if (addr + len < LOCAL_DDR_SIZE)

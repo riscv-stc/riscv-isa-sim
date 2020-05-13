@@ -40,8 +40,6 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
       disassembler->add_insn(disasm_insn);
 
   reset();
-  proxy = Transport::Factory<Transport::AbstractProxy>::create();
-  proxy->init(id, "127.0.0.1", 3291, this);
 
   hwsync->join(0);
 }

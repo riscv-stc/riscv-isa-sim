@@ -1,22 +1,17 @@
-using namespace Transport;
-auto proxy = p->get_proxy();
-if (proxy == nullptr) return -1;
-
 check_traps_mov_llb_l1;
 
-//class CustomInsns CusIns;
-//struct ShapeStride sst;
-//sst_fill(sst, 2, 2);
 uint8_t* src = (uint8_t*)MMU.get_phy_addr(RS1);
-uint32_t dst = RD;
-GET_LLB_OFF(dst, dst);
+uint8_t* dst = p->get_sim()->addr_to_mem(zext_xlen(RD));
 
 //src shape
 unsigned short col = MTE_SHAPE_COLUMN;
 unsigned short row = MTE_SHAPE_ROW; 
 unsigned short stride = STRIDE_LLB ? STRIDE_LLB : 0;
 
-for (int times = 0; times < 5; times++) {
-  if (likely(proxy->llbStore(dst, col * row * 2, src, col * 2, stride, 0)))
-    break;
+if (stride == 0) {
+  memcpy(dst, src, col * row * 2);
+} else {
+  for (int i = 0; i < row; i++) {
+    memcpy(dst + i * stride, src + i * col * 2, col * 2);
+  }
 }

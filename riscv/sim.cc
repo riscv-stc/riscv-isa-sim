@@ -431,6 +431,17 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
   return NULL;
 }
 
+char* sim_t::local_addr_to_mem_by_id(reg_t addr, uint32_t id) {
+  for (unsigned i = 0; i < nprocs(); i++) {
+    processor_t *proc = get_core(i);
+    if (proc->get_id() == id) {
+      return local_addr_to_mem(addr, proc->get_idx());
+    }
+  }
+
+  return NULL;
+}
+
 // htif
 
 void sim_t::reset()
