@@ -82,7 +82,6 @@ void sysdma_device_t::dma_core(int ch) {
         dma_channel_[ch].llp = desc->llpr;
         continue;
       }
-      Transport::AbstractProxy::DmaDir dir;
 
       // for linear mode, row is 1, col is xfer len, stride is 0
       unsigned int col = desc->ctlr.bits.blk_en?

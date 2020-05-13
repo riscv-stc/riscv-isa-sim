@@ -14,8 +14,6 @@
 #include <memory>
 #include "../VERSION"
 #include <execinfo.h>
-#include "Transport/Transport.h"
-
 
 static void help(int exit_code = 1)
 {
@@ -140,7 +138,7 @@ int main(int argc, char** argv)
   bool log_cache = false;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
-  int coreId = INVALID_CORE_ID;
+  int coreId = -1;
   const char *load_file = NULL;
   const char *dump_file = NULL;
   std::pair<reg_t, size_t> mem2 = {0x10000, 0x40000}; 

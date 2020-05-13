@@ -14,9 +14,6 @@
 #include <iostream>
 #include "eigen3_ops.h"
 
-#include "Transport/AbstractLogger.h"
-#include "Transport/Factory.h"
-
 using namespace std::placeholders;
 
 #define RISCV_AT_FDCWD -100
@@ -88,9 +85,6 @@ syscall_t::syscall_t(htif_t* htif)
   fds.alloc(stdin_fd); // stdin -> stdin
   fds.alloc(stdout_fd0); // stdout -> stdout
   fds.alloc(stdout_fd1); // stderr -> stdout
-
-  logger.reset(Transport::Factory<Transport::AbstractLogger>::create());
-  logger->init(0, "127.0.0.1", 3291);
 }
 
 std::string syscall_t::do_chroot(const char* fn)
@@ -160,10 +154,6 @@ reg_t syscall_t::sys_write(reg_t fd, reg_t pbuf, reg_t len, reg_t a3, reg_t a4, 
 {
   std::vector<char> buf(len);
   memif->read(pbuf, len, &buf[0]);
-
-  if (fd == 1) {  // only log stdout
-    if (logger != nullptr) logger->console(&buf[0], len);
-  }
 
   reg_t ret = sysret_errno(write(fds.lookup(fd), &buf[0], len));
   return ret;

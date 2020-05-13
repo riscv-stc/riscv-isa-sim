@@ -11,7 +11,6 @@
 #include <map>
 #include "simif.h"
 #include "debug_rom_defines.h"
-#include "Transport/AbstractProxy.h"
 
 class processor_t;
 class mmu_t;
@@ -215,13 +214,11 @@ static int cto(reg_t val)
 }
 
 // this class represents one processor in a RISC-V machine.
-class processor_t : public abstract_device_t, public Transport::AbstractProxy::Callback
+class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, simif_t* sim, hwsync_t *hs, uint32_t idx, uint32_t id, bool halt_on_reset=false);
   ~processor_t();
-
-  Transport::AbstractProxy* get_proxy() { return proxy; };
 
   void set_debug(bool value);
   void set_histogram(bool value);
@@ -275,10 +272,6 @@ public:
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
-
-  // Receive data from Transport module
-  bool recv(uint32_t dstaddr, const char* data, uint32_t size, bool set_active) override;
-  bool dump(std::string *data, uint64_t addr, uint32_t size) override;
 
   // When true, display disassembly of each instruction that's executed.
   bool debug;
@@ -388,8 +381,6 @@ private:
   std::string isa_string;
   bool histogram_enabled;
   bool halt_on_reset;
-
-  Transport::AbstractProxy* proxy;
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
