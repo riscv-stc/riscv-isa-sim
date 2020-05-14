@@ -164,6 +164,7 @@ void processor_t::reset()
   halt_on_reset = false;
   set_csr(CSR_MSTATUS, state.mstatus);
   state.vtype = 0x4; //vlmul=0,vsew=1,vediv=0
+  state.vl = 64;//follow IC design, default value 64
 
   if (ext)
     ext->reset(); // reset the extension
