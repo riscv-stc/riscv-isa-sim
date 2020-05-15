@@ -12,5 +12,5 @@ wfi();
 //
 //sprintf(fname, "dump/output_mem2-%d@%d.dat", p->get_syncs(), p->get_id());
 //p->set_syncs(p->get_syncs() + 1);
-//sim->dump_heap(fname, 0x100000, 0x10000);
+//sim->dump_mem(fname, 0x100000, 0x10000);
 

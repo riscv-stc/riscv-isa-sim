@@ -12,6 +12,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cassert>
+#include <regex>
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -180,63 +181,105 @@ void sim_t::main()
   }
 }
 
-void sim_t::load_heap(const char *fname, reg_t off, size_t len)
+void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
 {
   memif_t mem(this);
-  if (!fname)
-    return;
 
-  std::cout << "Load heap off 0x" << std::hex << off
-            << " len 0x" << std::hex << len
-            << " to file " << fname << std::endl;
+  std::cout << "Load memory from " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
   std::string name = std::string(fname);
   std::string suffix_str = name.substr(name.find_last_of('.') + 1);
 
   if (suffix_str == "dat") {
     std::ifstream ifs(fname, std::ios::in);
     if (!ifs.is_open()) {
-        std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
     }
 
     char buf[512];
-    addr_t addr = off;
+    addr_t offset = 0;
     while(!ifs.eof()) {
       ifs.getline(buf, 512);
       char *p = buf;
-      for (int i = 0; i < 64; i++, p += 5, addr += 2) {
+      for (int i = 0; i < 64 && offset < len; i++, p += 5, offset += 2) {
         uint16_t data = (uint16_t)strtol(p, NULL, 16);
-        mem.write(addr, 2, &data);
+        mem.write(addr + offset, 2, &data);
       }
     }
     ifs.close();
   } else if (suffix_str == "bin") {
     std::ifstream ifs(fname, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
-      std::cout << __FUNCTION__ << ": Error opening file";
-      return;
+      std::cout << "Failed to open file." << std::endl;
+      exit(1);
     }
 
     char buf[2];
-    for (addr_t addr = 0; addr < len; addr += 2) {
+    for (addr_t offset = 0; !ifs.eof() && offset < len; offset += 2) {
       ifs.read(buf, sizeof(buf));
-      mem.write(off + addr, 2, buf);
+      mem.write(addr + offset, 2, buf);
     }
   } else {
-      std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+      std::cout << "Unsupported file type " << suffix_str << std::endl;
       exit(1);
   }
 }
 
-void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
+void sim_t::load_mem(const char *fname, reg_t addr, size_t len, int proc_id)
+{
+  char *mem = local_addr_to_mem_by_id(addr, proc_id);
+
+  std::cout << "Load memory from " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str == "dat") {
+    std::ifstream ifs(fname, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    char buf[512];
+    int offset = 0;
+    while(!ifs.eof()) {
+      ifs.getline(buf, 512);
+      char *p = buf;
+      for (int i = 0; i < 64 && offset < len; i++, p += 5, offset += 2) {
+        uint16_t data = (uint16_t)strtol(p, NULL, 16);
+        memcpy(mem + offset, &data, 2);
+      }
+    }
+    ifs.close();
+  } else if (suffix_str == "bin") {
+    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) {
+      std::cout << "Failed to open file." << std::endl;
+      exit(1);
+    }
+
+    char buf[2];
+    for (addr_t offset = 0; !ifs.eof() && offset < len; offset += 2) {
+      ifs.read(buf, sizeof(buf));
+      memcpy(mem + offset, buf, 2);
+    }
+  } else {
+      std::cout << "Unsupported file type " << suffix_str << std::endl;
+      exit(1);
+  }
+}
+
+void sim_t::dump_mem(const char *fname, reg_t off, size_t len)
 {
   memif_t mem(this);
-  if (!fname)
-    return;
 
-  std::cout << "Dump heap off 0x" << std::hex << off
-            << " len 0x" << std::hex << len
-            << " to file " << fname << std::endl;
+  std::cout << "Dump memory to " << fname
+            << ", addr=0x" << std::hex << off
+            << ", len=0x" << std::hex << len << std::endl;
   std::string name = std::string(fname);
   std::string suffix_str = name.substr(name.find_last_of('.') + 1);
 
@@ -248,8 +291,8 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
   if (suffix_str == "dat") {
     std::ofstream ofs(fname, std::ios::out);
     if (!ofs.is_open()) {
-        std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
     }
 
     uint16_t data;
@@ -266,8 +309,8 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
   } else if (suffix_str == "bin") {
     std::ofstream ofs(fname, std::ios::out | std::ios::binary);
     if (!ofs.is_open()) {
-        std::cout << __FUNCTION__ << ": Error opening file";
-        return;
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
     }
 
     char buf[2];
@@ -278,14 +321,163 @@ void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
   }
 }
 
-int sim_t::run(const char *fname_load, const char *fname_dump, addr_t off, size_t len)
+void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id)
+{
+  char *mem = (proc_id >= 0)?
+              local_addr_to_mem_by_id(addr, proc_id) :
+              addr_to_mem(addr);
+
+  std::cout << "Dump memory to " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str != "dat" && suffix_str != "bin") {
+    std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+    exit(1);
+  }
+
+  if (suffix_str == "dat") {
+    std::ofstream ofs(fname, std::ios::out);
+    if (!ofs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    uint16_t data;
+    char buf[5];
+    for (addr_t offset = 0; offset < len; offset += 2) {
+      data = *((uint16_t *)(mem + offset));
+      sprintf(buf, "%04x", data);
+      ofs << buf << " ";
+      if (!((offset + 2) % 128))
+        ofs << endl;
+    }
+
+    ofs.close();
+  } else if (suffix_str == "bin") {
+    std::ofstream ofs(fname, std::ios::out | std::ios::binary);
+    if (!ofs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    for (addr_t offset = 0; offset < len; offset += 2) {
+      ofs.write(mem + offset, 2);
+    }
+  }
+}
+
+void sim_t::load_mems(std::vector<std::string> load_files) {
+  for (const std::string& fname : load_files) {
+    // l1 file name format: <any>@<core_id|llb|ddr>.<ext>
+    const std::regex re0(".*@([0-9]+|ddr|llb)\\.([a-z]+)");
+    // llb, ddr file name format: <any>@<start>.<ext>
+    const std::regex re1(".*@(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // llb, ddr file name format: <any>@<start>_<len>.<ext>
+    const std::regex re2(".*@(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // l1 file name format: <any>@<core_id|llb|ddr>.<start>.<ext>
+    const std::regex re3(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // l1 file name format: <any>@<core_id|llb|ddr>.<start>_<len>.<ext>
+    const std::regex re4(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    std::smatch match;
+ 
+    if (std::regex_match(fname, match, re0)) {
+      if (match[1] == "ddr") {
+        reg_t start = 0;
+        size_t len = 0xc0000000;
+        load_mem(fname.c_str(), start, len);
+      } else if (match[1] == "llb") {
+        reg_t start = LLB_AXI0_BUFFER_START;
+        size_t len = LLB_BUFFER_SIZE;
+        load_mem(fname.c_str(), start, len);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        reg_t start = l1_buffer_start;
+        size_t len = l1_buffer_size;
+        load_mem(fname.c_str(), start, len, proc_id);
+      }
+    } else if (std::regex_match(fname, match, re1)) {
+      auto start = std::stoul(match[1], nullptr, 16);
+      load_mem(fname.c_str(), start, -1);
+    } else if (std::regex_match(fname, match, re2)) {
+      auto start = std::stoul(match[1], nullptr, 16);
+      auto len = std::stoul(match[2], nullptr, 16);
+      load_mem(fname.c_str(), start, len);
+    } else if (std::regex_match(fname, match, re3)) {
+      auto start = std::stoul(match[2], nullptr, 16);
+      if (match[1] == "ddr" || match[1] == "llb") {
+        load_mem(fname.c_str(), start, -1);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        load_mem(fname.c_str(), start, -1, proc_id);
+      }
+
+    } else if (std::regex_match(fname, match, re4)) {
+      auto start = std::stoul(match[2], nullptr, 16);
+      auto len = std::stoul(match[3], nullptr, 16);
+      if (match[1] == "ddr" || match[1] == "llb") {
+        load_mem(fname.c_str(), start, len);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        load_mem(fname.c_str(), start, len, proc_id);
+      }
+
+    } else {
+      std::cout << "Invalid load file " << fname << std::endl;
+      exit(1);
+    }
+  }
+}
+
+void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::string path) {
+  char fname[256];
+
+  for (const std::string& mem: mems) {
+    if (mem == "l1") {
+      // dump whole l1 buffer for all procs
+      for (auto i=0u; i< nprocs(); i++) {
+        snprintf(fname, sizeof(fname), "%s/%s@%d.dat", path.c_str(), prefix.c_str(), procs[i]->get_id());
+        dump_mem(fname, l1_buffer_start, l1_buffer_size, procs[i]->get_id());
+      }
+    } else if (mem == "llb") {
+      // dump whole llb
+      snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
+      dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BUFFER_SIZE, -1);
+    } else {
+      // dump memory range, format: <start>:<len>
+      const std::regex re("(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)");
+      std::smatch match;
+      if (!std::regex_match(mem, match, re)) {
+        std::cout << "Invalid dump format " << mem << std::endl;
+        exit(1);
+      }
+      auto start = std::stoul(match[1], nullptr, 16);
+      auto len = std::stoul(match[2], nullptr, 16);
+      snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
+      dump_mem(fname, start, len, -1);
+    }
+  }
+}
+
+int sim_t::run(std::vector<std::string> load_files,
+               std::vector<std::string> init_dump,
+               std::vector<std::string> exit_dump, 
+               std::string dump_path)
 {
   int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);
-  load_heap(fname_load, off, len);
+  load_mems(load_files);
+
+  if (init_dump.size() > 0)
+    dump_mems("input_mem", init_dump, dump_path);
+
   stat = htif_t::run();
-  dump_heap(fname_dump, off, len);
+
+  if (exit_dump.size() > 0)
+    dump_mems("output_mem", exit_dump, dump_path);
   return stat;
 }
 

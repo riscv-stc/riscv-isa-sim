@@ -3,6 +3,8 @@
 
 #include "hwsync.h"
 
+//#define DEBUG
+
 hwsync_t::hwsync_t() : num_total(), num_enter() {
 
 }
@@ -16,7 +18,7 @@ hwsync_t::join(unsigned group_id) {
         num_total[group_id] = 0;
         idle[group_id] = true;
     } else if (!idle[group_id]) {
-        std::cerr << "make sure join sync group while group is idle" << std::endl;
+        std::cerr << "ERROR: join sync group while group is busy" << std::endl;
         exit(1);
     }
 
@@ -26,12 +28,12 @@ hwsync_t::join(unsigned group_id) {
 void
 hwsync_t::leave(unsigned group_id) {
     if (!idle[group_id]) {
-        std::cerr << "make sure join sync group while group is idle" << std::endl;
+        std::cerr << "ERROR: leave sync group while group is busy" << std::endl;
         exit(1);
     }
 
     if (num_total.find(group_id) == num_total.end()) {
-        std::cerr << "unregister on empty sync group " << group_id << std::endl;
+        std::cerr << "ERROR: unregister on empty sync group " << group_id << std::endl;
         exit(1);
     }
 
@@ -45,7 +47,9 @@ hwsync_t::enter(unsigned group_id) {
     if (num_exit[group_id] != num_total[group_id] && num_exit[group_id] != 0)
         return false;
 
+#ifdef DEBUG
     std::cout << "enter sync" << std::endl;
+#endif
 
     idle[group_id] = false;
 
@@ -64,7 +68,9 @@ hwsync_t::exit(unsigned group_id) {
     if (num_enter[group_id] != num_total[group_id])
         return false;
 
+#ifdef DEBUG
     std::cout << "exit sync" << std::endl;
+#endif
 
     if (num_exit.find(group_id) == num_exit.end()) {
         num_exit[group_id] = 0;

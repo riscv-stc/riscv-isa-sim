@@ -136,7 +136,7 @@ void sim_t::main()
   }
 }
 
-void sim_t::load_heap(const char *fname, reg_t off, size_t len)
+void sim_t::load_mem(const char *fname, reg_t off, size_t len)
 {
   memif_t mem(this);
   if (!fname)
@@ -184,7 +184,7 @@ out:
   set_aunit(MCU, 0);
 }
 
-void sim_t::dump_heap(const char *fname, reg_t off, size_t len)
+void sim_t::dump_mem(const char *fname, reg_t off, size_t len)
 {
   memif_t mem(this);
   if (!fname)
@@ -237,9 +237,9 @@ int sim_t::run(const char *fname_load, const char *fname_dump, addr_t off, size_
   int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);
-  load_heap(fname_load, off, len);
+  load_mem(fname_load, off, len);
   stat = htif_t::run();
-  dump_heap(fname_dump, off, len);
+  dump_mem(fname_dump, off, len);
   return stat;
 }
 

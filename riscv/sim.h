@@ -31,9 +31,16 @@ public:
   ~sim_t();
 
   // run the simulation to completion
-  int run(const char *fname_load, const char *fname_dump, reg_t off, size_t len);
-  void load_heap(const char *path, reg_t off, size_t len);
-  void dump_heap(const char *path, reg_t off, size_t len);
+  int run(std::vector<std::string> load_files,
+          std::vector<std::string> init_dump,
+          std::vector<std::string> exit_dump, 
+          std::string dump_path);
+  void load_mems(std::vector<std::string> load_files);
+  void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
+  void load_mem(const char *path, reg_t off, size_t len);
+  void dump_mem(const char *path, reg_t off, size_t len);
+  void load_mem(const char *path, reg_t off, size_t len, int proc_id);
+  void dump_mem(const char *path, reg_t off, size_t len, int proc_id);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);

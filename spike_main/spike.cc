@@ -53,13 +53,15 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --without-hasel       Debug module supports hasel\n");
   fprintf(stderr, "  --debug-no-abstract-csr  Debug module won't support abstract to authenticate\n");
   
-  /* added a backdoor by hao.chen */
   fprintf(stderr, "BackDoor Options:\n");
-  fprintf(stderr, "  --map=<n>             Define the size of mem2 <n> bytes [default 0x40000]\n");
-  fprintf(stderr, "  --map=<a:m,b:n>       Define the mem2 offset m and size n bytes\n");
-  fprintf(stderr, "                          [default offset 0x10000]\n");
-  fprintf(stderr, "  --load=<file>         Define the mem2 file to load before run\n");
-  fprintf(stderr, "  --dump=<file>         Define the mem2 file to dump after run\n");
+  fprintf(stderr, "  --load=<file1,...>    load files into memory\n");
+  fprintf(stderr, "                          file name: *@[core_id|ddr|llb.][<start>_<len>].<ext>\n");
+  fprintf(stderr, "                          example: aaa@0.bin, bbb@llb.dat, ccc@ddr.dat,\n");
+  fprintf(stderr, "                                   aaa@0.0xc0000000_0x100.dat, aaa@ddr.0x0_0x10000.dat\n");
+  fprintf(stderr, "  --init-dump=<m1,...>  Dump memory on init\n");
+  fprintf(stderr, "  --exit-dump=<m1,...>  Dump memory on exit\n");
+  fprintf(stderr, "                          memory range could be: l1, llb, <start>:<len>\n");
+  fprintf(stderr, "  --dump-path           Path for files to dump memory [default .]\n");
 
   exit(exit_code);
 }
@@ -120,6 +122,17 @@ static std::pair<reg_t, size_t> make_mem2(const char* arg)
   return std::make_pair((reg_t)first, (size_t)size);
 }
 
+static std::vector<std::string> make_strings(const char* arg)
+{
+  std::stringstream ss(arg);
+  std::string item;
+  std::vector<std::string> result;
+  while (std::getline(ss, item, ',')) {
+    result.push_back(std::move(item));
+  }
+  return result;
+}
+
 int main(int argc, char** argv)
 {
   bool debug = false;
@@ -128,7 +141,7 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
-  uint32_t ddr_size = 0x10000000;
+  uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -139,9 +152,10 @@ int main(int argc, char** argv)
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
   int coreId = -1;
-  const char *load_file = NULL;
-  const char *dump_file = NULL;
-  std::pair<reg_t, size_t> mem2 = {0x10000, 0x40000}; 
+  std::vector<std::string> load_files;
+  std::vector<std::string> init_dump;
+  std::vector<std::string> exit_dump;
+  std::string dump_path = ".";
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned progsize = 2;
@@ -212,9 +226,10 @@ int main(int argc, char** argv)
    * load-path is case input path
    * dump-path is memory dump path, for ncbet get result
    */
-  parser.option(0, "map", 1, [&](const char* s){mem2 = make_mem2(s);});
-  parser.option(0, "load", 1, [&](const char* s){load_file = s;});
-  parser.option(0, "dump", 1, [&](const char* s){dump_file = s;});
+  parser.option(0, "load", 1, [&](const char* s){load_files = make_strings(s);});
+  parser.option(0, "init-dump", 1, [&](const char* s){init_dump = make_strings(s);});
+  parser.option(0, "exit-dump", 1, [&](const char* s){exit_dump = make_strings(s);});
+  parser.option(0, "dump-path", 1, [&](const char* s){dump_path = s;});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -260,5 +275,5 @@ int main(int argc, char** argv)
   s.set_log(log);
   s.set_histogram(histogram);
   
-  return s.run(load_file, dump_file, mem2.first, mem2.second);
+  return s.run(load_files, init_dump, exit_dump, dump_path);
 }
