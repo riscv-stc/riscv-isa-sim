@@ -796,7 +796,7 @@ private:
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_invalid_param(col, row, llb_sstride) \
-        if (unlikely(col == 0 || row == 0)) { \
+        if (unlikely(col == 0 || row == 0) || unlikely(llb_sstride < col *2)) { \
             throw trap_tcp_invalid_param(); \
         }
 
@@ -811,29 +811,29 @@ private:
 
 // check traps for pld instruction
 #define check_traps_pld ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
         check_tcp_access_start_l1(RD) \
         check_tcp_access_start_llb_pld(RS1) \
         check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
-        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
 })
 
 // check traps for mov.l1.llb instruction
 #define check_traps_mov_l1_llb ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
         check_tcp_access_start_llb_mov(RS1) \
         check_tcp_access_start_l1(RD) \
-        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
         check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
 })
 
 // check traps for mov.llb.l instruction
 #define check_traps_mov_llb_l1 ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_llb_mov(RD) \
         check_tcp_access_end_l1(RS1 + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
-        check_tcp_access_end_llb(RD + (STRIDE_LLB? STRIDE_LLB: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+        check_tcp_access_end_llb(RD + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
 })
 
 
