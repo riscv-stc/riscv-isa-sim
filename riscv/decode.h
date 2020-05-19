@@ -810,7 +810,7 @@ private:
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_invalid_param(col, row, llb_sstride) \
-        if (unlikely(col == 0 || row == 0) || unlikely(llb_sstride < col *2)) { \
+        if (unlikely(col == 0 || row == 0) || (llb_sstride > 0 && unlikely(llb_sstride < col *2))) { \
             throw trap_tcp_invalid_param(); \
         }
 
