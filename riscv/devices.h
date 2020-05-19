@@ -45,13 +45,16 @@ class rom_device_t : public abstract_device_t {
 
 class uart_device_t : public abstract_device_t {
  public:
-  uart_device_t();
+  uart_device_t(processor_t* proc);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
-  // const std::vector<char>& contents() { return data; }
+
+  size_t size() { return len; }
   ~uart_device_t();
  private:
   std::vector<char> data;
+  processor_t* proc;
+  size_t len;
 };
 
 class mbox_device_t : public abstract_device_t {

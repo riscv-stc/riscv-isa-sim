@@ -61,7 +61,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
   hwsync_t *hwsync = new hwsync_t();
 
   pcie_driver = new pcie_driver_t(this, procs);
-  bus.add_device(0xc07f3000, new uart_device_t());
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
   bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
   
@@ -71,12 +70,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
       //  add_debug_dev = 0;
       //if (x.first <= CLINT_BASE && (x.first + x.second->size()) > CLINT_BASE)
       //  add_clint_dev = 0;
-  }
-
-  for (size_t i = 0; i < procs.size(); i++) {
-    local_bus[i] = new bus_t();
-    local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
-    local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
   }
 
   debug_module.add_device(&bus);
@@ -104,6 +97,14 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
     for (size_t i = 0; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, hwsync, i, hartids[i], halted);
     }
+  }
+
+  for (size_t i = 0; i < procs.size(); i++) {
+    local_bus[i] = new bus_t();
+    local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
+
+    local_bus[i]->add_device(0xc07f3000, new uart_device_t(procs[i]));
   }
 
   // a cluster has 8 cores
@@ -382,7 +383,7 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
     // l1 file name format: <any>@<core_id|llb|ddr>.<start>_<len>.<ext>
     const std::regex re4(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
     std::smatch match;
- 
+
     if (std::regex_match(fname, match, re0)) {
       if (match[1] == "ddr") {
         reg_t start = 0;
@@ -545,9 +546,33 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 
   if (addr + len < addr)
     return false;
-  
+
   result = bus.store(addr, len, bytes);
-  
+
+  return result;
+}
+
+bool sim_t::local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx)
+{
+  bool result = false;
+
+  if (addr + len < addr)
+    return false;
+
+  result = local_bus[idx]->load(addr, len, bytes);
+
+  return result;
+}
+
+bool sim_t::local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx)
+{
+  bool result = false;
+
+  if (addr + len < addr)
+    return false;
+
+  result = local_bus[idx]->store(addr, len, bytes);
+
   return result;
 }
 
@@ -583,8 +608,19 @@ void sim_t::make_dtb()
   bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
 }
 
-bool sim_t::in_local_mem(reg_t addr, memory_type type) {
+bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
   auto desc = local_bus[0]->find_device(addr);
+
+  if (type == IO_DEVICE) {
+    if (auto mem = dynamic_cast<uart_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
 
     reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
@@ -592,6 +628,7 @@ bool sim_t::in_local_mem(reg_t addr, memory_type type) {
       return true;
     }
   }
+
   return false;
 }
 

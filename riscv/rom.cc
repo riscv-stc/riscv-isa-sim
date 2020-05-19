@@ -20,7 +20,8 @@ bool rom_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   return false;
 }
 
-uart_device_t::uart_device_t()
+uart_device_t::uart_device_t(processor_t* proc)
+  : proc(proc), len(0x4000)
 {
 }
 
@@ -38,6 +39,7 @@ bool uart_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   if (addr == 0x100) {
     for (size_t index = 0; index < len; index++) {
       if (unlikely(0 == *bytes)) {
+        std::cout << "cpu" << proc->get_id() << ":\t";
         for (int index = 0; index < data.size(); index++)
           std::cout << data[index];
         std::cout << std::flush;

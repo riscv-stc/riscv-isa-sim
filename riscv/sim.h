@@ -87,9 +87,11 @@ private:
   char* addr_to_mem(reg_t addr);
   char* local_addr_to_mem(reg_t addr, uint32_t idx);
   char* local_addr_to_mem_by_id(reg_t addr, uint32_t id);
-  bool in_local_mem(reg_t addr, memory_type type);
+  bool in_local_mem(reg_t addr, local_device_type type);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
+  bool local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx);
+  bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx);
   void make_dtb();
 
   // presents a prompt for introspection into the simulation
