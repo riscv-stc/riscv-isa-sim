@@ -43,14 +43,14 @@ class rom_device_t : public abstract_device_t {
   std::vector<char> data;
 };
 
-class uart_device_t : public abstract_device_t {
+class misc_device_t : public abstract_device_t {
  public:
-  uart_device_t(processor_t* proc);
+  misc_device_t(processor_t* proc);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
   size_t size() { return len; }
-  ~uart_device_t();
+  ~misc_device_t();
  private:
   std::vector<char> data;
   processor_t* proc;
