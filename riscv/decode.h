@@ -233,6 +233,7 @@ private:
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
 #define VL (STATE.vl)
+#define VILL ((STATE.vtype >> 31) & 0x1)
 #define VUIMM	(insn.v_uimm())
 #define VSTART (STATE.vstart)
 #define VLMAX (LMUL*(VLEN/SEW))
@@ -850,6 +851,10 @@ private:
         check_tcp_access_end_llb(RD + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
 })
 
+//throw trp if VL set invalid
+#define check_ncp_vill_invalid() \
+        if (VILL) \
+             throw trap_ncp_vill_invalid_inst();
 
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)

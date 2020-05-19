@@ -1,4 +1,5 @@
 require_extension('V');
+check_ncp_vill_invalid()
 // FIXME: should implement ncp access trap
 
 uint32_t start = VSTART > VUIMM ? VSTART : VUIMM;

@@ -1,5 +1,5 @@
 require_extension('V');
-
+check_ncp_vill_invalid()
 check_vstart{
 	switch(SEW){
 	case 8:

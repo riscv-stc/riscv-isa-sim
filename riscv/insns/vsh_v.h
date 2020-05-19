@@ -1,4 +1,5 @@
 require_extension('V');
+check_ncp_vill_invalid()
 
 check_rvv_misaligned_base(RS1, int16)
 check_rvv_access(RS1, VL * SEW/8)

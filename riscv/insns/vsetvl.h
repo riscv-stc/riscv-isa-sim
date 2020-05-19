@@ -1,5 +1,4 @@
 require_extension('V');
-// FIXME: should implement ncp access trap
 
 reg_t rd = insn.rd();
 reg_t rs1 = insn.rs1();

@@ -1,4 +1,5 @@
 require_extension('V');
+check_ncp_vill_invalid()
 // FIXME: should implement ncp access trap
 
 reg_t sum = 0;

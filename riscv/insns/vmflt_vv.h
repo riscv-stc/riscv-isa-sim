@@ -1,4 +1,5 @@
 require_extension('V');
+check_ncp_vill_invalid()
 // FIXME: should implement ncp access trap
 check_vstart{
 	Vcompare<half, unsigned short, unsigned short> vcompare;

@@ -1,4 +1,6 @@
 require_extension('V');
+check_ncp_vill_invalid()
+
 // FIXME: should implement ncp access trap
 if (unlikely((insn.rs2() == insn.rd()) || (insn.vm() == 0 && insn.vm() == insn.rd())))
   throw trap_ncp_rvv_invalid_same_rdrs();
