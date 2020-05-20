@@ -322,7 +322,7 @@ void sim_t::dump_mem(const char *fname, reg_t off, size_t len)
   }
 }
 
-void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id)
+void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, bool space_end)
 {
   char *mem = (proc_id >= 0)?
               local_addr_to_mem_by_id(addr, proc_id) :
@@ -351,9 +351,13 @@ void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id)
     for (addr_t offset = 0; offset < len; offset += 2) {
       data = *((uint16_t *)(mem + offset));
       sprintf(buf, "%04x", data);
-      ofs << buf << " ";
-      if (!((offset + 2) % 128))
+      ofs << buf;
+      if ((offset + 2) % 128) {
+        ofs << " ";
+      } else {
+        if (space_end) ofs << " ";
         ofs << endl;
+      }
     }
 
     ofs.close();
@@ -440,12 +444,12 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       // dump whole l1 buffer for all procs
       for (auto i=0u; i< nprocs(); i++) {
         snprintf(fname, sizeof(fname), "%s/%s@%d.dat", path.c_str(), prefix.c_str(), procs[i]->get_id());
-        dump_mem(fname, l1_buffer_start, l1_buffer_size, procs[i]->get_id());
+        dump_mem(fname, l1_buffer_start, l1_buffer_size, procs[i]->get_id(), true);
       }
     } else if (mem == "llb") {
       // dump whole llb
       snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
-      dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BUFFER_SIZE, -1);
+      dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BANK_BUFFER_SIZE, -1);
     } else {
       // dump memory range, format: <start>:<len>
       const std::regex re("(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)");

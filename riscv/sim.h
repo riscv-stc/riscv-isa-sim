@@ -40,7 +40,7 @@ public:
   void load_mem(const char *path, reg_t off, size_t len);
   void dump_mem(const char *path, reg_t off, size_t len);
   void load_mem(const char *path, reg_t off, size_t len, int proc_id);
-  void dump_mem(const char *path, reg_t off, size_t len, int proc_id);
+  void dump_mem(const char *path, reg_t off, size_t len, int proc_id, bool space_end = false);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);
