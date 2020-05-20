@@ -39,11 +39,11 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   // uart device
   if (addr == 0x100) {
     for (size_t index = 0; index < len; index++) {
-      if (unlikely(0 == *bytes)) {
+      if (unlikely('\n' == *bytes)) {
         std::cout << "cpu" << proc->get_id() << ":\t";
         for (int index = 0; index < data.size(); index++)
           std::cout << data[index];
-        std::cout << std::flush;
+        std::cout << std::endl;
         data.clear();
       }
       else {
