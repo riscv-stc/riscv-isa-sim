@@ -1,7 +1,7 @@
 require_extension('V');
 check_traps_meconv_mm(int16, int16);
 
-p->run_async([p, insn, pc](){
+p->run_async([p, insn, pc]() {
   class CustomInsns CusIns;
   struct ConvShapeStride sst;
   conv_fill(sst);

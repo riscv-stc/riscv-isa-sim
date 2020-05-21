@@ -1,15 +1,19 @@
 require_extension('V');
 check_traps_meconv_mm(int8, int16);
 
-class CustomInsns CusIns;
-struct ConvShapeStride sst;
-conv_fill(sst);
+p->run_async([p, insn, pc]() {
+  class CustomInsns CusIns;
+  struct ConvShapeStride sst;
+  conv_fill(sst);
 
-unsigned long rs1 = MMU.get_phy_addr(RS1);
-unsigned long rs2 = MMU.get_phy_addr(RS2);
-unsigned long rd = MMU.get_phy_addr(RD);
+  unsigned long rs1 = MMU.get_phy_addr(RS1);
+  unsigned long rs2 = MMU.get_phy_addr(RS2);
+  unsigned long rd = MMU.get_phy_addr(RD);
 
-sst.dequant_coeff.x = f32_to_f16(f32(CONV_DEQUANT_COEFF)).v;;
+  sst.dequant_coeff.x = f32_to_f16(f32(CONV_DEQUANT_COEFF)).v;;
 
-CusIns.meconv_hf_x8_mm((int8_t*)rs1, (half *)rd, (int8_t*)rs2, &sst);
+  CusIns.meconv_hf_x8_mm((int8_t*)rs1, (half *)rd, (int8_t*)rs2, &sst);
+});
+
+wfi();
 
