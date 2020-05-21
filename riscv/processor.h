@@ -182,6 +182,8 @@ struct state_t
   bool sync_entered;
   bool sync_exited;
 
+  bool async_started;
+
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
   enum {
@@ -268,6 +270,9 @@ public:
 
   void sync_start();
   bool sync_done();
+
+  void run_async(std::function<void()> func);
+  bool async_done();
 
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -384,6 +389,11 @@ private:
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
+
+  std::function<void()> async_function = nullptr;
+  std::mutex async_mutex;
+  std::condition_variable async_cond;
+  bool async_running;
 
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];

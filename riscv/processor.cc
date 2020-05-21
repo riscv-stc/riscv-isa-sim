@@ -24,7 +24,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
         uint32_t idx, uint32_t id,
         bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), hwsync(hs),
-  ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset),
+  ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset), async_running(true),
   last_pc(1), executions(1)
 {
   parse_isa_string(isa);
@@ -38,6 +38,22 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
       disassembler->add_insn(disasm_insn);
 
   reset();
+
+  // start a thread for receive async tasks
+  std::thread([this]() {
+    while (true) {
+      std::unique_lock<std::mutex> lock(async_mutex);
+      async_cond.wait(lock, [this]{
+        return async_function != nullptr || !async_running;
+      });
+
+      if (!async_running) break;
+
+      async_function();
+
+      async_function = nullptr;
+    }
+  }).detach();
 
   hwsync->join(0);
 }
@@ -54,6 +70,10 @@ processor_t::~processor_t()
 #endif
 
   hwsync->leave(0);
+
+  // stop async task thread
+  async_running = false;
+  async_cond.notify_all();
 
   delete mmu;
   delete disassembler;
@@ -1057,6 +1077,27 @@ bool processor_t::sync_done() {
   if (state.sync_exited) {
     if (hwsync->exited(0)) {
       state.sync_exited = false;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void processor_t::run_async(std::function<void()> func) {
+  {
+    std::lock_guard<std::mutex> lock(async_mutex);
+
+    state.async_started = true;
+    async_function = func;
+  }
+  async_cond.notify_all();
+}
+
+bool processor_t::async_done() {
+  if (state.async_started) {
+    if (async_function == nullptr) {
+      state.async_started = false;
       return true;
     }
   }
