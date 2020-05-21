@@ -46,10 +46,10 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         std::cout << std::endl;
         data.clear();
       }
-      else {
+      else if (likely('\0' != *bytes)) {
         data.push_back(*bytes);
       }
-      
+
       bytes++;
     }
   }
