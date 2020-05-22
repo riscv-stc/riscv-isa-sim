@@ -489,7 +489,7 @@ private:
         check_cust_misaligned_base(RS2, int16); \
         check_cust_misaligned_base(RD, int16); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        if (SHAPE1_ROW > 1) { \
+        if (SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
         if (DIM_DM == 1) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
