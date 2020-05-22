@@ -395,8 +395,10 @@ private:
 
 // throw trap if cust inst source address access with misaligned stride
 #define check_cust_misaligned_stride_src(x, type, stride) \
-        if (unlikely(stride && (stride & (sizeof(type##_t)-1)))) { \
-            throw trap_ncp_cust_misaligned_stride(x); \
+        if (SHAPE1_ROW > 1) { \
+                if (unlikely(stride && (stride & (sizeof(type##_t)-1)))) { \
+                    throw trap_ncp_cust_misaligned_stride(x); \
+                } \
         }
 
 // throw trap if cust inst dest access with misaligned stride, or stride < width
