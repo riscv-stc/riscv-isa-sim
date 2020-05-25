@@ -49,7 +49,12 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
 
       if (!async_running) break;
 
-      async_function();
+      async_trap = nullptr;
+      try {
+        async_function();
+      } catch(trap_t& t) {
+        async_trap = std::current_exception();
+      }
 
       async_function = nullptr;
     }

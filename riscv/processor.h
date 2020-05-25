@@ -391,6 +391,7 @@ private:
   std::map<reg_t,uint64_t> pc_histogram;
 
   std::function<void()> async_function = nullptr;
+  std::exception_ptr async_trap = nullptr;
   std::mutex async_mutex;
   std::condition_variable async_cond;
   bool async_running;

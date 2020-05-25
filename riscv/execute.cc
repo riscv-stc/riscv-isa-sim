@@ -142,6 +142,11 @@ void processor_t::step(size_t n)
       if (async_done()) {
         pc = state.pc;
         state.wfi_flag = 0;
+
+        if (async_trap != nullptr) {
+          pc -= 4;
+          std::rethrow_exception(async_trap);
+        }
       }
       
       if (unlikely(slow_path()))
