@@ -96,7 +96,7 @@ void sysdma_device_t::dma_core(int ch) {
       char *src = sim->addr_to_mem(desc->dsar);
 
       if (stride == 0) {
-        memcpy(dst, src, col * row * 2);
+        memcpy(dst, src, col * row);
       } else {
         for (int i = 0; i < row; i++) {
           memcpy(dst + i * col, src + i * stride, col);
