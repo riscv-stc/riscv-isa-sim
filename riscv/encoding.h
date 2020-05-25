@@ -150,8 +150,8 @@
 #define IRQ_COP      12
 #define IRQ_HOST     13
 
-#define DEFAULT_RSTVEC     0x40001000
-#define CLINT_BASE         0x42000000
+#define DEFAULT_RSTVEC     0xc0601000
+#define CLINT_BASE         0xc0440000
 #define CLINT_SIZE         0x000c0000
 #define EXT_IO_BASE        0x40000000
 #define DRAM_BASE          0x80000000

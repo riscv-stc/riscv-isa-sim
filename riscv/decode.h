@@ -164,13 +164,13 @@ private:
 #define STATE (*p->get_state())
 
 // Seems that 0x0 doesn't work.
-#define DEBUG_BASE              (0x40000000)
+#define DEBUG_BASE              (0xc0500000)
 #define DEBUG_START             (0x100)
-#define DEBUG_END               (0x40001000 - 1)
+#define DEBUG_END               (0xc0501000 - 1)
 #define DEBUG_ROM_BASE          (DEBUG_BASE)
-#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (pc)) \
-  && ((DEBUG_ROM_BASE + 0x884) >= (pc))) || (((DEBUG_ROM_BASE + 0x360) <= (pc)) \
-  && ((DEBUG_ROM_BASE + 0x374) > (pc))))
+#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
 #define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
 
 #define READ_FREG(reg) STATE.FPR[reg]
