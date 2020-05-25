@@ -1,5 +1,5 @@
 require_extension('V');
-
+check_ncp_vill_invalid()
 check_traps_mov_v;
 
 class CustomInsns CusIns;

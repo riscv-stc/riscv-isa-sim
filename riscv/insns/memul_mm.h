@@ -1,4 +1,5 @@
 require_extension('V');
+check_ncp_vill_invalid()
 check_traps_memul_mm(int16, int16, TS);
 
 p->run_async([p, insn, pc]() {
