@@ -122,8 +122,10 @@ void processor_t::parse_isa_string(const char* str)
   }
 
   isa_string = "rv" + std::to_string(max_xlen) + p;
-  state.misa |= 1L << ('s' - 'a'); // advertise support for supervisor mode
-  state.misa |= 1L << ('u' - 'a'); // advertise support for user mode
+
+  // note: stc npu only support machine mode, so disable others
+  // state.misa |= 1L << ('s' - 'a'); // advertise support for supervisor mode
+  // state.misa |= 1L << ('u' - 'a'); // advertise support for user mode
 
   while (*p) {
     state.misa |= 1L << (*p - 'a');
