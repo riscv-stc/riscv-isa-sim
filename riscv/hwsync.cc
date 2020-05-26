@@ -5,101 +5,55 @@
 
 //#define DEBUG
 
-hwsync_t::hwsync_t() : num_total(), num_enter() {
+hwsync_t::hwsync_t(size_t nprocs) : group_count(16) {
+    // reset group masks
+    for (int i=0; i<group_count; i++) {
+        masks.push_back(~0);
+    }
+    sync_enter = ~0;
 
+    // add all processors to group 0
+    masks[0] = ~((1 << nprocs) - 1);
 }
 
 hwsync_t::~hwsync_t() {
 }
 
-void
-hwsync_t::join(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (num_total.find(group_id) == num_total.end()) {
-        num_total[group_id] = 0;
-        idle[group_id] = true;
-    } else if (!idle[group_id]) {
-        std::cerr << "ERROR: join sync group while group is busy" << std::endl;
-        exit(1);
-    }
-
-    num_total[group_id] ++;
-}
-
-void
-hwsync_t::leave(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!idle[group_id]) {
-        std::cerr << "ERROR: leave sync group while group is busy" << std::endl;
-        exit(1);
-    }
-
-    if (num_total.find(group_id) == num_total.end()) {
-        std::cerr << "ERROR: unregister on empty sync group " << group_id << std::endl;
-        exit(1);
-    }
-
-    num_total[group_id] --;
-    assert(num_total[group_id] >= 0);
-}
-
-
 bool
-hwsync_t::enter(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (num_exit[group_id] != num_total[group_id] && num_exit[group_id] != 0)
-        return false;
+hwsync_t::enter(unsigned core_id, uint32_t coremap) {
+    std::unique_lock<std::mutex> lock(sync_mutex);
 
 #ifdef DEBUG
-    std::cout << "enter sync" << std::endl;
+    std::cout << "start sync" << std::endl;
 #endif
 
-    idle[group_id] = false;
+    if (coremap) {
+        pld_enter &= ~(1 << core_id);
+        if ((pld_enter | ~coremap) == ~coremap) {
+            // all enter, clear enter requests
+            pld_enter |= coremap;
+            sync_cond.notify_all();
+        }
+        sync_cond.wait(lock, [&]{ return (pld_enter & 1 << core_id) != 0; });
 
-    if (num_enter.find(group_id) == num_enter.end()) {
-        num_enter[group_id] = 0;
+        return true;
     }
 
-    num_enter[group_id] ++;
-    assert(num_enter[group_id] <= num_total[group_id]);
+    sync_enter &= ~(1 << core_id);
+    for (int i=0; i< group_count; i++) {
+        if ((sync_enter | masks[i]) == masks[i] && ~masks[i] != 0) {
+            // all enter, clear enter requests
+            sync_enter |= ~masks[i];
+            sync_cond.notify_all();
+            break;
+        }
+    }
 
-    return true;
-}
-
-bool
-hwsync_t::exit(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (num_enter[group_id] != num_total[group_id])
-        return false;
+    sync_cond.wait(lock, [&]{ return (sync_enter & 1 << core_id) != 0; });
 
 #ifdef DEBUG
-    std::cout << "exit sync" << std::endl;
+    std::cout << "end sync" << std::endl;
 #endif
 
-    if (num_exit.find(group_id) == num_exit.end()) {
-        num_exit[group_id] = 0;
-    }
-
-    num_exit[group_id] ++;
-
-    if (num_exit[group_id] == num_total[group_id]) {
-        num_exit[group_id] = 0;
-        num_enter[group_id] = 0;
-        idle[group_id] = true;
-    }
-
     return true;
-}
-
-
-bool
-hwsync_t::done(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    return num_enter[group_id] == num_total[group_id];
-}
-
-bool
-hwsync_t::exited(unsigned group_id) {
-    std::lock_guard<std::mutex> lock(mutex);
-    return num_exit[group_id] == num_total[group_id] || num_exit[group_id] == 0;
 }

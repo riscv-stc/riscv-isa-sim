@@ -58,7 +58,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   signal(SIGINT, &handle_signal);
 
-  hwsync_t *hwsync = new hwsync_t();
+  hwsync_t *hwsync = new hwsync_t(nprocs);
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));

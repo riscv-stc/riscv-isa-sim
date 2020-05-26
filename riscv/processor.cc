@@ -59,8 +59,6 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
       async_function = nullptr;
     }
   }).detach();
-
-  hwsync->join(0);
 }
 
 processor_t::~processor_t()
@@ -73,8 +71,6 @@ processor_t::~processor_t()
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
 #endif
-
-  hwsync->leave(0);
 
   // stop async task thread
   async_running = false;
@@ -1068,27 +1064,8 @@ void processor_t::register_base_instructions()
   build_opcode_map();
 }
 
-void processor_t::sync_start() {
-  hwsync->enter(0);
-  state.sync_entered = true;
-}
-
-bool processor_t::sync_done() {
-  if (state.sync_entered) {
-    if (hwsync->done(0)) {
-      hwsync->exit(0);
-      state.sync_entered = false;
-      state.sync_exited = true;
-    }
-  }
-  if (state.sync_exited) {
-    if (hwsync->exited(0)) {
-      state.sync_exited = false;
-      return true;
-    }
-  }
-
-  return false;
+void processor_t::sync(uint32_t coremap) {
+  hwsync->enter(id, coremap);
 }
 
 void processor_t::run_async(std::function<void()> func) {

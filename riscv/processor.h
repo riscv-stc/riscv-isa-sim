@@ -179,9 +179,6 @@ struct state_t
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
-  bool sync_entered;
-  bool sync_exited;
-
   bool async_started;
 
   // When true, execute a single instruction and then enter debug mode.  This
@@ -268,8 +265,7 @@ public:
   void register_insn(insn_desc_t);
   void register_extension(extension_t*);
 
-  void sync_start();
-  bool sync_done();
+  void sync(uint32_t coremap = 0);
 
   void run_async(std::function<void()> func);
   bool async_done();
