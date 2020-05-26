@@ -2,6 +2,7 @@
 #define __HWSYNC_H__
 
 #include <map>
+#include <mutex>
 
 class hwsync_t {
   private:
@@ -9,6 +10,7 @@ class hwsync_t {
     std::map<unsigned, int> num_enter;
     std::map<unsigned, int> num_exit;
     std::map<unsigned, bool> idle;
+    std::mutex mutex;
 
   public:
     hwsync_t();

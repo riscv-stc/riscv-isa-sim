@@ -14,6 +14,7 @@ hwsync_t::~hwsync_t() {
 
 void
 hwsync_t::join(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     if (num_total.find(group_id) == num_total.end()) {
         num_total[group_id] = 0;
         idle[group_id] = true;
@@ -27,6 +28,7 @@ hwsync_t::join(unsigned group_id) {
 
 void
 hwsync_t::leave(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     if (!idle[group_id]) {
         std::cerr << "ERROR: leave sync group while group is busy" << std::endl;
         exit(1);
@@ -44,6 +46,7 @@ hwsync_t::leave(unsigned group_id) {
 
 bool
 hwsync_t::enter(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     if (num_exit[group_id] != num_total[group_id] && num_exit[group_id] != 0)
         return false;
 
@@ -65,6 +68,7 @@ hwsync_t::enter(unsigned group_id) {
 
 bool
 hwsync_t::exit(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     if (num_enter[group_id] != num_total[group_id])
         return false;
 
@@ -90,10 +94,12 @@ hwsync_t::exit(unsigned group_id) {
 
 bool
 hwsync_t::done(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     return num_enter[group_id] == num_total[group_id];
 }
 
 bool
 hwsync_t::exited(unsigned group_id) {
+    std::lock_guard<std::mutex> lock(mutex);
     return num_exit[group_id] == num_total[group_id] || num_exit[group_id] == 0;
 }
