@@ -8,18 +8,21 @@
 class hwsync_t {
   private:
     std::vector<uint32_t> masks;
-    uint32_t sync_enter;
-    uint32_t pld_enter;
+    uint32_t req_sync;
+    uint32_t req_pld;
     int group_count;
 
-    std::mutex sync_mutex;
-    std::condition_variable_any sync_cond;
+    std::mutex mutex_sync;
+    std::mutex mutex_pld;
+    std::condition_variable_any cond_sync;
+    std::condition_variable_any cond_pld;
 
   public:
     hwsync_t(size_t nprocs);
     ~hwsync_t();
 
-    bool enter(unsigned core_id, uint32_t coremap = 0);
+    bool enter(unsigned core_id);
+    bool enter(unsigned core_id, uint32_t coremap);
 };
 
 #endif // __HWSYNC_H__

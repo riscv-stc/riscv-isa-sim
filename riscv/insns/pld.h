@@ -6,7 +6,7 @@ p->run_async([p, insn, pc, xlen]() {
   unsigned int core_map = MTE_CORE_MAP;
 
   // do sync for pld
-  p->sync(core_map);
+  p->pld(core_map);
 
   #if 0
   //2020-01-04: the bit of current core is no need to set but the data will send

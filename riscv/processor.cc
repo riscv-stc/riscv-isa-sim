@@ -1064,7 +1064,11 @@ void processor_t::register_base_instructions()
   build_opcode_map();
 }
 
-void processor_t::sync(uint32_t coremap) {
+void processor_t::sync() {
+  hwsync->enter(id);
+}
+
+void processor_t::pld(uint32_t coremap) {
   hwsync->enter(id, coremap);
 }
 
