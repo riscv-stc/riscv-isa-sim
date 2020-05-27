@@ -472,7 +472,7 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
         } \
-        if (DIM_DM == 1) { \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
         int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
@@ -496,7 +496,7 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
         if ((DIM_DM == 0) && (SHAPE1_ROW > 1)) \
           check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
-        if (DIM_DM == 1) { \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
         int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
@@ -517,7 +517,7 @@ private:
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         if(SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
-        if (DIM_DM == 1) { \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
         int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
