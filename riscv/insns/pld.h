@@ -1,4 +1,5 @@
 check_traps_pld;
+check_ncp_vill_invalid()
 
 p->run_async([p, insn, pc, xlen]() {
   uint8_t* src = p->get_sim()->addr_to_mem(zext_xlen(RS1));
