@@ -36,8 +36,8 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   if (unlikely(!bytes || addr >= 0x1000))
     return false;
 
-  // uart device
   if (addr == 0x100) {
+    // uart device
     for (size_t index = 0; index < len; index++) {
       if (unlikely('\n' == *bytes)) {
         std::cout << "cpu" << proc->get_id() << ":\t";
@@ -52,6 +52,9 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
       bytes++;
     }
+  } else if (addr == 0x500) {
+    // exit signal
+    proc->set_exit();
   }
   
   return true;

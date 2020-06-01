@@ -24,7 +24,8 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
         uint32_t idx, uint32_t id,
         bool halt_on_reset)
   : debug(false), halt_request(false), sim(sim), hwsync(hs),
-  ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset), async_running(true),
+  ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset),
+  async_running(true), exit_request(false),
   last_pc(1), executions(1)
 {
   parse_isa_string(isa);

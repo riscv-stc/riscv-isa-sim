@@ -271,6 +271,9 @@ public:
   void run_async(std::function<void()> func);
   bool async_done();
 
+  void set_exit() { exit_request = true; };
+  bool exited() { return exit_request; };
+
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
@@ -392,6 +395,7 @@ private:
   std::mutex async_mutex;
   std::condition_variable async_cond;
   bool async_running;
+  bool exit_request;
 
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];

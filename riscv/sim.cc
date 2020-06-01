@@ -461,7 +461,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       auto start = std::stoul(match[1], nullptr, 16);
       auto len = std::stoul(match[2], nullptr, 16);
       snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
-      dump_mem(fname, start, len, -1);
+      dump_mem(fname, start, len, -1, true);
     }
   }
 }
@@ -706,4 +706,21 @@ void sim_t::write_chunk(addr_t taddr, size_t len, const void* src)
 void sim_t::proc_reset(unsigned id)
 {
   debug_module.proc_reset(id);
+}
+
+void sim_t::stop() {
+  while (true) {
+    bool all_exited = true;
+    for (unsigned i = 0; i < nprocs(); i++) {
+      if (!get_core(i)->exited()) {
+        all_exited = false;
+        break;
+      }
+    }
+    if (all_exited) break;
+
+    idle();
+  }
+
+  htif_t::stop();
 }

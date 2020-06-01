@@ -57,6 +57,9 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
+
+  // override htif_t::stop to wait all procs exited before stop
+  virtual void stop() override;
   
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
