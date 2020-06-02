@@ -52,8 +52,6 @@ void pcie_driver_t::init()
 	// Create a socket
 	mSockFd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
 	if (mSockFd == -1) {
-    std::cout << "driver init error getting socket: " \
-      << strerror(errno) << std::endl;
     mStatus = ERROR_SOCK;
     return;
 	}
