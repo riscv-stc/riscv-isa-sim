@@ -17,6 +17,10 @@
 #include <stdexcept>
 #include <algorithm>
 
+#define __USE_GNU
+#include <sched.h>
+#include <pthread.h>
+
 #undef STATE
 #define STATE state
 
@@ -41,7 +45,16 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
   reset();
 
   // start a thread for receive async tasks
-  std::thread([this]() {
+  std::thread([this, id]() {
+    // set affinity for performance
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(id, &cpuset);
+    int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+    if (rc != 0) {
+      std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+    }
+
     while (true) {
       std::unique_lock<std::mutex> lock(async_mutex);
       async_cond.wait(lock, [this]{
