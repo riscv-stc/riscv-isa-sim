@@ -143,6 +143,7 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
+  size_t bank_id = 0;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::unique_ptr<icache_sim_t> ic;
@@ -151,7 +152,6 @@ int main(int argc, char** argv)
   bool log_cache = false;
   std::function<extension_t*()> extension;
   const char* isa = DEFAULT_ISA;
-  int coreId = -1;
   std::vector<std::string> load_files;
   std::vector<std::string> init_dump;
   std::vector<std::string> exit_dump;
@@ -187,6 +187,7 @@ int main(int argc, char** argv)
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
+  parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
   parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
@@ -240,10 +241,7 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
-  if(hartids.size() == 1)
-	coreId = hartids[0];
-
-  sim_t s(isa, nprocs, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, bank_id, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
       abstract_rti, support_hasel, support_abstract_csr_access);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);

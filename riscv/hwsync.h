@@ -18,7 +18,7 @@ class hwsync_t {
     std::condition_variable_any cond_pld;
 
   public:
-    hwsync_t(size_t nprocs);
+    hwsync_t(size_t nprocs, size_t bank_id);
     ~hwsync_t();
 
     bool enter(unsigned core_id);

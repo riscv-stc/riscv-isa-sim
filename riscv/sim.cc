@@ -38,14 +38,14 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
-sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
+sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access)
-  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))),
+  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -58,7 +58,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   signal(SIGINT, &handle_signal);
 
-  hwsync_t *hwsync = new hwsync_t(nprocs);
+  hwsync_t *hwsync = new hwsync_t(nprocs, bank_id);
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
@@ -86,7 +86,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, bool halted, reg_t start_pc,
 
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size(); i++) {
-      procs[i] = new processor_t(isa, this, hwsync, i, i, halted);
+      procs[i] = new processor_t(isa, this, hwsync, i, i + bank_id * procs.size(), halted);
     }
   }
   else {
@@ -394,8 +394,8 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
         size_t len = 0xc0000000;
         load_mem(fname.c_str(), start, len);
       } else if (match[1] == "llb") {
-        reg_t start = LLB_AXI0_BUFFER_START;
-        size_t len = LLB_BUFFER_SIZE;
+        reg_t start = LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE;
+        size_t len = LLB_BANK_BUFFER_SIZE;
         load_mem(fname.c_str(), start, len);
       } else {
         auto proc_id = std::stoul(match[1], nullptr, 16);
@@ -449,7 +449,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
     } else if (mem == "llb") {
       // dump whole llb
       snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
-      dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BANK_BUFFER_SIZE, -1);
+      dump_mem(fname, LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
     } else {
       // dump memory range, format: <start>:<len>
       const std::regex re("(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)");

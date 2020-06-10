@@ -5,7 +5,7 @@
 
 //#define DEBUG
 
-hwsync_t::hwsync_t(size_t nprocs) : group_count(16) {
+hwsync_t::hwsync_t(size_t nprocs, size_t bank_id) : group_count(16) {
     // reset group masks
     for (int i=0; i<group_count; i++) {
         masks.push_back(~0);
@@ -14,7 +14,8 @@ hwsync_t::hwsync_t(size_t nprocs) : group_count(16) {
     req_pld = ~0;
 
     // add all processors to group 0
-    masks[0] = ~((1 << nprocs) - 1);
+    uint32_t mask = (1 << nprocs) - 1;
+    masks[0] = ~(mask << (nprocs * bank_id));
 }
 
 hwsync_t::~hwsync_t() {
