@@ -97,10 +97,10 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     cmd_count--;
 
     memcpy(bytes, &value, 4);
-    if (cmd_value.empty()) {
-      procs[0]->state.mextip &= ~(1 << RX_CFIFO_VAL);
-      *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
-    }
+    // if (cmd_value.empty()) {
+      // procs[0]->state.mextip &= ~(1 << RX_CFIFO_VAL);
+      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
+    // }
     return true;
   }
 
@@ -113,10 +113,10 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     cmdext_count--;
 
     memcpy(bytes, &value, 4);
-    if (cmdext_value.empty()) {
-      procs[0]->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
-      *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_EXT_CFIFO_VAL);
-    }
+    // if (cmdext_value.empty()) {
+      // procs[0]->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
+      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_EXT_CFIFO_VAL);
+    //}
     return true;
   }
     
@@ -128,6 +128,13 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   if (unlikely(!bytes || addr >= 0x1000))
     return false;
+
+  if (MBOX_INT_PEND == addr) {
+    uint32_t v = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+    *(uint32_t *)(data + MBOX_INT_PEND) &= ~v;
+    procs[0]->state.mextip &= ~v;
+    return true;
+  }
 
   memcpy(data + addr, bytes, len);
   if (MBOX_MTXCMD == addr && PCIE0_MBOX_MRXCMD == *(uint32_t *)data) {
