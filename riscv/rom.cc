@@ -131,8 +131,10 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
   if (MBOX_INT_PEND == addr) {
     uint32_t v = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
-    *(uint32_t *)(data + MBOX_INT_PEND) &= ~v;
     procs[0]->state.mextip &= ~v;
+    procs[0]->state.mextip |= ((cmd_value.empty() ? 0 : 1) << RX_CFIFO_VAL) |
+	    ((cmdext_value.empty() ? 0 : 1) << RX_EXT_CFIFO_VAL);
+    *(uint32_t *)(data + MBOX_INT_PEND) = procs[0]->state.mextip;
     return true;
   }
 
