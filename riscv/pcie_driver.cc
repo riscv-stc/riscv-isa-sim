@@ -155,26 +155,85 @@ int pcie_driver_t::recv()
 
 #define LOCAL_DDR_SIZE 0xa00000
 #define DDR_SIZE (0xc0000000)
+#define NOC_NPC0_MBOX_BASE 0xc2000000
+#define NOC_NPC1_MBOX_BASE 0xc2800000
+#define NOC_NPC2_MBOX_BASE 0xca000000
+#define NOC_NPC3_MBOX_BASE 0xca800000
+#define NOC_NPC4_MBOX_BASE 0xcb000000
+#define NOC_NPC5_MBOX_BASE 0xd2000000
+#define NOC_NPC6_MBOX_BASE 0xd2800000
+#define NOC_NPC7_MBOX_BASE 0xd3000000
+#define NOC_NPC8_MBOX_BASE 0xc4000000
+#define NOC_NPC9_MBOX_BASE 0xc4800000
+#define NOC_NPC10_MBOX_BASE 0xcc000000
+#define NOC_NPC11_MBOX_BASE 0xcc800000
+#define NOC_NPC12_MBOX_BASE 0xcd000000
+#define NOC_NPC13_MBOX_BASE 0xd4000000
+#define NOC_NPC14_MBOX_BASE 0xd4800000
+#define NOC_NPC15_MBOX_BASE 0xd5000000
+static const uint32_t noc_npc_mbox_base[] = {
+        NOC_NPC0_MBOX_BASE,
+        NOC_NPC1_MBOX_BASE,
+        NOC_NPC2_MBOX_BASE,
+        NOC_NPC3_MBOX_BASE,
+        NOC_NPC4_MBOX_BASE,
+        NOC_NPC5_MBOX_BASE,
+        NOC_NPC6_MBOX_BASE,
+        NOC_NPC7_MBOX_BASE,
+        NOC_NPC8_MBOX_BASE,
+        NOC_NPC9_MBOX_BASE,
+        NOC_NPC10_MBOX_BASE,
+        NOC_NPC11_MBOX_BASE,
+        NOC_NPC12_MBOX_BASE,
+        NOC_NPC13_MBOX_BASE,
+        NOC_NPC14_MBOX_BASE,
+        NOC_NPC15_MBOX_BASE
+};
+
+int32_t get_core_id_by_addr(reg_t addr, reg_t *paddr)
+{
+  int32_t core_id = -1;
+  for (int i = 0; i < sizeof(noc_npc_mbox_base) / sizeof(noc_npc_mbox_base[0]); i++) {
+    if ((addr >= noc_npc_mbox_base[i]) && (addr < noc_npc_mbox_base[i] + 0x800000)) {
+      core_id = i;
+      *paddr = addr - noc_npc_mbox_base[i] + 0xc0000000;
+      break;
+    }
+  }
+
+  return core_id;
+}
+
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
+	reg_t paddr;
+	int32_t core_id;
+
 	if (auto host_addr = mPSim->addr_to_mem(addr)) {
-  	// low addr use local caches
-  	// if (addr + len < LOCAL_DDR_SIZE)
-  		memcpy(bytes, host_addr, len);
-  	return true;
-  } else if (!mPSim->mmio_load(addr, len, bytes)) {
-    throw trap_load_access_fault(addr);
-  }
+	  memcpy(bytes, host_addr, len);
+	} else if (core_id = get_core_id_by_addr(addr, &paddr)) {
+		if (!mPSim->local_mmio_load(paddr, len, bytes, core_id))
+		  throw trap_load_access_fault(addr);
+	} else {
+	  if (!mPSim->mmio_load(addr, len, bytes))
+		throw trap_load_access_fault(addr);
+	}
 
   return true;
 }
 
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
-	if (auto host_addr = mPSim->addr_to_mem(addr)) {
+	reg_t paddr;
+	int32_t core_id;
+
+  if (auto host_addr = mPSim->addr_to_mem(addr)) {
   	// low addr use local caches
   	// if (addr + len < LOCAL_DDR_SIZE)
-  		memcpy(host_addr, bytes, len);
+	memcpy(host_addr, bytes, len);
+  } else if (core_id = get_core_id_by_addr(addr, &paddr)) {
+    if (!mPSim->local_mmio_store(paddr, len, bytes, core_id))
+      throw trap_store_access_fault(addr);
   } else if (!mPSim->mmio_store(addr, len, bytes)) {
     throw trap_store_access_fault(addr);
   }
@@ -182,10 +241,13 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
   return true;
 }
 
-#define INTERRUPT_ADDR (0xc60a100c)
-#define INTERRUPT_EXT_ADDR (0xc60a1010)
-#define MBOX_MRXCMD_ADDR (0xc07f400c)
-#define MBOX_MRXCMDEXT_ADDR (0xc07f4010)
+#define PCIE_MBOX_CFG_ADDR      (0xc60a1000)
+#define PCIE_MBOX_TXCMD_ADDR    (0xc60a1004)
+#define PCIE_MBOX_EXTTXCMD_ADDR (0xc60a1008)
+// #define INTERRUPT_ADDR (0xc60a100c)
+// #define INTERRUPT_EXT_ADDR (0xc60a1010)
+// #define MBOX_MRXCMD_ADDR (0xc07f400c)
+// #define MBOX_MRXCMDEXT_ADDR (0xc07f4010)
 void pcie_driver_t::transfer_loop()
 {
   command_head_t *pCmd = NULL;
@@ -201,14 +263,20 @@ void pcie_driver_t::transfer_loop()
       	  read(pCmd->addr, pCmd->len);
       	  break;
       	case CODE_WRITE:
-          if (INTERRUPT_ADDR == pCmd->addr) {
+          if (PCIE_MBOX_CFG_ADDR == pCmd->addr) {
             unsigned int value = *(unsigned int *)pCmd->data;
-            store_data(MBOX_MRXCMD_ADDR, pCmd->len, pCmd->data);
-            std::cout << "interrupt has occur " << value << std::endl;
-          } else if (INTERRUPT_EXT_ADDR == pCmd->addr) {
+            mTxCfgAddr = value;
+            std::cout << "cfg tx dst addr " << value << std::endl;
+          } else if ((PCIE_MBOX_TXCMD_ADDR == pCmd->addr) |
+					 (PCIE_MBOX_EXTTXCMD_ADDR == pCmd->addr)) {
             unsigned int value = *(unsigned int *)pCmd->data;
-            store_data(MBOX_MRXCMDEXT_ADDR, pCmd->len, pCmd->data);
-            std::cout << "interrupt has occur " << value << std::endl;
+            if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
+				mTxCmd = value;
+            else
+				mTxExtCmd = value;
+            store_data(mTxCfgAddr, pCmd->len, pCmd->data);
+            std::cout << "pcie mbox send addr:" << mTxCfgAddr << " value:"
+				<< value << std::endl;
           } else {
             store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
           }

@@ -68,8 +68,8 @@ misc_device_t::~misc_device_t()
   }
 }
 
-mbox_device_t::mbox_device_t(pcie_driver_t *pcie, std::vector<processor_t*>& p) 
-  : pcie_driver(pcie), procs(p)
+mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p)
+  : pcie_driver(pcie), p(p)
 {
   cmd_count = 0;
   cmdext_count = 0;
@@ -77,9 +77,11 @@ mbox_device_t::mbox_device_t(pcie_driver_t *pcie, std::vector<processor_t*>& p)
 
 #define RX_CFIFO_VAL     0x2
 #define RX_EXT_CFIFO_VAL 0x3
-#define MBOX_MTXCFG      0x0
-#define MBOX_MTXCMD      0x4
+#define MBOX_MTXCFG         (0x0)
+#define MBOX_MTXCMD         (0x4)
+#define MBOX_MEXTTXCMD      (0x8)
 #define PCIE0_MBOX_MRXCMD    (0xC60A100C)
+#define PCIE0_MBOX_MRXCMDEXT    (0xC60A1010)
 #define MBOX_MRXCMD_ADDR     (0x0c)
 #define MBOX_MRXCMDEXT_ADDR  (0x10)
 #define MBOX_INT_PEND        (0x20)
@@ -98,7 +100,7 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
     memcpy(bytes, &value, 4);
     // if (cmd_value.empty()) {
-      // procs[0]->state.mextip &= ~(1 << RX_CFIFO_VAL);
+      // p->state.mextip &= ~(1 << RX_CFIFO_VAL);
       // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
     // }
     return true;
@@ -114,7 +116,7 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
     memcpy(bytes, &value, 4);
     // if (cmdext_value.empty()) {
-      // procs[0]->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
+      // p->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
       // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_EXT_CFIFO_VAL);
     //}
     return true;
@@ -131,18 +133,20 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
   if (MBOX_INT_PEND == addr) {
     uint32_t v = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
-    procs[0]->state.mextip &= ~v;
-    procs[0]->state.mextip |= ((cmd_value.empty() ? 0 : 1) << RX_CFIFO_VAL) |
+    p->state.mextip &= ~v;
+    p->state.mextip |= ((cmd_value.empty() ? 0 : 1) << RX_CFIFO_VAL) |
 	    ((cmdext_value.empty() ? 0 : 1) << RX_EXT_CFIFO_VAL);
-    *(uint32_t *)(data + MBOX_INT_PEND) = procs[0]->state.mextip;
+    *(uint32_t *)(data + MBOX_INT_PEND) = p->state.mextip;
     return true;
   }
 
   memcpy(data + addr, bytes, len);
-  if (MBOX_MTXCMD == addr && PCIE0_MBOX_MRXCMD == *(uint32_t *)data) {
+  if (((MBOX_MTXCMD == addr) | (MBOX_MEXTTXCMD == addr)) &&
+		((PCIE0_MBOX_MRXCMD == *(uint32_t *)data) |
+		(PCIE0_MBOX_MRXCMDEXT == *(uint32_t *)data))) {
     command_head_t cmd;
     cmd.code = CODE_INTERRUPT;
-    cmd.addr = 0;
+    cmd.addr = addr;
     cmd.len = 4;
     *(uint32_t *)cmd.data = *(uint32_t *)bytes;
     pcie_driver->send((const uint8_t *)&cmd, sizeof(cmd));
@@ -151,14 +155,14 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   if (MBOX_MRXCMD_ADDR == addr) {
     cmd_count++;
     cmd_value.push(*(uint32_t*)bytes);
-    procs[0]->state.mextip = procs[0]->state.mextip | (1 << RX_CFIFO_VAL);
+    p->state.mextip = p->state.mextip | (1 << RX_CFIFO_VAL);
     *(uint32_t *)(data + MBOX_INT_PEND) |= 1 << RX_CFIFO_VAL;
   }
 
   if (MBOX_MRXCMDEXT_ADDR == addr) {
     cmdext_count++;
     cmdext_value.push(*(uint32_t*)bytes);
-    procs[0]->state.mextip = procs[0]->state.mextip | (1 << RX_EXT_CFIFO_VAL);
+    p->state.mextip = p->state.mextip | (1 << RX_EXT_CFIFO_VAL);
     *(uint32_t *)(data + MBOX_INT_PEND) |= 1 << RX_EXT_CFIFO_VAL;
   }
     

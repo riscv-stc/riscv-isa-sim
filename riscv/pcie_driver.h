@@ -47,6 +47,9 @@ class pcie_driver_t {
   int mSockFd;
   int mStatus;
 
+  reg_t mTxCfgAddr;
+  reg_t mTxCmd;
+  reg_t mTxExtCmd;
   void init();
   int  read(reg_t addr, size_t length);
   int  recv();

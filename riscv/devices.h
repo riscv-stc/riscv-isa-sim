@@ -59,9 +59,10 @@ class misc_device_t : public abstract_device_t {
 
 class mbox_device_t : public abstract_device_t {
  public:
-  mbox_device_t(pcie_driver_t * pcie, std::vector<processor_t*>& p);
+  mbox_device_t(pcie_driver_t * pcie, processor_t* p);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  size_t size() { return 4096; }
   // const std::vector<char>& contents() { return data; }
   ~mbox_device_t();
  private:
@@ -69,7 +70,7 @@ class mbox_device_t : public abstract_device_t {
   queue<uint32_t> cmd_value;
   uint32_t cmdext_count;
   queue<uint32_t> cmdext_value;
-  std::vector<processor_t*>& procs;
+  processor_t* p;
   uint8_t data[4096];
   pcie_driver_t *pcie_driver;
 };

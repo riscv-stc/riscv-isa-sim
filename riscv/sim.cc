@@ -62,7 +62,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t 
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
-  bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
+  // bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
   
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
@@ -105,6 +105,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t 
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
 
     local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
+    local_bus[i]->add_device(MBOX_START, new mbox_device_t(pcie_driver, procs[i]));
   }
 
   // a cluster has 8 cores
@@ -617,6 +618,12 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
 
   if (type == IO_DEVICE) {
     if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
       if (addr - desc.first <= mem->size()) {
         return true;
       }
