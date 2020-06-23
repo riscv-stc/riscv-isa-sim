@@ -65,7 +65,8 @@ void sysdma_device_t::dma_core(int ch) {
 
   while (1) {
     std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
-    thread_cond_[ch].wait(lock);
+    while (!dma_channel_[ch].enabled)
+      thread_cond_[ch].wait(lock);
 
     while (dma_channel_[ch].llp) {
       if(dma_channel_[ch].llp < SYSDMA0_BASE + DMA_BUF_OFFSET ||
