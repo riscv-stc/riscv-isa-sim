@@ -687,7 +687,7 @@ private:
         int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
         int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
-        check_cust_access(RS2, 0); \
+        check_cust_access(RS2, 0x10000); \
         check_cust_access(RD, rd_size); \
   })
 
