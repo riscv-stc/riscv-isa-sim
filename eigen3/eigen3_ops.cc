@@ -1939,7 +1939,7 @@ int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *
         cout << "rs1:\n" << rs1_matrix << endl;
     }
 
-    rd_matrix = (rs1_matrix.array() < (half)0).select(rs1_matrix * rs2, rs1_matrix);
+    rd_matrix = (rs1_matrix.array() <= (half)0).select(rs1_matrix * rs2, rs1_matrix);
     
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
