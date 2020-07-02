@@ -1976,7 +1976,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
     switch (dim) {
     case 0:
         for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() < (half)0).select(
+            rd_matrix.row(row) = (rs1_matrix.row(row).array() <= (half)0).select(
                 rs1_matrix.row(row).array() * vector_dim0.array(),
                 rs1_matrix.row(row));
         
@@ -1987,7 +1987,7 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
         break;
     case 1:
         for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() < (half)0).select(
+            rd_matrix.col(col) = (rs1_matrix.col(col).array() <= (half)0).select(
                 rs1_matrix.col(col).array() * vector_dim1.array(),
                 rs1_matrix.col(col));
         
