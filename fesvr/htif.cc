@@ -31,12 +31,17 @@
 #endif
 
 static volatile bool signal_exit = false;
+static volatile bool signal_dump = false;
 static void handle_signal(int sig)
 {
   if (sig == SIGABRT || signal_exit) // someone set up us the bomb!
     exit(-1);
   signal_exit = true;
   signal(sig, &handle_signal);
+}
+static void handle_dump_signal(int sig)
+{
+  signal_dump = true;
 }
 
 htif_t::htif_t()
@@ -47,6 +52,8 @@ htif_t::htif_t()
   signal(SIGINT, &handle_signal);
   signal(SIGTERM, &handle_signal);
   signal(SIGABRT, &handle_signal); // we still want to call static destructors
+
+  signal(SIGUSR1, &handle_dump_signal);
 }
 
 htif_t::htif_t(int argc, char** argv) : htif_t()
@@ -189,6 +196,12 @@ int htif_t::run()
       device_list.handle_command(cmd);
     } else {
       idle();
+    }
+
+    if (signal_dump) {
+      dump_mems();
+      signal_dump = false;
+      signal(SIGUSR1, &handle_dump_signal);
     }
 
     device_list.tick();

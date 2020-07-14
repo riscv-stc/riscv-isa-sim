@@ -35,6 +35,9 @@ public:
           std::vector<std::string> init_dump,
           std::vector<std::string> exit_dump, 
           std::string dump_path);
+
+  void dump_mems() override;
+
   void load_mems(std::vector<std::string> load_files);
   void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
   void load_mem(const char *path, reg_t off, size_t len);
@@ -86,6 +89,9 @@ private:
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
   remote_bitbang_t* remote_bitbang;
+
+  std::vector<std::string> exit_dump;
+  std::string dump_path;
 
   // memory-mapped I/O routines
   char* addr_to_mem(reg_t addr);

@@ -183,6 +183,10 @@ void sim_t::main()
   }
 }
 
+void sim_t::dump_mems() {
+  dump_mems("output_mem", exit_dump, dump_path);
+}
+
 void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
 {
   memif_t mem(this);
@@ -469,9 +473,12 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
 
 int sim_t::run(std::vector<std::string> load_files,
                std::vector<std::string> init_dump,
-               std::vector<std::string> exit_dump, 
-               std::string dump_path)
+               std::vector<std::string> exit_dump_,
+               std::string dump_path_)
 {
+  exit_dump = exit_dump_;
+  dump_path = dump_path_;
+
   int stat;
   host = context_t::current();
   target.init(sim_thread_main, this);

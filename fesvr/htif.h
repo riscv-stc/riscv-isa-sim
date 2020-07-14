@@ -39,6 +39,8 @@ class htif_t : public chunked_memif_t
   virtual void load_program();
   virtual void idle() {}
 
+  virtual void dump_mems() = 0;
+
   const std::vector<std::string>& host_args() { return hargs; }
 
   reg_t get_entry_point() { return entry; }
