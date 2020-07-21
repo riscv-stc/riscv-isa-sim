@@ -184,8 +184,14 @@ int htif_t::run()
     std::bind(enq_func, &fromhost_queue, std::placeholders::_1);
 
   if (tohost_addr == 0) {
-    while (true)
+    while (true) {
       idle();
+      if (signal_dump) {
+        dump_mems();
+        signal_dump = false;
+        signal(SIGUSR1, &handle_dump_signal);
+      }
+    }
   }
 
   while (!signal_exit && exitcode == 0)
