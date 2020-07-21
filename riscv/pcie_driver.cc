@@ -110,7 +110,7 @@ int pcie_driver_t::read(reg_t addr, size_t length)
   int rv = 0;
   int result = 0;
   int size = 0;
-  int offset = 0;
+  reg_t offset = 0;
   int block_size = 1024;
   command_head_t *pCmd = NULL;
 
