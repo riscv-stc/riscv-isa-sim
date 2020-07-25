@@ -16,9 +16,15 @@
 //#define ENABLE_MEMORY_TRACE
 
 #ifdef ENABLE_MEMORY_TRACE
-#define MEM_TRACE(...) fprintf(stderr, __VA_ARGS__);
+#define LOAD_TRACE(addr, val, type) \
+    fprintf(stderr, "       load: A=0x%016lx, D=0x%0*lx\n", \
+        addr, (int)(sizeof(type##_t)*2), (unsigned long)val);
+#define STORE_TRACE(addr, val, type) \
+    fprintf(stderr, "      store: A=0x%016lx, D=0x%0*lx\n", \
+        addr, (int)(sizeof(type##_t)*2), (unsigned long)val);
 #else
-#define MEM_TRACE(...)
+#define LOAD_TRACE(...)
+#define STORE_TRACE(...)
 #endif
 
 // virtual memory configuration
@@ -89,15 +95,13 @@ public:
   // template for functions that load an aligned value from memory
   #define load_func(type) \
     inline type##_t load_##type(reg_t addr) { \
-      MEM_TRACE("        load: A=0x%016x, D=", addr); \
       if (unlikely(addr & (sizeof(type##_t)-1))) { \
-        MEM_TRACE("Misaligned\n"); \
+        LOAD_TRACE(addr, 0, type);  \
         return misaligned_load(addr, sizeof(type##_t)); \
       } \
       reg_t vpn = addr >> PGSHIFT; \
       if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
-        MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, \
-              *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
+        LOAD_TRACE(addr, *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr), type);  \
         return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
       } \
       if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
@@ -107,12 +111,12 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
-        MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, data); \
+        LOAD_TRACE(addr, data, type);  \
         return data; \
       } \
       type##_t res; \
       load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res); \
-      MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, res); \
+      LOAD_TRACE(addr, res, type);  \
       return res; \
     }
 
@@ -131,7 +135,7 @@ public:
   // template for functions that store an aligned value to memory
   #define store_func(type) \
     void store_##type(reg_t addr, type##_t val) { \
-      MEM_TRACE("       store: A=0x%016x, D=0x%0*x\n", addr, sizeof(type##_t)*2, val); \
+      STORE_TRACE(addr, val, type);  \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t)); \
       reg_t vpn = addr >> PGSHIFT; \
