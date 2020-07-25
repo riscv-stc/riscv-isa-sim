@@ -13,6 +13,14 @@
 #include <stdlib.h>
 #include <vector>
 
+//#define ENABLE_MEMORY_TRACE
+
+#ifdef ENABLE_MEMORY_TRACE
+#define MEM_TRACE(...) fprintf(stderr, __VA_ARGS__);
+#else
+#define MEM_TRACE(...)
+#endif
+
 // virtual memory configuration
 #define PGSHIFT 12
 const reg_t PGSIZE = 1 << PGSHIFT;
@@ -81,11 +89,17 @@ public:
   // template for functions that load an aligned value from memory
   #define load_func(type) \
     inline type##_t load_##type(reg_t addr) { \
-      if (unlikely(addr & (sizeof(type##_t)-1))) \
+      MEM_TRACE("        load: A=0x%016x, D=", addr); \
+      if (unlikely(addr & (sizeof(type##_t)-1))) { \
+        MEM_TRACE("Misaligned\n"); \
         return misaligned_load(addr, sizeof(type##_t)); \
+      } \
       reg_t vpn = addr >> PGSHIFT; \
-      if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) \
+      if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
+        MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, \
+              *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
         return *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+      } \
       if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
         type##_t data = *(type##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
         if (!matched_trigger) { \
@@ -93,10 +107,12 @@ public:
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
+        MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, data); \
         return data; \
       } \
       type##_t res; \
       load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res); \
+      MEM_TRACE("0x%0*x\n", sizeof(type##_t)*2, res); \
       return res; \
     }
 
@@ -115,6 +131,7 @@ public:
   // template for functions that store an aligned value to memory
   #define store_func(type) \
     void store_##type(reg_t addr, type##_t val) { \
+      MEM_TRACE("       store: A=0x%016x, D=0x%0*x\n", addr, sizeof(type##_t)*2, val); \
       if (unlikely(addr & (sizeof(type##_t)-1))) \
         return misaligned_store(addr, val, sizeof(type##_t)); \
       reg_t vpn = addr >> PGSHIFT; \
