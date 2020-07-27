@@ -240,12 +240,9 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
     else
       abort();
 
-    state.mip = 0;
+    state.mip &= ~enabled_interrupts;
     throw trap_t(((reg_t)1 << (max_xlen-1)) | ctz(enabled_interrupts));
   }
-
-  if (pending_interrupts)
-	state.interrupt_flag = 1;
 }
 
 static int xlen_to_uxl(int xlen)
