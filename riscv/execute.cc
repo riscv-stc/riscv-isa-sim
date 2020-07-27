@@ -133,6 +133,8 @@ void processor_t::step(size_t n)
       take_pending_interrupt(interrupts);
 
       if (async_done()) {
+        pc = state.pc;
+        state.wfi_flag = 0;
         if (async_trap != nullptr) {
           pc -= 4;
           std::rethrow_exception(async_trap);
