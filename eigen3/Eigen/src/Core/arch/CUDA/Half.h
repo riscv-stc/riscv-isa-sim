@@ -648,7 +648,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (min)(const half& a, const half& b) {
   return __hlt(b, a) ? b : a;
 #else
   if ( isnan(a) ||  isnan(b))
-    return  isnan(a)? a:b;
+      return  Eigen::half_impl::raw_uint16_to_half(0x7c01);
+  if (((a.x == 0x8000) && (b.x == 0x0)) || ((b.x == 0x8000) && (a.x == 0x0)))
+      return Eigen::half_impl::raw_uint16_to_half(0x8000);
   const float f1 = static_cast<float>(a);
   const float f2 = static_cast<float>(b);
   return f2 < f1 ? b : a;
@@ -659,7 +661,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (max)(const half& a, const half& b) {
   return __hlt(a, b) ? b : a;
 #else
   if ( isnan(a) ||  isnan(b))
-    return  isnan(a)? a:b;
+      return  Eigen::half_impl::raw_uint16_to_half(0x7c01);
+  if (((a.x==0x8000) && (b.x==0x0)) || ((b.x==0x8000) && (a.x==0x0)))
+      return Eigen::half_impl::raw_uint16_to_half(0x0);
   const float f1 = static_cast<float>(a);
   const float f2 = static_cast<float>(b);
   return f1 < f2 ? b : a;
