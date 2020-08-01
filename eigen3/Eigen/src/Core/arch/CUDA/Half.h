@@ -360,12 +360,10 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator - (const half& a, const half
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator / (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
-  if(isnan(a) ||  isnan(b))
-    return NaN();
-  if(iszero(b)&& iszero(a))
-    return NaN();
-  if(iszero(b)&& !iszero(a))
-    return isPositive(b)==isPositive(a)?pinf():ninf();
+  //Make the spike result be consistent with the hardware
+  //if one of the src is Nan, or the divisor is zero, the result of div is Nan(0x7c01)
+  if(isnan(a) ||  isnan(b) || iszero(b))
+    return Eigen::half_impl::raw_uint16_to_half(0x7c01);
   return a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
 #else
   return half(float(a) / float(b));
