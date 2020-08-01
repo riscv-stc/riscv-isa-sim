@@ -647,6 +647,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (min)(const half& a, const half& b) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return __hlt(b, a) ? b : a;
 #else
+  //Make the spike result be consistent with the hardware
+  //If one of the src data is Nan, the result is 0x7C01(Nan value)
+  //If one src data is +0.0(0x0) and the other is -0.0(0x8000), the result of min is -0.0.
   if ( isnan(a) ||  isnan(b))
       return  Eigen::half_impl::raw_uint16_to_half(0x7c01);
   if (((a.x == 0x8000) && (b.x == 0x0)) || ((b.x == 0x8000) && (a.x == 0x0)))
@@ -660,7 +663,10 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half (max)(const half& a, const half& b) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return __hlt(a, b) ? b : a;
 #else
-  if ( isnan(a) ||  isnan(b))
+  //Make the spike result be consistent with the hardware
+  //If one of the src is Nan, the result is 0x7C01(Nan value)
+  //If one src is +0.0(0x0) and the other is -0.0(0x8000), the result of max is +0.0.
+  if ( isnan(a) ||  isnan(b)) 
       return  Eigen::half_impl::raw_uint16_to_half(0x7c01);
   if (((a.x==0x8000) && (b.x==0x0)) || ((b.x==0x8000) && (a.x==0x0)))
       return Eigen::half_impl::raw_uint16_to_half(0x0);
