@@ -37,12 +37,8 @@ public:
           std::string dump_path);
 
   void dump_mems() override;
+  void dump_mems(std::string prefix, reg_t addr, size_t len, int proc_id) override;
 
-  void load_mems(std::vector<std::string> load_files);
-  void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
-  void load_mem(const char *path, reg_t off, size_t len);
-  void load_mem(const char *path, reg_t off, size_t len, int proc_id);
-  void dump_mem(const char *path, reg_t off, size_t len, int proc_id, bool space_end = false);
   void set_debug(bool value);
   void set_log(bool value);
   void set_histogram(bool value);
@@ -146,6 +142,12 @@ private:
   void write_chunk(addr_t taddr, size_t len, const void* src);
   size_t chunk_align() { return 8; }
   size_t chunk_max_size() { return 8; }
+
+  void load_mems(std::vector<std::string> load_files);
+  void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
+  void load_mem(const char *path, reg_t off, size_t len);
+  void load_mem(const char *path, reg_t off, size_t len, int proc_id);
+  void dump_mem(const char *path, reg_t off, size_t len, int proc_id, bool space_end = false);
 
 public:
   // Initialize this after procs, because in debug_module_t::reset() we

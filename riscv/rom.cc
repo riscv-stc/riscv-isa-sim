@@ -1,3 +1,5 @@
+#include <fesvr/htif.h>
+
 #include "devices.h"
 #include "processor.h"
 #include "pcie_driver.h"
@@ -21,7 +23,7 @@ bool rom_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 misc_device_t::misc_device_t(processor_t* proc)
-  : proc(proc), len(0x4000)
+  : proc(proc), len(0x4000), dump_count(0)
 {
 }
 
@@ -55,6 +57,17 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   } else if (addr == 0x500) {
     // exit signal
     proc->set_exit();
+  } else if (addr == 0x600) {
+    auto count = *((uint32_t*)bytes);
+    if (count != 0)
+      dump_count = count;
+    std::string prefix = "snapshot-" + to_string(dump_count);
+    proc->get_sim()->dump_mems(prefix, dump_addr, dump_len, proc->get_id());
+    dump_count ++;
+  } else if (addr == 0x604) {
+    dump_addr = *((uint32_t*)bytes);
+  } else if (addr == 0x608) {
+    dump_len = *((uint32_t*)bytes);
   }
   
   return true;

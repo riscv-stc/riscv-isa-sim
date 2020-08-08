@@ -55,6 +55,10 @@ class misc_device_t : public abstract_device_t {
   std::vector<char> data;
   processor_t* proc;
   size_t len;
+
+  uint32_t dump_addr;
+  uint32_t dump_len;
+  uint32_t dump_count;
 };
 
 class mbox_device_t : public abstract_device_t {
