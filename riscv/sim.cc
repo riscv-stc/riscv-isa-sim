@@ -279,54 +279,6 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len, int proc_id)
   }
 }
 
-void sim_t::dump_mem(const char *fname, reg_t off, size_t len)
-{
-  memif_t mem(this);
-
-  std::cout << "Dump memory to " << fname
-            << ", addr=0x" << std::hex << off
-            << ", len=0x" << std::hex << len << std::endl;
-  std::string name = std::string(fname);
-  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
-
-  if (suffix_str != "dat" && suffix_str != "bin") {
-    std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
-    exit(1);
-  }
-
-  if (suffix_str == "dat") {
-    std::ofstream ofs(fname, std::ios::out);
-    if (!ofs.is_open()) {
-        std::cout << "Failed to open file." << std::endl;
-        exit(1);
-    }
-
-    uint16_t data;
-    char buf[5];
-    for (addr_t addr = 0; addr < len; addr += 2) {
-      mem.read(off + addr, 2, &data);
-      sprintf(buf, "%04x", data);
-      ofs << buf << " ";
-      if (!((addr + 2) % 128))
-        ofs << endl;
-    }
-
-    ofs.close();
-  } else if (suffix_str == "bin") {
-    std::ofstream ofs(fname, std::ios::out | std::ios::binary);
-    if (!ofs.is_open()) {
-        std::cout << "Failed to open file." << std::endl;
-        exit(1);
-    }
-
-    char buf[2];
-    for (addr_t addr = 0; addr < len; addr += 2) {
-      mem.read(off + addr, 2, buf);
-      ofs.write(buf, sizeof(buf));
-    }
-  }
-}
-
 void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, bool space_end)
 {
   char *mem = (proc_id >= 0)?

@@ -30,8 +30,6 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   virtual void proc_reset(unsigned id) = 0;
-  virtual void load_mem(const char *path, reg_t off, size_t len) = 0;
-  virtual void dump_mem(const char *path, reg_t off, size_t len) = 0;
 };
 
 #endif
