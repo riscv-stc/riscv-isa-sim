@@ -48,12 +48,14 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     // exit signal
     proc->set_exit();
   } else if (addr == DUMP_BASE + DUMP_START_OFFSET) {
-    auto count = *((uint32_t*)bytes);
-    if (count != 0)
-      dump_count = count;
+    auto prefix_addr = *((uint32_t*)bytes);
     std::string prefix = "snapshot-" + to_string(dump_count);
+    if (prefix_addr != 0) {
+      prefix = proc->get_sim()->addr_to_mem(prefix_addr);
+    } else {
+      dump_count ++;
+    }
     proc->get_sim()->dump_mems(prefix, dump_addr, dump_len, proc->get_id());
-    dump_count ++;
   } else if (addr == DUMP_BASE + DUMP_ADDR_OFFSET) {
     dump_addr = *((uint32_t*)bytes);
   } else if (addr == DUMP_BASE + DUMP_LEN_OFFSET) {
