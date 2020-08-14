@@ -192,7 +192,7 @@ void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) 
 
   // dump single memory range
   char fname[256];
-  if (start >= l1_buffer_start && start + len < LLB_AXI0_BUFFER_START) {
+  if (start >= l1_buffer_start && start + len < SRAM_START) {
     snprintf(fname, sizeof(fname), "%s/%s@%d.0x%lx_0x%lx.dat",
           dump_path.c_str(), prefix.c_str(), proc_id, start, len);
     dump_mem(fname, start, len, proc_id, false);
@@ -433,7 +433,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       }
       auto start = std::stoul(match[1], nullptr, 16);
       auto len = std::stoul(match[2], nullptr, 16);
-      if (start >= l1_buffer_start && start + len < LLB_AXI0_BUFFER_START) {
+      if (start >= l1_buffer_start && start + len < SRAM_START) {
         // dump l1 address range
         for (auto i=0u; i< nprocs(); i++) {
           snprintf(fname, sizeof(fname),
