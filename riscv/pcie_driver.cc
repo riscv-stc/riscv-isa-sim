@@ -263,7 +263,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(bytes, host_addr, len);
   else if (-1 != (core_id = which_npc(addr, &paddr))) {
-    if (auto host_addr = mPSim->local_addr_to_mem(addr, core_id)) {
+    if (auto host_addr = mPSim->local_addr_to_mem(paddr, core_id)) {
       memcpy(bytes, host_addr, len);
       return true;
     }
@@ -299,7 +299,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(host_addr, bytes, len);
   else if (-1 != (core_id = which_npc(addr, &paddr))) {
-    if (auto host_addr = mPSim->local_addr_to_mem(addr, core_id)) {
+    if (auto host_addr = mPSim->local_addr_to_mem(paddr, core_id)) {
       memcpy(host_addr, bytes, len);
       return true;
     }
