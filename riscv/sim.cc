@@ -28,6 +28,13 @@
 #define SRAM_START           (0xc1000000)
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
+
+//llb size 0x2000000 =32MB
+#define llb_buffer_start     (0xf8000000)
+#define llb_buffer_size      (0x2000000)
+#define L1_SHM_KEY           (0x1234)
+#define LLB_SHM_KEY          (0x5678)
+
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
@@ -38,14 +45,15 @@ static void handle_signal(int sig)
   signal(sig, &handle_signal);
 }
 
-sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t start_pc,
+sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
+            size_t target_bank_id, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access)
-  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id),
+  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id), target_bank_id(target_bank_id),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -58,7 +66,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t 
 
   signal(SIGINT, &handle_signal);
 
-  hwsync_t *hwsync = new hwsync_t(nprocs, bank_id);
+  hwsync_t *hwsync = new hwsync_t(nprocs, bank_id, target_bank_id);
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
@@ -101,7 +109,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t 
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
-    local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    share_mem_t *l1 = new share_mem_t(l1_buffer_size * 32, "L1", (i +  bank_id * procs.size()) * l1_buffer_size);
+    local_bus[i]->add_device(l1_buffer_start, l1);
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
 
     local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
@@ -146,7 +155,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id, bool halted, reg_t 
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
 
-  mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+ // mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+  share_mem_t *llb = new share_mem_t(LLB_BUFFER_SIZE, "LLB", 0);
   bus.add_device(LLB_AXI0_BUFFER_START, llb);
   bus.add_device(LLB_AXI1_BUFFER_START, llb);
 }
@@ -618,11 +628,19 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
     return false;
   }
 
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-
-    reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
-    if (desc.first == start_addr && addr - desc.first <= mem->size()) {
-      return true;
+  if (type == L1_BUFFER) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      reg_t start_addr = l1_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= l1_buffer_size) {
+        return true;
+      }
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = im_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
     }
   }
 
@@ -633,10 +651,20 @@ char* sim_t::addr_to_mem(reg_t addr) {
   std::ostringstream err;
 
   auto desc = bus.find_device(addr);
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (addr - desc.first < mem->size())
-        return mem->contents() + (addr - desc.first);
-    return NULL;
+  if (((addr & 0xffffffff) >= l1_buffer_start && (addr & 0xffffffff) < l1_buffer_start + l1_buffer_size) ||
+      ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
+
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
   }
 
   return NULL;
@@ -648,12 +676,21 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
 
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (addr - desc.first < mem->size())
-        return mem->contents() + (addr - desc.first);
-    return NULL;
+  if (((addr & 0xffffffff) >= l1_buffer_start && (addr & 0xffffffff) < l1_buffer_start + l1_buffer_size) ||
+      ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
+     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size()) {
+          return mem->contents() + (addr - desc.first);
+      }
+      return NULL;
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
   }
-
   return NULL;
 }
 
@@ -668,6 +705,18 @@ char* sim_t::local_addr_to_mem_by_id(reg_t addr, uint32_t id) {
   return NULL;
 }
 
+char* sim_t::local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id) {
+  char *mem_ptr = NULL;
+  int32_t mem_offset = 0;
+
+  //get current bank first core id and addr
+  processor_t *proc = get_core(0);
+  mem_ptr = local_addr_to_mem(addr, 0);
+
+  mem_offset = (id - proc->get_id()) * l1_buffer_size;
+  mem_ptr = mem_ptr + mem_offset;
+  return mem_ptr;
+}
 // htif
 
 void sim_t::reset()

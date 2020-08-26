@@ -93,6 +93,7 @@ comma := ,
 LD            := $(CXX)
 LDFLAGS       := @LDFLAGS@
 LIBS          := @LIBS@
+LIBS 	      += -lrt
 LINK          := $(LD) -L. $(LDFLAGS) -Wl,-rpath,$(install_libs_dir) $(patsubst -L%,-Wl$(comma)-rpath$(comma)%,$(filter -L%,$(LDFLAGS)))
 
 # Library creation

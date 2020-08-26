@@ -22,7 +22,8 @@ class remote_bitbang_t;
 class sim_t : public htif_t, public simif_t
 {
 public:
-  sim_t(const char* isa, size_t _nprocs, size_t bank_id, bool halted, reg_t start_pc,
+  sim_t(const char* isa, size_t _nprocs, size_t bank_id,
+        size_t target_bank_id, bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
@@ -64,6 +65,7 @@ private:
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
   size_t bank_id;
+  size_t target_bank_id;
   reg_t start_pc;
   std::string dts;
   std::unique_ptr<rom_device_t> boot_rom;
@@ -92,6 +94,7 @@ private:
   char* addr_to_mem(reg_t addr);
   char* local_addr_to_mem(reg_t addr, uint32_t idx);
   char* local_addr_to_mem_by_id(reg_t addr, uint32_t id);
+  char* local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id);
   bool in_local_mem(reg_t addr, local_device_type type);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);

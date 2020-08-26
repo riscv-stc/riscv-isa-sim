@@ -19,6 +19,7 @@ public:
   virtual char* addr_to_mem(reg_t addr) = 0;
   virtual char* local_addr_to_mem(reg_t addr, uint32_t idx) = 0;
   virtual char* local_addr_to_mem_by_id(reg_t addr, uint32_t id) = 0;
+  virtual char* local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id) = 0;
 
   // check if address in memory of type
   virtual bool in_local_mem(reg_t addr, local_device_type type) = 0;

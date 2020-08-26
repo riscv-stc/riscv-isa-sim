@@ -9,7 +9,18 @@
 #include <queue>
 #include <thread>
 #include <mutex>
+#include<sys/ipc.h>
+#include<sys/shm.h>
 #include <condition_variable>
+
+#include <stdlib.h>
+#include <string.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/shm.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 class pcie_driver_t;
 class processor_t;
@@ -185,6 +196,40 @@ class mem_t : public abstract_device_t {
  private:
   char* data;
   size_t len;
+};
+
+class share_mem_t : public abstract_device_t {
+  private:
+    int shm_id;
+    size_t len;
+    char *data_ptr;
+    char *start_ptr;
+   
+  public:
+    share_mem_t(size_t size, char* shm_name, size_t offset) : len(size) {
+      if (!size)
+        throw std::runtime_error("zero bytes of target memory requested");
+
+      shm_id = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+      if (shm_id == -1) {
+        throw std::runtime_error("shmget failed");
+      }
+
+      ftruncate(shm_id, size);
+      start_ptr = mmap(0, size, PROT_WRITE, MAP_SHARED, shm_id, 0);
+      if (start_ptr == (void *)-1)
+        throw std::runtime_error("shmat failed");
+      data_ptr = start_ptr + offset;
+    }
+
+    //share_mem_t(const share_mem_t& that) = delete;
+    ~share_mem_t() {
+    }
+
+    bool load(reg_t addr, size_t len, uint8_t* bytes) { return false; }
+    bool store(reg_t addr, size_t len, const uint8_t* bytes) { return false; }
+    char* contents() {return data_ptr;}
+    size_t size() {return len;}
 };
 
 class clint_t : public abstract_device_t {
