@@ -122,6 +122,25 @@ void processor_t::step(size_t n)
 
     try
     {
+      /* check current core sync state, if current core is sync,
+       * and wait for other core to sync, swap current core to idle,
+       * and let other core to execute insn. */
+      if (async_done()) {
+        pc = state.pc;
+        state.wfi_flag = 0;
+        if (async_trap != nullptr) {
+          pc -= 4;
+          std::rethrow_exception(async_trap);
+        }
+      }
+
+      /* if sync is started, let other core that not in sync to execute.
+       * the core will not ack interrupt if it is in sync. */
+      if (unlikely(state.async_started))
+	break;
+
+      /* check interrupt status, if there is any interrupt occur,
+       * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
       reg_t interrupts = ((state.mip & ~(0x1 << IRQ_M_TIMER))
 	                  | (state.mextip ? (0x1 << IRQ_M_EXT) : 0));
       if (unlikely(interrupts)) {
@@ -132,15 +151,8 @@ void processor_t::step(size_t n)
       }
       take_pending_interrupt(interrupts);
 
-      if (async_done()) {
-        pc = state.pc;
-        state.wfi_flag = 0;
-        if (async_trap != nullptr) {
-          pc -= 4;
-          std::rethrow_exception(async_trap);
-        }
-      }
-      
+     /* check current core wfi state, if it is in wfi state, swap current core to idle,
+      * and let other core to execute insn. */
       if (unlikely(state.wfi_flag))
         break;
 
