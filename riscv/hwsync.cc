@@ -12,59 +12,74 @@
 
 //#define DEBUG
 
-hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, size_t target_bank_id) : group_count(16) {
-    uint16_t size = 256;
+hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks_list) : group_count(16) {
+    uint8_t index = 0;
+    char *p = NULL;
+    const char *delim = ",";
+
     pthread_mutexattr_t attrmutex_pld;
     pthread_mutexattr_t attrmutex_sync;
     pthread_condattr_t attrcond_pld;
     pthread_condattr_t attrcond_sync;
 
     shm_name = "HWSYNC";
+    shm_size = 256;
     shm_id = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
     if (shm_id == -1)
         throw std::runtime_error("hwsync shmget failed");
 
-    ftruncate(shm_id, size);
-    shm_ptr = (char *)mmap(0, size, PROT_WRITE, MAP_SHARED, shm_id, 0);
+    ftruncate(shm_id, shm_size);
+    shm_ptr = (char *)mmap(0, shm_size, PROT_WRITE, MAP_SHARED, shm_id, 0);
     if (shm_ptr == (void *)-1)
         throw std::runtime_error("hwsync mmap failed");
 
+    shm_start = shm_ptr;
     req_sync = (uint32_t *)shm_ptr;
+
     shm_ptr += 4;
     req_pld = (uint32_t *)shm_ptr;
 
     shm_ptr += 4;
     masks = (uint32_t *)shm_ptr;
 
-    shm_ptr += 4;
+    shm_ptr += 64;
     sem_init_flag = (uint8_t *)shm_ptr;
-    shm_ptr += 16;
 
+    shm_ptr += 4;
     pmutex_pld = (pthread_mutex_t *)shm_ptr;
+
     shm_ptr += sizeof(pthread_mutex_t);
     pmutex_sync = (pthread_mutex_t *)shm_ptr;
 
     shm_ptr += sizeof(pthread_mutex_t);
     pcond_pld = (pthread_cond_t *)shm_ptr;
+
     shm_ptr += sizeof(pthread_cond_t);
     pcond_sync = (pthread_cond_t *)shm_ptr;
 
     uint32_t mask = (1 << nprocs) - 1;
     // reset group masks
-    masks[0] = 0xffffffff;
-    if (*req_sync == 0)
-         *req_sync = 0xffffffff;
-    else
-        *req_sync |= mask << (bank_id * nprocs);
+    if ((*req_sync == 0) || (*req_pld == 0)) {
+        *req_sync = ~0;
+        *req_pld = ~0;
+        *sem_init_flag = 0;
 
-    if (*req_pld == 0)
-        *req_pld = 0xffffffff;
-    else
-        *req_pld |= mask << (bank_id * nprocs);
+        for (int i = 0; i < group_count; i++)
+            masks[i] = ~0;
+    }
 
-    // add all processors to group 0
-    masks[0] &= ~(mask << (bank_id * nprocs));
-    masks[0] &= ~(mask << (target_bank_id * nprocs));
+    // add all processors to group
+    p = std::strtok(hwsync_masks_list, delim);
+    if (!p) {
+        masks[0] &= ~(mask << (bank_id * nprocs));
+    } else {
+        while (p) {
+            masks[index++] = std::stoul(p, nullptr, 16);
+            p = std::strtok(NULL, delim);
+            if (index >= group_count)
+                break;
+        }
+    }
 
     if (*sem_init_flag == 0) {
         pthread_mutexattr_init(&attrmutex_pld);
@@ -87,30 +102,27 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, size_t target_bank_id) : group
 }
 
 hwsync_t::~hwsync_t() {
+    munmap(shm_start, shm_size);
     shm_unlink(shm_name);
 }
 
 bool
 hwsync_t::enter(unsigned core_id) {
-    //std::unique_lock<std::mutex> lock(mutex_sync);
 #ifdef DEBUG
     std::cout << "core" << core_id << ": start sync" << std::endl;
 #endif
     pthread_mutex_lock(pmutex_sync);
     *req_sync &= ~(1 << core_id);
-    //for (int i=0; i< group_count; i++) {
-    if ((*req_sync | masks[0]) == masks[0] && ~masks[0] != 0) {
-        // all enter, clear enter requests
-        *req_sync |= ~masks[0];
-        *sem_init_flag = 0;
-        pthread_cond_broadcast(pcond_sync);
-        //cond_sync.notify_all();
-        //break;
+    for (int i = 0; i < group_count; i++) {
+        if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
+            // all enter, clear enter requests
+            *req_sync |= ~masks[i];
+            pthread_cond_broadcast(pcond_sync);
+            break;
+        }
     }
     pthread_mutex_unlock(pmutex_sync);
-    //}
 
-    //cond_sync.wait(lock, [&]{ return (*req_sync & 1 << core_id) != 0; });
     pthread_mutex_lock(pmutex_sync);
     while ((*req_sync & 1 << core_id) == 0)
         pthread_cond_wait(pcond_sync, pmutex_sync);
@@ -125,8 +137,6 @@ hwsync_t::enter(unsigned core_id) {
 
 bool
 hwsync_t::enter(unsigned core_id, uint32_t coremap) {
-    //std::unique_lock<std::mutex> lock(mutex_pld);
-
 #ifdef DEBUG
     std::cout << "core" << core_id << ": start pld, coremap=" << coremap << std::endl;
 #endif
@@ -136,13 +146,10 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
     if ((*req_pld | ~coremap) == ~coremap) {
         // all enter, clear enter requests
         *req_pld |= coremap;
-        *sem_init_flag = 0;
-        //cond_pld.notify_all();
         pthread_cond_broadcast(pcond_pld);
     }
     pthread_mutex_unlock(pmutex_pld);
 
-    //cond_pld.wait(lock, [&]{ return (*req_pld & 1 << core_id) != 0; });
     pthread_mutex_lock(pmutex_pld);
     while ((*req_pld & 1 << core_id) == 0)
         pthread_cond_wait(pcond_pld, pmutex_pld);

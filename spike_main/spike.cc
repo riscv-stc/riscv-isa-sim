@@ -43,7 +43,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --progsize=<words>    Progsize for the debug module [default 2]\n");
   fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
-  fprintf(stderr, "  --target-bank-id=<n>  NPU icmov target Bank ID [default 0]\n");
+  fprintf(stderr, "  --hwsync-masks-list=<0xxx,0xxx,>  HWsync masks list \n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
@@ -146,7 +146,8 @@ int main(int argc, char** argv)
   uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
   size_t bank_id = 0;
-  size_t target_bank_id = 0;
+  char masks_buf[178]={'\0'};
+  const char *hwsync_masks_list = masks_buf;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::unique_ptr<icache_sim_t> ic;
@@ -191,7 +192,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
-  parser.option(0, "target-bank-id", 1, [&](const char* s){ target_bank_id = atoi(s);});
+  parser.option(0, "hwsync-masks-list", 1, [&](const char* s){ hwsync_masks_list = s;});
   parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
@@ -245,7 +246,7 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
-  sim_t s(isa, nprocs, bank_id, target_bank_id, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, bank_id, hwsync_masks_list, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
       abstract_rti, support_hasel, support_abstract_csr_access);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);

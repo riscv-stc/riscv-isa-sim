@@ -23,7 +23,7 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, size_t _nprocs, size_t bank_id,
-        size_t target_bank_id, bool halted, reg_t start_pc,
+        char *hwsync_masks_list, bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
@@ -65,7 +65,7 @@ private:
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
   size_t bank_id;
-  size_t target_bank_id;
+  char *hwsync_masks_list;
   reg_t start_pc;
   std::string dts;
   std::unique_ptr<rom_device_t> boot_rom;
@@ -73,6 +73,7 @@ private:
   bus_t bus;
   std::vector<bus_t*> local_bus;
   pcie_driver_t *pcie_driver;
+  hwsync_t *hwsync;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation

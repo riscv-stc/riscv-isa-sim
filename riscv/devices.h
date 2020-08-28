@@ -9,8 +9,8 @@
 #include <queue>
 #include <thread>
 #include <mutex>
-#include<sys/ipc.h>
-#include<sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <condition_variable>
 
 #include <stdlib.h>
@@ -18,7 +18,6 @@
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
@@ -216,7 +215,7 @@ class share_mem_t : public abstract_device_t {
       }
 
       ftruncate(shm_id, size);
-      start_ptr = mmap(0, size, PROT_WRITE, MAP_SHARED, shm_id, 0);
+      start_ptr = (char *)mmap(0, size, PROT_WRITE, MAP_SHARED, shm_id, 0);
       if (start_ptr == (void *)-1)
         throw std::runtime_error("shmat failed");
       data_ptr = start_ptr + offset;

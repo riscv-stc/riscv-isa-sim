@@ -46,14 +46,15 @@ static void handle_signal(int sig)
 }
 
 sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
-            size_t target_bank_id, bool halted, reg_t start_pc,
+            char *hwsync_masks_list, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access)
-  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id), target_bank_id(target_bank_id),
+  : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id),
+    hwsync_masks_list(hwsync_masks_list),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -66,7 +67,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   signal(SIGINT, &handle_signal);
 
-  hwsync_t *hwsync = new hwsync_t(nprocs, bank_id, target_bank_id);
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks_list);
 
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
@@ -155,7 +156,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
 
- // mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
   share_mem_t *llb = new share_mem_t(LLB_BUFFER_SIZE, "LLB", 0);
   bus.add_device(LLB_AXI0_BUFFER_START, llb);
   bus.add_device(LLB_AXI1_BUFFER_START, llb);
@@ -169,6 +169,8 @@ sim_t::~sim_t()
   }
   delete debug_mmu;
   delete pcie_driver;
+
+  delete hwsync;
 }
 
 void sim_thread_main(void* arg)
@@ -651,8 +653,8 @@ char* sim_t::addr_to_mem(reg_t addr) {
   std::ostringstream err;
 
   auto desc = bus.find_device(addr);
-  if (((addr & 0xffffffff) >= l1_buffer_start && (addr & 0xffffffff) < l1_buffer_start + l1_buffer_size) ||
-      ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
+  if (in_local_mem(addr, L1_BUFFER) ||
+   ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
 
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size())
@@ -676,8 +678,8 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
 
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
-  if (((addr & 0xffffffff) >= l1_buffer_start && (addr & 0xffffffff) < l1_buffer_start + l1_buffer_size) ||
-      ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
+  if (in_local_mem(addr, L1_BUFFER) ||
+    ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
      if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size()) {
           return mem->contents() + (addr - desc.first);
