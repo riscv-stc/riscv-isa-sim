@@ -110,7 +110,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
-    share_mem_t *l1 = new share_mem_t(l1_buffer_size * 32, "L1", (i +  bank_id * procs.size()) * l1_buffer_size);
+    l1 = new share_mem_t(l1_buffer_size * 32, "L1", (i +  bank_id * procs.size()) * l1_buffer_size);
     local_bus[i]->add_device(l1_buffer_start, l1);
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
 
@@ -156,7 +156,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
 
-  share_mem_t *llb = new share_mem_t(LLB_BUFFER_SIZE, "LLB", 0);
+  llb = new share_mem_t(LLB_BUFFER_SIZE, "LLB", 0);
   bus.add_device(LLB_AXI0_BUFFER_START, llb);
   bus.add_device(LLB_AXI1_BUFFER_START, llb);
 }
@@ -171,6 +171,8 @@ sim_t::~sim_t()
   delete pcie_driver;
 
   delete hwsync;
+  delete llb;
+  delete l1;
 }
 
 void sim_thread_main(void* arg)

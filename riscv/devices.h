@@ -203,13 +203,14 @@ class share_mem_t : public abstract_device_t {
     size_t len;
     char *data_ptr;
     char *start_ptr;
+    char *shm_name;
    
   public:
-    share_mem_t(size_t size, char* shm_name, size_t offset) : len(size) {
+    share_mem_t(size_t size, char* name, size_t offset) : len(size) {
       if (!size)
         throw std::runtime_error("zero bytes of target memory requested");
 
-      shm_id = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+      shm_id = shm_open(name, O_CREAT | O_RDWR, 0666);
       if (shm_id == -1) {
         throw std::runtime_error("shmget failed");
       }
@@ -219,10 +220,13 @@ class share_mem_t : public abstract_device_t {
       if (start_ptr == (void *)-1)
         throw std::runtime_error("shmat failed");
       data_ptr = start_ptr + offset;
+      shm_name = name;
     }
 
-    //share_mem_t(const share_mem_t& that) = delete;
+    share_mem_t(const share_mem_t& that) = delete;
     ~share_mem_t() {
+      munmap(start_ptr, len);
+      shm_unlink(shm_name);
     }
 
     bool load(reg_t addr, size_t len, uint8_t* bytes) { return false; }

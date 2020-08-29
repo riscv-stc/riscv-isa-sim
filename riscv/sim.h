@@ -74,6 +74,8 @@ private:
   std::vector<bus_t*> local_bus;
   pcie_driver_t *pcie_driver;
   hwsync_t *hwsync;
+  share_mem_t *llb;
+  share_mem_t *l1;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation

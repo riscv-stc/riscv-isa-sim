@@ -43,7 +43,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --progsize=<words>    Progsize for the debug module [default 2]\n");
   fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
-  fprintf(stderr, "  --hwsync-masks-list=<0xxx,0xxx,>  HWsync masks list \n");
+  fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
-  parser.option(0, "hwsync-masks-list", 1, [&](const char* s){ hwsync_masks_list = s;});
+  parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks_list = s;});
   parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
