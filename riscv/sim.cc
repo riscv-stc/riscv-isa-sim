@@ -30,8 +30,6 @@
 #define MBOX_START           (0xc07f4000)
 
 //llb size 0x2000000 =32MB
-#define llb_buffer_start     (0xf8000000)
-#define llb_buffer_size      (0x2000000)
 #define L1_SHM_KEY           (0x1234)
 #define LLB_SHM_KEY          (0x5678)
 
@@ -656,8 +654,8 @@ char* sim_t::addr_to_mem(reg_t addr) {
 
   auto desc = bus.find_device(addr);
   if (in_local_mem(addr, L1_BUFFER) ||
-   ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
-
+   (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size())
           return mem->contents() + (addr - desc.first);
@@ -674,15 +672,15 @@ char* sim_t::addr_to_mem(reg_t addr) {
   return NULL;
 }
 
-
 char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
   std::ostringstream err;
 
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
   if (in_local_mem(addr, L1_BUFFER) ||
-    ((addr & 0xffffffff) >= llb_buffer_start && (addr & 0xffffffff) < llb_buffer_start + llb_buffer_size)) {
-     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size()) {
           return mem->contents() + (addr - desc.first);
       }
