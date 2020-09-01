@@ -31,6 +31,9 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   virtual void proc_reset(unsigned id) = 0;
+  virtual void hart_reset(reg_t hart_map) = 0;
+  virtual bool reset_signal(reg_t hart_id) = 0;
+  virtual void clear_reset_signal(reg_t hart_id) = 0;
   virtual void dump_mems(std::string prefix, reg_t addr, size_t len, int proc_id) = 0;
 };
 

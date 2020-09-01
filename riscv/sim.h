@@ -13,6 +13,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <mutex>
 #include <sys/types.h>
 
 class mmu_t;
@@ -53,7 +54,17 @@ public:
   const char* get_dts() { if (dts.empty()) reset(); return dts.c_str(); }
   processor_t* get_core(size_t i) { return procs.at(i); }
   unsigned nprocs() const { return procs.size(); }
-
+  void hart_reset(reg_t hart_map) {
+    rst_mutex.lock();
+    core_reset_n = hart_map & ((0x1 << procs.size()) - 0x1);
+    rst_mutex.unlock();
+  }
+  bool reset_signal(reg_t hart_id) { return core_reset_n & (0x1 << hart_id); };
+  void clear_reset_signal(reg_t hart_id) {
+    rst_mutex.lock();
+    core_reset_n &= ~(0x1 << hart_id);
+    rst_mutex.unlock();
+  }
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
 
@@ -73,13 +84,16 @@ private:
   bus_t bus;
   std::vector<bus_t*> local_bus;
   pcie_driver_t *pcie_driver;
+  volatile reg_t core_reset_n;
+  std::mutex rst_mutex;
+
   hwsync_t *hwsync;
   share_mem_t *llb;
   share_mem_t *l1;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
-  static const size_t INTERLEAVE = 5000;
+  static const size_t INTERLEAVE = 500;
   static const size_t INSNS_PER_RTC_TICK = 100; // 10 MHz clock for 1 BIPS core
   static const size_t CPU_HZ = 1000000000; // 1GHz CPU
   size_t current_step;

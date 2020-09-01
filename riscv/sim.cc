@@ -36,9 +36,13 @@
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
-  if (ctrlc_pressed)
+  if (ctrlc_pressed) {
+    shm_unlink("HWSYNC");
+    shm_unlink("L1");
+    shm_unlink("LLB");
     exit(-1);
-  
+  }
+
   ctrlc_pressed = true;
   signal(sig, &handle_signal);
 }
@@ -67,6 +71,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks_list);
 
+  core_reset_n = 0;
   pcie_driver = new pcie_driver_t(this, procs);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
   // bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
@@ -189,6 +194,7 @@ void sim_t::main()
       interactive();
     else
       step(INTERLEAVE);
+
     if (remote_bitbang) {
       remote_bitbang->tick();
     }

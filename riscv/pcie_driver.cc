@@ -82,13 +82,17 @@ void pcie_driver_t::init()
   mDestAddr.nl_groups = 0;
 
   mStatus = PCIE_OK;
-  auto mainloop = std::bind(&pcie_driver_t::transfer_loop, this);
+  auto mainloop = std::bind(&pcie_driver_t::task_doing, this);
   auto thread = new std::thread(mainloop);
   thread->detach();
   mDriverThread.reset(thread);
 }
 
-/* send data to kernel by netlink, command head info must has in data. */
+/*
+ * send data to kernel by netlink blocked, command head info must has in data.
+ * data: command head info and src data that will send to
+ * len:  length of commamd head and src data
+ */
 int32_t pcie_driver_t::send(const uint8_t* data, size_t len)
 {
   int32_t rv = 0;
@@ -96,17 +100,20 @@ int32_t pcie_driver_t::send(const uint8_t* data, size_t len)
   if (unlikely(PCIE_OK != mStatus))
     return mStatus;
 
+  pcie_mutex.lock();
   mSendBuffer->nlmsg_len = NLMSG_SPACE(len);
   if (data && len)
     memcpy(NLMSG_DATA(mSendBuffer), data, len);
 
-  //send message
+  // send message
   rv = sendto(mSockFd,
               mSendBuffer,
               NLMSG_LENGTH(len),
               0,
               (struct sockaddr*)(&mDestAddr),
               sizeof(mDestAddr));
+  pcie_mutex.unlock();
+
   if (NETLINK_FAULT == rv)
     std::cout << "pcie send data error: "
         << strerror(errno)
@@ -127,16 +134,16 @@ int32_t pcie_driver_t::read(reg_t addr, size_t length)
   command_head_t *pCmd = NULL;
 
   pCmd = NLMSG_DATA(mSendBuffer);
-  pCmd->code = CODE_READ;
-
   for (size_t i = 0; i < length; i+=block_size) {
     offset = addr + i;
     size = std::min(length - i, (size_t)block_size);
+
+    pcie_mutex.lock();
     pCmd->addr = offset;
     pCmd->len = size;
     load_data(offset, size, (uint8_t*)pCmd->data);
 
-    //send message
+    pCmd->code = CODE_READ;
     mSendBuffer->nlmsg_len = NLMSG_SPACE(size + COMMAND_HEAD_SIZE);
     rv = sendto(mSockFd,
     	        mSendBuffer,
@@ -144,6 +151,8 @@ int32_t pcie_driver_t::read(reg_t addr, size_t length)
                 0,
                 (struct sockaddr*)(&mDestAddr),
                 sizeof(mDestAddr));
+    pcie_mutex.unlock();
+
     if (NETLINK_FAULT == rv) {
       std::cout << "pcie send data error: "
       	  << strerror(errno)
@@ -331,13 +340,42 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
   return true;
 }
 
-/* PCIe mbox address, send to txcmd or exttxcmd data will write to cfg address. */
+/* PCIe mbox address, send to txcmd or exttxcmd
+ * data will write to cfg address. */
 #define PCIE_MBOX_CFG_ADDR      (0xc60a1000)
 #define PCIE_MBOX_TXCMD_ADDR    (0xc60a1004)
 #define PCIE_MBOX_EXTTXCMD_ADDR (0xc60a1008)
-void pcie_driver_t::transfer_loop()
+
+/* core reset addr, just only write,
+ * not realy phy_addr, just valid for PCIe dummy driver. */
+#define PCIE_CORE_RESET_ADDR    (0xc07f3500)
+
+/* sync state addr, just only read,
+ * not realy phy_addr, just valid for PCIe dummy driver. */
+#define PCIE_SYNC_STATE_ADDR    (0xc07f3504)
+int32_t pcie_driver_t::get_sync_state()
+{
+  int32_t rv;
+  uint32_t state = 0;
+  command_head_t cmd;
+
+  cmd.code = CODE_READ;
+  cmd.addr = PCIE_SYNC_STATE_ADDR;
+  cmd.len = 4;
+
+  for (reg_t i = 0; i < procs.size(); i++)
+    if (procs[i]->async_state())
+      state |= 0x1 << i;
+
+  *(uint32_t *)cmd.data = state;
+  rv = send((const uint8_t *)&cmd, sizeof(cmd));
+  return rv;
+}
+
+void pcie_driver_t::task_doing()
 {
   command_head_t *pCmd = NULL;
+  uint32_t value;
 
   std::cout << "driver transfer loop start." << std::endl;
   while (1) {
@@ -354,34 +392,56 @@ void pcie_driver_t::transfer_loop()
 
       switch (pCmd->code) {
         case CODE_READ:
-          read(pCmd->addr, pCmd->len);
+	  switch (pCmd->addr) {
+	    case PCIE_SYNC_STATE_ADDR:
+	      get_sync_state();
+	      break;
+
+	    default:
+              read(pCmd->addr, pCmd->len);
+	  }
+	  usleep(1);
           break;
 
         case CODE_WRITE:
-	  /* PCIe mbox cfg addr. */
-          if (PCIE_MBOX_CFG_ADDR == pCmd->addr) {
-            unsigned int value = *(unsigned int *)pCmd->data;
-            mTxCfgAddr = value;
-            std::cout << "cfg tx dst addr " << value << std::endl;
-          } else if ((PCIE_MBOX_TXCMD_ADDR == pCmd->addr) |
-           (PCIE_MBOX_EXTTXCMD_ADDR == pCmd->addr)) {
-           /* PCIe mbox txcmd or exttxcmd. */
-            unsigned int value = *(unsigned int *)pCmd->data;
-            if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
-              mTxCmd = value;
-            else
-              mTxExtCmd = value;
+	  switch (pCmd->addr) {
+	    /* PCIe mbox cfg addr. */
+            case PCIE_MBOX_CFG_ADDR:
+	      {
+                value = *(uint32_t *)pCmd->data;
+                mTxCfgAddr = value;
+                std::cout << "cfg tx dst addr " << value << std::endl;
+              }
+	      break;
 
-            store_data(mTxCfgAddr, pCmd->len, pCmd->data);
-            std::cout << "pcie mbox send addr:0x"
-	    	<< hex
-	    	<< mTxCfgAddr
-	    	<< " value:0x"
-	    	<< value
-	    	<< std::endl;
-          } else
-            store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+	    case PCIE_MBOX_TXCMD_ADDR:
+            case PCIE_MBOX_EXTTXCMD_ADDR:
+	      {
+                /* PCIe mbox txcmd or exttxcmd. */
+                value = *(uint32_t *)pCmd->data;
+                if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
+                  mTxCmd = value;
+                else
+                  mTxExtCmd = value;
 
+                store_data(mTxCfgAddr, pCmd->len, pCmd->data);
+                std::cout << "pcie mbox send addr:0x"
+	    	    << hex
+	    	    << mTxCfgAddr
+	    	    << " value:0x"
+	    	    << value
+	    	    << std::endl;
+              }
+	      break;
+
+	    case PCIE_CORE_RESET_ADDR:
+	      value = *(uint32_t *)pCmd->data;
+	      mPSim->hart_reset(value);
+	      break;
+
+	    default:
+              store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+	  }
           break;
 
         default:

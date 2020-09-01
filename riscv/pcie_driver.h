@@ -33,7 +33,8 @@ class pcie_driver_t {
   pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs);
   ~pcie_driver_t();
 
-  int32_t  send(const uint8_t* data, size_t len);
+  int32_t send(const uint8_t* data, size_t len);
+  int32_t get_sync_state();
  private:
   std::vector<processor_t*>& procs;
   std::unique_ptr<std::thread> mDriverThread;
@@ -55,7 +56,7 @@ class pcie_driver_t {
   int32_t recv();
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
-  void transfer_loop();
+  void task_doing();
   std::mutex pcie_mutex;
 };
 

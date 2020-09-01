@@ -174,7 +174,9 @@ struct state_t
   uint32_t dma_shape_col;
   uint32_t dma_stride_ddr;
   reg_t wfi_flag;
-  reg_t mextip;
+  /* mextip is ext interrupt pending status for mbox,
+   * just effect mip ext interrupt bit. */
+  volatile reg_t mextip;
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
@@ -269,6 +271,7 @@ public:
 
   void run_async(std::function<void()> func);
   bool async_done();
+  bool async_state() { return state.async_started; };
 
   void set_exit() { exit_request = true; };
   bool exited() { return exit_request; };

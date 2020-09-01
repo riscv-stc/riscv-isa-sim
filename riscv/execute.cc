@@ -94,9 +94,13 @@ void processor_t::step(size_t n)
   if (state.dcsr.cause == DCSR_CAUSE_NONE) {
     if (halt_request) {
       enter_debug_mode(DCSR_CAUSE_DEBUGINT);
+      if (unlikely(state.wfi_flag && !state.async_started))
+        state.wfi_flag = 0;
     } // !!!The halt bit in DCSR is deprecated.
     else if (state.dcsr.halt) {
       enter_debug_mode(DCSR_CAUSE_HALT);
+      if (unlikely(state.wfi_flag && !state.async_started))
+        state.wfi_flag = 0;
     }
   }
 
@@ -122,6 +126,16 @@ void processor_t::step(size_t n)
 
     try
     {
+      /* check hart reset signal is valid. */
+      if (unlikely(sim->reset_signal(id))) {
+        /*hart reset. */
+        reset();
+	/* clear rst signal. */
+	sim->clear_reset_signal(id);
+        std::cout<< "hart[" << id << "] will reset." << std::endl;
+	break;
+      }
+
       /* check current core sync state, if current core is sync,
        * and wait for other core to sync, swap current core to idle,
        * and let other core to execute insn. */
@@ -141,9 +155,13 @@ void processor_t::step(size_t n)
 
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
-      reg_t interrupts = ((state.mip & ~(0x1 << IRQ_M_TIMER))
-	                  | (state.mextip ? (0x1 << IRQ_M_EXT) : 0));
-      if (unlikely(interrupts)) {
+      reg_t interrupts = (state.mip |
+                          (state.mextip ?
+                          (0x1 << IRQ_M_EXT) : 0));
+
+      /* hart wil be wakeup from wfi status by interrupt even if mstatus.MIE is disable,
+       * but if mie is disable, hart will not be wakeup. */
+      if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;
           state.wfi_flag = 0;
