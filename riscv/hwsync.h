@@ -19,7 +19,7 @@ class hwsync_t {
     char *shm_ptr;
     char *shm_start;
     char * shm_name;
-    uint8_t *sem_init_flag;
+
     std::mutex mutex_sync;
     std::mutex mutex_pld;
     std::condition_variable_any cond_sync;
@@ -30,7 +30,7 @@ class hwsync_t {
     pthread_cond_t * pcond_sync;
 
   public:
-    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks_list);
+    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks);
     virtual ~hwsync_t();
 
     bool enter(unsigned core_id);

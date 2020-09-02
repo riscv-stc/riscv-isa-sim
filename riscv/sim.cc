@@ -30,16 +30,16 @@
 #define MBOX_START           (0xc07f4000)
 
 //llb size 0x2000000 =32MB
-#define L1_SHM_KEY           (0x1234)
-#define LLB_SHM_KEY          (0x5678)
+char *shm_l1_name = "L1";
+char *shm_llb_name = "LLB";
 
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed) {
     shm_unlink("HWSYNC");
-    shm_unlink("L1");
-    shm_unlink("LLB");
+    shm_unlink(shm_l1_name);
+    shm_unlink(shm_llb_name);
     exit(-1);
   }
 
@@ -48,7 +48,7 @@ static void handle_signal(int sig)
 }
 
 sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
-            char *hwsync_masks_list, bool halted, reg_t start_pc,
+            char *hwsync_masks, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
@@ -56,7 +56,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
              suseconds_t abstract_delay_usec, bool support_hasel,
              bool support_abstract_csr_access)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id),
-    hwsync_masks_list(hwsync_masks_list),
+    hwsync_masks(hwsync_masks),
     local_bus(std::max(nprocs, size_t(1))),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
     histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),
@@ -69,7 +69,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   signal(SIGINT, &handle_signal);
 
-  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks_list);
+  if ((bank_id == 0) && has_hwsync_masks()) {
+    shm_unlink(shm_l1_name);
+    shm_unlink(shm_llb_name);
+  }
+
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks);
 
   core_reset_n = 0;
   pcie_driver = new pcie_driver_t(this, procs);
@@ -113,8 +118,14 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
-    l1 = new share_mem_t(l1_buffer_size * 32, "L1", (i +  bank_id * procs.size()) * l1_buffer_size);
-    local_bus[i]->add_device(l1_buffer_start, l1);
+    if (hwsync_masks[0] != 0) {
+      l1 = new share_mem_t(l1_buffer_size * 32, shm_l1_name, (i +  bank_id * procs.size()) * l1_buffer_size);
+      local_bus[i]->add_device(l1_buffer_start, l1);
+    }
+    else {
+      local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    }
+
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
 
     local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
@@ -158,10 +169,17 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   if (ddr_size > 0) {
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
-
-  llb = new share_mem_t(LLB_BUFFER_SIZE, "LLB", 0);
-  bus.add_device(LLB_AXI0_BUFFER_START, llb);
-  bus.add_device(LLB_AXI1_BUFFER_START, llb);
+  
+  if (hwsync_masks[0] != 0) {
+    llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+  }
+  else {
+    mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+  }
 }
 
 sim_t::~sim_t()
@@ -173,9 +191,11 @@ sim_t::~sim_t()
   delete debug_mmu;
   delete pcie_driver;
 
-  delete hwsync;
-  delete llb;
-  delete l1;
+  if (has_hwsync_masks()) {
+    delete hwsync;
+    delete llb;
+    delete l1;
+  }
 }
 
 void sim_thread_main(void* arg)
@@ -636,7 +656,7 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
     return false;
   }
 
-  if (type == L1_BUFFER) {
+  if ((type == L1_BUFFER) && has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       reg_t start_addr = l1_buffer_start;
       if (desc.first == start_addr && addr - desc.first <= l1_buffer_size) {
@@ -645,7 +665,7 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
     }
   } else {
     if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-      reg_t start_addr = im_buffer_start;
+      reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
       if (desc.first == start_addr && addr - desc.first <= mem->size()) {
         return true;
       }
@@ -659,9 +679,10 @@ char* sim_t::addr_to_mem(reg_t addr) {
   std::ostringstream err;
 
   auto desc = bus.find_device(addr);
-  if (in_local_mem(addr, L1_BUFFER) ||
+  if ((in_local_mem(addr, L1_BUFFER) ||
    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) {
+   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+    has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size())
           return mem->contents() + (addr - desc.first);
@@ -683,9 +704,10 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
 
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
-  if (in_local_mem(addr, L1_BUFFER) ||
+  if ((in_local_mem(addr, L1_BUFFER) ||
     (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) {
+    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+    has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size()) {
           return mem->contents() + (addr - desc.first);
@@ -717,13 +739,17 @@ char* sim_t::local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id) {
   char *mem_ptr = NULL;
   int32_t mem_offset = 0;
 
-  //get current bank first core id and addr
-  processor_t *proc = get_core(0);
-  mem_ptr = local_addr_to_mem(addr, 0);
+  if (has_hwsync_masks()) {
+    //get current bank first core id and addr
+    processor_t *proc = get_core(0);
+    mem_ptr = local_addr_to_mem(addr, 0);
 
-  mem_offset = (id - proc->get_id()) * l1_buffer_size;
-  mem_ptr = mem_ptr + mem_offset;
-  return mem_ptr;
+    mem_offset = (id - proc->get_id()) * l1_buffer_size;
+    mem_ptr = mem_ptr + mem_offset;
+    return mem_ptr;
+  }
+  else
+    return local_addr_to_mem_by_id(addr, id);
 }
 // htif
 

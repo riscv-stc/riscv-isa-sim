@@ -24,7 +24,7 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, size_t _nprocs, size_t bank_id,
-        char *hwsync_masks_list, bool halted, reg_t start_pc,
+        char *hwsync_masks, bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
@@ -76,7 +76,7 @@ private:
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
   size_t bank_id;
-  char *hwsync_masks_list;
+  char *hwsync_masks;
   reg_t start_pc;
   std::string dts;
   std::unique_ptr<rom_device_t> boot_rom;
@@ -174,6 +174,7 @@ public:
   // enumerate processors, which segfaults if procs hasn't been initialized
   // yet.
   debug_module_t debug_module;
+  bool has_hwsync_masks() {return (hwsync_masks[0] == 0) ? false : true;};
 };
 
 extern volatile bool ctrlc_pressed;

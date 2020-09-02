@@ -147,7 +147,7 @@ int main(int argc, char** argv)
   size_t nprocs = 1;
   size_t bank_id = 0;
   char masks_buf[178]={'\0'};
-  const char *hwsync_masks_list = masks_buf;
+  const char *hwsync_masks = masks_buf;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::unique_ptr<icache_sim_t> ic;
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
-  parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks_list = s;});
+  parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks = s;});
   parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
@@ -246,7 +246,7 @@ int main(int argc, char** argv)
   if (!*argv1)
     help();
 
-  sim_t s(isa, nprocs, bank_id, hwsync_masks_list, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
       abstract_rti, support_hasel, support_abstract_csr_access);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
