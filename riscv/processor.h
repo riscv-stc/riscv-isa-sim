@@ -368,6 +368,7 @@ public:
   }
 
   void trigger_updated();
+  mbox_device_t* add_mbox(mbox_device_t *box);
 
 private:
   simif_t* sim;
@@ -388,6 +389,7 @@ private:
   std::string isa_string;
   bool histogram_enabled;
   bool halt_on_reset;
+  mbox_device_t *mbox;
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;

@@ -105,6 +105,22 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   return true;
 }
 
+void mbox_device_t::reset()
+{
+  cmd_count = 0;
+  cmdext_count = 0;
+  p->state.mextip = 0;
+  memset(data, 0, 4096);
+
+  while (!cmd_value.empty())
+    cmd_value.pop();
+
+  while (!cmdext_value.empty())
+    cmdext_value.pop();
+
+  return true;
+}
+
 mbox_device_t::~mbox_device_t()
 {
 }

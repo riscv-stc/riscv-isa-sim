@@ -118,6 +118,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
+    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i]);
+
     if (hwsync_masks[0] != 0) {
       l1 = new share_mem_t(l1_buffer_size * 32, shm_l1_name, (i +  bank_id * procs.size()) * l1_buffer_size);
       local_bus[i]->add_device(l1_buffer_start, l1);
@@ -127,9 +129,9 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     }
 
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
-
     local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
-    local_bus[i]->add_device(MBOX_START, new mbox_device_t(pcie_driver, procs[i]));
+    local_bus[i]->add_device(MBOX_START, box);
+    procs[i]->add_mbox(box);
   }
 
   // a cluster has 8 cores

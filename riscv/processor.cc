@@ -23,7 +23,7 @@
 processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
         uint32_t idx, uint32_t id,
         bool halt_on_reset)
-  : debug(false), halt_request(false), sim(sim), hwsync(hs),
+  : debug(false), halt_request(false), mbox(NULL), sim(sim), hwsync(hs),
   ext(NULL), idx(idx), id(id), halt_on_reset(halt_on_reset),
   async_running(true), exit_request(false),
   last_pc(1), executions(1)
@@ -190,6 +190,9 @@ void processor_t::reset()
   set_csr(CSR_MSTATUS, state.mstatus);
   state.vtype = 0x4; //vlmul=0,vsew=1,vediv=0
   state.vl = 64;//follow IC design, default value 64
+
+  if (mbox)
+    mbox->reset();
 
   if (ext)
     ext->reset(); // reset the extension
@@ -1140,4 +1143,10 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
+}
+
+mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
+{
+  mbox = box;
+  return mbox;
 }
