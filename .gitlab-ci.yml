@@ -1,0 +1,27 @@
+image: 'code.streamcomputing.com/stc-toolkit:llvm'
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  RISCV: /usr/local
+  LD_LIBRARY_PATH: /usr/local/lib
+
+stages:
+  - build
+  - test
+
+build:
+  stage : build
+  script:
+    - mkdir -p build
+    - cd build && ../configure --with-isa=rv32imafcv --prefix=$RISCV && make -j`nproc` install && cd -
+
+  artifacts:
+    paths:
+      - build
+    name: build_output
+
+test:
+  stage : test
+  script:
+    - cd /work/verification/isa/riscv-tests/isa && make test -j`nproc` && cd -
+
