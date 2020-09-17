@@ -1245,6 +1245,7 @@
 #define CSR_TCSR 0x426
 #define CSR_MDCM_CFG 0xfc1
 #define CSR_MICM_CFG 0xfc0
+#define CSR_MCACHE_CTL 0x7ca
 #define CSR_MCCTLBEGINADDR 0x7cb
 #define CSR_MCCTLCOMMAND 0x7cc
 #define CSR_MCCTLDATA 0x7cd
