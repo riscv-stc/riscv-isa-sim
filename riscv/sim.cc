@@ -785,20 +785,3 @@ void sim_t::proc_reset(unsigned id)
 {
   debug_module.proc_reset(id);
 }
-
-void sim_t::stop() {
-  while (true) {
-    bool all_exited = true;
-    for (unsigned i = 0; i < nprocs(); i++) {
-      if (!get_core(i)->exited()) {
-        all_exited = false;
-        break;
-      }
-    }
-    if (all_exited) break;
-
-    idle();
-  }
-
-  htif_t::stop();
-}
