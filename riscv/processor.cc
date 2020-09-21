@@ -152,7 +152,11 @@ void processor_t::parse_isa_string(const char* str)
 
 void state_t::reset(reg_t max_isa)
 {
+  bool async_status = false;
+  if (async_started)
+    async_status = async_started;
   memset(this, 0, sizeof(*this));
+  async_started = async_status;
   misa = max_isa;
   prv = PRV_M;
   pc = DEFAULT_RSTVEC;
