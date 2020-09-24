@@ -13,7 +13,7 @@ build:
   stage : build
   script:
     - mkdir -p build
-    - cd build && ../configure --with-isa=rv32imafcv --prefix=$RISCV && make -j`nproc` install && cd -
+    - cd build && ../configure --with-isa=rv32imafcv --prefix=$RISCV && make -j`nproc` && cd -
 
   artifacts:
     paths:
@@ -23,5 +23,6 @@ build:
 test:
   stage : test
   script:
+    - export PATH=$PATH:$CI_PROJECT_DIR/build
     - cd /work/verification/isa/riscv-tests/isa && make test -j`nproc` && cd -
 
