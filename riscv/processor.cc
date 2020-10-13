@@ -42,13 +42,13 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
 
   // start a thread for receive async tasks
   async_thread = new std::thread([this]() {
-    while (async_running) {
+    while (true) {
       std::unique_lock<std::mutex> lock(async_mutex);
       async_cond.wait(lock, [this]{
         return async_function != nullptr || !async_running;
       });
 
-      if (!async_running) break;
+      if (!async_running && async_function == nullptr) break;
 
       async_trap = nullptr;
       try {
