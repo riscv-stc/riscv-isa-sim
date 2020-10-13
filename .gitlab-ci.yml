@@ -23,6 +23,7 @@ build:
 test:
   stage : test
   script:
-    - export PATH=$PATH:$CI_PROJECT_DIR/build
+    - export PATH=$CI_PROJECT_DIR/build:$PATH
+    - which spike
     - cd /work/verification/isa/riscv-tests/isa && make test -j`nproc` && cd -
 
