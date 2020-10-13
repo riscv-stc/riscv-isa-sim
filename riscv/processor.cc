@@ -41,8 +41,8 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
   reset();
 
   // start a thread for receive async tasks
-  std::thread([this]() {
-    while (true) {
+  async_thread = new std::thread([this]() {
+    while (async_running) {
       std::unique_lock<std::mutex> lock(async_mutex);
       async_cond.wait(lock, [this]{
         return async_function != nullptr || !async_running;
@@ -59,7 +59,7 @@ processor_t::processor_t(const char* isa, simif_t* sim, hwsync_t* hs,
 
       async_function = nullptr;
     }
-  }).detach();
+  });
 }
 
 processor_t::~processor_t()
@@ -76,6 +76,9 @@ processor_t::~processor_t()
   // stop async task thread
   async_running = false;
   async_cond.notify_all();
+
+  async_thread->join();
+  delete async_thread;
 
   delete mmu;
   delete disassembler;

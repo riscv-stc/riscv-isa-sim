@@ -104,6 +104,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   if (hartids.size() == 0) {
     for (size_t i = 0; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, hwsync, i, i + bank_id * procs.size(), halted);
+      assert (procs[i] != nullptr);
     }
   }
   else {
@@ -113,6 +114,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     }
     for (size_t i = 0; i < procs.size(); i++) {
       procs[i] = new processor_t(isa, this, hwsync, i, hartids[i], halted);
+      assert (procs[i] != nullptr);
     }
   }
 

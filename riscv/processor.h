@@ -394,6 +394,7 @@ private:
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
 
+  std::thread *async_thread = nullptr;
   std::function<void()> async_function = nullptr;
   std::exception_ptr async_trap = nullptr;
   std::mutex async_mutex;

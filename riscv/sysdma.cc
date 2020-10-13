@@ -61,8 +61,6 @@ sysdma_device_t::~sysdma_device_t() {}
  * @brief dma core function to transfer data between LLB and DDR
  */
 void sysdma_device_t::dma_core(int ch) {
-  simif_t *sim = procs_[0]->get_sim();
-
   while (1) {
     std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
     while (!dma_channel_[ch].enabled)
@@ -93,6 +91,7 @@ void sysdma_device_t::dma_core(int ch) {
       if(stride && stride < col)
         throw std::runtime_error("stride is smaller than col");
 
+      simif_t *sim = procs_[0]->get_sim();
       char *dst = sim->addr_to_mem(desc->ddar);
       char *src = sim->addr_to_mem(desc->dsar);
 
