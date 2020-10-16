@@ -180,7 +180,7 @@ struct state_t
   
   bool serialized; // whether timer CSRs are in a well-defined state
 
-  bool async_started;
+  bool async_started = false;
 
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
