@@ -34,13 +34,6 @@
  */
 sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     : procs_(procs) {
-  // create thread for each dma channel
-  for (int ch = 0; ch < DMA_MAX_CHANNEL_NUMER; ch++) {
-    auto func = std::bind(&sysdma_device_t::dma_core, this, ch);
-    this->dma_ch_thread_[ch] = std::thread(func);
-    this->dma_ch_thread_[ch].detach();
-  }
-
   // dma feature
   dma_enabled_ = false;
   for (int i = 0; i < DMA_MAX_CHANNEL_NUMER; i++) {
@@ -49,6 +42,12 @@ sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     dma_channel_[i].llp = 0;
     dma_channel_[i].ddr_base[DDR_DIR_SRC] = 0;
     dma_channel_[i].ddr_base[DDR_DIR_DST] = 0;
+  }
+
+  // create thread for each dma channel
+  for (int ch = 0; ch < DMA_MAX_CHANNEL_NUMER; ch++) {
+    dma_ch_thread_[ch] = std::thread([this, ch] { dma_core(ch); });
+    dma_ch_thread_[ch].detach();
   }
 }
 
