@@ -19,6 +19,14 @@ enum command_code {
     CODE_READ = 0,
     CODE_WRITE = 1,
     CODE_INTERRUPT = 2,
+    CODE_STATUS = 3,
+};
+
+enum NL_STATUS {
+  STATUS_UNINIT,
+  STATUS_INIT,
+  STATUS_OK,
+  STATUS_EXIT,
 };
 
 struct command_head_t {
@@ -30,7 +38,7 @@ struct command_head_t {
 
 class pcie_driver_t {
  public:
-  pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs);
+  pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id);
   ~pcie_driver_t();
 
   int32_t send(const uint8_t* data, size_t len);
@@ -47,6 +55,7 @@ class pcie_driver_t {
 
   int mSockFd;
   int mStatus;
+  uint32_t mBankId;
 
   reg_t mTxCfgAddr;
   reg_t mTxCmd;
@@ -56,6 +65,7 @@ class pcie_driver_t {
   int32_t recv();
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
+  int32_t tell_peer_status(NL_STATUS status);
   void task_doing();
   std::mutex pcie_mutex;
 };
