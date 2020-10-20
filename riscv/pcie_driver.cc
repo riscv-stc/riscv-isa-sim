@@ -294,7 +294,10 @@ static const uint32_t noc_npc_base[] = {
 	NOC_NPC31_BASE,
 };
 
+#define CORE_NUM_OF_BANK (0x8)
+#define CORE_ID_MASK     (0x7)
 #define NPC_LOCAL_ADDR_START (0xc0000000)
+#define IGNORE_BANKID(core_id) ((core_id) & CORE_ID_MASK)
 #define NPC_MBOX_TOTAL \
 	(sizeof(noc_npc_base) / \
 	sizeof(noc_npc_base[0]))
@@ -323,7 +326,7 @@ int32_t which_npc(reg_t addr, reg_t *paddr)
     }
   }
 
-  return core_id;
+  return IGNORE_BANKID(core_id);
 }
 
 /* get data from npc addr, data will fill to buffer bytes. */
