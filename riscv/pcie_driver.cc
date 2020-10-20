@@ -62,6 +62,42 @@
 #define NOC_NPC30_BASE (0xec000000)
 #define NOC_NPC31_BASE (0xec800000)
 
+/* NPC local space in soc view. */
+static const uint32_t noc_npc_base[] = {
+        NOC_NPC0_BASE,
+        NOC_NPC1_BASE,
+        NOC_NPC2_BASE,
+        NOC_NPC3_BASE,
+        NOC_NPC4_BASE,
+        NOC_NPC5_BASE,
+        NOC_NPC6_BASE,
+        NOC_NPC7_BASE,
+        NOC_NPC8_BASE,
+        NOC_NPC9_BASE,
+        NOC_NPC10_BASE,
+        NOC_NPC11_BASE,
+        NOC_NPC12_BASE,
+        NOC_NPC13_BASE,
+        NOC_NPC14_BASE,
+        NOC_NPC15_BASE,
+	NOC_NPC16_BASE,
+	NOC_NPC17_BASE,
+	NOC_NPC18_BASE,
+	NOC_NPC19_BASE,
+	NOC_NPC20_BASE,
+	NOC_NPC21_BASE,
+	NOC_NPC22_BASE,
+	NOC_NPC23_BASE,
+	NOC_NPC24_BASE,
+	NOC_NPC25_BASE,
+	NOC_NPC26_BASE,
+	NOC_NPC27_BASE,
+	NOC_NPC28_BASE,
+	NOC_NPC29_BASE,
+	NOC_NPC30_BASE,
+	NOC_NPC31_BASE,
+};
+
 pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id)
   : procs(procs), mPSim(sim), mBankId(bank_id)
 {
@@ -258,45 +294,10 @@ int32_t pcie_driver_t::recv()
   return rv;
 }
 
-/* NPC local space in soc view. */
-static const uint32_t noc_npc_base[] = {
-        NOC_NPC0_BASE,
-        NOC_NPC1_BASE,
-        NOC_NPC2_BASE,
-        NOC_NPC3_BASE,
-        NOC_NPC4_BASE,
-        NOC_NPC5_BASE,
-        NOC_NPC6_BASE,
-        NOC_NPC7_BASE,
-        NOC_NPC8_BASE,
-        NOC_NPC9_BASE,
-        NOC_NPC10_BASE,
-        NOC_NPC11_BASE,
-        NOC_NPC12_BASE,
-        NOC_NPC13_BASE,
-        NOC_NPC14_BASE,
-        NOC_NPC15_BASE,
-	NOC_NPC16_BASE,
-	NOC_NPC17_BASE,
-	NOC_NPC18_BASE,
-	NOC_NPC19_BASE,
-	NOC_NPC20_BASE,
-	NOC_NPC21_BASE,
-	NOC_NPC22_BASE,
-	NOC_NPC23_BASE,
-	NOC_NPC24_BASE,
-	NOC_NPC25_BASE,
-	NOC_NPC26_BASE,
-	NOC_NPC27_BASE,
-	NOC_NPC28_BASE,
-	NOC_NPC29_BASE,
-	NOC_NPC30_BASE,
-	NOC_NPC31_BASE,
-};
-
 #define CORE_NUM_OF_BANK (0x8)
 #define CORE_ID_MASK     (0x7)
 #define NPC_LOCAL_ADDR_START (0xc0000000)
+#define NPC_LOCAL_REGIN_SIZE (0x800000)
 #define IGNORE_BANKID(core_id) ((core_id) & CORE_ID_MASK)
 #define NPC_MBOX_TOTAL \
 	(sizeof(noc_npc_base) / \
@@ -305,7 +306,7 @@ static const uint32_t noc_npc_base[] = {
 /* current address is which npc */
 #define IS_NPC(addr, id) \
 	(((addr) >= noc_npc_base[id]) && \
-	((addr) < noc_npc_base[id] + 0x800000))
+	((addr) < noc_npc_base[id] + NPC_LOCAL_REGIN_SIZE))
 
 /* change soc address to local address */
 #define switch_soc_to_local(addr, id) \
@@ -433,7 +434,8 @@ int32_t pcie_driver_t::get_sync_state()
     if (procs[i]->async_state())
       state |= 0x1 << i;
 
-  *(uint32_t *)cmd.data = state;
+  /* each bank core_id in spike is start at 0. */
+  *(uint32_t *)cmd.data = state << (mBankId * CORE_NUM_OF_BANK);
   rv = send((const uint8_t *)&cmd, sizeof(cmd));
   return rv;
 }
@@ -506,7 +508,8 @@ void pcie_driver_t::task_doing()
 
 	    case PCIE_CORE_RESET_ADDR:
 	      value = *(uint32_t *)pCmd->data;
-	      mPSim->hart_reset(value);
+	      /* each bank in spike core_id is start at 0. */
+	      mPSim->hart_reset(value >> (mBankId * CORE_NUM_OF_BANK));
 	      break;
 
 	    default:
