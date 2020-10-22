@@ -73,8 +73,6 @@ processor_t::~processor_t()
   }
 #endif
 
-  fprintf(stderr, "processor %d exit\n", id);
-
   // wait all async tasks exit
   while (1) {
     std::unique_lock<std::mutex> lock(async_mutex);
