@@ -188,6 +188,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
 sim_t::~sim_t()
 {
+  delete hwsync;
+
   for (size_t i = 0; i < procs.size(); i++) {
     delete procs[i];
     delete local_bus[i];
@@ -196,7 +198,6 @@ sim_t::~sim_t()
   delete pcie_driver;
 
   if (has_hwsync_masks()) {
-    delete hwsync;
     delete llb;
     delete l1;
   }

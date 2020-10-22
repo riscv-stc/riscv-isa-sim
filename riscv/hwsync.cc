@@ -122,8 +122,14 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 
 hwsync_t::~hwsync_t() {
     if (shm_start) {
+        *req_sync = ~0;
+        pthread_cond_broadcast(pcond_sync);
+
         munmap(shm_start, shm_size);
         shm_unlink(shm_name);
+    } else {
+        *req_sync = ~0;
+        cond_sync.notify_all();
     }
 }
 
