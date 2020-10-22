@@ -117,8 +117,6 @@ void mbox_device_t::reset()
 
   while (!cmdext_value.empty())
     cmdext_value.pop();
-
-  return true;
 }
 
 mbox_device_t::~mbox_device_t()
