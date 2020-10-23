@@ -509,7 +509,7 @@ void pcie_driver_t::task_doing()
 	    case PCIE_CORE_RESET_ADDR:
 	      value = *(uint32_t *)pCmd->data;
 	      /* each bank in spike core_id is start at 0. */
-	      mPSim->hart_reset(value >> (mBankId * CORE_NUM_OF_BANK));
+	      mPSim->hart_reset(value);
 	      break;
 
 	    default:

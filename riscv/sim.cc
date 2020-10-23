@@ -80,7 +80,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   pcie_driver = new pcie_driver_t(this, procs, bank_id);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
   // bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
-  
+
   for (auto& x : mems) {
       bus.add_device(x.first, x.second);
       //if (x.first <= DEBUG_START && (x.first + x.second->size()) > DEBUG_START)
@@ -142,6 +142,11 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
       cluster_id = 0;
   else
      cluster_id = hartids[0]/8;
+
+  if (bank_id) {
+     cluster_id = bank_id;
+  }
+
   switch (cluster_id) {
     case 0:
       bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, procs));
@@ -173,7 +178,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   if (ddr_size > 0) {
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
-  
+
   if (hwsync_masks[0] != 0) {
     llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
     bus.add_device(LLB_AXI0_BUFFER_START, llb);
@@ -565,12 +570,12 @@ void sim_t::set_procs_debug(bool value)
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
   bool result = false;
-  
+
   if (addr + len < addr)
     return false;
-  
+
   result = bus.load(addr, len, bytes);
-  
+
   return result;
 }
 

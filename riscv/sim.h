@@ -35,7 +35,7 @@ public:
   // run the simulation to completion
   int run(std::vector<std::string> load_files,
           std::vector<std::string> init_dump,
-          std::vector<std::string> exit_dump, 
+          std::vector<std::string> exit_dump,
           std::string dump_path);
 
   void dump_mems() override;
@@ -56,7 +56,7 @@ public:
   unsigned nprocs() const { return procs.size(); }
   void hart_reset(reg_t hart_map) {
     rst_mutex.lock();
-    core_reset_n = hart_map & ((0x1 << procs.size()) - 0x1);
+    core_reset_n = hart_map;
     rst_mutex.unlock();
   }
   bool reset_signal(reg_t hart_id) { return core_reset_n & (0x1 << hart_id); };
@@ -67,7 +67,7 @@ public:
   }
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
-  
+
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   mmu_t* debug_mmu;  // debug port into main memory

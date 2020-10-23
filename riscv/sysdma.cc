@@ -29,6 +29,17 @@
 #define DMA_C1_LLPR_OFFSET 0X214
 #define DMA_C1_PCNT_OFFSET 0X218
 
+static reg_t sysdma_base[] = {
+	SYSDMA0_BASE,
+	SYSDMA1_BASE,
+	SYSDMA2_BASE,
+	SYSDMA3_BASE,
+	SYSDMA4_BASE,
+	SYSDMA5_BASE,
+	SYSDMA6_BASE,
+	SYSDMA7_BASE,
+};
+
 /**
  * @brief constructor
  */
@@ -36,6 +47,7 @@ sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
     : procs_(procs) {
   // dma feature
   dma_enabled_ = false;
+  dma_idx_ = dma_idx;
   for (int i = 0; i < DMA_MAX_CHANNEL_NUMER; i++) {
     dma_channel_[i].enabled = false;
     dma_channel_[i].desc_mode_enabled = false;
@@ -66,11 +78,11 @@ void sysdma_device_t::dma_core(int ch) {
       thread_cond_[ch].wait(lock);
 
     while (dma_channel_[ch].llp) {
-      if(dma_channel_[ch].llp < SYSDMA0_BASE + DMA_BUF_OFFSET ||
-              dma_channel_[ch].llp >= SYSDMA0_BASE + DMA_BUF_OFFSET+DMA_BUF_SIZE)
+      if(dma_channel_[ch].llp < sysdma_base[dma_idx_] + DMA_BUF_OFFSET ||
+              dma_channel_[ch].llp >= sysdma_base[dma_idx_] + DMA_BUF_OFFSET+DMA_BUF_SIZE)
           throw std::runtime_error("sysdma:wrong llp");
 
-      struct dma_desc_t* desc = (struct dma_desc_t*)&dma_buf_[dma_channel_[ch].llp - SYSDMA0_BASE - DMA_BUF_OFFSET];
+      struct dma_desc_t* desc = (struct dma_desc_t*)&dma_buf_[dma_channel_[ch].llp - sysdma_base[dma_idx_] - DMA_BUF_OFFSET];
 
       // std::cout << "desc:" << hex << desc << "desc next:" << desc->llpr
       //           << "sysdma: ctlr:" << desc->ctlr.full << std::endl;

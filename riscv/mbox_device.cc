@@ -12,7 +12,7 @@ mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p)
 }
 
 #define RX_CFIFO_VAL     0x2
-#define RX_EXT_CFIFO_VAL 0x3
+#define RX_EXT_CFIFO_VAL 0x4
 #define MBOX_MTXCFG         (0x0)
 #define MBOX_MTXCMD         (0x4)
 #define MBOX_MEXTTXCMD      (0x8)
