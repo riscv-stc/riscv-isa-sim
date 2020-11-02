@@ -8,7 +8,9 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-class hwsync_t {
+#include "devices.h"
+
+class hwsync_t: public abstract_device_t {
   private:
     uint32_t *masks;
     uint32_t *req_sync;
@@ -35,6 +37,9 @@ class hwsync_t {
 
     bool enter(unsigned core_id);
     bool enter(unsigned core_id, uint32_t coremap);
+
+    bool load(reg_t addr, size_t len, uint8_t* bytes);
+    bool store(reg_t addr, size_t len, const uint8_t* bytes);
 };
 
 #endif // __HWSYNC_H__
