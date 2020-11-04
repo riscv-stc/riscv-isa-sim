@@ -34,12 +34,14 @@ char *shm_l1_name = "L1";
 char *shm_llb_name = "LLB";
 
 volatile bool ctrlc_pressed = false;
+extern std::function<int32_t(NL_STATUS)> pcie_driver_exit;
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed) {
     shm_unlink("HWSYNC");
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
+    pcie_driver_exit(STATUS_EXIT);
     exit(-1);
   }
 

@@ -98,6 +98,7 @@ static const uint32_t noc_npc_base[] = {
 	NOC_NPC31_BASE,
 };
 
+std::function<int32_t(NL_STATUS)> pcie_driver_exit;
 pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id)
   : procs(procs), mPSim(sim), mBankId(bank_id)
 {
@@ -170,6 +171,9 @@ void pcie_driver_t::init()
   auto thread = new std::thread(mainloop);
   thread->detach();
   mDriverThread.reset(thread);
+  pcie_driver_exit = std::bind(&pcie_driver_t::tell_peer_status,
+                               this,
+                               std::placeholders::_1);
 }
 
 /*
@@ -221,6 +225,7 @@ int32_t pcie_driver_t::tell_peer_status(NL_STATUS status)
    cmd.len = 4;
    *(uint32_t *)cmd.data = (uint32_t)status;
    rv = send((const uint8_t *)&cmd, sizeof(cmd));
+   std::cout << "tell peer status:" << status << std::endl;
    return rv;
 }
 
