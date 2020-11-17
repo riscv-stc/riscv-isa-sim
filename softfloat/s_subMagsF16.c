@@ -41,6 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
+uint_fast8_t softfloat_countLeadingZeros16( uint16_t a );
+uint_fast8_t softfloat_countLeadingZeros32( uint32_t a );
+
 float16_t softfloat_subMagsF16( uint_fast16_t uiA, uint_fast16_t uiB )
 {
     int_fast8_t expA;

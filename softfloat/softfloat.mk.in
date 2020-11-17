@@ -49,6 +49,7 @@ softfloat_c_srcs = \
 	f16_lt_quiet.c \
 	f16_mulAdd.c \
 	f16_mul.c \
+	f16_mul32.c \
 	f16_rem.c \
 	f16_roundToInt.c \
 	f16_sqrt.c \
@@ -68,6 +69,14 @@ softfloat_c_srcs = \
 	f16_to_ui32_r_minMag.c \
 	f16_to_ui64.c \
 	f16_to_ui64_r_minMag.c \
+	bf16_add.c  \
+	bf16_mul32.c  \
+	bf16_mul.c  \
+	bf16_sub.c  \
+	bf16_to_f16.c  \
+	bf16_to_f32.c  \
+	f16_to_bf16.c  \
+	f32_to_bf16.c  \
 	f32_add.c \
 	f32_classify.c \
 	f32_div.c \
@@ -140,7 +149,9 @@ softfloat_c_srcs = \
 	s_addComplCarryM.c \
 	s_addMagsF128.c \
 	s_addMagsF16.c \
+	s_addMagsBF16.c \
 	s_addMagsF32.c \
+	s_addMagsTF32.c \
 	s_addMagsF64.c \
 	s_addM.c \
 	s_approxRecip_1Ks.c \
@@ -173,11 +184,15 @@ softfloat_c_srcs = \
 	s_negXM.c \
 	s_normRoundPackToF128.c \
 	s_normRoundPackToF16.c \
+	s_normRoundPackToBF16.c \
 	s_normRoundPackToF32.c \
+	s_normRoundPackToTF32.c \
 	s_normRoundPackToF64.c \
 	s_normSubnormalF128Sig.c \
 	s_normSubnormalF16Sig.c \
+	s_normSubnormalBF16Sig.c \
 	s_normSubnormalF32Sig.c \
+	s_normSubnormalTF32Sig.c \
 	s_normSubnormalF64Sig.c \
 	softfloat_raiseFlags.c \
 	softfloat_state.c \
@@ -192,7 +207,9 @@ softfloat_c_srcs = \
 	s_roundPackMToUI64.c \
 	s_roundPackToF128.c \
 	s_roundPackToF16.c \
+	s_roundPackToBF16.c \
 	s_roundPackToF32.c \
+	s_roundPackToTF32.c \
 	s_roundPackToF64.c \
 	s_roundPackToI32.c \
 	s_roundPackToI64.c \
@@ -217,14 +234,22 @@ softfloat_c_srcs = \
 	s_shortShiftRightJam64.c \
 	s_shortShiftRightJam64Extra.c \
 	s_shortShiftRightM.c \
+	s_shiftLeftM.c \
+	s_shiftRightJamM.c \
+	s_shiftRightM.c \
+	s_shortShiftLeftM.c \
+	s_shortShiftRightJamM.c \
 	s_sub128.c \
 	s_sub1XM.c \
 	s_sub256M.c \
 	s_subMagsF128.c \
 	s_subMagsF16.c \
+	s_subMagsBF16.c \
 	s_subMagsF32.c \
 	s_subMagsF64.c \
 	s_subM.c \
+	tf32_mul.c \
+	tf32_to_f32.c \
 	ui32_to_f128.c \
 	ui32_to_f16.c \
 	ui32_to_f32.c \

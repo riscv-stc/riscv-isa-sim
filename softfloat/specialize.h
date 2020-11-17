@@ -99,11 +99,24 @@ struct commonNaN { char _unused; };
 #define defaultNaNF16UI 0x7E00
 
 /*----------------------------------------------------------------------------
+| The bit pattern for a default generated 16-bit bfloating-point NaN.
+*----------------------------------------------------------------------------*/
+#define defaultNaNBF16UI 0xFFC0
+
+/*----------------------------------------------------------------------------
 | Returns true when 16-bit unsigned integer `uiA' has the bit pattern of a
 | 16-bit floating-point signaling NaN.
 | Note:  This macro evaluates its argument more than once.
 *----------------------------------------------------------------------------*/
 #define softfloat_isSigNaNF16UI( uiA ) ((((uiA) & 0x7E00) == 0x7C00) && ((uiA) & 0x01FF))
+
+
+/*----------------------------------------------------------------------------
+| Returns true when 16-bit unsigned integer 'uiA' has the bit pattern of a
+| 16-bit bfloating-point signaling NaN.
+| Note:  This macro evaluates its argument more than once.
+*----------------------------------------------------------------------------*/
+#define softfloat_isSigNaNBF16UI( uiA ) ((((uiA) & 0x7FC0) == 0x7F80) && ((uiA) & 0x003F))
 
 /*----------------------------------------------------------------------------
 | Assuming `uiA' has the bit pattern of a 16-bit floating-point NaN, converts
@@ -120,6 +133,20 @@ struct commonNaN { char _unused; };
 #define softfloat_commonNaNToF16UI( aPtr ) ((uint_fast16_t) defaultNaNF16UI)
 
 /*----------------------------------------------------------------------------
+| Assuming 'uiA' has the bit pattern of a 16-bit floating-point NaN, converts
+| this NaN to the common NaN form, and stores the resulting common NaN at the
+| location pointed to by 'zPtr'.  If the NaN is a signaling NaN, the invalid
+| exception is raised.
+*----------------------------------------------------------------------------*/
+void softfloat_bf16UIToCommonNaN( uint_fast16_t uiA, struct commonNaN *zPtr );
+
+/*----------------------------------------------------------------------------
+| Converts the common NaN pointed to by 'aPtr' into a 16-bit bfloating-point
+| NaN, and returns the bit pattern of this value as an unsigned integer.
+*----------------------------------------------------------------------------*/
+uint_fast16_t softfloat_commonNaNToBF16UI( const struct commonNaN *aPtr );
+
+/*----------------------------------------------------------------------------
 | Interpreting `uiA' and `uiB' as the bit patterns of two 16-bit floating-
 | point values, at least one of which is a NaN, returns the bit pattern of
 | the combined NaN result.  If either `uiA' or `uiB' has the pattern of a
@@ -127,6 +154,15 @@ struct commonNaN { char _unused; };
 *----------------------------------------------------------------------------*/
 uint_fast16_t
  softfloat_propagateNaNF16UI( uint_fast16_t uiA, uint_fast16_t uiB );
+
+/*----------------------------------------------------------------------------
+| Interpreting 'uiA' and 'uiB' as the bit patterns of two 16-bit bfloating-
+| point values, at least one of which is a NaN, returns the bit pattern of
+| the combined NaN result.  If either 'uiA' or 'uiB' has the pattern of a
+| signaling NaN, the invalid exception is raised.
+*----------------------------------------------------------------------------*/
+uint_fast16_t
+ softfloat_propagateNaNBF16UI( uint_fast16_t uiA, uint_fast16_t uiB );
 
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 32-bit floating-point NaN.

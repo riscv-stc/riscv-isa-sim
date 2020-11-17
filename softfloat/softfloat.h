@@ -2,7 +2,7 @@
 /*============================================================================
 
 This C header file is part of the SoftFloat IEEE Floating-Point Arithmetic
-Package, Release 3d, by John R. Hauser.
+Package, Release 3e, by John R. Hauser.
 
 Copyright 2011, 2012, 2013, 2014, 2015, 2016, 2017 The Regents of the
 University of California.  All rights reserved.
@@ -78,7 +78,7 @@ enum {
     softfloat_round_min         = 2,
     softfloat_round_max         = 3,
     softfloat_round_near_maxMag = 4,
-    softfloat_round_odd         = 5
+    softfloat_round_odd         = 6
 };
 
 /*----------------------------------------------------------------------------
@@ -154,6 +154,9 @@ uint_fast64_t f16_to_ui64_r_minMag( float16_t, bool );
 int_fast32_t f16_to_i32_r_minMag( float16_t, bool );
 int_fast64_t f16_to_i64_r_minMag( float16_t, bool );
 float32_t f16_to_f32( float16_t );
+float32_t bf16_to_f32( bfloat16_t );
+bfloat16_t f16_to_bf16( float16_t );
+float16_t bf16_to_f16( bfloat16_t );
 float64_t f16_to_f64( float16_t );
 #ifdef SOFTFLOAT_FAST_INT64
 extFloat80_t f16_to_extF80( float16_t );
@@ -163,10 +166,15 @@ void f16_to_extF80M( float16_t, extFloat80_t * );
 void f16_to_f128M( float16_t, float128_t * );
 float16_t f16_roundToInt( float16_t, uint_fast8_t, bool );
 float16_t f16_add( float16_t, float16_t );
+bfloat16_t bf16_add( bfloat16_t, bfloat16_t );
+bfloat16_t bf16_sub( bfloat16_t, bfloat16_t );
 float16_t f16_sub( float16_t, float16_t );
 float16_t f16_max( float16_t, float16_t );
 float16_t f16_min( float16_t, float16_t );
 float16_t f16_mul( float16_t, float16_t );
+float32_t f16_mul32( float16_t, float16_t );
+bfloat16_t bf16_mul( bfloat16_t, bfloat16_t );
+float32_t bf16_mul32( bfloat16_t, bfloat16_t );
 float16_t f16_mulAdd( float16_t, float16_t, float16_t );
 float16_t f16_div( float16_t, float16_t );
 float16_t f16_rem( float16_t, float16_t );
@@ -196,7 +204,10 @@ uint_fast64_t f32_to_ui64_r_minMag( float32_t, bool );
 int_fast32_t f32_to_i32_r_minMag( float32_t, bool );
 int_fast64_t f32_to_i64_r_minMag( float32_t, bool );
 float16_t f32_to_f16( float32_t );
+bfloat16_t f32_to_bf16( float32_t );
 float64_t f32_to_f64( float32_t );
+tfloat32_t f32_to_tf32( float32_t );
+float32_t tf32_to_f32( tfloat32_t );
 #ifdef SOFTFLOAT_FAST_INT64
 extFloat80_t f32_to_extF80( float32_t );
 float128_t f32_to_f128( float32_t );
@@ -209,6 +220,7 @@ float32_t f32_sub( float32_t, float32_t );
 float32_t f32_max( float32_t, float32_t );
 float32_t f32_min( float32_t, float32_t );
 float32_t f32_mul( float32_t, float32_t );
+float32_t tf32_mul( float32_t, float32_t );
 float32_t f32_mulAdd( float32_t, float32_t, float32_t );
 float32_t f32_div( float32_t, float32_t );
 float32_t f32_rem( float32_t, float32_t );

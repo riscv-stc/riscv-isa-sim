@@ -72,6 +72,11 @@ float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
          case softfloat_round_max:
             if ( ! uiZ ) uiZ = packToF32UI( 0, 0x7F, 0 );
             break;
+#ifdef SOFTFLOAT_ROUND_ODD
+         case softfloat_round_odd:
+            uiZ |= packToF32UI( 0, 0x7F, 0 );
+            break;
+#endif
         }
         goto uiZ;
     }
@@ -101,8 +106,11 @@ float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool exact )
         uiZ += roundBitsMask;
     }
     uiZ &= ~roundBitsMask;
-    if ( exact && (uiZ != uiA) ) {
-        softfloat_exceptionFlags |= softfloat_flag_inexact;
+    if ( uiZ != uiA ) {
+#ifdef SOFTFLOAT_ROUND_ODD
+        if ( roundingMode == softfloat_round_odd ) uiZ |= lastBitMask;
+#endif
+        if ( exact ) softfloat_exceptionFlags |= softfloat_flag_inexact;
     }
  uiZ:
     uZ.ui = uiZ;

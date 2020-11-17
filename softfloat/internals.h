@@ -2,7 +2,7 @@
 /*============================================================================
 
 This C header file is part of the SoftFloat IEEE Floating-Point Arithmetic
-Package, Release 3d, by John R. Hauser.
+Package, Release 3e, by John R. Hauser.
 
 Copyright 2011, 2012, 2013, 2014, 2015, 2016, 2017 The Regents of the
 University of California.  All rights reserved.
@@ -47,7 +47,9 @@ extern "C" {
 #endif
 
 union ui16_f16 { uint16_t ui; float16_t f; };
+union ui16_bf16 { uint16_t ui; bfloat16_t f; };
 union ui32_f32 { uint32_t ui; float32_t f; };
+union ui32_tf32 { uint32_t ui; tfloat32_t f; };
 union ui64_f64 { uint64_t ui; float64_t f; };
 
 #ifdef SOFTFLOAT_FAST_INT64
@@ -99,9 +101,28 @@ float16_t softfloat_normRoundPackToF16( bool, int_fast16_t, uint_fast16_t );
 
 float16_t softfloat_addMagsF16( uint_fast16_t, uint_fast16_t );
 float16_t softfloat_subMagsF16( uint_fast16_t, uint_fast16_t );
+
+bfloat16_t softfloat_addMagsBF16( uint_fast16_t, uint_fast16_t );
+bfloat16_t softfloat_subMagsBF16( uint_fast16_t, uint_fast16_t );
+
 float16_t
  softfloat_mulAddF16(
      uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast8_t );
+
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signBF16UI( a ) ((bool) ((uint16_t) (a)>>15))
+#define expBF16UI( a ) ((int_fast16_t) ((a)>>7) & 0xFF)
+#define fracBF16UI( a ) ((a) & 0x7F)
+#define packToBF16UI( sign, exp, sig ) (((uint16_t) (sign)<<15) + ((uint16_t) (exp)<<7) + (sig))
+
+#define isNaNBF16UI( a ) (((~(a) & 0x7f80) == 0) && ((a) & 0x07F))
+
+struct exp8_sig16 softfloat_normSubnormalBF16Sig( uint_fast16_t );
+
+bfloat16_t softfloat_roundPackToBF16( bool, int_fast16_t, uint_fast16_t );
+bfloat16_t softfloat_normRoundPackToBF16( bool, int_fast16_t, uint_fast16_t );
+
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
@@ -123,6 +144,23 @@ float32_t softfloat_subMagsF32( uint_fast32_t, uint_fast32_t );
 float32_t
  softfloat_mulAddF32(
      uint_fast32_t, uint_fast32_t, uint_fast32_t, uint_fast8_t );
+
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signTF32UI( a ) ((bool) ((uint32_t) (a)>>18))
+#define expTF32UI( a ) ((int_fast16_t) ((a)>>10) & 0xFF)
+#define fracTF32UI( a ) ((a) & 0x3FF)
+#define packToTF32UI( sign, exp, sig ) (((uint32_t) (sign)<<18) + ((uint32_t) (exp)<<10) + (sig))
+
+#define isNaNTF32UI( a ) (((~(a) & 0x3fC00) == 0) && ((a) & 0x3FF))
+
+struct exp16_sig32 softfloat_normSubnormalTF32Sig( uint_fast32_t );
+
+tfloat32_t softfloat_roundPackToTF32( bool, int_fast16_t, uint_fast32_t );
+tfloat32_t softfloat_normRoundPackToTF32( bool, int_fast16_t, uint_fast32_t );
+
+tfloat32_t softfloat_addMagsTF32( uint_fast32_t, uint_fast32_t );
+tfloat32_t softfloat_subMagsTF32( uint_fast32_t, uint_fast32_t );
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
