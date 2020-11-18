@@ -14,6 +14,20 @@
 #include <stdlib.h>
 #include <vector>
 
+//#define ENABLE_MEMORY_TRACE
+
+#ifdef ENABLE_MEMORY_TRACE
+#define LOAD_TRACE(addr, val, type) \
+    fprintf(stderr, "       load: A=0x%016lx, D=0x%0*lx\n", \
+        addr, (int)(sizeof(type##_t)*2), (unsigned long)val);
+#define STORE_TRACE(addr, val, type) \
+    fprintf(stderr, "      store: A=0x%016lx, D=0x%0*lx\n", \
+        addr, (int)(sizeof(type##_t)*2), (unsigned long)val);
+#else
+#define LOAD_TRACE(...)
+#define STORE_TRACE(...)
+#endif
+
 // virtual memory configuration
 #define PGSHIFT 12
 const reg_t PGSIZE = 1 << PGSHIFT;
@@ -252,6 +266,8 @@ public:
     reg_t paddr = translate(vaddr, 1, LOAD, 0);
     if (auto host_addr = sim->addr_to_mem(paddr))
       load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
+    else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
+      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
     else
       throw trap_load_access_fault(vaddr, 0, 0); // disallow LR to I/O space
   }
@@ -263,6 +279,8 @@ public:
 
     reg_t paddr = translate(vaddr, 1, STORE, 0);
     if (auto host_addr = sim->addr_to_mem(paddr))
+      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
+    else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
       return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
     else
       throw trap_store_access_fault(vaddr, 0, 0); // disallow SC to I/O space
@@ -324,6 +342,8 @@ public:
 
   void flush_tlb();
   void flush_icache();
+
+  size_t get_phy_addr(reg_t paddr);
 
   void register_memtracer(memtracer_t*);
 
