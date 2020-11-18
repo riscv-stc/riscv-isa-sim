@@ -5,6 +5,7 @@
 
 #include "debug_module.h"
 #include "devices.h"
+#include "pcie_driver.h"
 #include "log_file.h"
 #include "processor.h"
 #include "simif.h"
@@ -24,9 +25,9 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, const char* priv, const char* varch, size_t _nprocs,
-        bool halted, bool real_time_clint,
+        size_t bank_id, char *hwsync_masks, bool halted, bool real_time_clint,
         reg_t initrd_start, reg_t initrd_end, const char* bootargs,
-        reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems,
+        reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
@@ -34,7 +35,14 @@ public:
   ~sim_t();
 
   // run the simulation to completion
-  int run();
+  int run(std::vector<std::string> load_files,
+          std::vector<std::string> init_dump,
+          std::vector<std::string> exit_dump,
+          std::string dump_path);
+
+  void dump_mems() override;
+  void dump_mems(std::string prefix, reg_t addr, size_t len, int proc_id) override;
+
   void set_debug(bool value);
   void set_histogram(bool value);
 
@@ -54,6 +62,20 @@ public:
   processor_t* get_core(size_t i) { return procs.at(i); }
   unsigned nprocs() const { return procs.size(); }
 
+  void hart_reset(reg_t hart_map) {
+    rst_mutex.lock();
+    core_reset_n = hart_map;
+    rst_mutex.unlock();
+  }
+
+  bool reset_signal(reg_t hart_id) { return core_reset_n & (0x1 << hart_id); };
+
+  void clear_reset_signal(reg_t hart_id) {
+    rst_mutex.lock();
+    core_reset_n &= ~(0x1 << hart_id);
+    rst_mutex.unlock();
+  }
+
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
 
@@ -62,6 +84,8 @@ private:
   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
+  size_t bank_id;
+  char *hwsync_masks;
   reg_t initrd_start;
   reg_t initrd_end;
   const char* bootargs;
@@ -74,6 +98,18 @@ private:
   std::unique_ptr<clint_t> clint;
   bus_t bus;
   log_file_t log_file;
+
+  std::vector<bus_t*> local_bus;
+  pcie_driver_t *pcie_driver;
+  volatile reg_t core_reset_n;
+  std::mutex rst_mutex;
+
+  hwsync_t *hwsync;
+  share_mem_t *llb;
+  share_mem_t *l1;
+
+  std::vector<std::string> exit_dump;
+  std::string dump_path;
 
   processor_t* get_core(const std::string& i);
   void step(size_t n); // step through simulation
@@ -89,8 +125,14 @@ private:
 
   // memory-mapped I/O routines
   char* addr_to_mem(reg_t addr);
+  char* local_addr_to_mem(reg_t addr, uint32_t idx);
+  char* local_addr_to_mem_by_id(reg_t addr, uint32_t id);
+  char* local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id);
+  bool in_local_mem(reg_t addr, local_device_type type);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
+  bool local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx);
+  bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx);
   void make_dtb();
   void set_rom();
 
@@ -141,11 +183,18 @@ private:
   void set_target_endianness(memif_endianness_t endianness);
   memif_endianness_t get_target_endianness() const;
 
+  void load_mems(std::vector<std::string> load_files);
+  void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
+  void load_mem(const char *path, reg_t off, size_t len);
+  void load_mem(const char *path, reg_t off, size_t len, int proc_id);
+  void dump_mem(const char *path, reg_t off, size_t len, int proc_id, bool space_end = false);
+
 public:
   // Initialize this after procs, because in debug_module_t::reset() we
   // enumerate processors, which segfaults if procs hasn't been initialized
   // yet.
   debug_module_t debug_module;
+  bool has_hwsync_masks() {return (hwsync_masks[0] == 0) ? false : true;};
 };
 
 extern volatile bool ctrlc_pressed;

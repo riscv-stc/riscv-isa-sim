@@ -206,11 +206,35 @@
 #define IRQ_COP      12
 #define IRQ_HOST     13
 
-#define DEFAULT_RSTVEC     0x00001000
-#define CLINT_BASE         0x02000000
+#define DEFAULT_RSTVEC     0xc0601000
+#define CLINT_BASE         0xc0440000
 #define CLINT_SIZE         0x000c0000
 #define EXT_IO_BASE        0x40000000
 #define DRAM_BASE          0x80000000
+
+#define SYSDMA0_BASE       0xC9F00000
+#define SYSDMA1_BASE       0xD1F00000
+#define SYSDMA2_BASE       0xCFF00000
+#define SYSDMA3_BASE       0xD7F00000
+#define SYSDMA4_BASE       0xD9F00000
+#define SYSDMA5_BASE       0xE1F00000
+#define SYSDMA6_BASE       0xDFF00000
+#define SYSDMA7_BASE       0xE7F00000
+
+// two axi bus access same llb buffer
+#define LLB_AXI0_BUFFER_START 0xf8000000
+#define LLB_AXI1_BUFFER_START 0xfa000000
+#define LLB_BUFFER_SIZE 0x2000000
+#define LLB_BANK_BUFFER_SIZE 0x800000
+
+#define GET_LLB_OFF(src, dst) do {                                                 \
+    if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
+        dst = src - LLB_AXI0_BUFFER_START;                                         \
+    else if  (LLB_AXI1_BUFFER_START <= src < LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE)\
+        dst = src - LLB_AXI1_BUFFER_START;                                         \
+    else                                                                           \
+        throw std::runtime_error("wrong llb address");                             \
+} while(0)
 
 /* page table entry (PTE) fields */
 #define PTE_V     0x001 /* Valid */

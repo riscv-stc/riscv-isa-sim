@@ -134,6 +134,8 @@ void merge_overlapping_memory_regions(std::vector<std::pair<reg_t, mem_t*>>& mem
   }
 }
 
+#define DEFAULT_MEMORY_LAYOUT "0x0:0xc0000000"
+
 static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
 {
   // handle legacy mem argument
@@ -199,6 +201,17 @@ static unsigned long atoul_nonzero_safe(const char* s)
   return res;
 }
 
+static std::vector<std::string> make_strings(const char* arg)
+{
+  std::stringstream ss(arg);
+  std::string item;
+  std::vector<std::string> result;
+  while (std::getline(ss, item, ',')) {
+    result.push_back(std::move(item));
+  }
+  return result;
+}
+
 int main(int argc, char** argv)
 {
   bool debug = false;
@@ -209,6 +222,11 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   bool real_time_clint = false;
   size_t nprocs = 1;
+  uint32_t ddr_size = 0xC0000000;
+  size_t bank_id = 0;
+  char masks_buf[178]={'\0'};
+  const char *hwsync_masks = masks_buf;
+
   const char* kernel = NULL;
   reg_t kernel_offset, kernel_size;
   size_t initrd_size;
@@ -229,6 +247,10 @@ int main(int argc, char** argv)
   const char* priv = DEFAULT_PRIV;
   const char* varch = DEFAULT_VARCH;
   const char* dtb_file = NULL;
+  std::vector<std::string> load_files;
+  std::vector<std::string> init_dump;
+  std::vector<std::string> exit_dump;
+  std::string dump_path = ".";
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned dmi_rti = 0;
@@ -307,6 +329,9 @@ int main(int argc, char** argv)
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
+  parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
+  parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks = s;});
+  parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
   parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoul_safe(s);});
@@ -358,10 +383,19 @@ int main(int argc, char** argv)
   parser.option(0, "log", 1,
                 [&](const char* s){log_path = s;});
 
+  /* a backdoor for ncbet
+   * load-path is case input path
+   * dump-path is memory dump path, for ncbet get result
+   */
+  parser.option(0, "load", 1, [&](const char* s){load_files = make_strings(s);});
+  parser.option(0, "init-dump", 1, [&](const char* s){init_dump = make_strings(s);});
+  parser.option(0, "exit-dump", 1, [&](const char* s){exit_dump = make_strings(s);});
+  parser.option(0, "dump-path", 1, [&](const char* s){dump_path = s;});
+
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
-  if (mems.empty())
-    mems = make_mems("2048");
+  if (ddr_size == 0 && mems.empty())
+    mems = make_mems(DEFAULT_MEMORY_LAYOUT);
 
   if (!*argv1)
     help();
@@ -392,9 +426,9 @@ int main(int argc, char** argv)
     }
   }
 
-  sim_t s(isa, priv, varch, nprocs, halted, real_time_clint,
-      initrd_start, initrd_end, bootargs, start_pc, mems, plugin_devices, htif_args,
-      std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
+  sim_t s(isa, priv, varch, nprocs, bank_id, (char *)hwsync_masks, halted, real_time_clint,
+      initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
+      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
@@ -423,7 +457,7 @@ int main(int argc, char** argv)
   s.configure_log(log, log_commits);
   s.set_histogram(histogram);
 
-  auto return_code = s.run();
+  auto return_code = s.run(load_files, init_dump, exit_dump, dump_path);
 
   for (auto& mem : mems)
     delete mem.second;

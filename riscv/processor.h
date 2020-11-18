@@ -6,20 +6,26 @@
 #include "config.h"
 #include "devices.h"
 #include "trap.h"
+#include "simif.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <map>
 #include <cassert>
+#include <functional>
 #include "debug_rom_defines.h"
 
 class processor_t;
 class mmu_t;
 typedef reg_t (*insn_func_t)(processor_t*, insn_t, reg_t);
 class simif_t;
+class hwsync_t;
 class trap_t;
 class extension_t;
 class disassembler_t;
+
+#define VECTOR_REG_LEN    (VREG_LENGTH * 8)
+#define VECTOR_STRIP_LEN  (VREG_LENGTH * 8)
 
 struct insn_desc_t
 {
@@ -213,7 +219,13 @@ struct state_t
 
   uint32_t fflags;
   uint32_t frm;
+
+  /* mextip is ext interrupt pending status for mbox,
+   * just effect mip ext interrupt bit. */
+  volatile reg_t mextip;
   bool serialized; // whether timer CSRs are in a well-defined state
+
+  bool async_started = false;
 
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
@@ -267,7 +279,8 @@ class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, uint32_t id, bool halt_on_reset,
+              simif_t* sim, hwsync_t *hs, uint32_t idx,
+              uint32_t id, bool halt_on_reset,
               FILE *log_file);
   ~processor_t();
 
@@ -280,10 +293,14 @@ public:
   void reset();
   void step(size_t n); // run for n cycles
   void set_csr(int which, reg_t val);
+  uint32_t get_idx() {return idx; };
   uint32_t get_id() const { return id; }
   reg_t get_csr(int which, insn_t insn, bool write, bool peek = 0);
   reg_t get_csr(int which) { return get_csr(which, insn_t(0), false, true); }
   mmu_t* get_mmu() { return mmu; }
+  simif_t* get_sim() { return sim; };
+  uint32_t get_syncs() {return synctimes; };
+  uint32_t set_syncs(uint32_t times) {return synctimes = times; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
   unsigned get_max_xlen() { return max_xlen; }
@@ -321,6 +338,16 @@ public:
 
   void register_insn(insn_desc_t);
   void register_extension(extension_t*);
+
+  void sync();
+  void pld(uint32_t coremap);
+
+  void run_async(std::function<void()> func);
+  bool async_done();
+  bool async_state() { return state.async_started; };
+
+  void set_exit() { exit_request = true; };
+  bool exited() { return exit_request; };
 
   // MMIO slave interface
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -418,6 +445,7 @@ public:
   }
 
   void trigger_updated();
+  mbox_device_t* add_mbox(mbox_device_t *box);
 
   void set_pmp_num(reg_t pmp_num);
   void set_pmp_granularity(reg_t pmp_granularity);
@@ -427,25 +455,40 @@ public:
 
 private:
   simif_t* sim;
+  hwsync_t *hwsync;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
   state_t state;
+  uint32_t idx;
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
+  unsigned elen;
+  unsigned slen;
+  unsigned vlen;
+  uint32_t synctimes;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
   bool log_commits_enabled;
   FILE *log_file;
   bool halt_on_reset;
+  mbox_device_t *mbox;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
   
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
+
+  std::thread *async_thread = nullptr;
+  std::function<void()> async_function = nullptr;
+  std::exception_ptr async_trap = nullptr;
+  std::mutex async_mutex;
+  std::condition_variable async_cond;
+  bool async_running;
+  bool exit_request;
 
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];
@@ -463,6 +506,8 @@ private:
   friend class mmu_t;
   friend class clint_t;
   friend class extension_t;
+  friend class pcie_driver_t;
+  friend class mbox_device_t;
 
   void parse_varch_string(const char*);
   void parse_priv_string(const char*);

@@ -6,6 +6,7 @@
 #include "common.h"
 #include "config.h"
 #include "simif.h"
+#include "hwsync.h"
 #include "mmu.h"
 #include "disasm.h"
 #include <cinttypes>
@@ -22,10 +23,12 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-                         simif_t* sim, uint32_t id, bool halt_on_reset,
+                         simif_t* sim, hwsync_t* hs, uint32_t idx,
+                         uint32_t id, bool halt_on_reset,
                          FILE* log_file)
   : debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), id(id), xlen(0),
   histogram_enabled(false), log_commits_enabled(false),
+  hwsync(hs), idx(idx),
   log_file(log_file), halt_on_reset(halt_on_reset),
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
 {
@@ -1823,6 +1826,14 @@ void processor_t::register_base_instructions()
   build_opcode_map();
 }
 
+void processor_t::sync() {
+  hwsync->enter(id);
+}
+
+void processor_t::pld(uint32_t coremap) {
+  hwsync->enter(id, coremap);
+}
+
 bool processor_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
   switch (addr)
@@ -1872,4 +1883,10 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
+}
+
+mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
+{
+  mbox = box;
+  return mbox;
 }

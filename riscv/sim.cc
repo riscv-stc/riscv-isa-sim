@@ -2,6 +2,7 @@
 
 #include "sim.h"
 #include "mmu.h"
+#include "hwsync.h"
 #include "dts.h"
 #include "remote_bitbang.h"
 #include "byteorder.h"
@@ -12,24 +13,48 @@
 #include <climits>
 #include <cstdlib>
 #include <cassert>
+#include <regex>
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 
+//L1 buffer size adjust to 1.25M
+//im buffer size adjust to 256K
+#define ddr_mem_start        (0x00000000)
+#define l1_buffer_start      (0xc0000000)
+#define l1_buffer_size       (0x00140000)
+#define im_buffer_start      (0xc0400000)
+#define im_buffer_size       (0x00040000)
+#define SRAM_START           (0xc1000000)
+#define SRAM_SIZE            (0x80000)
+#define MBOX_START           (0xc07f4000)
+
+//llb size 0x2000000 =32MB
+char *shm_l1_name = "L1";
+char *shm_llb_name = "LLB";
+
 volatile bool ctrlc_pressed = false;
+extern std::function<int32_t(NL_STATUS)> pcie_driver_exit;
 static void handle_signal(int sig)
 {
-  if (ctrlc_pressed)
+  if (ctrlc_pressed) {
+    shm_unlink("HWSYNC");
+    shm_unlink(shm_l1_name);
+    shm_unlink(shm_llb_name);
+    pcie_driver_exit(STATUS_EXIT);
     exit(-1);
+  }
+
   ctrlc_pressed = true;
   signal(sig, &handle_signal);
 }
 
 sim_t::sim_t(const char* isa, const char* priv, const char* varch,
-             size_t nprocs, bool halted, bool real_time_clint,
+             size_t nprocs, size_t bank_id, char *hwsync_masks,
+             bool halted, bool real_time_clint,
              reg_t initrd_start, reg_t initrd_end, const char* bootargs,
-             reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems,
+             reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems,size_t ddr_size,
              std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
              const std::vector<std::string>& args,
              std::vector<int> const hartids,
@@ -40,6 +65,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     mems(mems),
     plugin_devices(plugin_devices),
     procs(std::max(nprocs, size_t(1))),
+    bank_id(bank_id),
+    hwsync_masks(hwsync_masks),
+    local_bus(std::max(nprocs, size_t(1))),
     initrd_start(initrd_start),
     initrd_end(initrd_end),
     bootargs(bootargs),
@@ -56,6 +84,16 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     debug_module(this, dm_config)
 {
   signal(SIGINT, &handle_signal);
+
+  if ((bank_id == 0) && has_hwsync_masks()) {
+    shm_unlink(shm_l1_name);
+    shm_unlink(shm_llb_name);
+  }
+
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks);
+  core_reset_n = 0;
+  pcie_driver = new pcie_driver_t(this, procs, bank_id);
+  bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
 
   for (auto& x : mems)
     bus.add_device(x.first, x.second);
@@ -76,9 +114,74 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   for (size_t i = 0; i < nprocs; i++) {
-    int hart_id = hartids.empty() ? i : hartids[i];
-    procs[i] = new processor_t(isa, priv, varch, this, hart_id, halted,
-                               log_file.get());
+    int hart_id = hartids.empty() ? (i + bank_id * procs.size()) : hartids[i];
+    procs[i] = new processor_t(isa, priv, varch, this, hwsync, i,
+    hart_id, halted, log_file.get());
+  }
+
+  for (size_t i = 0; i < procs.size(); i++) {
+    local_bus[i] = new bus_t();
+    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i]);
+
+    if (hwsync_masks[0] != 0) {
+      l1 = new share_mem_t(l1_buffer_size * 32, shm_l1_name, (i +  bank_id * procs.size()) * l1_buffer_size);
+      local_bus[i]->add_device(l1_buffer_start, l1);
+    }
+    else {
+      local_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    }
+
+    local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
+    local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
+    local_bus[i]->add_device(MBOX_START, box);
+    procs[i]->add_mbox(box);
+  }
+
+  // a cluster has 8 cores
+  int cluster_id;
+  if (hartids.size() == 0)
+      cluster_id = 0;
+  else
+     cluster_id = hartids[0]/8;
+
+  if (bank_id) {
+     cluster_id = bank_id;
+  }
+
+  switch (cluster_id) {
+    case 0:
+      bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, procs));
+      bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, procs));
+      break;
+    case 1:
+      bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, procs));
+      bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, procs));
+      break;
+    case 2:
+      bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, procs));
+      bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, procs));
+      break;
+    case 3:
+      bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, procs));
+      bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, procs));
+      break;
+    default:
+      throw std::runtime_error("unsupported core id");
+  }
+
+  if (ddr_size > 0) {
+    bus.add_device(ddr_mem_start, new mem_t(ddr_size));
+  }
+
+  if (hwsync_masks[0] != 0) {
+    llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+  }
+  else {
+    mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
   }
 
   make_dtb();
@@ -151,9 +254,20 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
 sim_t::~sim_t()
 {
-  for (size_t i = 0; i < procs.size(); i++)
+  delete hwsync;
+
+  for (size_t i = 0; i < procs.size(); i++) {
     delete procs[i];
+    delete local_bus[i];
+  }
+
   delete debug_mmu;
+  delete pcie_driver;
+
+  if (has_hwsync_masks()) {
+    delete llb;
+    delete l1;
+  }
 }
 
 void sim_thread_main(void* arg)
@@ -178,11 +292,295 @@ void sim_t::main()
   }
 }
 
-int sim_t::run()
+void sim_t::dump_mems() {
+  dump_mems("output_mem", exit_dump, dump_path);
+}
+
+void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) {
+  if (prefix == "") prefix = "snapshot";
+
+  // dump single memory range
+  char fname[256];
+  if (start >= l1_buffer_start && start + len < SRAM_START) {
+    snprintf(fname, sizeof(fname), "%s/%s@%d.0x%lx_0x%lx.dat",
+          dump_path.c_str(), prefix.c_str(), proc_id, start, len);
+    dump_mem(fname, start, len, proc_id, false);
+  } else {
+    snprintf(fname, sizeof(fname), "%s/%s@0x%lx_0x%lx.dat",
+          dump_path.c_str(), prefix.c_str(), start, len);
+    dump_mem(fname, start, len, -1, true);
+  }
+}
+
+void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::string path) {
+  char fname[256];
+
+  for (const std::string& mem: mems) {
+    if (mem == "l1") {
+      // dump whole l1 buffer for all procs
+      for (auto i=0u; i< nprocs(); i++) {
+        snprintf(fname, sizeof(fname), "%s/%s@%d.dat", path.c_str(), prefix.c_str(), procs[i]->get_id());
+        dump_mem(fname, l1_buffer_start, l1_buffer_size, procs[i]->get_id(), true);
+      }
+    } else if (mem == "llb") {
+      // dump whole llb
+      snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
+      dump_mem(fname, LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
+    } else {
+      // dump memory range, format: <start>:<len>
+      const std::regex re("(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)");
+      std::smatch match;
+      if (!std::regex_match(mem, match, re)) {
+        std::cout << "Invalid dump format " << mem << std::endl;
+        exit(1);
+      }
+      auto start = std::stoul(match[1], nullptr, 16);
+      auto len = std::stoul(match[2], nullptr, 16);
+      if (start >= l1_buffer_start && start + len < SRAM_START) {
+        // dump l1 address range
+        for (auto i=0u; i< nprocs(); i++) {
+          snprintf(fname, sizeof(fname),
+            "%s/%s@%d.0x%lx_0x%lx.dat",
+            path.c_str(), prefix.c_str(), procs[i]->get_id(), start, len);
+          dump_mem(fname, start, len, procs[i]->get_id(), true);
+        }
+      } else {
+        // dump llb or ddr range
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
+        dump_mem(fname, start, len, -1, true);
+      }
+    }
+  }
+}
+
+void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, bool space_end)
 {
+  char *mem = (proc_id >= 0)?
+              local_addr_to_mem_by_id(addr, proc_id) :
+              addr_to_mem(addr);
+
+  std::cout << "Dump memory to " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str != "dat" && suffix_str != "bin") {
+    std::cout << __FUNCTION__ << ": Unsupported file type " << suffix_str << std::endl;
+    exit(1);
+  }
+
+  if (suffix_str == "dat") {
+    std::ofstream ofs(fname, std::ios::out);
+    if (!ofs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    uint16_t data;
+    char buf[5];
+    for (addr_t offset = 0; offset < len; offset += 2) {
+      data = *((uint16_t *)(mem + offset));
+      sprintf(buf, "%04x", data);
+      ofs << buf;
+      if ((offset + 2) % 128) {
+        ofs << " ";
+      } else {
+        if (space_end) ofs << " ";
+        ofs << std::endl;
+      }
+    }
+
+    ofs.close();
+  } else if (suffix_str == "bin") {
+    std::ofstream ofs(fname, std::ios::out | std::ios::binary);
+    if (!ofs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    for (addr_t offset = 0; offset < len; offset += 2) {
+      ofs.write(mem + offset, 2);
+    }
+  }
+}
+
+void sim_t::load_mems(std::vector<std::string> load_files) {
+  for (const std::string& fname : load_files) {
+    // l1 file name format: <any>@<core_id|llb|ddr>.<ext>
+    const std::regex re0(".*@([0-9]+|ddr|llb)\\.([a-z]+)");
+    // llb, ddr file name format: <any>@<start>.<ext>
+    const std::regex re1(".*@(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // llb, ddr file name format: <any>@<start>_<len>.<ext>
+    const std::regex re2(".*@(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // l1 file name format: <any>@<core_id|llb|ddr>.<start>.<ext>
+    const std::regex re3(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    // l1 file name format: <any>@<core_id|llb|ddr>.<start>_<len>.<ext>
+    const std::regex re4(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
+    std::smatch match;
+
+    if (std::regex_match(fname, match, re0)) {
+      if (match[1] == "ddr") {
+        reg_t start = 0;
+        size_t len = 0xc0000000;
+        load_mem(fname.c_str(), start, len);
+      } else if (match[1] == "llb") {
+        reg_t start = LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE;
+        size_t len = LLB_BANK_BUFFER_SIZE;
+        load_mem(fname.c_str(), start, len);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        reg_t start = l1_buffer_start;
+        size_t len = l1_buffer_size;
+        load_mem(fname.c_str(), start, len, proc_id);
+      }
+    } else if (std::regex_match(fname, match, re1)) {
+      auto start = std::stoul(match[1], nullptr, 16);
+      load_mem(fname.c_str(), start, -1);
+    } else if (std::regex_match(fname, match, re2)) {
+      auto start = std::stoul(match[1], nullptr, 16);
+      auto len = std::stoul(match[2], nullptr, 16);
+      load_mem(fname.c_str(), start, len);
+    } else if (std::regex_match(fname, match, re3)) {
+      auto start = std::stoul(match[2], nullptr, 16);
+      if (match[1] == "ddr" || match[1] == "llb") {
+        load_mem(fname.c_str(), start, -1);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        load_mem(fname.c_str(), start, -1, proc_id);
+      }
+
+    } else if (std::regex_match(fname, match, re4)) {
+      auto start = std::stoul(match[2], nullptr, 16);
+      auto len = std::stoul(match[3], nullptr, 16);
+      if (match[1] == "ddr" || match[1] == "llb") {
+        load_mem(fname.c_str(), start, len);
+      } else {
+        auto proc_id = std::stoul(match[1], nullptr, 16);
+        load_mem(fname.c_str(), start, len, proc_id);
+      }
+
+    } else {
+      std::cout << "Invalid load file " << fname << std::endl;
+      exit(1);
+    }
+  }
+}
+
+void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
+{
+  memif_t mem(this);
+
+  std::cout << "Load memory from " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str == "dat") {
+    std::ifstream ifs(fname, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    char buf[512];
+    addr_t offset = 0;
+    while(!ifs.eof()) {
+      ifs.getline(buf, 512);
+      char *p = buf;
+      for (int i = 0; i < 64 && offset < len; i++, p += 5, offset += 2) {
+        uint16_t data = (uint16_t)strtol(p, NULL, 16);
+        mem.write(addr + offset, 2, &data);
+      }
+    }
+    ifs.close();
+  } else if (suffix_str == "bin") {
+    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) {
+      std::cout << "Failed to open file." << std::endl;
+      exit(1);
+    }
+
+    char buf[2];
+    for (addr_t offset = 0; !ifs.eof() && offset < len; offset += 2) {
+      ifs.read(buf, sizeof(buf));
+      mem.write(addr + offset, 2, buf);
+    }
+  } else {
+      std::cout << "Unsupported file type " << suffix_str << std::endl;
+      exit(1);
+  }
+}
+
+void sim_t::load_mem(const char *fname, reg_t addr, size_t len, int proc_id)
+{
+  char *mem = local_addr_to_mem_by_id(addr, proc_id);
+
+  std::cout << "Load memory from " << fname
+            << ", addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len << std::endl;
+  std::string name = std::string(fname);
+  std::string suffix_str = name.substr(name.find_last_of('.') + 1);
+
+  if (suffix_str == "dat") {
+    std::ifstream ifs(fname, std::ios::in);
+    if (!ifs.is_open()) {
+        std::cout << "Failed to open file." << std::endl;
+        exit(1);
+    }
+
+    char buf[512];
+    int offset = 0;
+    while(!ifs.eof()) {
+      ifs.getline(buf, 512);
+      char *p = buf;
+      for (int i = 0; i < 64 && offset < len; i++, p += 5, offset += 2) {
+        uint16_t data = (uint16_t)strtol(p, NULL, 16);
+        memcpy(mem + offset, &data, 2);
+      }
+    }
+    ifs.close();
+  } else if (suffix_str == "bin") {
+    std::ifstream ifs(fname, std::ios::in | std::ios::binary);
+    if (!ifs.is_open()) {
+      std::cout << "Failed to open file." << std::endl;
+      exit(1);
+    }
+
+    char buf[2];
+    for (addr_t offset = 0; !ifs.eof() && offset < len; offset += 2) {
+      ifs.read(buf, sizeof(buf));
+      memcpy(mem + offset, buf, 2);
+    }
+  } else {
+      std::cout << "Unsupported file type " << suffix_str << std::endl;
+      exit(1);
+  }
+}
+
+int sim_t::run(std::vector<std::string> load_files,
+               std::vector<std::string> init_dump,
+               std::vector<std::string> exit_dump_,
+               std::string dump_path_)
+{
+  int stat;
+
+  exit_dump = exit_dump_;
+  dump_path = dump_path_;
+
   host = context_t::current();
   target.init(sim_thread_main, this);
-  return htif_t::run();
+  load_mems(load_files);
+
+  if (init_dump.size() > 0)
+    dump_mems("input_mem", init_dump, dump_path);
+
+  stat = htif_t::run();
+
+  if (exit_dump.size() > 0)
+    dump_mems("output_mem", exit_dump, dump_path);
+  return stat;
 }
 
 void sim_t::step(size_t n)
@@ -263,6 +661,30 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
   if (addr + len < addr || !paddr_ok(addr + len - 1))
     return false;
   return bus.store(addr, len, bytes);
+}
+
+bool sim_t::local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx)
+{
+  bool result = false;
+
+  if (addr + len < addr)
+    return false;
+
+  result = local_bus[idx]->load(addr, len, bytes);
+
+  return result;
+}
+
+bool sim_t::local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx)
+{
+  bool result = false;
+
+  if (addr + len < addr)
+    return false;
+
+  result = local_bus[idx]->store(addr, len, bytes);
+
+  return result;
 }
 
 void sim_t::make_dtb()
@@ -346,14 +768,118 @@ void sim_t::set_rom()
   bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
 }
 
+bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
+  auto desc = local_bus[0]->find_device(addr);
+
+  if (type == IO_DEVICE) {
+    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  if ((type == L1_BUFFER) && has_hwsync_masks()) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      reg_t start_addr = l1_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= l1_buffer_size) {
+        return true;
+      }
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = (type == L1_BUFFER)? l1_buffer_start: im_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 char* sim_t::addr_to_mem(reg_t addr) {
   if (!paddr_ok(addr))
     return NULL;
   auto desc = bus.find_device(addr);
-  if (auto mem = dynamic_cast<mem_t*>(desc.second))
-    if (addr - desc.first < mem->size())
-      return mem->contents() + (addr - desc.first);
+
+  if ((in_local_mem(addr, L1_BUFFER) ||
+   (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+    has_hwsync_masks()) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
+  }
+}
+
+char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
+  std::ostringstream err;
+
+  // addr on local bus (l1 | im cache)
+  auto desc = local_bus[idx]->find_device(addr);
+  if ((in_local_mem(addr, L1_BUFFER) ||
+    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+    has_hwsync_masks()) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size()) {
+          return mem->contents() + (addr - desc.first);
+      }
+      return NULL;
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
+  }
   return NULL;
+}
+
+char* sim_t::local_addr_to_mem_by_id(reg_t addr, uint32_t id) {
+  for (unsigned i = 0; i < nprocs(); i++) {
+    processor_t *proc = get_core(i);
+    if (proc->get_id() == id) {
+      return local_addr_to_mem(addr, proc->get_idx());
+    }
+  }
+
+  return NULL;
+}
+
+char* sim_t::local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id) {
+  char *mem_ptr = NULL;
+  int32_t mem_offset = 0;
+
+  if (has_hwsync_masks()) {
+    //get current bank first core id and addr
+    processor_t *proc = get_core(0);
+    mem_ptr = local_addr_to_mem(addr, 0);
+
+    mem_offset = (id - proc->get_id()) * l1_buffer_size;
+    mem_ptr = mem_ptr + mem_offset;
+    return mem_ptr;
+  }
+  else
+    return local_addr_to_mem_by_id(addr, id);
 }
 
 const char* sim_t::get_symbol(uint64_t addr)

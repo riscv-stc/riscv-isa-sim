@@ -18,6 +18,10 @@
 #include "specialize.h"
 #include <cinttypes>
 
+#include <iostream>
+//#include <cstring>
+using namespace std;
+
 typedef int64_t sreg_t;
 typedef uint64_t reg_t;
 
