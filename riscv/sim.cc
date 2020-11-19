@@ -77,6 +77,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   }
 
   hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks);
+  bus.add_device(0xd0080000, hwsync);
 
   core_reset_n = 0;
   pcie_driver = new pcie_driver_t(this, procs, bank_id);
