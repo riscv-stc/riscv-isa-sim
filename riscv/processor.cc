@@ -28,7 +28,8 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
                          FILE* log_file)
   : debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), id(id), xlen(0),
   histogram_enabled(false), log_commits_enabled(false),
-  hwsync(hs), idx(idx),
+  hwsync(hs), idx(idx), mbox(NULL),
+  async_running(true), exit_request(false),
   log_file(log_file), halt_on_reset(halt_on_reset),
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
 {
@@ -55,6 +56,27 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     set_mmu_capability(IMPL_MMU_SV48);
 
   reset();
+
+  // start a thread for receive async tasks
+  async_thread = new std::thread([this] {
+    while (true) {
+      std::unique_lock<std::mutex> lock(async_mutex);
+      async_cond.wait(lock, [this]{
+        return async_function || !async_running;
+      });
+
+      if (!async_running && !async_function) break;
+
+      async_trap = nullptr;
+      try {
+        async_function();
+      } catch(trap_t& t) {
+        async_trap = std::current_exception();
+      }
+
+      async_function = nullptr;
+    }
+  });
 }
 
 processor_t::~processor_t()
@@ -67,6 +89,21 @@ processor_t::~processor_t()
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
 #endif
+
+  // wait all async tasks exit
+  while (1) {
+    std::unique_lock<std::mutex> lock(async_mutex);
+    if (!async_function) {
+      // stop async task thread
+      async_running = false;
+      async_cond.notify_all();
+      break;
+    };
+    usleep(10000);
+  }
+
+  async_thread->join();
+  delete async_thread;
 
   delete mmu;
   delete disassembler;
@@ -301,6 +338,12 @@ void processor_t::parse_isa_string(const char* str)
 
 void state_t::reset(reg_t max_isa)
 {
+  bool async_status = false;
+  if (async_started)
+    async_status = async_started;
+
+  async_started = async_status;
+
   pc = DEFAULT_RSTVEC;
   XPR.reset();
   FPR.reset();
@@ -473,6 +516,9 @@ void processor_t::reset()
     set_csr(CSR_PMPADDR0, ~reg_t(0));
     set_csr(CSR_PMPCFG0, PMP_R | PMP_W | PMP_X | PMP_NAPOT);
   }
+
+  if (mbox)
+    mbox->reset();
 
   if (ext)
     ext->reset(); // reset the extension
@@ -1444,6 +1490,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret((VU.vxsat << VCSR_VXSAT_SHIFT) | (VU.vxrm << VCSR_VXRM_SHIFT));
+    case CSR_TID:
+      if(!supports_extension('V'))
+        break;
+      return id;
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (!ctr_ok)
@@ -1832,6 +1882,27 @@ void processor_t::sync() {
 
 void processor_t::pld(uint32_t coremap) {
   hwsync->enter(id, coremap);
+}
+
+void processor_t::run_async(std::function<void()> func) {
+  {
+    std::lock_guard<std::mutex> lock(async_mutex);
+
+    state.async_started = true;
+    async_function = func;
+  }
+  async_cond.notify_all();
+}
+
+bool processor_t::async_done() {
+  if (state.async_started) {
+    if (async_function == nullptr) {
+      state.async_started = false;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool processor_t::load(reg_t addr, size_t len, uint8_t* bytes)

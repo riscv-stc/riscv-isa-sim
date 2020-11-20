@@ -299,8 +299,6 @@ public:
   reg_t get_csr(int which) { return get_csr(which, insn_t(0), false, true); }
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
-  uint32_t get_syncs() {return synctimes; };
-  uint32_t set_syncs(uint32_t times) {return synctimes = times; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
   unsigned get_max_xlen() { return max_xlen; }
@@ -464,10 +462,6 @@ private:
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
-  unsigned elen;
-  unsigned slen;
-  unsigned vlen;
-  uint32_t synctimes;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
