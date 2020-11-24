@@ -553,6 +553,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_ITYPE(addiwu);
   DEFINE_RTYPE(ror);
   DEFINE_RTYPE(rol);
+  DEFINE_RTYPE(sync);
+  DEFINE_RTYPE(pld);
   DEFINE_ITYPE_SHIFT(rori);
 
   DEFINE_NOARG(ecall);

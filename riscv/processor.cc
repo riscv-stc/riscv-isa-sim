@@ -1036,6 +1036,86 @@ void processor_t::set_csr(int which, reg_t val)
       state.medeleg = (state.medeleg & ~mask) | (val & mask);
       break;
     }
+    case CSR_SHAPE_S1:
+      state.shape_s1 = val;
+      break;
+    case CSR_SHAPE_S2:
+      state.shape_s2 = val;
+      break;
+    case CSR_STRIDE_D:
+      state.stride_d = val;
+      break;
+    case CSR_STRIDE_S:
+      state.stride_s = val;
+      break;
+    case CSR_M_SHAPE_S1:
+      state.m_shape_s1 = val;
+      break;
+    case CSR_M_SHAPE_S2:
+      state.m_shape_s2 = val;
+      break;
+    case CSR_M_STRIDE_D:
+      state.m_stride_d = val;
+      break;
+    case CSR_M_STRIDE_S:
+      state.m_stride_s = val;
+      break;
+    case CSR_CONV_FM_IN:
+      state.conv_FM_in = val;
+      break;
+    case CSR_CONV_DEPTH_IN:
+      state.conv_Depth_in = val;
+      break;
+    case CSR_CONV_FM_OUT:
+      state.conv_FM_out = val;
+      break;
+    case CSR_CONV_DEPTH_OUT:
+      state.conv_Depth_out = val;
+      break;
+    case CSR_CONV_S_KERNEL:
+      state.conv_S_kernel = val;
+      break;
+    case CSR_CONV_KERNEL:
+      state.conv_kernel = val;
+      break;
+    case CSR_CONV_PADDING:
+      state.conv_padding = val;
+      break;
+    case CSR_M_DEQUANT_COEFF:
+      state.m_dequant_coeff = val;
+      break;
+    case CSR_M_QUANT_COEFF:
+      state.m_quant_coeff = val;
+      break;
+    case CSR_M_SPARSEIDX_BASE:
+      state.m_sparseidx_base = val;
+      break;
+    case CSR_M_SPARSEIDX_STRIDE:
+      state.m_sparseidx_stride = val;
+      break;
+    case CSR_VME_DATA_TYPE:
+      state.vme_data_type = val;
+      break;
+    case CSR_MME_DATA_TYPE:
+      state.mme_data_type = val;
+      break;
+    case CSR_NCP_BUSY:
+        break; //read only
+    case CSR_MTE_COREMAP:
+      state.mte_coremap = val;
+      break;
+    case CSR_MTE_ICDEST:
+      state.mte_icdest = val;
+      break;
+    case CSR_MTE_SHAPE:
+      state.mte_shape = val;
+      break;
+    case CSR_MTE_STRIDE:
+      state.mte_stride = val;
+      break;
+    case CSR_MTE_DATA_TYPE:
+      state.mte_data_type = val;
+      break;
     case CSR_MINSTRET:
     case CSR_MCYCLE:
       if (xlen == 32)
@@ -1490,10 +1570,134 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret((VU.vxsat << VCSR_VXSAT_SHIFT) | (VU.vxrm << VCSR_VXRM_SHIFT));
+    case CSR_SHAPE_S1:
+      if(!supports_extension('V'))
+        break;
+      return state.shape_s1;
+    case CSR_SHAPE_S2:
+      if(!supports_extension('V'))
+        break;
+      return state.shape_s2;
+    case CSR_STRIDE_D:
+      if(!supports_extension('V'))
+        break;
+      return state.stride_d;
+    case CSR_STRIDE_S:
+      if(!supports_extension('V'))
+        break;
+      return state.stride_s;
+    case CSR_M_SHAPE_S1:
+      if(!supports_extension('V'))
+        break;
+      return state.m_shape_s1;
+    case CSR_M_SHAPE_S2:
+      if(!supports_extension('V'))
+        break;
+      return state.m_shape_s2;
+    case CSR_M_STRIDE_D:
+      if(!supports_extension('V'))
+        break;
+      return state.m_stride_d;
+    case CSR_M_STRIDE_S:
+      if(!supports_extension('V'))
+        break;
+      return state.m_stride_s;
+    case CSR_CONV_FM_IN:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_FM_in;
+    case CSR_CONV_DEPTH_IN:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_Depth_in;
+    case CSR_CONV_FM_OUT:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_FM_out;
+    case CSR_CONV_DEPTH_OUT:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_Depth_out;
+    case CSR_CONV_S_KERNEL:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_S_kernel;
+    case CSR_CONV_KERNEL:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_kernel;
+    case CSR_CONV_PADDING:
+      if(!supports_extension('V'))
+        break;
+      return state.conv_padding;
+    case CSR_M_DEQUANT_COEFF:
+      if(!supports_extension('V'))
+        break;
+      return state.m_dequant_coeff;
+    case CSR_M_QUANT_COEFF:
+      if(!supports_extension('V'))
+        break;
+      return state.m_quant_coeff;
+    case CSR_M_SPARSEIDX_BASE:
+      if(!supports_extension('V'))
+        break;
+      return state.m_sparseidx_base;
+    case CSR_M_SPARSEIDX_STRIDE:
+      if(!supports_extension('V'))
+        break;
+      return state.m_sparseidx_stride;
+    case CSR_VME_DATA_TYPE:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_data_type;
+    case CSR_MME_DATA_TYPE:
+      if(!supports_extension('V'))
+        break;
+      return state.mme_data_type;
+    case CSR_NCP_BUSY:
+      if(!supports_extension('V'))
+        break;
+      return state.ncp_busy;
+    case CSR_MTE_COREMAP:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_coremap;
+    case CSR_MTE_ICDEST:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_icdest;
+    case CSR_MTE_SHAPE:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_shape;
+    case CSR_MTE_STRIDE:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_stride;
+      
     case CSR_TID:
       if(!supports_extension('V'))
         break;
       return id;
+      case CSR_TMISC:
+      if(!supports_extension('V'))
+        break;
+      return state.tmisc; 
+    case CSR_TCSR:
+      if(!supports_extension('V'))
+        break;
+      return state.tcsr;
+    case CSR_MTE_DATA_TYPE:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_data_type;
+    case CSR_MICM_CFG:
+    case CSR_MDCM_CFG:
+    case CSR_MCCTLBEGINADDR:
+    case CSR_MCCTLCOMMAND:
+      return 0;//Return 0 since it is not truely supported yet.
+    case CSR_MCCTLDATA:
+      return 1;//Return 1 to avoid cache set failure report in application.
     case CSR_INSTRET:
     case CSR_CYCLE:
       if (!ctr_ok)
