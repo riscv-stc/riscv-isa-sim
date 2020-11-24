@@ -1,7 +1,7 @@
 //check_traps_pld;
 //check_ncp_vill_invalid()
 
-p->run_async([p, insn, pc, xlen]() {
+p->run_async([p, &insn, pc, xlen]() {
   uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RS1));
   uint8_t* dst = (uint8_t*)MMU.get_phy_addr(RD);
   unsigned int core_map = MTE_CORE_MAP;

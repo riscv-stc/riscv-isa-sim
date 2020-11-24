@@ -87,8 +87,8 @@ public:
   int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
-  uint64_t rd() const { return x(7, 5); }
-  uint64_t rs1() const { return x(15, 5); }
+  uint64_t rd() { return x(7, 5); }
+  uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
   uint64_t rs3() { return x(27, 5); }
   uint64_t rm() { return x(12, 3); }
@@ -132,7 +132,7 @@ public:
 
 private:
   insn_bits_t b;
-  uint64_t x(int lo, int len) const { return (b >> lo) & ((insn_bits_t(1) << len)-1); }
+  uint64_t x(int lo, int len) { return (b >> lo) & ((insn_bits_t(1) << len)-1); }
   uint64_t xs(int lo, int len) { return int64_t(b) << (64-lo-len) >> (64-len); }
   uint64_t imm_sign() { return xs(63, 1); }
 };
