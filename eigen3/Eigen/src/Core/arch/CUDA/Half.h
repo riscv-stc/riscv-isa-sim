@@ -330,6 +330,19 @@ EIGEN_STRONG_INLINE __device__ bool operator >= (const half& a, const half& b) {
 // Definitions for CPUs and older CUDA, mostly working through conversion
 // to/from float32_bits.
 
+// add by Kening.Zhang
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float16_t half_to_float16_t(__half_raw x) {
+  float16_t f16;
+  f16.v = x.x;
+  return f16;
+}
+
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float16_t_to_half(float16_t f16) {
+  __half_raw h;
+  h.x = f16.v;
+  return h;
+}
+
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator + (const half& a, const half& b) {
 #ifdef USING_RISCV_FP16
   return float16_t_to_half(f16_add(half_to_float16_t(a), half_to_float16_t(b)));
@@ -430,7 +443,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half& operator /= (half& a, const half& b)
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator == (const half& a, const half& b) {
   if( isnan(a)||isnan(b))
     return false;
-  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+  if((ispinf(a) && ispinf(b)) || (isninf(a) && isninf(b)))
     return true;
   if((isinf(a)||isinf(b)))
     return false;
@@ -494,18 +507,7 @@ union float32_bits {
   float f;
 };
 
-// add by Kening.Zhang
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float16_t half_to_float16_t(__half_raw x) {
-  float16_t f16;
-  f16.v = x.x;
-  return f16;
-}
 
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float16_t_to_half(float16_t f16) {
-  __half_raw h;
-  h.x = f16.v;
-  return h;
-}
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float_to_half_rtne(float ff) {
 #if defined(EIGEN_HAS_CUDA_FP16) && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 300
   __half tmp_ff = __float2half(ff);
@@ -614,7 +616,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
 #elif defined(USING_RISCV_FP16)
-  return float16_t_to_half(f16_exp(half_to_float16_t(a)));
+  return Eigen::half_impl::raw_uint16_to_half(fp16_exp(a.x));
 #else
    return half(::expf(float(a)));
 #endif

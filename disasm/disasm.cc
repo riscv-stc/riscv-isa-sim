@@ -353,6 +353,13 @@ struct : public arg_t {
   }
 } x0;
 
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+	return dim_name[insn.dim()];
+  }
+} dmx;
+
+
 typedef struct {
   reg_t match;
   reg_t mask;
@@ -418,6 +425,12 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_FX2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &frs1, &frs2})
   #define DEFINE_XFTYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
   #define DEFINE_SFENCE_TYPE(code) DISASM_INSN(#code, code, 0, {&xrs1, &xrs2})
+
+  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
+  #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
+  #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
+  #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+
 
   DEFINE_XLOAD(lb)
   DEFINE_XLOAD(lbu)
@@ -713,6 +726,40 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FX2TYPE(feq_q);
   DEFINE_FX2TYPE(flt_q);
   DEFINE_FX2TYPE(fle_q);
+
+  DEFINE_R1TYPE(veacc_m);
+  DEFINE_CV2TYPE(veadd_mf);
+  DEFINE_RTYPE(veadd_mm);
+  DEFINE_R2TYPE(veadd_mv);
+  DEFINE_R3TYPE(vecvt_hf_x8_m);
+  DEFINE_R3TYPE(vecvt_hf_xu8_m);
+  DEFINE_R3TYPE(vecvt_x8_hf_m);
+  DEFINE_CV2TYPE(veemacc_mf);
+  DEFINE_R2TYPE(veemacc_mm);
+  DEFINE_R2TYPE(veemacc_mv);
+  DEFINE_CV2TYPE(veemul_mf);
+  DEFINE_RTYPE(veemul_mm);
+  DEFINE_R2TYPE(veemul_mv);
+  DEFINE_R2TYPE(velkrelu_mv);
+  DEFINE_CV2TYPE(velkrelu_mf);
+  DEFINE_RTYPE(velut_m);
+  DEFINE_R1TYPE(vemax_m);
+  DEFINE_RTYPE(vemax_mm);
+  DEFINE_CV2TYPE(vemax_mf);
+  DEFINE_R2TYPE(vemax_mv);
+  DEFINE_R1TYPE(vemin_m);
+  DEFINE_RTYPE(vemin_mm);
+  DEFINE_CV2TYPE(vemin_mf);
+  DEFINE_R2TYPE(vemin_mv);
+  DEFINE_RTYPE(veemul_x32_mv);
+  DEFINE_CV2TYPE(veemul_x32_mf);
+  DEFINE_CV2TYPE(veemul_x8_hf_mf);
+  DEFINE_RTYPE(vesub_mm);
+  DEFINE_CV2TYPE(vesub_mf);
+  DEFINE_R2TYPE(vesub_mv);
+  DEFINE_R3TYPE(verecip_m);
+  DEFINE_R3TYPE(vesqrt_m);
+  DEFINE_R3TYPE(veexp_m);
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

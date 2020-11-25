@@ -901,6 +901,38 @@ riscv_insn_priv = \
 riscv_insn_stc = \
 	sync \
 	pld \
+    veacc_m \
+	veadd_mf \
+	veadd_mm \
+	veadd_mv \
+	vecvt_hf_x8_m \
+	vecvt_hf_xu8_m \
+	veemacc_mf \
+	veemacc_mm \
+	veemacc_mv \
+	veemul_mf \
+	veemul_mm \
+	veemul_mv \
+	velkrelu_mf \
+	velkrelu_mv \
+	velut_m \
+	vemax_mf \
+	vemax_m \
+	vemax_mm \
+	vemax_mv \
+	vemin_mf \
+	vemin_m \
+	vemin_mm \
+	vemin_mv \
+    verecip_m \
+	vesqrt_m  \
+	vesub_mf \
+	vesub_mm \
+	vesub_mv \
+    vecvt_x8_hf_m \
+	veemul_x32_mf \
+	veemul_x32_mv \
+	veemul_x8_hf_mf \
 
 riscv_insn_list = \
 	$(riscv_insn_ext_a) \
