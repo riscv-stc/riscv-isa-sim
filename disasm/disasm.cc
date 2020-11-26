@@ -473,11 +473,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FLOAD(fld)
   DEFINE_FLOAD(flh)
   DEFINE_FLOAD(flq)
+  DEFINE_FLOAD(flhw)
 
   DEFINE_FSTORE(fsw)
   DEFINE_FSTORE(fsd)
   DEFINE_FSTORE(fsh)
   DEFINE_FSTORE(fsq)
+  DEFINE_FSTORE(fshw)
 
   add_insn(new disasm_insn_t("j", match_jal, mask_jal | mask_rd, {&jump_target}));
   add_insn(new disasm_insn_t("jal", match_jal | match_rd_ra, mask_jal | mask_rd, {&jump_target}));

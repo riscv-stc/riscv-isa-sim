@@ -290,6 +290,8 @@ riscv_insn_ext_zfh = \
 	feq_h \
 	fle_h \
 	flh \
+    flhw \
+    fshw \
 	flt_h \
 	fmadd_h \
 	fmax_h \
