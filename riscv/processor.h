@@ -234,10 +234,10 @@ struct state_t
   uint32_t conv_S_kernel;
   uint32_t conv_kernel;
   uint32_t conv_padding;
-  uint32_t m_dequant_coeff;
-  uint32_t m_quant_coeff;
-  uint32_t m_sparseidx_base;
-  uint32_t m_sparseidx_stride;
+  uint32_t mme_dequant_coeff;
+  uint32_t mme_quant_coeff;
+  uint32_t mme_sparseidx_base;
+  uint32_t mme_sparseidx_stride;
   uint32_t vme_data_type;
   uint32_t mme_data_type;
   uint32_t ncp_busy;

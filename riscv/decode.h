@@ -93,7 +93,7 @@ public:
   uint64_t rs3() { return x(27, 5); }
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
-
+  uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
   int64_t rvc_addi4spn_imm() { return (x(6, 1) << 2) + (x(5, 1) << 3) + (x(11, 2) << 4) + (x(7, 4) << 6); }
@@ -202,7 +202,20 @@ private:
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
 #define STRIDE_LLB        (STATE.mte_stride & 0xFFFF)
+
+#define DIM_DM (insn.dim()&1)
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+
+#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
 #define MTE_CORE_MAP    (STATE.mte_coremap)
+
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
 #define WRITE_RVC_RS2S(value) WRITE_REG(insn.rvc_rs2s(), value)
@@ -2379,6 +2392,14 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       require(0); \
       break; \
   }
+
+#define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
+					 (x).shape1_row = SHAPE1_ROW; \
+					 (x).shape2_column = SHAPE2_COLUMN; \
+					 (x).shape2_row = SHAPE2_ROW; \
+					 (x).stride_rd = STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
 #define DEBUG_START             0x0
 #define DEBUG_END               (0x1000 - 1)

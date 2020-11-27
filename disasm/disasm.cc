@@ -70,6 +70,12 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
+	return dim_name[insn.dim()];
+  }
+} dmx;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
     switch (insn.csr())
     {
       #define DECLARE_CSR(name, num) case num: return #name;
@@ -396,6 +402,9 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_NOARG(code) \
     add_insn(new disasm_insn_t(#code, match_##code, mask_##code, {}));
   #define DEFINE_RTYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2})
+  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
+  #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
+  #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -555,6 +564,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(rol);
   DEFINE_RTYPE(sync);
   DEFINE_RTYPE(pld);
+  DEFINE_RTYPE(icmov);
+  DEFINE_R3TYPE(mov_m);
+  DEFINE_R1TYPE(mov_v);
+  DEFINE_FXTYPE(mov_f);
+  DEFINE_R3TYPE(mov_llb_l1);
+  DEFINE_R3TYPE(mov_l1_llb);
   DEFINE_ITYPE_SHIFT(rori);
 
   DEFINE_NOARG(ecall);

@@ -1081,17 +1081,17 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_CONV_PADDING:
       state.conv_padding = val;
       break;
-    case CSR_M_DEQUANT_COEFF:
-      state.m_dequant_coeff = val;
+    case CSR_MME_DEQUANT_COEFF:
+      state.mme_dequant_coeff = val;
       break;
-    case CSR_M_QUANT_COEFF:
-      state.m_quant_coeff = val;
+    case CSR_MME_QUANT_COEFF:
+      state.mme_quant_coeff = val;
       break;
-    case CSR_M_SPARSEIDX_BASE:
-      state.m_sparseidx_base = val;
+    case CSR_MME_SPARSEIDX_BASE:
+      state.mme_sparseidx_base = val;
       break;
-    case CSR_M_SPARSEIDX_STRIDE:
-      state.m_sparseidx_stride = val;
+    case CSR_MME_SPARSEIDX_STRIDE:
+      state.mme_sparseidx_stride = val;
       break;
     case CSR_VME_DATA_TYPE:
       state.vme_data_type = val;
@@ -1630,22 +1630,22 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.conv_padding;
-    case CSR_M_DEQUANT_COEFF:
+    case CSR_MME_DEQUANT_COEFF:
       if(!supports_extension('V'))
         break;
-      return state.m_dequant_coeff;
-    case CSR_M_QUANT_COEFF:
+      return state.mme_dequant_coeff;
+    case CSR_MME_QUANT_COEFF:
       if(!supports_extension('V'))
         break;
-      return state.m_quant_coeff;
-    case CSR_M_SPARSEIDX_BASE:
+      return state.mme_quant_coeff;
+    case CSR_MME_SPARSEIDX_BASE:
       if(!supports_extension('V'))
         break;
-      return state.m_sparseidx_base;
-    case CSR_M_SPARSEIDX_STRIDE:
+      return state.mme_sparseidx_base;
+    case CSR_MME_SPARSEIDX_STRIDE:
       if(!supports_extension('V'))
         break;
-      return state.m_sparseidx_stride;
+      return state.mme_sparseidx_stride;
     case CSR_VME_DATA_TYPE:
       if(!supports_extension('V'))
         break;
