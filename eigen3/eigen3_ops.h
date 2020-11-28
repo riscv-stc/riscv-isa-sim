@@ -151,7 +151,11 @@ class CustomInsns
 private:
     void shapestride_dbg(struct ShapeStride *ss);
     void meconv_dbg(struct ConvShapeStride *ss);
-    int meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
+    int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
+    float16_t half_to_float16_t(half x);
+    float32_t half_mul_f32(half a, half b);
+    half float16_t_to_half(float16_t f16);
+    half f32_to_half(float32_t f32);
 public:
     int debug;
 
@@ -221,8 +225,8 @@ public:
     int veexp_m(half *rs1, half *rd, struct ShapeStride *ss);
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_hf_x8_mm(const int8_t *rs1, half *rd, const int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_x8_mm(int8_t *rs1, int32_t *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
 };
 
 /**

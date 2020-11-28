@@ -460,11 +460,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FLOAD(fld)
   DEFINE_FLOAD(flh)
   DEFINE_FLOAD(flq)
+  DEFINE_FLOAD(flhw)
 
   DEFINE_FSTORE(fsw)
   DEFINE_FSTORE(fsd)
   DEFINE_FSTORE(fsh)
   DEFINE_FSTORE(fsq)
+  DEFINE_FSTORE(fshw)
 
   add_insn(new disasm_insn_t("j", match_jal, mask_jal | mask_rd, {&jump_target}));
   add_insn(new disasm_insn_t("jal", match_jal | match_rd_ra, mask_jal | mask_rd, {&jump_target}));
@@ -480,6 +482,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_BTYPE(bge)
   DEFINE_BTYPE(bltu)
   DEFINE_BTYPE(bgeu)
+  DEFINE_RTYPE(memul_mm)
+//  DEFINE_RTYPE(memul_sp_mm)
+//  DEFINE_RTYPE(memul_ts1_mm)
+//  DEFINE_RTYPE(memul_ts2_mm)
+//  DEFINE_RTYPE(memul_ts3_mm)
+  DEFINE_RTYPE(meconv_mm)
+//  DEFINE_RTYPE(meconv_sp_mm)
 
   DEFINE_LTYPE(lui);
   DEFINE_LTYPE(auipc);

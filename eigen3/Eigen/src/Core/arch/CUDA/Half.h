@@ -77,6 +77,8 @@ typedef __half __half_raw;
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw raw_uint16_to_half(unsigned short x);
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float_to_half_rtne(float ff);
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float half_to_float(__half_raw h);
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float16_t half_to_float16_t(__half_raw x);
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC __half_raw float16_t_to_half(float16_t f16);
 
 struct half_base : public __half_raw {
   EIGEN_DEVICE_FUNC half_base() {}
@@ -614,7 +616,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
 #elif defined(USING_RISCV_FP16)
-  return float16_t_to_half(f16_exp(half_to_float16_t(a)));
+  // return float16_t_to_half(f16_exp(half_to_float16_t(a)));
 #else
    return half(::expf(float(a)));
 #endif

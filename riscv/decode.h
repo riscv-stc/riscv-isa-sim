@@ -16,6 +16,7 @@
 #include "common.h"
 #include "softfloat_types.h"
 #include "specialize.h"
+#include "eigen3_ops.h"
 #include <cinttypes>
 
 using namespace std;
@@ -73,6 +74,17 @@ const int NCSR = 4096;
 #define MAX_INSN_LENGTH 8
 #define PC_ALIGN 2
 
+
+#define VTYPE_EDIV_SHIFT 5
+#define VTYPE_SEW_SHIFT  2
+#define VTYPE_LMUL_SHIFT 0
+
+#define VTYPE_EDIV 3
+#define VTYPE_VSEW  7
+#define VTYPE_VLMUL 3
+
+#define CORE_COUNT 32
+
 typedef uint64_t insn_bits_t;
 class insn_t
 {
@@ -87,12 +99,25 @@ public:
   int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
+  uint64_t v_uimm() { return x(15, 5); }
+  uint64_t z_imm() { return x(20, 11); }
   uint64_t rd() { return x(7, 5); }
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
   uint64_t rs3() { return x(27, 5); }
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
+  uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t ts() { return x(14, 1); }
+  uint64_t vm() { return x(25, 1); }
+  uint64_t vlmul() {return x(20,2);}
+  uint64_t vsew() { return x(22,3);}
+  uint64_t vediv() { return x(25,2);}
+  uint64_t nf() { return x(29, 3); }
+  uint64_t mop() { return x(26, 3); }
+  uint64_t width() { return x(12, 3); }
+  uint64_t lumop() { return x(20, 5); }
+  uint64_t sumop() { return x(20, 5); }
 
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
@@ -166,7 +191,7 @@ private:
 #define MMU (*p->get_mmu())
 #define STATE (*p->get_state())
 #define P (*p)
-#define FLEN (p->get_flen())
+// #define FLEN (p->get_flen())
 #define READ_REG(reg) STATE.XPR[reg]
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
@@ -174,6 +199,8 @@ private:
 #define RS2 READ_REG(insn.rs2())
 #define RS3 READ_REG(insn.rs3())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
+#define WRITE_RS1(value) WRITE_REG(insn.rs1(), value)
+#define WRITE_RS2(value) WRITE_REG(insn.rs2(), value)
 
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
@@ -219,12 +246,235 @@ private:
 #define FRS1 READ_FREG(insn.rs1())
 #define FRS2 READ_FREG(insn.rs2())
 #define FRS3 READ_FREG(insn.rs3())
+#define FLEN (p->get_flen())
 #define dirty_fp_state (STATE.mstatus |= MSTATUS_FS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define dirty_ext_state (STATE.mstatus |= MSTATUS_XS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define dirty_vs_state (STATE.mstatus |= MSTATUS_VS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define DO_WRITE_FREG(reg, value) (STATE.FPR.write(reg, value), dirty_fp_state)
 #define WRITE_FRD(value) WRITE_FREG(insn.rd(), value)
- 
+
+// VPU macros
+#define VRS1 READ_VREG(insn.rs1())
+#define VRS2 READ_VREG(insn.rs2())
+#define VRS3 READ_VREG(insn.rd())
+#define VR0  READ_VREG(0)
+#define VRD  READ_VREG(insn.rd())
+#define FRD  READ_FREG(insn.rd())
+#define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
+#define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
+#define VL (STATE.vl)
+#define VILL ((STATE.vtype >> 31) & 0x1)
+#define VUIMM	(insn.v_uimm())
+#define VSTART (STATE.vstart)
+#define VLMAX (LMUL*(VLEN/SEW))
+#define VLMAX_NO_LMUL	(VLEN/SEW)
+#define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
+#define WRITE_VRD_B(value, idx) WRITE_VREG_B(insn.rd(), idx, value)
+// #define VLEN (p->get_vlen())
+// #define SLEN (p->get_slen())
+// #define ELEN (p->get_elen())
+#define DIM (insn.dim())
+#define TS (insn.ts())
+#define DIM_DM (insn.dim()&1)
+#define VM (insn.vm())
+#define VLMUL_I (insn.vlmul())
+#define VSEW_I (insn.vsew())
+#define VEDIV_I (insn.vediv())
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+
+#define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW (STATE.m_shape_s2 & 0xFFFF)
+#define BC_STRIDE_RD (STATE.m_stride_d & 0xFFFF)
+#define BC_STRIDE_RS1 (STATE.m_stride_s & 0xFFFF)
+#define BC_STRIDE_RS2 ((STATE.m_stride_s & 0xFFFF0000) >> 16)
+
+#define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
+#define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
+#define STRIDE_LLB        (STATE.mte_stride_llb & 0xFFFF)
+
+#define DMA_SHAPE_COLUMN  (STATE.dma_shape_col)
+#define DMA_SHAPE_ROW     (STATE.dma_shape_row)
+#define STRIDE_DDR        (STATE.dma_stride_ddr)
+
+#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
+#define MTE_CORE_MAP    (STATE.mte_coremap)
+
+#define CONV_INFM_WH    (STATE.conv_FM_in)
+#define CONV_DEPTH_IN   (STATE.conv_Depth_in)
+#define CONV_OUTFM_WH   (STATE.conv_FM_out)
+#define CONV_DEPTH_OUT  (STATE.conv_Depth_out)
+#define CONV_S_KERNEL   (STATE.conv_S_kernel)
+#define CONV_KERNEL     (STATE.conv_kernel)
+#define CONV_PADDING    (STATE.conv_padding)
+#define M_DEQUANT_COEFF (STATE.m_dequant_coeff)
+#define CONV_DEQUANT_COEFF (STATE.conv_dequant_coeff)
+
+#define CONV_IN_COLUMN	((STATE.conv_FM_in & 0xFFFF0000) >> 16)
+#define CONV_IN_ROW	(STATE.conv_FM_in & 0xFFFF)
+#define CONV_OUT_COLUMN	((STATE.conv_FM_out & 0xFFFF0000) >> 16)
+#define CONV_OUT_ROW	(STATE.conv_FM_out & 0xFFFF)
+#define CONV_CIN	(STATE.conv_Depth_in & 0xFFFF)
+#define CONV_COUT	(STATE.conv_Depth_out & 0xFFFF)
+#define CONV_IN_STRIDE	((STATE.conv_Depth_in & 0xFFFF0000) >> 16)
+#define CONV_W_STRIDE	(STATE.conv_S_kernel & 0xFF)
+#define CONV_OUT_STRIDE	((STATE.conv_Depth_out & 0xFFFF0000) >> 16)
+#define CONV_KW 	((STATE.conv_kernel & 0xFF000000) >> 24)
+#define CONV_KH 	((STATE.conv_kernel & 0xFF0000) >> 16)
+#define CONV_DL 	((STATE.conv_kernel & 0xFF00) >> 8)
+#define CONV_SK 	(STATE.conv_kernel & 0xFF)
+
+
+//#define TMODE	(STATE.tmode)
+//
+//#define TCSR_RX_ACTIVE_MASK (0x2)
+//#define TCSR_RX_READY_MASK (0x1)
+//
+//#define TPARA0_TAG_MASK (0xff)
+//#define TPARA0_TAG_SHIFT (0)
+///*LUT 13-15*/
+//#define TPARA0_LUT_MASK (0x7)
+//#define TPARA0_LUT_SHIFT (13)
+///*Core ID 16-26*/
+//#define TPARA0_CORE_MASK (0x7FF)
+//#define TPARA0_CORE_SHIFT (16)
+///*Chip ID 27-31*/
+//#define TPARA0_CHIP_MASK (0x1F)
+//#define TPARA0_CHIP_SHIFT (27)
+//#define TPARA0	(STATE.tpara0)
+
+#define check_v0hmask(x) \
+	if(!VM & !(READ_VREG(0).vh[x] & 0x1)) continue;
+
+#define check_v0bmask(x) \
+	if(!VM & !(READ_VREG(0).vb[x] & 0x1)) continue;
+
+#define v0b_mask(x)	(!VM & !(READ_VREG(0).vb[x] & 0x1))
+#define v0h_mask(x)	(!VM & !(READ_VREG(0).vh[x] & 0x1))
+
+#define check_vstart if(VSTART >= VL) VSTART = 0; \
+					 else
+
+#define check_vl() if(VL == 0) return;
+
+// throw trap if rvv inst access out of l1&im buffer
+#define check_rvv_access_without_exception(x, len) \
+        (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, IM_BUFFER)))
+
+
+
+// throw trap if cust inst access out of l1&im buffer
+#define check_cust_access(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access out of l1 buffer
+#define check_cust_access_l1(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access out of im buffer
+#define check_cust_access_im(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access misaligned base address
+#define check_cust_misaligned_base(x, type) \
+        if (unlikely(x & (sizeof(type##_t)-1))) { \
+            throw trap_ncp_cust_misaligned_base(x, 0, 0); \
+        }
+
+// throw trap if cust inst source address access with misaligned stride
+#define check_cust_misaligned_stride_src(x, type, stride) \
+        if (unlikely(stride && (stride & (sizeof(type##_t)-1)))) { \
+            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+        }
+
+// throw trap if cust inst dest access with misaligned stride, or stride < width
+#define check_cust_misaligned_stride_dst(x, type, stride, col) \
+        if (unlikely(stride && (stride & (sizeof(type##_t)-1) || stride < col*sizeof(type##_t)))) { \
+            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+        }
+
+// throw trap if cust inst use invalid shape, col=0 or row=0
+#define check_cust_invalid_shape(col, row) \
+        if (unlikely(col == 0 || row == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        }
+
+//  throw trap if conv inst use invalid param
+#define check_cust_invalid_conv_param(fm_in, depth_in, kernel) ({\
+        int in_w = (fm_in >> 16) & 0xffff; \
+        int in_h = (fm_in) & 0xffff; \
+        int in_c = (depth_in) & 0xffff; \
+        if (unlikely(in_w == 0 || in_h == 0 || inc_c == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        int dilation = (kernel >> 8) & 0xff; \
+        int kw = (ss->conv_kernel >> 24) & 0xff; \
+        int kh = (ss->conv_kernel >> 16) & 0xff; \
+        int sk = (kernel) & 0xff; \
+        if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+  })
+
+#define check_ncp_vill_invalid() \
+        if (VILL) \
+             throw trap_ncp_vill_invalid_inst();
+
+//don't modify elment of big than vl
+#define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
+#define vector_for_each_from_zero(x) for(unsigned int (x) = 0; (x) < VL; (x)++)
+#define vector_for_each_no_lmlu(x) for(unsigned int (x) = 0; (x) < VLMAX_NO_LMUL; (x)++)
+
+#define vdh_clear_exceed(idx) if(idx >= VL) {WRITE_VRD_H(0,idx); continue;} \
+								else
+
+#define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
+					 (x).shape1_row = SHAPE1_ROW; \
+					 (x).shape2_column = SHAPE2_COLUMN; \
+					 (x).shape2_row = SHAPE2_ROW; \
+					 (x).stride_rd = STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
+
+#define bc_sst_fill(x, esize_in, esize_out) ({ \
+                                         (x).shape1_column = BC_SHAPE1_COLUMN; \
+					 (x).shape1_row = BC_SHAPE1_ROW; \
+					 (x).shape2_column = BC_SHAPE2_COLUMN; \
+					 (x).shape2_row = BC_SHAPE2_ROW; \
+					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
+					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
+
+#define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
+					 (x).conv_depth_in = CONV_DEPTH_IN; \
+					 (x).conv_fm_out = CONV_OUTFM_WH; \
+					 (x).conv_depth_out = CONV_DEPTH_OUT; \
+					 (x).conv_s_kernel = CONV_S_KERNEL; \
+					 (x).conv_kernel = CONV_KERNEL; \
+					 (x).conv_padding = CONV_PADDING;})
+
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
 #define JUMP_TARGET (pc + insn.uj_imm())
@@ -363,8 +613,19 @@ inline freg_t f128_negate(freg_t a)
 #define validate_csr(which, write) ({ \
   if (!STATE.serialized) return PC_SERIALIZE_BEFORE; \
   STATE.serialized = false; \
-  /* permissions check occurs in get_csr */ \
+  unsigned csr_priv = get_field((which), 0x300); \
+  unsigned csr_read_only = get_field((which), 0xC00) == 3; \
+  if (((write) && csr_read_only) || STATE.prv < csr_priv) \
+    throw trap_illegal_instruction(0); \
   (which); })
+  
+#define VREG_LENGTH (128)
+/*Vector instruction support*/
+union vreg_t{
+	unsigned char vb[VREG_LENGTH];
+	unsigned short vh[VREG_LENGTH / 2];
+}; //vector reg length 256bit
+//typedef int64_t vreg_t; //vector reg length 256bit
 
 /* For debug only. This will fail if the native machine's float types are not IEEE */
 inline float to_f(float32_t f){float r; memcpy(&r, &f, sizeof(r)); return r;}
@@ -620,7 +881,51 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   if (is_over) \
     require(insn.rd() != insn.rs2()); \
 
-
+// check traps for memul.mm instructions
+#define check_traps_memul_mm(in_type, out_type) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
+        check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
+        if(BC_SHAPE1_ROW > 1)  { \
+          check_cust_misaligned_stride_src(RS1, in_type, BC_STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, out_type, BC_STRIDE_RD, BC_SHAPE2_COLUMN); \
+        } \
+        if(BC_SHAPE2_ROW > 1)  \
+          check_cust_misaligned_stride_src(RS2, in_type, BC_STRIDE_RS2); \
+        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) * BC_SHAPE1_ROW; \
+        int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : (BC_SHAPE2_COLUMN * sizeof(in_type##_t))) * BC_SHAPE2_ROW; \
+        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE2_COLUMN * sizeof(out_type##_t))) * BC_SHAPE1_ROW;\
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+// check traps for meconv.mm instructions
+#define check_traps_meconv_mm(in_type, out_type) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(CONV_IN_ROW, CONV_IN_COLUMN); \
+        check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
+        check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
+        check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        check_cust_misaligned_stride_src(RS1, in_type, CONV_IN_STRIDE); \
+        check_cust_misaligned_stride_src(RS2, in_type, CONV_W_STRIDE); \
+        check_cust_misaligned_stride_dst(RD, out_type, CONV_OUT_STRIDE, CONV_COUT); \
+        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : (CONV_CIN * sizeof(in_type##_t))) * \
+                       (CONV_IN_COLUMN * CONV_IN_ROW); \
+        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : (CONV_COUT * sizeof(in_type##_t))) * \
+                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : (CONV_COUT * sizeof(out_type##_t))) * \
+                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
 //
 // vector: loop header and end helper
 //

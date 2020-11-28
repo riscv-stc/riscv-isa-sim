@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@prefix@
+libdir=${prefix}/@libdir@
+includedir=${prefix}/@includedir@
+
+Name: riscv-eigen3
+Description: RISC-V eigen3 library
+Version: git
+Libs: -Wl,-rpath,${libdir} -L${libdir} -leigen3
+Cflags: -I${includedir}
+URL: http://riscv.org/download.html#tab_spike

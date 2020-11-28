@@ -78,7 +78,7 @@ enum {
     softfloat_round_min         = 2,
     softfloat_round_max         = 3,
     softfloat_round_near_maxMag = 4,
-    softfloat_round_odd         = 6
+    softfloat_round_odd         = 5
 };
 
 /*----------------------------------------------------------------------------

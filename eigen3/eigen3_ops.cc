@@ -57,6 +57,7 @@ MY_MATRIX_DEFINE(float)
             meconv_dbg(ss);\
         }\
     } while(0)
+
 /**
  * CustomInsns() 构造函数
  * 
@@ -66,6 +67,40 @@ CustomInsns::CustomInsns(): debug(GLOBAL_DBG)
 {
 }
 
+float16_t
+CustomInsns::half_to_float16_t(half x)
+{
+    float16_t f16;
+    f16.v = x.x;
+    return f16;
+}
+
+half
+CustomInsns::float16_t_to_half(float16_t f16)
+{
+    half h;
+    h.x = f16.v;
+    return h;
+}
+
+half
+CustomInsns::f32_to_half(float32_t f32)
+{
+    half h;
+    h = float16_t_to_half(f32_to_f16(f32));
+    return h;
+}
+
+float32_t
+CustomInsns::half_mul_f32(half a, half b)
+{
+    float16_t a_f16, b_f16;
+    float32_t res_f32;
+    a_f16 = half_to_float16_t(a);
+    b_f16 = half_to_float16_t(b);
+    res_f32 = f16_mul32(a_f16, b_f16);
+    return res_f32;
+}
 /**
  * shapestride_dbg() 打印ShapeStride信息
  * 
@@ -241,22 +276,22 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     col_val = (half *)malloc(okh * okw * in_c * sizeof(half));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    half odd;
-    half even;
+    float32_t odd;
+    float32_t even;
     //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
-            odd =(half) 0;
-            even =(half) 0;
+            odd = i32_to_f32(0);
+            even = i32_to_f32(0);
             for (k = 0; k < okh * okw * in_c; k++) {
                 if (! (k % 2))
-                    even += row_matrix(0, k) * col_matrix(0, k);
+                    even = f32_add(even, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
                 else
-                    odd += row_matrix(0, k) * col_matrix(0, k);
+                    odd = f32_add(odd, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
             }
-            rd_matrix(i, j) = even + odd;
+            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }
 
@@ -281,7 +316,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
  * @param outputfp16, 1 output as fp16, 0 output as int32
  * @return 执行结果
  */
-int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
+int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk;
@@ -426,7 +461,7 @@ int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs
         cout << "rd:" << endl << rd_matrix << endl;        
 
     if (outfp16) {
-        Map_half rd_fp_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+        Map_half rd_fp_matrix((half *)rd, out_h * out_w, out_c, DynStride(out_stride, 1));
         for (int row = 0; row < out_h * out_w; row++)
             for (int col = 0; col < out_c; col++)
                 rd_fp_matrix(row, col) = ss->dequant_coeff * rd_matrix(row, col);
@@ -448,7 +483,7 @@ int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs
  * @return 执行结果
  */
 
-int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::meconv_x8_mm(int8_t *rs1, int32_t *rd, int8_t *rs2, struct ConvShapeStride *ss)
 {
     return meconv_x8_mm_base(rs1, rd, rs2, ss, 0);
 }
@@ -463,7 +498,7 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::meconv_hf_x8_mm(const int8_t *rs1, half *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
 {
     return meconv_x8_mm_base(rs1, rd, rs2, ss, 1);
 }
@@ -1497,17 +1532,17 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            even = (half)0;
-            odd = (half)0;
+            float32_t even = i32_to_f32(0);
+            float32_t odd = i32_to_f32(0);
             row_matrix = rs1_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
             for (k = 0; k < ss->shape1_column; k++) {
                 if (!(k % 2))
-                    even += row_matrix(0, k) * col_matrix(0, k);
+                    even = f32_add(even, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
                 else
-                    odd += row_matrix(0, k) * col_matrix(0, k);
+                    odd = f32_add(odd, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
             }
-            rd_matrix(i, j) = even + odd;
+            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }
     if (debug)
@@ -1537,10 +1572,10 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
         return -BR_EPARAM;
     }
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
-    Map_int32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_int32_t rd_matrix((int32_t *)rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1575,11 +1610,11 @@ int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStri
         return -BR_EPARAM;
     }
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
 
-    int32_t *rd_buf = malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
+    int32_t *rd_buf = (int32_t *)malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
     Map_int32_t rd_matrix(rd_buf, ss->shape1_row, ss->shape2_column, DynStride(ss->shape2_column , 1));
 
     if (debug) {
@@ -1901,7 +1936,7 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    half *pcol_sum = malloc(1 * ss->shape1_column * sizeof(half));
+    half *pcol_sum = (half *)malloc(1 * ss->shape1_column * sizeof(half));
     Map_half rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {

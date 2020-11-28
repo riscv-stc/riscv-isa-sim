@@ -163,6 +163,7 @@ struct state_t
   reg_t pc;
   regfile_t<reg_t, NXPR, true> XPR;
   regfile_t<freg_t, NFPR, false> FPR;
+  regfile_t<vreg_t, NVPR, false> VPR;
 
   // control and status registers
   reg_t prv;    // TODO: Can this be an enum instead?
@@ -227,6 +228,14 @@ struct state_t
   uint32_t m_shape_s2;
   uint32_t m_stride_d;
   uint32_t m_stride_s;
+  
+  uint32_t vstart;
+  uint32_t vxsat;
+  uint32_t vxrm;
+  uint32_t vl;
+  uint32_t vtype;
+  const uint32_t vlenb = VREG_LENGTH;
+  
   uint32_t conv_FM_in;
   uint32_t conv_Depth_in;
   uint32_t conv_FM_out;
@@ -240,12 +249,14 @@ struct state_t
   uint32_t m_sparseidx_stride;
   uint32_t vme_data_type;
   uint32_t mme_data_type;
+  uint32_t  conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_coremap;
   uint32_t mte_icdest;
   uint32_t mte_shape;
   uint32_t mte_stride;
   uint32_t mte_data_type;
+  uint32_t mte_stride_llb;
   uint32_t tmisc;
   uint32_t tcsr;
   uint32_t dma_shape_row;
@@ -324,16 +335,23 @@ public:
 #endif
   void reset();
   void step(size_t n); // run for n cycles
+  void set_rx_active();
+  void set_vtype(reg_t val);
   void set_csr(int which, reg_t val);
-  uint32_t get_idx() {return idx; };
-  uint32_t get_id() const { return id; }
   reg_t get_csr(int which, insn_t insn, bool write, bool peek = 0);
   reg_t get_csr(int which) { return get_csr(which, insn_t(0), false, true); }
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
+  uint32_t get_syncs() {return synctimes; };
+  uint32_t set_syncs(uint32_t times) {return synctimes = times; };
+  uint32_t get_idx() {return idx; };
+  uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
   unsigned get_max_xlen() { return max_xlen; }
+  unsigned get_elen() { return elen; }
+  unsigned get_slen() { return slen; }
+  unsigned get_vlen() { return vlen; }
   std::string get_isa_string() { return isa_string; }
   unsigned get_flen() {
     return supports_extension('Q') ? 128 :
@@ -494,6 +512,10 @@ private:
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
+  unsigned elen;
+  unsigned slen;
+  unsigned vlen;
+  uint32_t synctimes;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
