@@ -167,7 +167,15 @@ private:
 #define STATE (*p->get_state())
 #define P (*p)
 #define FLEN (p->get_flen())
-#define READ_REG(reg) STATE.XPR[reg]
+
+// Seems that 0x0 doesn't work.
+#define DEBUG_BASE              (0xc0500000)
+#define DEBUG_ROM_BASE          (DEBUG_BASE)
+#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
+#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
+
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
 #define RS1 READ_REG(insn.rs1())
@@ -2401,7 +2409,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
-#define DEBUG_START             0x0
-#define DEBUG_END               (0x1000 - 1)
+#define DEBUG_START             (0x100)
+#define DEBUG_END               (0xc0501000 - 1)
 
 #endif

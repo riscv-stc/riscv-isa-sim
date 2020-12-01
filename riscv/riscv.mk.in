@@ -290,6 +290,8 @@ riscv_insn_ext_zfh = \
 	feq_h \
 	fle_h \
 	flh \
+	flhw \
+    fshw \
 	flt_h \
 	fmadd_h \
 	fmax_h \
@@ -901,6 +903,13 @@ riscv_insn_priv = \
 riscv_insn_stc = \
 	sync \
 	pld \
+	mov_f \
+	mov_m \
+	mov_v \
+	mov_l1_llb \
+	mov_llb_l1 \
+	icmov \
+
 
 riscv_insn_list = \
 	$(riscv_insn_ext_a) \

@@ -13,6 +13,8 @@
 #include <termios.h>
 #include <sstream>
 #include <iostream>
+#include "eigen3_ops.h"
+
 using namespace std::placeholders;
 
 #define RISCV_AT_FDCWD -100

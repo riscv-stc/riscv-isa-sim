@@ -218,3 +218,17 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
 
     return true;
 }
+bool hwsync_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+  if (unlikely(!bytes || addr >= 4 * 16))
+    return false;
+  *((uint32_t*)bytes) = masks[addr / 4];
+  return true;
+}
+bool hwsync_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+  if (unlikely(!bytes || addr >= 4 * 16))
+    return false;
+  masks[addr / 4] = *((uint32_t*)bytes);
+  return true;
+}

@@ -281,7 +281,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
  * @param outputfp16, 1 output as fp16, 0 output as int32
  * @return 执行结果
  */
-int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
+int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk;
@@ -426,7 +426,7 @@ int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs
         cout << "rd:" << endl << rd_matrix << endl;        
 
     if (outfp16) {
-        Map_half rd_fp_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+        Map_half rd_fp_matrix((half *)rd, out_h * out_w, out_c, DynStride(out_stride, 1));
         for (int row = 0; row < out_h * out_w; row++)
             for (int col = 0; col < out_c; col++)
                 rd_fp_matrix(row, col) = ss->dequant_coeff * rd_matrix(row, col);
@@ -448,7 +448,7 @@ int CustomInsns::meconv_x8_mm_base(const int8_t *rs1, void *rd, const int8_t *rs
  * @return 执行结果
  */
 
-int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::meconv_x8_mm(int8_t *rs1, int32_t *rd, int8_t *rs2, struct ConvShapeStride *ss)
 {
     return meconv_x8_mm_base(rs1, rd, rs2, ss, 0);
 }
@@ -463,7 +463,7 @@ int CustomInsns::meconv_x8_mm(const int8_t *rs1, int32_t *rd, const int8_t *rs2,
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::meconv_hf_x8_mm(const int8_t *rs1, half *rd, const int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
 {
     return meconv_x8_mm_base(rs1, rd, rs2, ss, 1);
 }
@@ -1537,10 +1537,10 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
         return -BR_EPARAM;
     }
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
-    Map_int32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_int32_t rd_matrix((int32_t *)rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1575,11 +1575,11 @@ int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStri
         return -BR_EPARAM;
     }
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
 
-    int32_t *rd_buf = malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
+    int32_t *rd_buf = (int32_t *)malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
     Map_int32_t rd_matrix(rd_buf, ss->shape1_row, ss->shape2_column, DynStride(ss->shape2_column , 1));
 
     if (debug) {
@@ -1901,7 +1901,7 @@ int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
 int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    half *pcol_sum = malloc(1 * ss->shape1_column * sizeof(half));
+    half *pcol_sum = (half *)malloc(1 * ss->shape1_column * sizeof(half));
     Map_half rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
     if (debug) {
