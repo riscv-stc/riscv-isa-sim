@@ -95,7 +95,6 @@ public:
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
-
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
   int64_t rvc_addi4spn_imm() { return (x(6, 1) << 2) + (x(5, 1) << 3) + (x(11, 2) << 4) + (x(7, 4) << 6); }
@@ -169,7 +168,15 @@ private:
 #define STATE (*p->get_state())
 #define P (*p)
 #define FLEN (p->get_flen())
-#define READ_REG(reg) STATE.XPR[reg]
+
+// Seems that 0x0 doesn't work.
+#define DEBUG_BASE              (0xc0500000)
+#define DEBUG_ROM_BASE          (DEBUG_BASE)
+#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
+#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
+
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
 #define RS1 READ_REG(insn.rs1())
@@ -204,7 +211,20 @@ private:
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
 #define STRIDE_LLB        (STATE.mte_stride & 0xFFFF)
+
+#define DIM_DM (insn.dim()&1)
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+
+#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
 #define MTE_CORE_MAP    (STATE.mte_coremap)
+
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
 #define WRITE_RVC_RS2S(value) WRITE_REG(insn.rvc_rs2s(), value)
@@ -1038,6 +1058,100 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access(RS1, rs_size); \
         check_cust_access_im(RD, rd_size); \
   })
+
+// throw trap if tcp icmov's target core id not exist
+#define check_tcp_icmov_invalid_core_id(core_id, max_id) \
+        if (core_id > max_id) { \
+            throw trap_tcp_icmov_invalid_core(); \
+        }
+
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_icmov(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start_icmov(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_end_l1(x); \
+        }
+
+// throw trap if tcp source start address in LLB for mov*
+#define check_tcp_access_start_llb_mov(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_start(x); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source start address in LLB for pld
+#define check_tcp_access_start_llb_pld(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_illegal_encoding(); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_illegal_encoding(); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_llb(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_end_llb(x); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_end_llb(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_invalid_param(col, row, llb_sstride) \
+        if (unlikely(col == 0 || row == 0) || (llb_sstride > 0 && unlikely(llb_sstride < col *2))) { \
+            throw trap_tcp_invalid_param(); \
+        }
+
+// check traps for icmov instruction
+#define check_traps_icmov ({ \
+        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_icmov(RD) \
+        check_tcp_access_end_l1(RS1 + RS2) \
+        check_tcp_access_end_l1(RD + RS2) \
+})
+
+// check traps for pld instruction
+#define check_traps_pld ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_start_llb_pld(RS1) \
+        check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+})
+
+// check traps for mov.l1.llb instruction
+#define check_traps_mov_l1_llb ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+        check_tcp_access_start_llb_mov(RS1) \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_end_llb(RS1 + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+        check_tcp_access_end_l1(RD + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+})
+
+// check traps for mov.llb.l instruction
+#define check_traps_mov_llb_l1 ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, STRIDE_LLB) \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_llb_mov(RD) \
+        check_tcp_access_end_l1(RS1 + MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2) \
+        check_tcp_access_end_llb(RD + (STRIDE_LLB? STRIDE_LLB*MTE_SHAPE_ROW: (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * 2))) \
+})
 
 //
 // vector: loop header and end helper
@@ -2798,8 +2912,8 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   }
 
-#define DEBUG_START             0x0
-#define DEBUG_END               (0x1000 - 1)
+#define DEBUG_START             (0x100)
+#define DEBUG_END               (0xc0501000 - 1)
 
 #define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
 					 (x).shape1_row = SHAPE1_ROW; \

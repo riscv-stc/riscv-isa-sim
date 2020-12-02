@@ -50,6 +50,9 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
+  fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
+  fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
+  fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --kernel=<path>       Load kernel flat image into memory\n");
   fprintf(stderr, "  --initrd=<path>       Load kernel initrd into memory\n");
   fprintf(stderr, "  --bootargs=<args>     Provide custom bootargs for kernel [default: console=hvc0 earlycon=sbi]\n");
@@ -66,6 +69,16 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --dm-no-abstract-csr  Debug module won't support abstract to authenticate\n");
   fprintf(stderr, "  --dm-no-halt-groups   Debug module won't support halt groups\n");
   fprintf(stderr, "  --dm-no-impebreak     Debug module won't support implicit ebreak in program buffer\n");
+
+  fprintf(stderr, "BackDoor Options:\n");
+  fprintf(stderr, "  --load=<file1,...>    load files into memory\n");
+  fprintf(stderr, "                          file name: *@[core_id|ddr|llb.][<start>_<len>].<ext>\n");
+  fprintf(stderr, "                          example: aaa@0.bin, bbb@llb.dat, ccc@ddr.dat,\n");
+  fprintf(stderr, "                                   aaa@0.0xc0000000_0x100.dat, aaa@ddr.0x0_0x10000.dat\n");
+  fprintf(stderr, "  --init-dump=<m1,...>  Dump memory on init\n");
+  fprintf(stderr, "  --exit-dump=<m1,...>  Dump memory on exit\n");
+  fprintf(stderr, "                          memory range could be: l1, llb, <start>:<len>\n");
+  fprintf(stderr, "  --dump-path           Path for files to dump memory [default .]\n");
 
   exit(exit_code);
 }

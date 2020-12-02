@@ -332,7 +332,8 @@ int32_t which_npc(reg_t addr, reg_t *paddr)
       break;
     }
   }
-
+  if (core_id == -1)
+    return core_id;
   return IGNORE_BANKID(core_id);
 }
 
@@ -396,13 +397,6 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     }
   } else if (!mPSim->mmio_store(addr, len, bytes)) {
     std::cout << "PCIe driver load addr: 0x"
-    	<< hex
-    	<< addr
-    	<< " access fault."
-    	<< std::endl;
-    throw trap_store_access_fault(addr, 0, 0);
-  } else {
-    std::cout << "load addr: 0x"
     	<< hex
     	<< addr
     	<< " access fault."
