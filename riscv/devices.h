@@ -163,7 +163,7 @@ class sysdma_device_t : public abstract_device_t {
   // size of dma buffer
   #define DMA_BUF_SIZE 0x1000
   char dma_buf_[DMA_BUF_SIZE];
-  typedef enum {
+  enum {
     DDR_DIR_SRC = 0,
     DDR_DIR_DST,
     DDR_DIR_MAX,

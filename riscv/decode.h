@@ -251,6 +251,11 @@ private:
 #define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
 
+#define VME_DTYPE (STATE.vme_data_type)
+#define VME_DTYPE_VD (STATE.vme_data_type & 0xFF)
+#define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
+#define VME_DTYPE_VS2 ((STATE.vme_data_type & 0xFF0000) >> 16)
+
 #define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
 #define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
 #define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
@@ -2931,5 +2936,40 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
 					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
+
+#define DTYPE_DECODING_TO_TYPE(...) \
+    bool relu = false; \
+    switch (VME_DTYPE) { \
+    case 0x9: \
+        relu = true; \
+    case 0x0: { \
+        using dtype_vd = half; \
+        using dtype_vs1 = half; \
+        using dtype_vs2 = half; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x1010a: \
+        relu = true; \
+    case 0x10101: { \
+        using dtype_vd = half; \
+        using dtype_vs1 = half; \
+        using dtype_vs2 = half; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x2020b: \
+        relu = true; \
+    case 0x20202: { \
+        using dtype_vd = half; \
+        using dtype_vs1 = half; \
+        using dtype_vs2 = half; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+    }
+
 
 #endif

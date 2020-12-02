@@ -386,6 +386,7 @@ void state_t::reset(reg_t max_isa)
   vscause = 0;
   vstval = 0;
   vsatp = 0;
+  vme_data_type = 0;
 
   dpc = 0;
   dscratch0 = 0;

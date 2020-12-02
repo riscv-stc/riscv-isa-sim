@@ -457,7 +457,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator != (const half& a, const hal
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator < (const half& a, const half& b) {
   if( isnan(a) ||  isnan(b))
     return false;
-  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+  if((ispinf(a) && ispinf(b)) || (isninf(a) && isninf(b)))
     return false;
   if( ispinf(a) || isninf(b))
     return false;
@@ -471,7 +471,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator <= (const half& a, const hal
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator > (const half& a, const half& b) {
   if( isnan(a) ||  isnan(b))
     return false;
-  if((ispinf(a) && ispinf(b)||(isninf(a)&&isninf(b))))
+  if((ispinf(a) && ispinf(b)) || (isninf(a) && isninf(b)))
     return false;
   if( ispinf(a) || isninf(b))
     return true;

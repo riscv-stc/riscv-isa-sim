@@ -82,6 +82,32 @@ using namespace std;
         number |= (0x1 << bit);    \
 } while(0)
 
+#define SHAPESTRIDE_DBG(ss) do { \
+    printf("\nShapeStride:\n"); \
+    printf("shape1: (%d:%d)\n", ss->shape1_row, ss->shape1_column); \
+    printf("shape2: (%d:%d)\n", ss->shape2_row, ss->shape2_column); \
+    printf("stride rs1: %d\n", ss->stride_rs1); \
+    printf("stride rs2: %d\n", ss->stride_rs2); \
+    printf("stride rd : %d\n\n", ss->stride_rd); \
+} while(0)
+
+#define SHAPE_STRIDE_INFO(ss) do {\
+        if (GLOBAL_DBG) {\
+           cout << endl << __FUNCTION__ << endl;\
+           SHAPESTRIDE_DBG(ss);\
+        } \
+    } while(0)
+
+#define STRIDE_DEFAULT
+#ifdef STRIDE_DEFAULT
+#define SET_DEFAULT_STRIDE(stride, value) do { \
+	if (!stride)        \
+	    stride = value; \
+} while (0)
+#else
+#define SET_DEFAULT_STRIDE(stride, value)
+#endif
+
 /**
  * @brief 矩阵形状描述结构
  *
@@ -140,6 +166,34 @@ enum {
     BR_EPARAM
 };
 
+template <typename DType>
+int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+{
+    typedef Matrix<DType, Dynamic, Dynamic, RowMajor> Matrix_Dtype;
+    typedef Map<Matrix_Dtype, Unaligned, Stride<Dynamic, Dynamic> > Map_DType;
+    typedef Stride<Dynamic, Dynamic> DynStride;
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    rd_matrix = rs1_matrix + rs2_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+
 /**
  * @brief custom扩展指令类
  *
@@ -149,7 +203,6 @@ enum {
 class CustomInsns
 {
 private:
-    void shapestride_dbg(struct ShapeStride *ss);
     void meconv_dbg(struct ConvShapeStride *ss);
     int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
 public:
@@ -162,7 +215,6 @@ public:
     int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss);
 
-    int veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
 
