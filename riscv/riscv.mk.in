@@ -935,6 +935,7 @@ riscv_insn_stc = \
 	veemul_x32_mf \
 	veemul_x32_mv \
 	veemul_x8_hf_mf \
+    veexp_m
 
 riscv_insn_list = \
 	$(riscv_insn_ext_a) \
