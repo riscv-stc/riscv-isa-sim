@@ -426,7 +426,8 @@ void processor_t::vectorUnit_t::reset(){
   memset(reg_file, 0, NVPR * vlenb);
 
   vtype = 0;
-  set_vl(0, 0, 0, -1); // default to illegal configuration
+  //set_vl(0, 0, 0, -1); // default to illegal configuration
+  set_vl(0, 0, 0, 0);
 }
 
 reg_t processor_t::vectorUnit_t::set_vl(int rd, int rs1, reg_t reqVL, reg_t newType){
