@@ -524,7 +524,7 @@ void processor_t::reset()
     ext->reset(); // reset the extension
 
   if (sim)
-    sim->proc_reset(id);
+    sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
 }
 
 // Count number of contiguous 0 bits starting from the LSB.
