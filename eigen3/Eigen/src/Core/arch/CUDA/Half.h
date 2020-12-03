@@ -110,6 +110,9 @@ struct half : public half_impl::half_base {
       : half_impl::half_base(half_impl::float_to_half_rtne(static_cast<float>(val))) {}
   explicit EIGEN_DEVICE_FUNC half(float f)
       : half_impl::half_base(half_impl::float_to_half_rtne(f)) {}
+  explicit EIGEN_DEVICE_FUNC half(float32_t f) {
+      x = f32_to_f16(f).v;
+  }
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
