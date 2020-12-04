@@ -41,10 +41,12 @@ package:
   script:
     - cd build && make install && cd -
     - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
+    - export LINK=latest
+    - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
     - mkdir -p archive
     - ./scripts/package.sh $RISCV archive/spike-installer-$VER.sh
-    - ln -s archive/spike-installer-$VER.sh latest
-    - tar -c latest archive | ssh release@$DEPLOY_SERVER "tar -xC ~/files/simulator/spike"
+    - ln -sf archive/spike-installer-$VER.sh $LINK
+    - tar -c $LINK archive | ssh release@$DEPLOY_SERVER "tar -xC ~/files/simulator/spike"
   only:
     - master
     - tags
