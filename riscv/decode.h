@@ -2961,9 +2961,9 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case 0x2020b: \
         relu = true; \
     case 0x20202: { \
-        using dtype_vd = half; \
-        using dtype_vs1 = half; \
-        using dtype_vs2 = half; \
+        using dtype_vd = Float32; \
+        using dtype_vs1 = Float32; \
+        using dtype_vs2 = Float32; \
         __VA_ARGS__ \
     } \
         break; \
