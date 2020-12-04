@@ -261,6 +261,57 @@ softfloat_c_srcs = \
 	ui64_to_f16.c \
 	ui64_to_f32.c \
 	ui64_to_f64.c \
+    \
+    bf16_exp.c \
+	bf16_reciprocal.c \
+	bf16_rsqrt.c \
+	bf16_sqrt_.c \
+	bf16_to_i16.c \
+	bf16_to_i8.c \
+	bf16_to_ui8.c \
+	extF80M_isSignalingNaN.c \
+	f128M_isSignalingNaN.c \
+	f16_exp.c \
+	f16_ln.c \
+	f16_reciprocal.c \
+	f16_rsqrt.c \
+	f16_sqrt_.c \
+	f32_exp.c \
+	f32_reciprocal.c \
+	f32_rsqrt.c \
+	f32_sqrt_.c \
+	i16_to_bf16.c \
+	i16_to_f16.c \
+	i8_to_bf16.c \
+	i8_to_f16.c \
+	s_bf16UIToCommonNaN.c \
+	s_commonNaNToBF16UI.c \
+	s_commonNaNToExtF80M.c \
+	s_commonNaNToExtF80UI.c \
+	s_commonNaNToF128M.c \
+	s_commonNaNToTF32UI.c \
+	s_extF80MToCommonNaN.c \
+	s_extF80UIToCommonNaN.c \
+	s_f128MToCommonNaN.c \
+	s_propagateNaNBF16UI.c \
+	s_propagateNaNExtF80M.c \
+	s_propagateNaNExtF80UI.c \
+	s_propagateNaNF128M.c \
+	s_propagateNaNTF32UI.c \
+	s_roundToI16.c \
+	s_roundToI8.c \
+	s_roundToUI8.c \
+	s_tf32UIToCommonNaN.c \
+	ui8_to_bf16.c \
+	ui8_to_f16.c \
+    s_f128UIToCommonNaN.c \
+    s_commonNaNToF16UI.c \
+    s_f16UIToCommonNaN.c \
+    s_commonNaNToF128UI.c \
+
+
+
+
 
 softfloat_CFLAGS = -fPIC
 

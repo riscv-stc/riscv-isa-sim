@@ -57,12 +57,12 @@ float16_t f16_roundToInt( float16_t a, uint_fast8_t roundingMode, bool exact )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     if ( exp <= 0xE ) {
-        if ( ! (uint16_t) (uiA<<1) ) return a;
+        if ( !(uint16_t) (uiA<<1) ) return a;
         if ( exact ) softfloat_exceptionFlags |= softfloat_flag_inexact;
         uiZ = uiA & packToF16UI( 1, 0, 0 );
         switch ( roundingMode ) {
          case softfloat_round_near_even:
-            if ( ! fracF16UI( uiA ) ) break;
+            if ( !fracF16UI( uiA ) ) break;
          case softfloat_round_near_maxMag:
             if ( exp == 0xE ) uiZ |= packToF16UI( 0, 0xF, 0 );
             break;
@@ -70,7 +70,7 @@ float16_t f16_roundToInt( float16_t a, uint_fast8_t roundingMode, bool exact )
             if ( uiZ ) uiZ = packToF16UI( 1, 0xF, 0 );
             break;
          case softfloat_round_max:
-            if ( ! uiZ ) uiZ = packToF16UI( 0, 0xF, 0 );
+            if ( !uiZ ) uiZ = packToF16UI( 0, 0xF, 0 );
             break;
 #ifdef SOFTFLOAT_ROUND_ODD
          case softfloat_round_odd:
@@ -98,7 +98,7 @@ float16_t f16_roundToInt( float16_t a, uint_fast8_t roundingMode, bool exact )
         uiZ += lastBitMask>>1;
     } else if ( roundingMode == softfloat_round_near_even ) {
         uiZ += lastBitMask>>1;
-        if ( ! (uiZ & roundBitsMask) ) uiZ &= ~lastBitMask;
+        if ( !(uiZ & roundBitsMask) ) uiZ &= ~lastBitMask;
     } else if (
         roundingMode
             == (signF16UI( uiZ ) ? softfloat_round_min : softfloat_round_max)

@@ -2,7 +2,7 @@
 /*============================================================================
 
 This C header file is part of the SoftFloat IEEE Floating-Point Arithmetic
-Package, Release 3d, by John R. Hauser.
+Package, Release 3e, by John R. Hauser.
 
 Copyright 2011, 2012, 2013, 2014, 2015, 2017 The Regents of the University of
 California.  All rights reserved.
@@ -38,6 +38,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define softfloat_types_h 1
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*----------------------------------------------------------------------------
 | Types used to pass 16-bit, 32-bit, 64-bit, and 128-bit floating-point
@@ -78,6 +82,10 @@ struct extFloat80M { uint16_t signExp; uint64_t signif; };
 | significand of the native type.
 *----------------------------------------------------------------------------*/
 typedef struct extFloat80M extFloat80_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

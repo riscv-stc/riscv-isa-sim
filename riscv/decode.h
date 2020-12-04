@@ -2952,9 +2952,9 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case 0x1010a: \
         relu = true; \
     case 0x10101: { \
-        using dtype_vd = half; \
-        using dtype_vs1 = half; \
-        using dtype_vs2 = half; \
+        using dtype_vd = Bfloat16; \
+        using dtype_vs1 = Bfloat16; \
+        using dtype_vs2 = Bfloat16; \
         __VA_ARGS__ \
     } \
         break; \
