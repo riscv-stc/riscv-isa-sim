@@ -40,10 +40,11 @@ package:
   stage : package
   script:
     - cd build && make install && cd -
-    - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
-    - ./scripts/package.sh $RISCV spike-installer-$VER.sh
-    - echo "master" > versions && git tag --list >> versions
-    - scp -r versions spike-installer-$VER.sh release@$DEPLOY_SERVER:~/files/simulator/spike
+    - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
+    - mkdir -p archive
+    - ./scripts/package.sh $RISCV archive/spike-installer-$VER.sh
+    - ln -s archive/spike-installer-$VER.sh latest
+    - scp -r latest archive/spike-installer-$VER.sh release@$DEPLOY_SERVER:~/files/simulator/spike
   only:
     - master
     - tags
