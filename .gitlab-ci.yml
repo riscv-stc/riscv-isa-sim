@@ -44,7 +44,7 @@ package:
     - mkdir -p archive
     - ./scripts/package.sh $RISCV archive/spike-installer-$VER.sh
     - ln -s archive/spike-installer-$VER.sh latest
-    - scp -r latest archive/spike-installer-$VER.sh release@$DEPLOY_SERVER:~/files/simulator/spike
+    - tar -c latest archive | ssh release@$DEPLOY_SERVER "tar -xC ~/files/simulator/spike"
   only:
     - master
     - tags
