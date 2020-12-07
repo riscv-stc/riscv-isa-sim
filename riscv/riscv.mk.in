@@ -939,6 +939,7 @@ riscv_insn_stc = \
 	mov_l1_llb \
 	mov_llb_l1 \
 	icmov \
+	icmov_m \
 
 
 riscv_insn_list = \

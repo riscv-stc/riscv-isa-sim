@@ -1,4 +1,4 @@
-//check_traps_icmov;
+check_traps_icmov;
 
 auto chipId = DST_CHIP_ID;
 auto coreId = DST_CORE_ID;
