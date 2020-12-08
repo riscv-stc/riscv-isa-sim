@@ -32,4 +32,6 @@ sst_fill(sst, e_size, e_size);
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
 
-CusIns.mov_m((half*)rs1, (half*)rd, &sst);
+MTE_DTYPE_DECODING_TO_TYPE({
+    mov_m<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, &sst);
+})

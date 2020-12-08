@@ -375,6 +375,112 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 /**
+ * mov_m() mov.m
+ * 
+ * 将矩阵从一个地方搬移到另一个地方
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+    
+    rd_matrix = rs1_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * mov_v() mov.v
+ * 
+ * 将矩阵从一个地方搬移到另一个地方
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_v(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    //mov.v 使用shape1的行数和列数，输入vector使用行数或者列数，列数或者行数为1，输出使用shape1的行数和列数
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_DType rs1_matrix(rs1, dim ? ss->shape1_row : 1, dim ? 1 : ss->shape1_column, DynStride(1, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    switch (dim) {
+        case 0:
+            for (int row = 0; row < rd_matrix.rows(); row++)
+                rd_matrix.row(row) = rs1_matrix;
+            break;
+        case 1:
+            for (int col = 0; col < rd_matrix.cols(); col++)
+                rd_matrix.col(col) = rs1_matrix;
+            break;
+        default:
+            cout << __FUNCTION__ << "error dim" << endl;
+            return -BR_EPARAM;
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    
+    return 0;
+}
+
+/**
+ * mov_f() mov.f
+ *
+ * 将浮点标量寄存器单值复制扩展成一个矩阵
+ * @param rs1 标 量 操 作 数
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1 << endl;
+    }
+
+    rd_matrix = rd_matrix.Constant(ss->shape1_row, ss->shape1_column, rs1);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
  * @brief custom扩展指令类
  *
  * 包含了全部的custom矩阵扩展指令
@@ -435,9 +541,6 @@ public:
 
     int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
-    int mov_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim);
-    int mov_f(half rs1, half *rd, struct ShapeStride *ss);
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);
     

@@ -1008,27 +1008,29 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   })
 
 // check traps for mov.f instructions
-#define check_traps_mov_f ({ \
+#define check_traps_mov_f(esize) ({ \
         check_cust_misaligned_base(RD, int16); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_tcp_data_type \
         if (SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
         check_cust_access(RD, rd_size); \
   })
 
 // check traps for mov.v instructions
-#define check_traps_mov_v ({ \
+#define check_traps_mov_v(esize) ({ \
         check_cust_misaligned_base(RS1, int16); \
         check_cust_misaligned_base(RD, int16); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_tcp_data_type \
         if (SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
         if (DIM_DM == 0) { \
-          check_cust_access(RS1, SHAPE1_COLUMN * sizeof(int16_t)); \
+          check_cust_access(RS1, SHAPE1_COLUMN * esize); \
         } else { \
-          check_cust_access(RS1, SHAPE1_ROW * sizeof(int16_t)); \
+          check_cust_access(RS1, SHAPE1_ROW * esize); \
         } \
         check_cust_access(RD, rd_size); \
   })
@@ -2994,5 +2996,64 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         throw trap_illegal_instruction(insn.bits()); \
     }
 
+#define MTE_DTYPE_DECODING_TO_TYPE(...) \
+  switch (MTE_DATA_TYPE_RS1) { \
+    case 0x0: {\
+      using dtype_vd = half; \
+      using dtype_vs1 = half; \
+       __VA_ARGS__ \
+    } \
+      break; \
+    case 0x1: {\
+      using dtype_vd = Bfloat16; \
+      using dtype_vs1 = Bfloat16; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x2: {\
+      using dtype_vd = Float32; \
+      using dtype_vs1 = Float32; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x3: {\
+      using dtype_vd = int8_t; \
+      using dtype_vs1 = int8_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x4: {\
+      using dtype_vd = uint8_t; \
+      using dtype_vs1 = uint8_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x5: {\
+      using dtype_vd = int16_t; \
+      using dtype_vs1 = int16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x6: {\
+      using dtype_vd = uint16_t; \
+      using dtype_vs1 = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x7: {\
+      using dtype_vd = int32_t; \
+      using dtype_vs1 = int32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x8: {\
+      using dtype_vd = uint32_t; \
+      using dtype_vs1 = uint32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+  }
 
 #endif
