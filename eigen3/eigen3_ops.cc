@@ -44,12 +44,7 @@ MY_MATRIX_DEFINE(int32_t)
 MY_MATRIX_DEFINE(float)
 #undef MY_MATRIX_DEFINE
 
-#define SHAPE_STRIDE_INFO(ss) do {\
-        if (debug) {\
-           cout << endl << __FUNCTION__ << endl;\
-           shapestride_dbg(ss);\
-        } \
-    } while(0)
+
 
 #define MECONV_INFO(ss) do {\
         if (debug) {\
@@ -123,22 +118,6 @@ void CustomInsns::meconv_dbg(struct ConvShapeStride *ss)
     printf("conv_padding(0x%x): top = %d bottom = %d left = %d right = %d\n", ss->conv_padding, (ss->conv_padding >> 24) & 0xff,(ss->conv_padding >> 16) & 0xff, (ss->conv_padding >> 8) & 0xff, (ss->conv_padding >> 0) & 0xff);
 }
 
-/**
- * shapestride_dbg() 打印ShapeStride信息
- * 
- * 用于调试
- * @param ss shapeStride 参数指针
- * @return 无返回值
- */
-void CustomInsns::shapestride_dbg(struct ShapeStride *ss)
-{
-    printf("\nShapeStride:\n");
-    printf("shape1: (%d:%d)\n", ss->shape1_row, ss->shape1_column);
-    printf("shape2: (%d:%d)\n", ss->shape2_row, ss->shape2_column);
-    printf("stride rs1: %d\n", ss->stride_rs1);
-    printf("stride rs2: %d\n", ss->stride_rs2);
-    printf("stride rd : %d\n\n", ss->stride_rd);
-}
 
 /**
  * meconv_mm() meconv.mm
@@ -502,16 +481,6 @@ int CustomInsns::meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct Conv
 {
     return meconv_x8_mm_base(rs1, rd, rs2, ss, 1);
 }
-
-#define STRIDE_DEFAULT
-#ifdef STRIDE_DEFAULT
-#define SET_DEFAULT_STRIDE(stride, value) do { \
-	if (!stride)        \
-	    stride = value; \
-} while (0)
-#else 
-#define SET_DEFAULT_STRIDE(stride, value)
-#endif
 
 /**
  * veemul_mf() veemul.mf
@@ -915,129 +884,6 @@ int CustomInsns::veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *s
 }
 
 /**
- * veadd_mf() veadd.mf
- * 
- * 标量和矩阵元素广播加 M = M1 + f
- * 如果要在原地进行，则rd的stride必须和rs1的stride相同
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param rs2 f,源标量操作数
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2 << endl;
-    }
-
-    /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
-     * convert this operation to matrix + matrix
-     */
-    Matrix_half const_matrix(ss->shape1_row, ss->shape1_column);
-    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
-    rd_matrix = rs1_matrix + const_matrix;
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * veadd_mm() veadd.mm
- * 
- * 同维度矩阵和矩阵元素加 M = M1 + M2
- * stride 一致的情况下运算还可以原地进行, 即rd = rs1 或 rd = rs2
- * @param rs1 M1,源操作矩阵一基地址
- * @param rs2 M2,源操作矩阵二基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss)
-{
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
-    }
-
-    rd_matrix = rs1_matrix + rs2_matrix;
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;   
-}
-
-/**
- * veadd_mv() veadd.mv
- * 
- * 同维度矩阵和矩阵元素加 M = M1 + v
- * @param rs1 M1,源操作矩阵基地址
- * @param rs2 M2,源操作向量基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @param dim 方向 dim = 0 v为行向量， dim = 1 v为列向量
- * @return 执行结果
- */
-int CustomInsns::veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
-    Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
-    
-    switch (dim) {
-    case 0:
-        if (debug) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim0 << endl;
-        }
-
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = rs1_matrix.row(row).array() + vector_dim0.array();
-        
-        if (debug)
-            cout << "rd:" << endl << rd_matrix << endl;
-        break;
-    case 1:
-        if (debug) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim1 << endl;
-        }
-
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = rs1_matrix.col(col).array() + vector_dim1.array();
-        
-        if (debug)
-            cout << "rd:" << endl << rd_matrix << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << " error dim" << endl;
-        return -BR_EPARAM;
-    }
-    return 0;
-}
-
-/**
  * vemax_m() vemax.m
  * 
  * 矩阵列元素(行向量)求最大值s=max(M1i)， 矩阵行元素(列向量)求最大值s=max(M1j)
@@ -1401,95 +1247,6 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
 }
 
 /**
- * vesub_mm() vesub.mm
- * 
- * 同维度矩阵和矩阵元素减 M = M1 - M2
- * stride 一致的情况下运算还可以原地进行, 即rd = rs1 或 rd = rs2
- * @param rs1 M1,源操作矩阵一基地址
- * @param rs2 M2,源操作矩阵二基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
-    }
-
-    /* our half not support operator - (const half& a, const half& b),
-     * but can support operator - (const half& a),
-     *  so we use (a + -b) to instead
-     */
-    rd_matrix = rs1_matrix + -rs2_matrix;
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;   
-}
-
-/**
- * vesub_mv() vesub.mv
- * 
- * 同维度矩阵和矩阵元素减 M = M1 - v
- * @param rs1 M1,源操作矩阵基地址
- * @param rs2 M2,源操作向量基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @param dim 方向 dim = 0 v为行向量， dim = 1 v为列向量
- * @return 执行结果
- */
-int CustomInsns::vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
-    Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
-
-    /* our half not support operator - (const half& a, const half& b),
-     * but can support operator - (const half& a),
-     *  so we use (a + -b) to instead
-     */
-    switch (dim) {
-    case 0:
-        if (debug) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim0 << endl;
-        }
-
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = rs1_matrix.row(row).array() + -vector_dim0.array();
-        break;
-    case 1:
-        if (debug) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim1 << endl;
-        }
-
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = rs1_matrix.col(col).array() + -vector_dim1.array();
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-    return 0;
-}
-
-/**
  * memul_mm() memul.mm
  * 
  * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
@@ -1675,46 +1432,6 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
         if (debug)
             cout << "rd:\n" << rd_matrix << endl;
     }
-
-    return 0;
-}
-
-/**
- * vesub_mf() vesub.mf
- * 
- * 标量和矩阵元素广播减 M = M1 - f
- * 如果要在原地进行，则rd的stride必须和rs1的stride相同
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param rs2 f,源标量操作数
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2 << endl;
-    }
-
-    /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
-     * convert this operation to matrix + matrix
-     * Our half not support operator - (const half& a, const half& b),
-     * but can support operator - (const half& a),
-     *  so we use (a + -b) to instead
-     */
-    Matrix_half const_matrix(ss->shape1_row, ss->shape1_column);
-    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, -rs2);
-    rd_matrix = rs1_matrix + const_matrix;
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
 
     return 0;
 }
@@ -2090,103 +1807,6 @@ int CustomInsns::metr_m(half *rs1, half *rd, struct ShapeStride *ss)
     }
 
     rd_matrix = rs1_matrix.transpose();
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * mov_m() mov.m
- * 
- * 将矩阵从一个地方搬移到另一个地方
- * @param rs1 M1,源操作矩阵基地址
- * @param rd V,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::mov_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
-    }
-    
-    rd_matrix = rs1_matrix;
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * mov_v() mov.v
- * 
- * 将矩阵从一个地方搬移到另一个地方
- * @param rs1 M1,源操作矩阵基地址
- * @param rd V,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim)
-{
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    //mov.v 使用shape1的行数和列数，输入vector使用行数或者列数，列数或者行数为1，输出使用shape1的行数和列数
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_half rs1_matrix(rs1, dim ? ss->shape1_row : 1, dim ? 1 : ss->shape1_column, DynStride(1, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    switch (dim) {
-        case 0:
-            for (int row = 0; row < rd_matrix.rows(); row++)
-                rd_matrix.row(row) = rs1_matrix;
-            break;
-        case 1:
-            for (int col = 0; col < rd_matrix.cols(); col++)
-                rd_matrix.col(col) = rs1_matrix;
-            break;
-        default:
-            cout << __FUNCTION__ << "error dim" << endl;
-            return -BR_EPARAM;
-    }
-
-    if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;
-    
-    return 0;
-}
-
-/**
- * mov_f() mov.f
- *
- * 将浮点标量寄存器单值复制扩展成一个矩阵
- * @param rs1 标 量 操 作 数
- * @param rd V,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::mov_f(half rs1, half *rd, struct ShapeStride *ss)
-{
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1 << endl;
-    }
-
-    rd_matrix = rd_matrix.Constant(ss->shape1_row, ss->shape1_column, rs1);
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;

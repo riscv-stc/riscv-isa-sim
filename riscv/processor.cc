@@ -386,6 +386,7 @@ void state_t::reset(reg_t max_isa)
   vscause = 0;
   vstval = 0;
   vsatp = 0;
+  vme_data_type = 0;
 
   dpc = 0;
   dscratch0 = 0;
@@ -426,7 +427,8 @@ void processor_t::vectorUnit_t::reset(){
   memset(reg_file, 0, NVPR * vlenb);
 
   vtype = 0;
-  set_vl(0, 0, 0, -1); // default to illegal configuration
+  //set_vl(0, 0, 0, -1); // default to illegal configuration
+  set_vl(0, 0, 0, 0);
 }
 
 reg_t processor_t::vectorUnit_t::set_vl(int rd, int rs1, reg_t reqVL, reg_t newType){
@@ -524,7 +526,7 @@ void processor_t::reset()
     ext->reset(); // reset the extension
 
   if (sim)
-    sim->proc_reset(id);
+    sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
 }
 
 // Count number of contiguous 0 bits starting from the LSB.
@@ -720,7 +722,8 @@ void processor_t::enter_debug_mode(uint8_t cause)
   state.dcsr.prv = state.prv;
   set_privilege(PRV_M);
   state.dpc = state.pc;
-  state.pc = DEBUG_ROM_ENTRY;
+  //state.pc = DEBUG_ROM_ENTRY;
+  state.pc = DEBUG_BASE + DEBUG_ROM_ENTRY;
 }
 
 void processor_t::take_trap(trap_t& t, reg_t epc)
@@ -735,9 +738,9 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
 
   if (state.debug_mode) {
     if (t.cause() == CAUSE_BREAKPOINT) {
-      state.pc = DEBUG_ROM_ENTRY;
+      state.pc = DEBUG_BASE + DEBUG_ROM_ENTRY;
     } else {
-      state.pc = DEBUG_ROM_TVEC;
+      state.pc = DEBUG_BASE + DEBUG_ROM_TVEC;
     }
     return;
   }
@@ -1081,17 +1084,17 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_CONV_PADDING:
       state.conv_padding = val;
       break;
-    case CSR_M_DEQUANT_COEFF:
-      state.m_dequant_coeff = val;
+    case CSR_MME_DEQUANT_COEFF:
+      state.mme_dequant_coeff = val;
       break;
-    case CSR_M_QUANT_COEFF:
-      state.m_quant_coeff = val;
+    case CSR_MME_QUANT_COEFF:
+      state.mme_quant_coeff = val;
       break;
-    case CSR_M_SPARSEIDX_BASE:
-      state.m_sparseidx_base = val;
+    case CSR_MME_SPARSEIDX_BASE:
+      state.mme_sparseidx_base = val;
       break;
-    case CSR_M_SPARSEIDX_STRIDE:
-      state.m_sparseidx_stride = val;
+    case CSR_MME_SPARSEIDX_STRIDE:
+      state.mme_sparseidx_stride = val;
       break;
     case CSR_VME_DATA_TYPE:
       state.vme_data_type = val;
@@ -1630,22 +1633,22 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.conv_padding;
-    case CSR_M_DEQUANT_COEFF:
+    case CSR_MME_DEQUANT_COEFF:
       if(!supports_extension('V'))
         break;
-      return state.m_dequant_coeff;
-    case CSR_M_QUANT_COEFF:
+      return state.mme_dequant_coeff;
+    case CSR_MME_QUANT_COEFF:
       if(!supports_extension('V'))
         break;
-      return state.m_quant_coeff;
-    case CSR_M_SPARSEIDX_BASE:
+      return state.mme_quant_coeff;
+    case CSR_MME_SPARSEIDX_BASE:
       if(!supports_extension('V'))
         break;
-      return state.m_sparseidx_base;
-    case CSR_M_SPARSEIDX_STRIDE:
+      return state.mme_sparseidx_base;
+    case CSR_MME_SPARSEIDX_STRIDE:
       if(!supports_extension('V'))
         break;
-      return state.m_sparseidx_stride;
+      return state.mme_sparseidx_stride;
     case CSR_VME_DATA_TYPE:
       if(!supports_extension('V'))
         break;

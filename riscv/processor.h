@@ -243,10 +243,10 @@ struct state_t
   uint32_t conv_S_kernel;
   uint32_t conv_kernel;
   uint32_t conv_padding;
-  uint32_t m_dequant_coeff;
-  uint32_t m_quant_coeff;
-  uint32_t m_sparseidx_base;
-  uint32_t m_sparseidx_stride;
+  uint32_t mme_dequant_coeff;
+  uint32_t mme_quant_coeff;
+  uint32_t mme_sparseidx_base;
+  uint32_t mme_sparseidx_stride;
   uint32_t vme_data_type;
   uint32_t mme_data_type;
   uint32_t  conv_dequant_coeff;
@@ -541,7 +541,7 @@ private:
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];
 
-  void take_pending_interrupt() { take_interrupt(state.mip & state.mie); }
+  void take_pending_interrupt(reg_t interrupts) { take_interrupt(interrupts & state.mie); }
   void take_interrupt(reg_t mask); // take first enabled interrupt in mask
   void take_trap(trap_t& t, reg_t epc); // take an exception
   void disasm(insn_t insn); // disassemble and print an instruction

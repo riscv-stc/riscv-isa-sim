@@ -82,6 +82,37 @@ using namespace std;
         number |= (0x1 << bit);    \
 } while(0)
 
+#define SHAPESTRIDE_DBG(ss) do { \
+    printf("\nShapeStride:\n"); \
+    printf("shape1: (%d:%d)\n", ss->shape1_row, ss->shape1_column); \
+    printf("shape2: (%d:%d)\n", ss->shape2_row, ss->shape2_column); \
+    printf("stride rs1: %d\n", ss->stride_rs1); \
+    printf("stride rs2: %d\n", ss->stride_rs2); \
+    printf("stride rd : %d\n\n", ss->stride_rd); \
+} while(0)
+
+#define SHAPE_STRIDE_INFO(ss) do {\
+        if (GLOBAL_DBG) {\
+           cout << endl << __FUNCTION__ << endl;\
+           SHAPESTRIDE_DBG(ss);\
+        } \
+    } while(0)
+
+#define STRIDE_DEFAULT
+#ifdef STRIDE_DEFAULT
+#define SET_DEFAULT_STRIDE(stride, value) do { \
+	if (!stride)        \
+	    stride = value; \
+} while (0)
+#else
+#define SET_DEFAULT_STRIDE(stride, value)
+#endif
+
+#define DEFINE_MAP_DTYPE \
+    typedef Matrix<DType, Dynamic, Dynamic, RowMajor> Matrix_DType; \
+    typedef Map<Matrix_DType, Unaligned, Stride<Dynamic, Dynamic> > Map_DType; \
+    typedef Stride<Dynamic, Dynamic> DynStride;
+
 /**
  * @brief 矩阵形状描述结构
  *
@@ -140,6 +171,315 @@ enum {
     BR_EPARAM
 };
 
+
+template <typename DType>
+int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    rd_matrix = rs1_matrix + rs2_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_DType vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_DType vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+
+        for (int row = 0; row < rs1_matrix.rows(); row++)
+            rd_matrix.row(row) = rs1_matrix.row(row).array() + vector_dim0.array();
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+
+        for (int col = 0; col < rs1_matrix.cols(); col++)
+            rd_matrix.col(col) = rs1_matrix.col(col).array() + vector_dim1.array();
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << " error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+template <typename DType>
+int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
+     * convert this operation to matrix + matrix
+     */
+    Matrix_DType const_matrix(ss->shape1_row, ss->shape1_column);
+    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
+    rd_matrix = rs1_matrix + const_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    /* our half not support operator - (const half& a, const half& b),
+     * but can support operator - (const half& a),
+     *  so we use (a + -b) to instead
+     */
+    rd_matrix = rs1_matrix + -rs2_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_DType vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_DType vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    /* our half not support operator - (const half& a, const half& b),
+     * but can support operator - (const half& a),
+     *  so we use (a + -b) to instead
+     */
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+
+        for (int row = 0; row < rs1_matrix.rows(); row++)
+            rd_matrix.row(row) = rs1_matrix.row(row).array() + -vector_dim0.array();
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+
+        for (int col = 0; col < rs1_matrix.cols(); col++)
+            rd_matrix.col(col) = rs1_matrix.col(col).array() + -vector_dim1.array();
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+template <typename DType>
+int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
+     * convert this operation to matrix + matrix
+     * Our half not support operator - (const half& a, const half& b),
+     * but can support operator - (const half& a),
+     *  so we use (a + -b) to instead
+     */
+    Matrix_DType const_matrix(ss->shape1_row, ss->shape1_column);
+    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, -rs2);
+    rd_matrix = rs1_matrix + const_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * mov_m() mov.m
+ * 
+ * 将矩阵从一个地方搬移到另一个地方
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+    
+    rd_matrix = rs1_matrix;
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * mov_v() mov.v
+ * 
+ * 将矩阵从一个地方搬移到另一个地方
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_v(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    //mov.v 使用shape1的行数和列数，输入vector使用行数或者列数，列数或者行数为1，输出使用shape1的行数和列数
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_DType rs1_matrix(rs1, dim ? ss->shape1_row : 1, dim ? 1 : ss->shape1_column, DynStride(1, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    switch (dim) {
+        case 0:
+            for (int row = 0; row < rd_matrix.rows(); row++)
+                rd_matrix.row(row) = rs1_matrix;
+            break;
+        case 1:
+            for (int col = 0; col < rd_matrix.cols(); col++)
+                rd_matrix.col(col) = rs1_matrix;
+            break;
+        default:
+            cout << __FUNCTION__ << "error dim" << endl;
+            return -BR_EPARAM;
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    
+    return 0;
+}
+
+/**
+ * mov_f() mov.f
+ *
+ * 将浮点标量寄存器单值复制扩展成一个矩阵
+ * @param rs1 标 量 操 作 数
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1 << endl;
+    }
+
+    rd_matrix = rd_matrix.Constant(ss->shape1_row, ss->shape1_column, rs1);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
 /**
  * @brief custom扩展指令类
  *
@@ -149,7 +489,6 @@ enum {
 class CustomInsns
 {
 private:
-    void shapestride_dbg(struct ShapeStride *ss);
     void meconv_dbg(struct ConvShapeStride *ss);
     int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
     float16_t half_to_float16_t(half x);
@@ -165,14 +504,6 @@ public:
     int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss);
-
-    int veadd_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
-    int veadd_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
-    int veadd_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
-
-    int vesub_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
-    int vesub_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
-    int vesub_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss);
 
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
@@ -214,9 +545,6 @@ public:
 
     int velut_m(uint16_t *rs1, unsigned long rs2, half *rd, struct ShapeStride *ss);
 
-    int mov_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int mov_v(half *rs1, half *rd, struct ShapeStride *ss, int dim);
-    int mov_f(half rs1, half *rd, struct ShapeStride *ss);
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);
     

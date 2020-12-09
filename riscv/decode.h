@@ -74,15 +74,6 @@ const int NCSR = 4096;
 #define MAX_INSN_LENGTH 8
 #define PC_ALIGN 2
 
-
-#define VTYPE_EDIV_SHIFT 5
-#define VTYPE_SEW_SHIFT  2
-#define VTYPE_LMUL_SHIFT 0
-
-#define VTYPE_EDIV 3
-#define VTYPE_VSEW  7
-#define VTYPE_VLMUL 3
-
 #define CORE_COUNT 32
 
 typedef uint64_t insn_bits_t;
@@ -108,17 +99,6 @@ public:
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
-  uint64_t ts() { return x(14, 1); }
-  uint64_t vm() { return x(25, 1); }
-  uint64_t vlmul() {return x(20,2);}
-  uint64_t vsew() { return x(22,3);}
-  uint64_t vediv() { return x(25,2);}
-  uint64_t nf() { return x(29, 3); }
-  uint64_t mop() { return x(26, 3); }
-  uint64_t width() { return x(12, 3); }
-  uint64_t lumop() { return x(20, 5); }
-  uint64_t sumop() { return x(20, 5); }
-
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
   int64_t rvc_addi4spn_imm() { return (x(6, 1) << 2) + (x(5, 1) << 3) + (x(11, 2) << 4) + (x(7, 4) << 6); }
@@ -191,8 +171,16 @@ private:
 #define MMU (*p->get_mmu())
 #define STATE (*p->get_state())
 #define P (*p)
-// #define FLEN (p->get_flen())
-#define READ_REG(reg) STATE.XPR[reg]
+#define FLEN (p->get_flen())
+
+// Seems that 0x0 doesn't work.
+#define DEBUG_BASE              (0xc0500000)
+#define DEBUG_ROM_BASE          (DEBUG_BASE)
+#define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
+  && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
+#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
+
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
 #define RS1 READ_REG(insn.rs1())
@@ -228,8 +216,24 @@ private:
 
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
-#define STRIDE_LLB        (STATE.mte_stride & 0xFFFF)
+#define MTE_STRIDE_RS1        (STATE.mte_stride & 0xFFFF)
+#define MTE_STRIDE_RD        ((STATE.mte_stride & 0xFFFF0000) >> 16)
+#define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
+#define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
+
+#define DIM_DM (insn.dim()&1)
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+
+#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
 #define MTE_CORE_MAP    (STATE.mte_coremap)
+
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
 #define WRITE_RVC_RS2S(value) WRITE_REG(insn.rvc_rs2s(), value)
@@ -241,6 +245,33 @@ private:
 #define RVC_FRS2 READ_FREG(insn.rvc_rs2())
 #define RVC_FRS2S READ_FREG(insn.rvc_rs2s())
 #define RVC_SP READ_REG(X_SP)
+
+//rvv macros
+#define VILL (P.VU.vill)
+
+// vme macros
+#define DIM (insn.dim())
+#define DIM_DM (insn.dim()&1)
+#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
+#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
+#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
+#define STRIDE_RD (STATE.stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+
+#define VME_DTYPE (STATE.vme_data_type)
+#define VME_DTYPE_VD (STATE.vme_data_type & 0xFF)
+#define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
+#define VME_DTYPE_VS2 ((STATE.vme_data_type & 0xFF0000) >> 16)
+
+#define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW (STATE.m_shape_s2 & 0xFFFF)
+#define BC_STRIDE_RD (STATE.m_stride_d & 0xFFFF)
+#define BC_STRIDE_RS1 (STATE.m_stride_s & 0xFFFF)
+#define BC_STRIDE_RS2 ((STATE.m_stride_s & 0xFFFF0000) >> 16)
 
 // FPU macros
 #define FRS1 READ_FREG(insn.rs1())
@@ -880,6 +911,367 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   require_vm; \
   if (is_over) \
     require(insn.rd() != insn.rs2()); \
+
+//throw trp if VL set invalid
+#define check_ncp_vill_invalid() \
+        if (VILL) \
+             throw trap_ncp_vill_invalid_inst();
+
+// throw trap if cust inst access out of l1&im buffer
+#define check_cust_access(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
+            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access out of l1 buffer
+#define check_cust_access_l1(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access out of im buffer
+#define check_cust_access_im(x, len) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
+              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+            throw trap_ncp_cust_access(x, 0, 0); \
+        }
+
+// throw trap if cust inst access misaligned base address
+#define check_cust_misaligned_base(x, type) \
+        if (unlikely(x & (sizeof(type##_t)-1))) { \
+            throw trap_ncp_cust_misaligned_base(x, 0, 0); \
+        }
+
+// throw trap if cust inst source address access with misaligned stride
+#define check_cust_misaligned_stride_src(x, type, stride) \
+        if (unlikely(stride && (stride & (sizeof(type##_t)-1)))) { \
+            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+        }
+
+// throw trap if cust inst dest access with misaligned stride, or stride < width
+#define check_cust_misaligned_stride_dst(x, type, stride, col) \
+        if (unlikely(stride && (stride & (sizeof(type##_t)-1) || stride < col*sizeof(type##_t)))) { \
+            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+        }
+
+// throw trap if cust inst use invalid shape, col=0 or row=0
+#define check_cust_invalid_shape(col, row) \
+        if (unlikely(col == 0 || row == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        }
+
+//  throw trap if conv inst use invalid param
+#define check_cust_invalid_conv_param(fm_in, depth_in, kernel) ({\
+        int in_w = (fm_in >> 16) & 0xffff; \
+        int in_h = (fm_in) & 0xffff; \
+        int in_c = (depth_in) & 0xffff; \
+        if (unlikely(in_w == 0 || in_h == 0 || inc_c == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        int dilation = (kernel >> 8) & 0xff; \
+        int kw = (ss->conv_kernel >> 24) & 0xff; \
+        int kh = (ss->conv_kernel >> 16) & 0xff; \
+        int sk = (kernel) & 0xff; \
+        if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+  })
+
+// check traps for ve***.mm instructions
+#define check_traps_vexxx_mm ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
+        check_cust_access(RD, rd_size); \
+    })
+
+// check traps for ve***.mm reduce with float result instructions
+#define check_traps_vexxx_mm_reduce_all ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if (SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
+    })
+
+// check traps for ve***.mm reduce with vector result instructions
+#define check_traps_vexxx_mm_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if (SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
+        } \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
+            check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+    })
+
+// check traps for ve***.mv reduce with vector result instructions
+#define check_traps_vexxx_mv_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if (SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
+            check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+    })
+
+// check traps for ve***.mf reduce with vector result instructions
+#define check_traps_vexxx_mf_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
+            check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+  })
+
+// check traps for ve***.mv instructions
+#define check_traps_vexxx_mv ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+          check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+          check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for ve***.mv instructions, x32 matrix
+#define check_traps_vexxx_mv_x32 ({ \
+        check_cust_misaligned_base(RS1, int32); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int32, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int32_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+          check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+          check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for ve***.mf instructions
+#define check_traps_vexxx_mf ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for ve***.mf instructions, x32 matrix
+#define check_traps_vexxx_mf_x32 ({ \
+        check_cust_misaligned_base(RS1, int32); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int32, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int32_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for ve***.mf instructions, .x8.hf.mf
+#define check_traps_vexxx_mf_x8out ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int8, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int8_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+
+// check traps for ve***.m instructions, element-wise
+#define check_traps_vexxx_m_element_wise(esize) ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_tcp_data_type \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for ve***.m instructions, reduce all
+#define check_traps_vexxx_m_reduce_all ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+  })
+
+// check traps for ve***.m instructions, reduce to vector
+#define check_traps_vexxx_m_reduce_vector ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+        if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
+            check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        if (DIM_DM == 0) { \
+          check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+        } else { \
+          check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+        } \
+  })
+
+
+// check traps for ve***.m instructions, element-wise
+#define check_traps_vexxx_m_convert(dtype, stype) ({ \
+        check_cust_misaligned_base(RS1, stype); \
+        check_cust_misaligned_base(RD, dtype); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, stype, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, dtype, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(stype##_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(dtype##_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for velut.m instructions
+#define check_traps_velut_m ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RS2, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        if(SHAPE1_ROW > 1) { \
+          check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        } \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, 0x10000); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for mov.f instructions
+#define check_traps_mov_f(esize) ({ \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_tcp_data_type \
+        if (SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for mov.v instructions
+#define check_traps_mov_v(esize) ({ \
+        check_cust_misaligned_base(RS1, int16); \
+        check_cust_misaligned_base(RD, int16); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_tcp_data_type \
+        if (SHAPE1_ROW > 1) \
+          check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * esize)) * SHAPE1_ROW; \
+        if (DIM_DM == 0) { \
+          check_cust_access(RS1, SHAPE1_COLUMN * esize); \
+        } else { \
+          check_cust_access(RS1, SHAPE1_ROW * esize); \
+        } \
+        check_cust_access(RD, rd_size); \
+  })
 
 // check traps for memul.mm instructions
 #define check_traps_memul_mm(in_type, out_type) ({ \
@@ -2685,7 +3077,118 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   }
 
-#define DEBUG_START             0x0
-#define DEBUG_END               (0x1000 - 1)
+#define DEBUG_START             (0x100)
+#define DEBUG_END               (0xc0501000 - 1)
+
+#define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
+					 (x).shape1_row = SHAPE1_ROW; \
+					 (x).shape2_column = SHAPE2_COLUMN; \
+					 (x).shape2_row = SHAPE2_ROW; \
+					 (x).stride_rd = STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
+
+#define bc_sst_fill(x, esize_in, esize_out) ({ \
+                                         (x).shape1_column = BC_SHAPE1_COLUMN; \
+					 (x).shape1_row = BC_SHAPE1_ROW; \
+					 (x).shape2_column = BC_SHAPE2_COLUMN; \
+					 (x).shape2_row = BC_SHAPE2_ROW; \
+					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
+					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
+
+#define DTYPE_DECODING_TO_TYPE(...) \
+    bool relu = false; \
+    switch (VME_DTYPE) { \
+    case 0x9: \
+        relu = true; \
+    case 0x0: { \
+        using dtype_vd = half; \
+        using dtype_vs1 = half; \
+        using dtype_vs2 = half; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x1010a: \
+        relu = true; \
+    case 0x10101: { \
+        using dtype_vd = Bfloat16; \
+        using dtype_vs1 = Bfloat16; \
+        using dtype_vs2 = Bfloat16; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x2020b: \
+        relu = true; \
+    case 0x20202: { \
+        using dtype_vd = Float32; \
+        using dtype_vs1 = Float32; \
+        using dtype_vs2 = Float32; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+    }
+
+#define MTE_DTYPE_DECODING_TO_TYPE(...) \
+  switch (MTE_DATA_TYPE_RS1) { \
+    case 0x0: {\
+      using dtype_vd = half; \
+      using dtype_vs1 = half; \
+       __VA_ARGS__ \
+    } \
+      break; \
+    case 0x1: {\
+      using dtype_vd = Bfloat16; \
+      using dtype_vs1 = Bfloat16; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x2: {\
+      using dtype_vd = Float32; \
+      using dtype_vs1 = Float32; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x3: {\
+      using dtype_vd = int8_t; \
+      using dtype_vs1 = int8_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x4: {\
+      using dtype_vd = uint8_t; \
+      using dtype_vs1 = uint8_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x5: {\
+      using dtype_vd = int16_t; \
+      using dtype_vs1 = int16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x6: {\
+      using dtype_vd = uint16_t; \
+      using dtype_vs1 = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x7: {\
+      using dtype_vd = int32_t; \
+      using dtype_vs1 = int32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x8: {\
+      using dtype_vd = uint32_t; \
+      using dtype_vs1 = uint32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+  }
 
 #endif

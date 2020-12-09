@@ -221,15 +221,19 @@ void processor_t::step(size_t n)
       enter_debug_mode(DCSR_CAUSE_DEBUGINT);
     } else if (halt_request == HR_GROUP) {
       enter_debug_mode(DCSR_CAUSE_GROUP);
+	   if (unlikely(state.wfi_flag && !state.async_started))
+        state.wfi_flag = 0;
     } // !!!The halt bit in DCSR is deprecated.
     else if (state.dcsr.halt) {
       enter_debug_mode(DCSR_CAUSE_HALT);
+      if (unlikely(state.wfi_flag && !state.async_started))
+        state.wfi_flag = 0;
     }
   }
 
   while (n > 0) {
     size_t instret = 0;
-    reg_t pc = state.pc;
+    reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;
     mmu_t* _mmu = mmu;
 
     #define advance_pc() \
@@ -249,8 +253,44 @@ void processor_t::step(size_t n)
 
     try
     {
-      take_pending_interrupt();
+      if (unlikely(sim->reset_signal(id))) {
+		 /*hart reset. */
+        reset();
+	/* clear rst signal. */
+	sim->clear_reset_signal(id);
+        std::cout<< "hart[" << id << "] will reset." << std::endl;
+	break;
+      }
+/* check current core sync state, if current core is sync,
+       * and wait for other core to sync, swap current core to idle,
+       * and let other core to execute insn. */
+      if (async_done()) {
+        pc = state.pc;
+        state.wfi_flag = 0;
+        if (async_trap != nullptr) {
+          pc -= 4;
+          std::rethrow_exception(async_trap);
+        }
+      }
+/* if sync is started, let other core that not in sync to execute.
+       * the core will not ack interrupt if it is in sync. */
+      if (unlikely(state.async_started))
+	break;
+/* check interrupt status, if there is any interrupt occur,
+       * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
+      reg_t interrupts = (state.mip |
+                          (state.mextip ?
+                          (0x1 << IRQ_M_EXT) : 0));
+ if (unlikely(interrupts & state.mie)) {
+        if (unlikely(state.wfi_flag)) {
+          pc = state.pc;
+          state.wfi_flag = 0;
+		}
+ }
+      take_pending_interrupt(interrupts);
 
+      if (unlikely(state.wfi_flag))
+        break;
       if (unlikely(slow_path()))
       {
         while (instret < n)
@@ -372,6 +412,8 @@ void processor_t::step(size_t n)
       // allows us to switch to other threads only once per idle loop in case
       // there is activity.
       n = instret;
+      if (!unlikely(IS_EXECUTE_IN_DEBUGROM(pc)))
+        state.wfi_flag = 1;
     }
 
     state.minstret += instret;

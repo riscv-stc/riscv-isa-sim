@@ -91,6 +91,8 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks);
+  bus.add_device(0xd0080000, hwsync);
+  
   core_reset_n = 0;
   pcie_driver = new pcie_driver_t(this, procs, bank_id);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));

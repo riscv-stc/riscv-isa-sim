@@ -1366,7 +1366,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-isa=RV64IMAFDC   Sets the default RISC-V ISA
   --with-priv=MSU         Sets the default RISC-V privilege modes supported
-  --with-varch=vlen:128,elen:64,slen:128
+  --with-varch=vlen:1024,elen:32,slen:1024
                           Sets the default vector config
 
 Some influential environment variables:
@@ -4795,7 +4795,7 @@ _ACEOF
 else
 
 cat >>confdefs.h <<_ACEOF
-#define DEFAULT_VARCH "vlen:128,elen:64,slen:128"
+#define DEFAULT_VARCH "vlen:1024,elen:32,slen:1024"
 _ACEOF
 
 fi
@@ -5175,12 +5175,17 @@ $as_echo "#define SOFTFLOAT_ENABLED /**/" >>confdefs.h
 
 
 
-  subprojects="$subprojects eigen3"
+    subprojects="$subprojects eigen3"
 
-    # Process the subproject appropriately. If enabled add it to the
-    # $enabled_subprojects running shell variable, set a
-    # SUBPROJECT_ENABLED C define, and include the appropriate
-    # 'subproject.ac'.
+    { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : eigen3" >&5
+$as_echo "$as_me: configuring default subproject : eigen3" >&6;}
+      ac_config_files="$ac_config_files eigen3.mk:eigen3/eigen3.mk.in"
+
+      enable_eigen3_sproj="yes"
+      subprojects_enabled="$subprojects_enabled eigen3"
+
+
+$as_echo "#define EIGEN3_ENABLED /**/" >>confdefs.h
 
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : eigen3" >&5

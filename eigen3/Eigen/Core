@@ -412,6 +412,9 @@ using std::ptrdiff_t;
 #include "src/Core/arch/CUDA/PacketMathHalf.h"
 #include "src/Core/arch/CUDA/TypeCasting.h"
 
+#include "src/Core/arch/STC/Bfloat16_stc.h"
+#include "src/Core/arch/STC/Float32_stc.h"
+
 #if defined EIGEN_VECTORIZE_CUDA
   #include "src/Core/arch/CUDA/PacketMath.h"
   #include "src/Core/arch/CUDA/MathFunctions.h"

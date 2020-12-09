@@ -64,6 +64,8 @@ enum {
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
+uint_fast8_t softfloat_roundToUI8(bool, uint_fast64_t, uint_fast8_t, bool );
+
 uint_fast32_t softfloat_roundToUI32( bool, uint_fast64_t, uint_fast8_t, bool );
 
 #ifdef SOFTFLOAT_FAST_INT64
@@ -74,6 +76,8 @@ uint_fast64_t
 uint_fast64_t softfloat_roundMToUI64( bool, uint32_t *, uint_fast8_t, bool );
 #endif
 
+int_fast8_t softfloat_roundToI8( bool, uint_fast64_t, uint_fast8_t, bool );
+int_fast16_t softfloat_roundToI16( bool, uint_fast64_t, uint_fast8_t, bool );
 int_fast32_t softfloat_roundToI32( bool, uint_fast64_t, uint_fast8_t, bool );
 
 #ifdef SOFTFLOAT_FAST_INT64
