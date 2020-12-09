@@ -42,10 +42,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "primitiveTypes.h"
 #include "softfloat.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*----------------------------------------------------------------------------
 | Default value for 'softfloat_detectTininess'.
 *----------------------------------------------------------------------------*/
@@ -458,10 +454,6 @@ void
  softfloat_propagateNaNF128M(
      const uint32_t *aWPtr, const uint32_t *bWPtr, uint32_t *zWPtr );
 
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

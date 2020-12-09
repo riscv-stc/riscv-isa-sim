@@ -959,6 +959,10 @@ riscv_insn_list = \
 	$(riscv_insn_priv) \
 	$(riscv_insn_stc) \
 	memul_mm \
+	memul_ts_mm \
+	memin_m \
+	memax_m \
+	meacc_m \
 	meconv_mm  
 
 riscv_gen_srcs = \

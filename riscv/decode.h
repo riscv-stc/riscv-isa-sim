@@ -99,6 +99,8 @@ public:
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t ts() { return (x(25, 1) << 1) + x(14, 1); }
+
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
   int64_t rvc_addi4spn_imm() { return (x(6, 1) << 2) + (x(5, 1) << 3) + (x(11, 2) << 4) + (x(7, 4) << 6); }
@@ -288,6 +290,7 @@ private:
 #define VRS1 READ_VREG(insn.rs1())
 #define VRS2 READ_VREG(insn.rs2())
 #define VRS3 READ_VREG(insn.rd())
+#define TS   (insn.ts())
 #define VR0  READ_VREG(0)
 #define VRD  READ_VREG(insn.rd())
 #define FRD  READ_FREG(insn.rd())
@@ -1293,6 +1296,48 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access_l1(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
   })
+// check traps for memul.tsx.mm instructions
+#define check_traps_memul_ts_mm(in_type, out_type) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
+        check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
+        if(BC_SHAPE1_ROW > 1)  { \
+          check_cust_misaligned_stride_src(RS1, in_type, BC_STRIDE_RS1); \
+          check_cust_misaligned_stride_dst(RD, out_type, BC_STRIDE_RD, BC_SHAPE2_COLUMN); \
+        } \
+        if(BC_SHAPE2_ROW > 1)  \
+          check_cust_misaligned_stride_src(RS2, in_type, BC_STRIDE_RS2); \
+        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) * BC_SHAPE1_ROW; \
+        int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : (BC_SHAPE2_COLUMN * sizeof(in_type##_t))) * BC_SHAPE2_ROW; \
+        unsigned int rd_stride, rd_col; \
+        if (TS == 0){ \
+          rd_stride = BC_SHAPE2_COLUMN; rd_col = BC_SHAPE1_COLUMN; \
+        } \
+        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (rd_stride * sizeof(out_type##_t))) * rd_col;\
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+
+
+// check traps for memin.m/memax.m/meacc.m instructions, reduce all
+#define check_traps_mexxx_m(in_type, out_type)({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
+        if(BC_SHAPE1_ROW > 1)  { \
+          check_cust_misaligned_stride_src(RS1, in_type, BC_STRIDE_RS1); \
+        } \
+        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) \
+                                * BC_SHAPE1_ROW; \
+        int rd_size = BC_SHAPE1_ROW * sizeof(out_type##_t); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+
+
 // check traps for meconv.mm instructions
 #define check_traps_meconv_mm(in_type, out_type) ({ \
         check_cust_misaligned_base(RS1, in_type); \
@@ -1318,6 +1363,119 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access_l1(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
   })
+
+#define check_tcp_data_type \
+  if (MTE_DATA_TYPE_RS1 != MTE_DATA_TYPE_RD) \
+    trap_tcp_invalid_param();
+
+// throw trap if tcp icmov's target core id not exist
+#define check_tcp_icmov_invalid_core_id(core_id, max_id) \
+        if (core_id > max_id) { \
+            throw trap_tcp_icmov_invalid_core(); \
+        }
+
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source start address in L1Buffer
+#define check_tcp_access_start_icmov(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_start_icmov(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_l1(x) \
+        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+            throw trap_tcp_access_end_l1(x); \
+        }
+
+// throw trap if tcp source start address in LLB for mov*
+#define check_tcp_access_start_llb_mov(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_start(x); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_start(x); \
+        }
+
+// throw trap if tcp source start address in LLB for pld
+#define check_tcp_access_start_llb_pld(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_illegal_encoding(); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_illegal_encoding(); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_access_end_llb(x) \
+        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+            throw trap_tcp_access_end_llb(x); \
+        } \
+        if (zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE) { \
+            throw trap_tcp_access_end_llb(x); \
+        }
+
+// throw trap if tcp source end address in L1Buffer
+#define check_tcp_invalid_param(col, row, llb_sstride) \
+        if (unlikely(col == 0 || row == 0) || (llb_sstride > 0 && unlikely(llb_sstride < col *2))) { \
+            throw trap_tcp_invalid_param(); \
+        }
+
+// check traps for icmov instruction
+#define check_traps_icmov ({ \
+        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_icmov(RD) \
+        check_tcp_access_end_l1(RS1 + RS2) \
+        check_tcp_access_end_l1(RD + RS2) \
+})
+
+// check traps for icmov_m instruction
+#define check_traps_icmov_m(esize) ({ \
+        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
+        check_tcp_data_type \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_icmov(RD) \
+        check_tcp_access_end_l1(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+        check_tcp_access_end_l1(RD + (MTE_STRIDE_RD ? MTE_STRIDE_RD * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+})
+
+// check traps for pld instruction
+#define check_traps_pld(esize) ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
+        check_tcp_data_type \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_start_llb_pld(RS1) \
+        check_tcp_access_end_l1(RD + (MTE_STRIDE_RD ? MTE_STRIDE_RD * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+        check_tcp_access_end_llb(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+})
+
+// check traps for mov.l1.llb instruction
+#define check_traps_mov_l1_llb(esize) ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
+        check_tcp_data_type \
+        check_tcp_access_start_llb_mov(RS1) \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_end_llb(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+        check_tcp_access_end_l1(RD + (MTE_STRIDE_RD ? MTE_STRIDE_RD * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+})
+
+// check traps for mov.llb.l instruction
+#define check_traps_mov_llb_l1(esize) ({ \
+        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
+        check_tcp_data_type \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_start_llb_mov(RD) \
+        check_tcp_access_end_l1(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+        check_tcp_access_end_llb(RD + (MTE_STRIDE_RD ? MTE_STRIDE_RD * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
+})
+
+
 //
 // vector: loop header and end helper
 //

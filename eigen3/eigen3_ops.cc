@@ -82,8 +82,17 @@ half
 CustomInsns::f32_to_half(float32_t f32)
 {
     half h;
-    h = float16_t_to_half(f32_to_f16(f32));
+    float16_t f16 = f32_to_f16(f32);
+    h = float16_t_to_half(f16);
     return h;
+}
+
+float32_t 
+CustomInsns::half_to_f32(half x)
+{
+    float32_t f32;
+    f32 = f16_to_f32(half_to_float16_t(x));
+    return f32;
 }
 
 float32_t
@@ -137,7 +146,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int dilation;
-    int i, j, k, ii, jj, kk;
+    int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     half *rs1_start;
     half *left_val, *row_val, *col_val;
@@ -255,22 +264,79 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     col_val = (half *)malloc(okh * okw * in_c * sizeof(half));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    float32_t odd;
-    float32_t even;
+    float32_t first, second, third, forth, res12, res34, res;
+    float32_t res_tmp;
     //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
-            odd = i32_to_f32(0);
-            even = i32_to_f32(0);
-            for (k = 0; k < okh * okw * in_c; k++) {
-                if (! (k % 2))
-                    even = f32_add(even, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
-                else
-                    odd = f32_add(odd, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
+            first.v = 0x80000000;
+            second.v = 0x80000000;
+            third.v = 0x80000000;
+            forth.v = 0x80000000;
+            res12.v = 0x80000000;
+            res34.v = 0x80000000;
+            res.v = 0x80000000;
+            counter = 0;
+            
+            if ((out_stride == out_c ) && (out_c <= 32)){
+                if ((in_stride == in_c) && (dilation == 1)){
+                     for (k = 0; k < okh; k++){
+                        int offset = k * okw * in_c; 
+                        for (index_cin = 0; index_cin < (okw * in_c); index_cin++){
+                            res_tmp = half_mul_f32(row_matrix(0, offset + index_cin), col_matrix(0, offset + index_cin));
+                            if(counter%4 == 0) first = f32_add(res_tmp, first);
+                            else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                            else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                            else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                            ++counter;
+                            if (((in_c*okw) % 2 == 1) && (index_cin == (in_c * okw - 1))) ++counter;
+                        }
+                    }
+                    res12 = f32_add(first, third);
+                    res34 = f32_add(second,forth);
+                    rd_matrix(i, j) = f32_to_half(f32_add(res12, res34));
+                } else {
+                    if (!(in_c%2)){//输出列宽小于32和stride行连续,并且cin为偶数
+                        for (index_cin = 0; index_cin < (okh * okw * in_c); index_cin++){
+                            res_tmp = half_mul_f32(row_matrix(0, index_cin), col_matrix(0, index_cin));
+                            if(counter%4 == 0) first = f32_add(res_tmp, first);
+                            else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                            else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                            else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                            ++counter;
+                        }
+                        res12 = f32_add(first, third);
+                        res34 = f32_add(second,forth);
+                        rd_matrix(i, j) = f32_to_half(f32_add(res12, res34));
+                    } else {//输出列宽小于32和stride行连续,并且cin为奇数
+                        for (k = 0; k < (okh * okw); k++){
+                            int offset = k * in_c;
+                            for (index_cin = 0; index_cin < in_c; index_cin++){
+                                res_tmp = half_mul_f32(row_matrix(0, offset + index_cin), col_matrix(0, offset +index_cin));
+                                if(counter%4 == 0) first = f32_add(res_tmp, first);
+                                else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                                else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                                else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                                ++counter;
+                                if (index_cin == (in_c - 1)) ++counter;
+                            }
+                        }
+                        res12 = f32_add(first, third);
+                        res34 = f32_add(second,forth);
+                        rd_matrix(i, j) = f32_to_half(f32_add(res12, res34));
+                    }
+                }
+            } else {
+                for (k = 0; k < okh * okw * in_c; k++) {
+                    if (! (k % 2))
+                        first = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), first);
+                    else
+                        second = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), second);
+                }
+                rd_matrix(i, j) = f32_to_half(f32_add(first, second));
             }
-            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }
 
@@ -280,7 +346,6 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     free(row_val);
     free(col_val);
     free(left_val);
-
     return 0;
 }
 
@@ -1262,7 +1327,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     half *row_val;
     half *col_val;
     int i, j, k;
-    half odd, even;
+    float32_t odd, even;
     /* param check */
     if (ss->shape1_column != ss->shape2_row) {
         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
@@ -1273,11 +1338,6 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-    row_val = (half *)malloc(ss->shape1_column * sizeof(half));
-    col_val = (half *)malloc(ss->shape1_column * sizeof(half));
-    Map_half row_matrix(row_val, 1, ss->shape1_column, DynStride(ss->shape1_column, 1));
-    Map_half col_matrix(col_val, 1, ss->shape1_column, DynStride(ss->shape1_column, 1));
-
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1289,24 +1349,20 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            float32_t even = i32_to_f32(0);
-            float32_t odd = i32_to_f32(0);
-            row_matrix = rs1_matrix.row(i);
-            col_matrix = rs2_matrix.col(j).transpose();
+            even.v = 0;
+            odd.v = 0;
             for (k = 0; k < ss->shape1_column; k++) {
                 if (!(k % 2))
-                    even = f32_add(even, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
+                    even = f32_add(even, half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)));
                 else
-                    odd = f32_add(odd, half_mul_f32(row_matrix(0, k), col_matrix(0, k)));
+                    odd = f32_add(odd, half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)));
             }
-            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
+            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));        
         }
     }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
 
-    free(row_val);
-    free(col_val);
     return 0;
 }
 
@@ -1405,29 +1461,46 @@ int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStri
  * @param rd M,目的矩阵基地址
  * @param rs2 M2,源操作矩阵二基地址
  * @param ss 矩阵形状描述
+ * @param ts: ts mode: 0-rs1转置，1-rs2转置，2-rs1和rs2都转置
  * @return 执行结果
  */
-int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts)
+int CustomInsns::memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts)
 {
+    half *row_val;
+    half *col_val;
+    int i, j, k;
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
-
+    
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_matrix << endl;
     }
 
-    if (ts == 1) {
+    if (ts == 0) {
         /* param check */
         if (ss->shape1_row != ss->shape2_row) {
             cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
             return -BR_EPARAM;
         }
-
         SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
         Map_half rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
-        rd_matrix = rs1_matrix.transpose() * rs2_matrix;
+        /* dot only support vector not support matrix, so we use '*' to do calculation */
+        //rd_matrix = rs1_matrix * rs2_matrix;
+        for (i = 0; i < ss->shape1_column; i++) {
+            for (j = 0; j < ss->shape2_column; j++) {
+                float32_t even = i32_to_f32(0);
+                float32_t odd = i32_to_f32(0);
+                for (k = 0; k < ss->shape1_row; k++) {
+                    if (!(k % 2))
+                        even = f32_add(even, half_mul_f32(rs1_matrix(k, i), rs2_matrix(k, j)));
+                    else
+                        odd = f32_add(odd, half_mul_f32(rs1_matrix(k, i), rs2_matrix(k, j)));
+                }
+                rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
+        }
+    }
 
         if (debug)
             cout << "rd:\n" << rd_matrix << endl;
@@ -1435,6 +1508,122 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     return 0;
 }
+
+
+/**
+ * memin_m() memin.m
+ * 
+ * 矩阵列元素(行向量)求最小值s=min(M1i)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    int i, j;
+    /* param check */
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        float16_t res= half_to_float16_t(rs1_matrix(i, 0));
+        for(j = 1; j < ss->shape1_column; j++){
+            bool isLt = f16_lt(res, half_to_float16_t(rs1_matrix(i, j)));
+            if (!isLt)
+                res = half_to_float16_t(rs1_matrix(i, j));
+        }
+        rd_matrix(i, 0) = float16_t_to_half(res);
+    }
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * memax_m() memax.m
+ * 
+ * 矩阵列元素(行向量)最大值s=max(M1i)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    int i, j;
+    /* param check */
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (i = 0; i < ss->shape1_row; i++) {
+        float16_t res= half_to_float16_t(rs1_matrix(i, 0));
+        for(j = 1; j < ss->shape1_column; j++){
+            bool isLt = f16_lt(res, half_to_float16_t(rs1_matrix(i, j)));
+            if (isLt)
+                res = half_to_float16_t(rs1_matrix(i, j));
+        }
+        rd_matrix(i, 0) = float16_t_to_half(res);
+    }
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+        
+    return 0;
+}
+
+/**
+ * memacc_m() meacc.m
+ * 
+ * 矩阵列元素(行向量)和s=sum(M1i)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    int i, j;
+    /* param check */
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (i = 0; i < ss->shape1_row; i++) {
+        float32_t res= half_to_f32(rs1_matrix(i, 0));
+        for(j = 1; j < ss->shape1_column; j++){
+            res = f32_add(res, half_to_f32(rs1_matrix(i, j)));
+        }
+        rd_matrix(i, 0) = f32_to_half(res);
+    }
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+        
+    return 0;
+}
+
 
 /**
  * verecip_m() verecip.m

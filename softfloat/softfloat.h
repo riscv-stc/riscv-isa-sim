@@ -77,7 +77,7 @@ enum {
     softfloat_round_min         = 2,
     softfloat_round_max         = 3,
     softfloat_round_near_maxMag = 4,
-    softfloat_round_odd         = 5
+    softfloat_round_odd         = 6
 };
 
 /*----------------------------------------------------------------------------
@@ -149,6 +149,7 @@ void i64_to_f128M( int64_t, float128_t * );
 *----------------------------------------------------------------------------*/
 uint_fast8_t f16_to_ui8( float16_t, uint_fast8_t, bool );
 uint_fast8_t bf16_to_ui8( bfloat16_t, uint_fast8_t, bool );
+uint_fast16_t f16_to_ui16( float16_t, uint_fast8_t, bool );
 uint_fast32_t f16_to_ui32( float16_t, uint_fast8_t, bool );
 uint_fast64_t f16_to_ui64( float16_t, uint_fast8_t, bool );
 int_fast8_t f16_to_i8( float16_t, uint_fast8_t, bool );

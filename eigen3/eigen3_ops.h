@@ -493,6 +493,7 @@ private:
     int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
     float16_t half_to_float16_t(half x);
     float32_t half_mul_f32(half a, half b);
+    float32_t half_to_f32(half x);
     half float16_t_to_half(float16_t f16);
     half f32_to_half(float32_t f32);
 public:
@@ -511,7 +512,10 @@ public:
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss);
     int memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStride *ss, half dequant_coeff);
-    int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
+    int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
+    int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int meacc_m(half *rs1, half *rd, struct ShapeStride *ss);
 
     int vemul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);

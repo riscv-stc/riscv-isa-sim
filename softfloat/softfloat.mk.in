@@ -161,8 +161,10 @@ softfloat_c_srcs = \
 	s_approxRecip32_1.c \
 	s_approxRecipSqrt_1Ks.c \
 	s_approxRecipSqrt32_1.c \
+	s_commonNaNToF16UI.c \
 	s_commonNaNToF32UI.c \
 	s_commonNaNToF64UI.c \
+	s_commonNaNToF128UI.c \
 	s_compare128M.c \
 	s_compare96M.c \
 	s_countLeadingZeros16.c \
@@ -170,8 +172,10 @@ softfloat_c_srcs = \
 	s_countLeadingZeros64.c \
 	s_countLeadingZeros8.c \
 	s_eq128.c \
+	s_f16UIToCommonNaN.c \
 	s_f32UIToCommonNaN.c \
 	s_f64UIToCommonNaN.c \
+	s_f128UIToCommonNaN.c \
 	s_le128.c \
 	s_lt128.c \
 	s_mul128By32.c \
@@ -222,6 +226,9 @@ softfloat_c_srcs = \
 	s_roundToI64.c \
 	s_roundToUI32.c \
 	s_roundToUI64.c \
+	s_roundToI8.c \
+	s_roundToI16.c \
+	s_roundToUI8.c \
 	s_shiftRightJam128.c \
 	s_shiftRightJam128Extra.c \
 	s_shiftRightJam256M.c \
