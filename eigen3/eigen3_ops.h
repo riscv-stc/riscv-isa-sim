@@ -119,7 +119,6 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         for (int _col = 0; _col < column; _col++) { \
             destDtype tmp = destDtype(src(_row, _col)); \
 		    dest(_row, _col) = tmp; \
-            std::cout << "dest " << dest(_row, _col) << std::endl; \
 	    } \
     }
 
@@ -384,6 +383,21 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     return 0;
 }
 
+#define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        dtype odd_acc = dtype(0); \
+        dtype even_acc = dtype(0); \
+        for (int _row = 0; _row < row; _row++) { \
+            if (_row % 2) \
+                even_acc += src(_row, _col); \
+            else \
+                odd_acc += src(_row, _col); \
+        } \
+        dest(0, _col) = odd_acc + even_acc; \
+    } \
+} while (0);
+
+
 template <typename OutDType, typename InDType>
 int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
 {
@@ -409,7 +423,8 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
         Map_OutDType rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
+        //rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
+        MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         if (GLOBAL_DBG)
             cout << "rdinner:\n" << rd_col_sum_inner << endl;
         //rd_col_sum = rd_col_sum_inner.cast<OutDType>();
