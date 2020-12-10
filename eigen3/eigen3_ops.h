@@ -108,10 +108,20 @@ using namespace std;
 #define SET_DEFAULT_STRIDE(stride, value)
 #endif
 
-#define DEFINE_MAP_DTYPE \
-    typedef Matrix<DType, Dynamic, Dynamic, RowMajor> Matrix_DType; \
-    typedef Map<Matrix_DType, Unaligned, Stride<Dynamic, Dynamic> > Map_DType; \
-    typedef Stride<Dynamic, Dynamic> DynStride;
+typedef Stride<Dynamic, Dynamic> DynStride;
+
+#define DEFINE_MAP_DTYPE(dtype) \
+    typedef Matrix<dtype, Dynamic, Dynamic, RowMajor> Matrix_##dtype; \
+    typedef Map<Matrix_##dtype, Unaligned, Stride<Dynamic, Dynamic> > Map_##dtype;
+
+#define MATRIX_CAST(src, dest, destDtype, row, column) \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            destDtype tmp = destDtype(src(_row, _col)); \
+		    dest(_row, _col) = tmp; \
+            std::cout << "dest " << dest(_row, _col) << std::endl; \
+	    } \
+    }
 
 /**
  * @brief 矩阵形状描述结构
@@ -175,7 +185,7 @@ enum {
 template <typename DType>
 int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
 
@@ -200,7 +210,7 @@ int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 template <typename DType>
 int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -245,7 +255,7 @@ int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
 template <typename DType>
 int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -273,7 +283,7 @@ int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 template <typename DType>
 int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
@@ -301,7 +311,7 @@ int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 template <typename DType>
 int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -346,7 +356,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
 template <typename DType>
 int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -374,6 +384,89 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     return 0;
 }
 
+template <typename OutDType, typename InDType>
+int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_OutDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    InDType *rs1_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
+    Map_InDType rs1_matrix_inner(rs1_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    MATRIX_CAST(rs1_matrix, rs1_matrix_inner, InDType, ss->shape1_row, ss->shape1_column);
+    //rs1_matrix_inner = rs1_matrix.cast<_InDType>();
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rsinner:\n" << rs1_matrix_inner << endl;
+        cout << "dim: " << dim << endl;
+    }
+
+    if (dim == 0) {
+        Map_OutDType rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
+        InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
+        Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
+        rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
+        if (GLOBAL_DBG)
+            cout << "rdinner:\n" << rd_col_sum_inner << endl;
+        //rd_col_sum = rd_col_sum_inner.cast<OutDType>();
+        MATRIX_CAST(rd_col_sum_inner, rd_col_sum, OutDType, 1, ss->shape1_column);
+        free(rd_col_buf);
+        if (GLOBAL_DBG)
+            cout << "rd:\n" << rd_col_sum << endl;
+    } else {
+        Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+        InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
+        Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
+        rd_row_sum_inner = rs1_matrix_inner.rowwise().sum();
+        //rd_row_sum = rd_row_sum_inner.cast<OutDType>();
+        MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
+        free(rd_row_buf);
+        if (GLOBAL_DBG)
+            cout << "rd:\n" << rd_row_sum << endl;
+    }
+
+    free(rs1_buf);
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_OutDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+
+    InDType *rs1_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
+    Map_InDType rs1_matrix_inner(rs1_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+    MATRIX_CAST(rs1_matrix, rs1_matrix_inner, InDType, ss->shape1_row, ss->shape1_column);
+    //rs1_matrix_inner = rs1_matrix.cast<InDType>();
+
+    InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
+    Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
+
+    rd_col_sum = rs1_matrix_inner.colwise().sum();
+    InDType rd_tmp = rd_col_sum.sum();
+    *rd = OutDType(rd_tmp);
+
+    if (GLOBAL_DBG)
+        cout << "rd:\n" << *rd << endl;
+
+    free(pcol_sum);
+    free(rs1_buf);
+
+    return 0;
+}
+
 /**
  * mov_m() mov.m
  * 
@@ -386,7 +479,7 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 template <typename DType>
 int mov_m(DType *rs1, DType *rd, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -418,7 +511,7 @@ int mov_m(DType *rs1, DType *rd, struct ShapeStride *ss)
 template <typename DType>
 int mov_v(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     //mov.v 使用shape1的行数和列数，输入vector使用行数或者列数，列数或者行数为1，输出使用shape1的行数和列数
@@ -462,7 +555,7 @@ int mov_v(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
 template <typename DType>
 int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
 {
-    DEFINE_MAP_DTYPE
+    DEFINE_MAP_DTYPE(DType)
 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
@@ -505,9 +598,6 @@ public:
     int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss);
-
-    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss);

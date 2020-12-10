@@ -297,7 +297,6 @@ private:
 #define SEW (8<<((STATE.vtype>>VTYPE_SEW_SHIFT) & VTYPE_VSEW))
 #define LMUL (1<<((STATE.vtype>>VTYPE_LMUL_SHIFT) & VTYPE_VLMUL))
 #define VL (STATE.vl)
-#define VILL ((STATE.vtype >> 31) & 0x1)
 #define VUIMM	(insn.v_uimm())
 #define VSTART (STATE.vstart)
 #define VLMAX (LMUL*(VLEN/SEW))
@@ -3255,7 +3254,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
 					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
 
-#define DTYPE_DECODING_TO_TYPE(...) \
+#define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \
     switch (VME_DTYPE) { \
     case 0x9: \
@@ -3348,5 +3347,20 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     default: \
         throw trap_illegal_instruction(insn.bits()); \
   }
+
+#define VME_DTYPE_DECODING_TO_TYPE_ACC(...) \
+    bool relu = false; \
+    switch (VME_DTYPE) { \
+    case 0x9: \
+        relu = true; \
+    case 0x0: { \
+        using dtype_vd = half; \
+        using dtype_in = Float32; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+    }
 
 #endif

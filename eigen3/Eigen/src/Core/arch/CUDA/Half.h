@@ -59,6 +59,7 @@ extern int int32xfp16(int a, int w);
 
 namespace Eigen {
 struct half;
+struct Float32;
 
 namespace half_impl {
 
@@ -115,6 +116,10 @@ struct half : public half_impl::half_base {
   explicit EIGEN_DEVICE_FUNC half(float32_t f) {
       x = f32_to_f16(f).v;
   }
+  explicit EIGEN_DEVICE_FUNC half(float16_t f) {
+      x = f.v;
+  }
+  explicit EIGEN_DEVICE_FUNC half(const Float32& f);
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
@@ -156,6 +161,8 @@ struct half : public half_impl::half_base {
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(double) const {
     return static_cast<double>(half_impl::half_to_float(*this));
   }
+
+  EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(Float32) const;
 
   EIGEN_DEVICE_FUNC half& operator=(const half& other) {
     x = other.x;
@@ -621,7 +628,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
 #elif defined(USING_RISCV_FP16)
-  // return float16_t_to_half(f16_exp(half_to_float16_t(a)));
+  return float16_t_to_half(f16_exp(half_to_float16_t(a)));
 #else
    return half(::expf(float(a)));
 #endif
