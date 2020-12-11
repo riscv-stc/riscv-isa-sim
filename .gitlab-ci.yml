@@ -52,7 +52,7 @@ package:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - tar -c $LINK archive | ssh release@$DEPLOY_SERVER "tar -xC ~/files/simulator/spike"
+    - tar -jc archive $LINK | ssh release@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
   only:
     - master
     - tags
