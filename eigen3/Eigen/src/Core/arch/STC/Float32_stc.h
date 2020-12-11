@@ -42,6 +42,7 @@
 
 namespace Eigen {
 struct Float32;
+struct half;
 
 namespace float32_impl {
 
@@ -82,6 +83,7 @@ struct Float32 : public float32_impl::float32_base {
   explicit EIGEN_DEVICE_FUNC Float32(float32_t f) {
       x = f.v;
   }
+  explicit EIGEN_DEVICE_FUNC Float32(const half& f);
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
@@ -123,6 +125,7 @@ struct Float32 : public float32_impl::float32_base {
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(double) const {
     return static_cast<double>(float32_impl::float32_to_float(*this));
   }
+  EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(half) const;
 
   EIGEN_DEVICE_FUNC Float32& operator=(const Float32& other) {
     x = other.x;

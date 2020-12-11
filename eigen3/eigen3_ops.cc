@@ -44,14 +44,47 @@ MY_MATRIX_DEFINE(int32_t)
 MY_MATRIX_DEFINE(float)
 #undef MY_MATRIX_DEFINE
 
-
-
 #define MECONV_INFO(ss) do {\
         if (debug) {\
             cout << endl << __FUNCTION__ << endl;\
             meconv_dbg(ss);\
         }\
     } while(0)
+
+namespace Eigen {
+  EIGEN_DEVICE_FUNC half::half(const Float32& f) {
+    float32_t f32t;
+    f32t.v = f.x;
+    this->x = f32_to_f16(f32t).v;
+  }
+
+  EIGEN_DEVICE_FUNC half::operator Float32() const {
+      float16_t f16t;
+      f16t.v = x;
+      float32_t f32t = f16_to_f32(f16t);
+      Float32 f32;
+      f32.x = f32t.v;
+    return f32;
+  }
+
+  EIGEN_DEVICE_FUNC Float32::Float32(const half& f) {
+      float16_t f16t;
+      f16t.v = f.x;
+      float32_t f32t = f16_to_f32(f16t);
+      this->x = f32t.v;
+  }
+
+  EIGEN_DEVICE_FUNC Float32::operator half() const {
+      float32_t f32t;
+      f32t.v = x;
+      float16_t f16t = f32_to_f16(f32t);
+      half res;
+      res.x = f16t.v;
+      return res;
+  }
+}
+
+
 
 /**
  * CustomInsns() 构造函数
@@ -1730,77 +1763,6 @@ int CustomInsns::vemul_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     rd_vector = rs2_vector * rs1_matrix;
     if (debug)
         cout << "rd:\n" << rd_vector << endl;
-
-    return 0;
-}
-
-/**
- * veacc_m() veacc.m
- * 
- * 矩阵列元素(行向量)求和s=sum(M1i)， 矩阵行元素(列向量)求和 s=sum(M1j)
- * @param rs1 M1,源操作矩阵基地址
- * @param rd V,目的向量基地址
- * @param ss 矩阵形状描述
- * @param dim 方向 dim = 0 列向量求和， dim = 1 行向量求和
- * @return 执行结果
- */
-int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "dim: " << dim << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        rd_col_sum = rs1_matrix.colwise().sum();
-        if (debug)
-            cout << "rd:\n" << rd_col_sum << endl;
-        break;
-    case 1:
-        rd_row_sum = rs1_matrix.rowwise().sum();
-        if (debug)
-            cout << "rd:\n" << rd_row_sum << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-
-    return 0;
-}
-
-/**
- * veacc_m() veacc.m
- * 
- * 矩阵所有元素求和
- * @param rs1 M1,源操作矩阵基地址
- * @param rd V,目的向量基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veacc_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    half *pcol_sum = (half *)malloc(1 * ss->shape1_column * sizeof(half));
-    Map_half rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-    }
-
-    rd_col_sum = rs1_matrix.colwise().sum();
-    *rd = rd_col_sum.sum();
-
-    if (debug)
-        cout << "rd:\n" << *rd << endl;
 
     return 0;
 }
