@@ -1,28 +1,26 @@
-image: 'code.streamcomputing.com/stc-toolkit:llvm'
+image: 'code.streamcomputing.com/ubuntu:18.04-stc'
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  RISCV: /usr/local/spike
-  LD_LIBRARY_PATH: /usr/local/spike/lib
+  RISCV: /usr/local
+  LD_LIBRARY_PATH: /usr/local/lib
 
 stages:
   - build
   - test
   - package
 
-before_script:
-  - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
-  - eval $(ssh-agent -s)
-  - echo "$DEPLOY_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-  - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-  - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-  - chmod 644 ~/.ssh/known_hosts
+cache:
+  paths:
+    - .cache
+    - .env
+    - build
 
 build:
   stage : build
   script:
     - mkdir -p build
-    - cd build && ../configure --with-isa=rv32imafcv --prefix=$RISCV && make -j`nproc` && cd -
+    - cd build && ../configure --with-isa=rv32imafcv --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
@@ -32,9 +30,11 @@ build:
 test:
   stage : test
   script:
-    - export PATH=$CI_PROJECT_DIR/build:$PATH
+    - export PATH=$CI_PROJECT_DIR/build:$RISCV/bin:$PATH
     - which spike
-    - cd /work/verification/isa/riscv-tests/isa && make test -j`nproc` && cd -
+    - curl http://releases.streamcomputing.com/toolchain/llvm-toolchain/latest | bash
+    - git clone --recurse-submodules http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/riscv-tests.git
+    - cd riscv-tests/isa && make test -j`nproc` && cd -
 
 package:
   stage : package
@@ -44,8 +44,14 @@ package:
     - export LINK=latest
     - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
     - mkdir -p archive
-    - ./scripts/package.sh $RISCV archive/spike-installer-$VER.sh
+    - ./scripts/package.sh $PWD/install archive/spike-installer-$VER.sh
     - ln -sf archive/spike-installer-$VER.sh $LINK
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$DEPLOY_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
     - tar -c $LINK archive | ssh release@$DEPLOY_SERVER "tar -xC ~/files/simulator/spike"
   only:
     - master
