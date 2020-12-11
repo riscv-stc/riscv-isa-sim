@@ -1075,11 +1075,11 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_CONV_DEPTH_OUT:
       state.conv_Depth_out = val;
       break;
-    case CSR_CONV_S_KERNEL:
-      state.conv_S_kernel = val;
+    case CSR_CONV_KERNEL_PARAMS1:
+      state.conv_kernel_params1 = val;
       break;
-    case CSR_CONV_KERNEL:
-      state.conv_kernel = val;
+    case CSR_CONV_KERNEL_PARAMS2:
+      state.conv_kernel_params2 = val;
       break;
     case CSR_CONV_PADDING:
       state.conv_padding = val;
@@ -1621,14 +1621,14 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.conv_Depth_out;
-    case CSR_CONV_S_KERNEL:
+    case CSR_CONV_KERNEL_PARAMS1:
       if(!supports_extension('V'))
         break;
-      return state.conv_S_kernel;
-    case CSR_CONV_KERNEL:
+      return state.conv_kernel_params1;
+    case CSR_CONV_KERNEL_PARAMS2:
       if(!supports_extension('V'))
         break;
-      return state.conv_kernel;
+      return state.conv_kernel_params2;
     case CSR_CONV_PADDING:
       if(!supports_extension('V'))
         break;

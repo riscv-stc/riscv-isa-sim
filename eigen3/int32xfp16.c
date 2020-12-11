@@ -67,8 +67,8 @@
     }  
   }
   
-  if(w_exp==31 && (w&0x3ff)!=0)                      cal_res  =  0x7c01;  //nan
-  else if(w_exp==31 && (w&0x3ff)==0 && a==0)         cal_res  =  0x7c01;  //inf*0=nan
+  if(w_exp==31 && (w&0x3ff)!=0)                      cal_res  =  0xfe00;  //nan
+  else if(w_exp==31 && (w&0x3ff)==0 && a==0)         cal_res  =  0xfe00;  //inf*0=nan
   else if(w_exp==31 && (w&0x3ff)==0 && res_sign==0)  cal_res  =  0x7c00;  //inf
   else if(w_exp==31 && (w&0x3ff)==0 && res_sign==1)  cal_res  =  0xfc00;  //inf
   else if((a==0 || (w&0x7fff)==0) && res_sign==0)    cal_res  =  0x0;     //0*0       

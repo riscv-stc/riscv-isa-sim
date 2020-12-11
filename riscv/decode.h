@@ -346,11 +346,11 @@ private:
 #define CONV_DEPTH_IN   (STATE.conv_Depth_in)
 #define CONV_OUTFM_WH   (STATE.conv_FM_out)
 #define CONV_DEPTH_OUT  (STATE.conv_Depth_out)
-#define CONV_S_KERNEL   (STATE.conv_S_kernel)
-#define CONV_KERNEL     (STATE.conv_kernel)
+#define CONV_KERNEL_PARAMS1   (STATE.conv_kernel_params1)
+#define CONV_KERNEL_PARAMS2     (STATE.conv_kernel_params2)
 #define CONV_PADDING    (STATE.conv_padding)
-#define M_DEQUANT_COEFF (STATE.m_dequant_coeff)
-#define CONV_DEQUANT_COEFF (STATE.conv_dequant_coeff)
+#define MME_QUANT_COEFF (STATE.mme_quant_coeff)
+#define MME_DEQUANT_COEFF (STATE.mme_dequant_coeff)
 
 #define CONV_IN_COLUMN	((STATE.conv_FM_in & 0xFFFF0000) >> 16)
 #define CONV_IN_ROW	(STATE.conv_FM_in & 0xFFFF)
@@ -359,12 +359,12 @@ private:
 #define CONV_CIN	(STATE.conv_Depth_in & 0xFFFF)
 #define CONV_COUT	(STATE.conv_Depth_out & 0xFFFF)
 #define CONV_IN_STRIDE	((STATE.conv_Depth_in & 0xFFFF0000) >> 16)
-#define CONV_W_STRIDE	(STATE.conv_S_kernel & 0xFF)
+#define CONV_W_STRIDE	(STATE.conv_kernel_params1 & 0xFF)
 #define CONV_OUT_STRIDE	((STATE.conv_Depth_out & 0xFFFF0000) >> 16)
-#define CONV_KW 	((STATE.conv_kernel & 0xFF000000) >> 24)
-#define CONV_KH 	((STATE.conv_kernel & 0xFF0000) >> 16)
-#define CONV_DL 	((STATE.conv_kernel & 0xFF00) >> 8)
-#define CONV_SK 	(STATE.conv_kernel & 0xFF)
+#define CONV_KW 	((STATE.conv_kernel_params2 & 0xFF000000) >> 24)
+#define CONV_KH 	((STATE.conv_kernel_params2 & 0xFF0000) >> 16)
+#define CONV_DL 	((STATE.conv_kernel_params2 & 0xFF00) >> 8)
+#define CONV_SK 	(STATE.conv_kernel_params2 & 0xFF)
 
 
 //#define TMODE	(STATE.tmode)
@@ -464,8 +464,8 @@ private:
             throw trap_ncp_cust_invalid_param(); \
         } \
         int dilation = (kernel >> 8) & 0xff; \
-        int kw = (ss->conv_kernel >> 24) & 0xff; \
-        int kh = (ss->conv_kernel >> 16) & 0xff; \
+        int kw = (ss->conv_kernel_params2 >> 24) & 0xff; \
+        int kh = (ss->conv_kernel_params2 >> 16) & 0xff; \
         int sk = (kernel) & 0xff; \
         if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
@@ -492,8 +492,9 @@ private:
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
+
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
-                                         (x).shape1_column = BC_SHAPE1_COLUMN; \
+           (x).shape1_column = BC_SHAPE1_COLUMN; \
 					 (x).shape1_row = BC_SHAPE1_ROW; \
 					 (x).shape2_column = BC_SHAPE2_COLUMN; \
 					 (x).shape2_row = BC_SHAPE2_ROW; \
@@ -501,13 +502,28 @@ private:
 					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
 					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
 
+
+#define memul_sst_fill(x, esize_src1, esize_src2, esize_out) ({ \
+           (x).shape1_column = BC_SHAPE1_COLUMN; \
+					 (x).shape1_row = BC_SHAPE1_ROW; \
+					 (x).shape2_column = BC_SHAPE2_COLUMN; \
+					 (x).shape2_row = BC_SHAPE2_ROW; \
+					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
+					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_src1 : BC_SHAPE1_COLUMN; \
+					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_src2 : BC_SHAPE2_COLUMN; \
+           (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
+           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF;})
+
+
 #define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
 					 (x).conv_depth_in = CONV_DEPTH_IN; \
 					 (x).conv_fm_out = CONV_OUTFM_WH; \
 					 (x).conv_depth_out = CONV_DEPTH_OUT; \
-					 (x).conv_s_kernel = CONV_S_KERNEL; \
-					 (x).conv_kernel = CONV_KERNEL; \
-					 (x).conv_padding = CONV_PADDING;})
+					 (x).conv_kernel_params1 = CONV_KERNEL_PARAMS1; \
+					 (x).conv_kernel_params2 = CONV_KERNEL_PARAMS2; \
+					 (x).conv_padding = CONV_PADDING; \
+           (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
+           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
@@ -976,8 +992,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_cust_invalid_param(); \
         } \
         int dilation = (kernel >> 8) & 0xff; \
-        int kw = (ss->conv_kernel >> 24) & 0xff; \
-        int kh = (ss->conv_kernel >> 16) & 0xff; \
+        int kw = (ss->conv_kernel_params2 >> 24) & 0xff; \
+        int kh = (ss->conv_kernel_params2 >> 16) & 0xff; \
         int sk = (kernel) & 0xff; \
         if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
@@ -3237,23 +3253,6 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 
 #define DEBUG_START             (0x100)
 #define DEBUG_END               (0xc0501000 - 1)
-
-#define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
-					 (x).shape1_row = SHAPE1_ROW; \
-					 (x).shape2_column = SHAPE2_COLUMN; \
-					 (x).shape2_row = SHAPE2_ROW; \
-					 (x).stride_rd = STRIDE_RD / esize_out; \
-					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
-					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
-
-#define bc_sst_fill(x, esize_in, esize_out) ({ \
-                                         (x).shape1_column = BC_SHAPE1_COLUMN; \
-					 (x).shape1_row = BC_SHAPE1_ROW; \
-					 (x).shape2_column = BC_SHAPE2_COLUMN; \
-					 (x).shape2_row = BC_SHAPE2_ROW; \
-					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
-					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
-					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
 
 #define DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \

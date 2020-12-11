@@ -16,8 +16,14 @@ reg_t t_rd = RD;
   unsigned long rs2 = MMU.get_phy_addr(t_rs2);
   unsigned long rd = MMU.get_phy_addr(t_rd);
 
-  // if (get_csr(CSR_MTE_DATA_TYPE) = 0))
+  switch (p->get_csr(CSR_MME_DATA_TYPE)){
+  case 0x0: // f16*f16 = f16
     CusIns.meconv_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
+    break;
+  case 0x90300: // (float16->int8) * int8 = f16
+    CusIns.meconv_mm((half*)rs1, (half*)rd, (int8_t*)rs2, &sst);
+    break;
+  }
 //});
 
 //wfi();

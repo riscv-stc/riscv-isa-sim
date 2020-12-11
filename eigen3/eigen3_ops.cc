@@ -105,6 +105,13 @@ CustomInsns::half_mul_f32(half a, half b)
     res_f32 = f16_mul32(a_f16, b_f16);
     return res_f32;
 }
+half
+CustomInsns::int32_mul_f16(int a, float16_t b)
+{
+    half res;
+    res.x = int32xfp16(a, b.v) & 0xfffff;
+    return res;
+}
 /**
  * shapestride_dbg() 打印ShapeStride信息
  * 
@@ -122,8 +129,8 @@ void CustomInsns::meconv_dbg(struct ConvShapeStride *ss)
     printf("conv_depth_in(0x%x): scin = %d depth = %d\n", ss->conv_depth_in, (ss->conv_depth_in >> 16) & 0xffff, ss->conv_depth_in & 0xffff);
     printf("conv_fm_out(0x%x): w = %d h = %d\n", ss->conv_fm_out, (ss->conv_fm_out >> 16) & 0xffff, ss->conv_fm_out & 0xffff);
     printf("conv_depth_out(0x%x): scout = %d depth = %d\n", ss->conv_depth_out, (ss->conv_depth_out >> 16) & 0xffff, ss->conv_depth_out & 0xffff);
-    printf("conv_s_kernel(0x%x): stride = %d\n", ss->conv_s_kernel, ss->conv_s_kernel & 0xffff);
-    printf("conv_kernel(0x%x): kw = %d kh = %d dilation = %d sk = %d\n", ss->conv_kernel,(ss->conv_kernel >> 24) & 0xff,(ss->conv_kernel >> 16) & 0xff,(ss->conv_kernel >> 8) & 0xff, (ss->conv_kernel >> 0) & 0xff);
+    printf("conv_s_kernel(0x%x): stride = %d\n", ss->conv_kernel_params1, ss->conv_kernel_params1 & 0xffff);
+    printf("conv_kernel(0x%x): kw = %d kh = %d dilation = %d sk = %d\n", ss->conv_kernel_params2,(ss->conv_kernel_params2 >> 24) & 0xff,(ss->conv_kernel_params2 >> 16) & 0xff,(ss->conv_kernel_params2 >> 8) & 0xff, (ss->conv_kernel_params2 >> 0) & 0xff);
     printf("conv_padding(0x%x): top = %d bottom = %d left = %d right = %d\n", ss->conv_padding, (ss->conv_padding >> 24) & 0xff,(ss->conv_padding >> 16) & 0xff, (ss->conv_padding >> 8) & 0xff, (ss->conv_padding >> 0) & 0xff);
 }
 
@@ -178,12 +185,12 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel >> 24) & 0xff;
-    kh = (ss->conv_kernel >> 16) & 0xff;
-    dilation = (ss->conv_kernel >> 8) & 0xff;
-    sk = (ss->conv_kernel) & 0xff;
+    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params2) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_s_kernel & 0xffff;
+    k_stride = ss->conv_kernel_params1 & 0xffff;
     assert(k_stride % 2 == 0);
     k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
 
@@ -350,17 +357,16 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
 }
 
 /**
- * meconv_x8_mm_base() meconv.x8.mm
+ * meconv_mm() meconv.mm
  *
  * 标量和矩阵元素广播乘 M = M1 * f
  * @param rs1 M1,源操作矩阵基地址
  * @param rd M,目的矩阵基地址
  * @param rs2 f,源标量操作数
  * @param ss 矩阵形状描述
- * @param outputfp16, 1 output as fp16, 0 output as int32
  * @return 执行结果
  */
-int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16)
+int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk;
@@ -370,10 +376,11 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
     int dilation;
     int i, j, k, ii, jj, kk;
     int row, col;
-    int8_t *rs1_start;
-    int8_t *left_val;
-    int8_t *start;
-    int8_t val;
+    half *rs1_start;
+    half *left_val, *row_val;
+    int8_t *col_val;
+    half *start;
+    half val;
 
     //get the padding
     pad_top = (ss->conv_padding >> 24) & 0xff;
@@ -387,7 +394,8 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
     in_c = (ss->conv_depth_in) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    in_stride = in_stride > 0 ? in_stride : in_c;
+    assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
@@ -395,23 +403,22 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    if (outfp16 == 0) { /*Int 32*/
-        assert(out_stride % 4 == 0);
-        out_stride = out_stride > 0 ? out_stride >> 2 : out_c;
-    }  else {
-        assert(out_stride % 2 == 0);
-        out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
-    }
-    
+    assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel >> 24) & 0xff;
-    kh = (ss->conv_kernel >> 16) & 0xff;
-    dilation = (ss->conv_kernel >> 8) & 0xff;
-    sk = (ss->conv_kernel) & 0xff;
+    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params2) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_s_kernel & 0xffff ;
+    k_stride = ss->conv_kernel_params1 & 0xffff;
+    // assert(k_stride % 2 == 0);
     k_stride = k_stride > 0 ? k_stride : out_c;
+
+    //get de/quant coeff
+    float16_t quant_coeff = f32_to_f16(ss->mme_quant_coeff);
+    float16_t dequant_coeff = f32_to_f16(ss->mme_dequant_coeff);
 
     /*calculate the kernel shape*/
     Map_int8_t rs2_matrix(rs2, kh * kw * in_c, out_c, DynStride(k_stride, 1)); // the depth is same as in_c
@@ -424,21 +431,18 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
     kw = w;
 
     /*calculate the input shape*/
-    Map_int8_t rs1_matrix(rs1, in_h, in_w * in_c, DynStride(in_stride * in_w, 1));
-    h = in_h + (pad_top + pad_bottom);
-    w = in_w + (pad_right + pad_left);
+    Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
     if (debug) {
         MECONV_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix.cast<int32_t>() << endl;
-        cout << "rs2:" << endl << rs2_matrix.cast<int32_t>() << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
     }
-
 
     /*calculate the output shape*/
     h = (in_h + pad_top + pad_bottom - kh + 1 + sk - 1) / sk;
     w = (in_w + pad_left + pad_right - kw + 1 + sk - 1) / sk;
-    left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
+    left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
@@ -464,14 +468,14 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
                                     val = *(rs1_start + rs1_offset);
                                 }
                                 else {
-                                    *(start + start_offset) = 0;
-                                    val =  0;
+                                    *(start + start_offset) = (half)0;
+                                    val =  (half)0;
                                 }
 
                                 if (debug) {
-                                    printf("rd offset= %d val = 0x%x ",start_offset, val);
+                                    printf("rd offset= %d val = 0x%x ",start_offset, val.x);
                                     val = *(start + start_offset);
-                                    printf("rd val = 0x%x\n", val);
+                                    printf("rd val = 0x%x\n", val.x);
                                 }
                             }//jj % dilation
                         }//i % dilation
@@ -481,70 +485,40 @@ int CustomInsns::meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct Co
         }//j
     }//i
 
-
     /*param check*/
     if (debug)
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     assert(h == out_h && w == out_w);
 
     /*calculate convolution*/
-    Map_int8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    int32_t *rd_buf;
-    int out_stride_int32;
-    if (outfp16 == 0) {
-        rd_buf =  (int32_t *)rd;
-        out_stride_int32 = out_stride;
-    } else {
-        rd_buf = (int32_t *)malloc(out_h * out_w *out_c * sizeof(int32_t));
-        out_stride_int32 = out_c;
+    Map_half left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+    row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
+    col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    int32_t res;
+    float16_t rs1_f16;
+    int8_t rs1_i8;
+    //rd_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < out_c; j++) {
+            row_matrix = left_matrix.row(i);
+            col_matrix = rs2_matrix.col(j).transpose();
+            res = 0;
+            for (k = 0; k < okh * okw * in_c; k++) {
+                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
+                rs1_i8 = f16_to_i8(rs1_f16, 1, true);
+                res += rs1_i8 * col_matrix(0, k);
+            }
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
+        }
     }
-    Map_int32_t rd_matrix(rd_buf, out_h * out_w, out_c, DynStride(out_stride_int32, 1));
-    rd_matrix = left_matrix.cast<int32_t>() * rs2_matrix.cast<int32_t>();
-       
+
     if (debug)
-        cout << "rd:" << endl << rd_matrix << endl;        
+        cout << "rd:" << endl << rd_matrix << endl;
 
-    if (outfp16) {
-        Map_half rd_fp_matrix((half *)rd, out_h * out_w, out_c, DynStride(out_stride, 1));
-        for (int row = 0; row < out_h * out_w; row++)
-            for (int col = 0; col < out_c; col++)
-                rd_fp_matrix(row, col) = ss->dequant_coeff * rd_matrix(row, col);
-        free(rd_buf);
-    }
-
-    free(left_val);
     return 0;
-}
-
-/**
- * meconv_x8_mm() meconv.x8.mm
- *
- * 标量和矩阵元素广播乘 M = M1 * f
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param rs2 f,源标量操作数
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-
-int CustomInsns::meconv_x8_mm(int8_t *rs1, int32_t *rd, int8_t *rs2, struct ConvShapeStride *ss)
-{
-    return meconv_x8_mm_base(rs1, rd, rs2, ss, 0);
-}
-
-/**
- * meconv_x8_mm() meconv.x8.mm
- *
- * 标量和矩阵元素广播乘 M = M1 * f
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param rs2 f,源标量操作数
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
-{
-    return meconv_x8_mm_base(rs1, rd, rs2, ss, 1);
 }
 
 /**
@@ -578,6 +552,7 @@ int CustomInsns::veemul_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss
 
     return 0;
 }
+
 
 /**
  * veemul_x32_mf() veemul.x32.mf
@@ -1349,8 +1324,8 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            even.v = 0;
-            odd.v = 0;
+            even.v = 0x80000000;
+            odd.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k++) {
                 if (!(k % 2))
                     even = f32_add(even, half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)));
@@ -1367,7 +1342,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 }
 
 /**
- * memul_x8_mm() memul.x8.mm
+ * memul_mm() memul.mm
  * 
  * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
  * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
@@ -1377,18 +1352,25 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss)
+int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss)
 {
+    int i, j, k;
+    float16_t rs1_f16;
+    int8_t rs1_i8;
+    int32_t res;
+
+    float16_t quant_coeff = f32_to_f16(ss->mme_quant_coeff);
+    float16_t dequant_coeff = f32_to_f16(ss->mme_dequant_coeff);
     /* param check */
     if (ss->shape1_column != ss->shape2_row) {
         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
         return -BR_EPARAM;
     }
 
-    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
-    Map_int32_t rd_matrix((int32_t *)rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -1397,60 +1379,24 @@ int CustomInsns::memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *
     }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_matrix = rs1_matrix.cast<int32_t>() * rs2_matrix.cast<int32_t>();
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            res = 0;
+            for (k = 0; k < ss->shape1_column; k++) {
+                rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
+                rs1_i8 = f16_to_i8(rs1_f16, 1, true);
+                res += rs1_i8 * rs2_matrix(k, j);
+            }
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);        
+        }
+    }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }
 
-/**
- * memul_hf_x8_mm() memul.x8.mm
- *
- * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
- * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param rs2 M2,源操作矩阵二基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStride *ss, half dequant_coeff)
-{
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
-
-    Map_int8_t rs1_matrix((int8_t *)rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_int8_t rs2_matrix((int8_t *)rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
-
-    int32_t *rd_buf = (int32_t *)malloc(ss->shape2_column * ss->shape1_row * sizeof(int32_t));
-    Map_int32_t rd_matrix(rd_buf, ss->shape1_row, ss->shape2_column, DynStride(ss->shape2_column , 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2:\n" << rs2_matrix << endl;
-    }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_matrix = rs1_matrix.cast<int32_t>() * rs2_matrix.cast<int32_t>();
-
-    Map_half rd_fp_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd , 1));
-    for (int row = 0; row < ss->shape1_row; row++)
-        for (int col = 0; col < ss->shape2_column; col++)
-            rd_fp_matrix(row, col) = dequant_coeff * rd_matrix(row, col);
-    free(rd_buf);
-
-    if (debug)
-        cout << "rd:\n" << rd_fp_matrix << endl;
-
-    return 0;
-     
-}
 
 /**
  * memul_mm() memul.mm

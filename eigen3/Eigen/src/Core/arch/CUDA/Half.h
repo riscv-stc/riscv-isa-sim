@@ -621,7 +621,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
 #elif defined(USING_RISCV_FP16)
-  // return float16_t_to_half(f16_exp(half_to_float16_t(a)));
+  return float16_t_to_half(f16_exp(half_to_float16_t(a)));
 #else
    return half(::expf(float(a)));
 #endif

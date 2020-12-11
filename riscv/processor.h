@@ -240,8 +240,8 @@ struct state_t
   uint32_t conv_Depth_in;
   uint32_t conv_FM_out;
   uint32_t conv_Depth_out;
-  uint32_t conv_S_kernel;
-  uint32_t conv_kernel;
+  uint32_t conv_kernel_params1;
+  uint32_t conv_kernel_params2;
   uint32_t conv_padding;
   uint32_t mme_dequant_coeff;
   uint32_t mme_quant_coeff;
@@ -249,7 +249,7 @@ struct state_t
   uint32_t mme_sparseidx_stride;
   uint32_t vme_data_type;
   uint32_t mme_data_type;
-  uint32_t  conv_dequant_coeff;
+  uint32_t conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_coremap;
   uint32_t mte_icdest;

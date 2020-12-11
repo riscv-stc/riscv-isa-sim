@@ -23,7 +23,7 @@
 using namespace Eigen;
 using namespace std;
 
-#define GLOBAL_DBG      0
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -135,6 +135,10 @@ struct ShapeStride
     /* CSR stride2 */
     unsigned short stride_rs2;
     unsigned short stride_rs1;
+
+    /* quant_coeff */
+    float32_t mme_quant_coeff;
+    float32_t mme_dequant_coeff;
 };
 
 /**
@@ -154,13 +158,15 @@ struct ConvShapeStride
     unsigned int conv_depth_out;
 
     /* CSR kernel */
-    unsigned int conv_s_kernel;
-    unsigned int conv_kernel;
+    unsigned int conv_kernel_params1;
+    unsigned int conv_kernel_params2;
 
     /* CSR padding */
     unsigned int conv_padding;
 
-    half dequant_coeff;
+    /* quant_coeff */
+    float32_t mme_quant_coeff;
+    float32_t mme_dequant_coeff;
 };
 
 /**
@@ -496,6 +502,7 @@ private:
     float32_t half_to_f32(half x);
     half float16_t_to_half(float16_t f16);
     half f32_to_half(float32_t f32);
+    half int32_mul_f16(int a, float16_t b);
 public:
     int debug;
 
@@ -510,8 +517,7 @@ public:
     int veacc_m(half *rs1, half *rd, struct ShapeStride *ss, int dim);
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_x8_mm(char *rs1, char *rs2, int *rd, struct ShapeStride *ss);
-    int memul_hf_x8_mm(char *rs1, char *rs2, half *rd, struct ShapeStride *ss, half dequant_coeff);
+    int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
     int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
@@ -557,8 +563,7 @@ public:
     int veexp_m(half *rs1, half *rd, struct ShapeStride *ss);
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int meconv_x8_mm(int8_t *rs1, int32_t *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_hf_x8_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
 };
 
 /**
