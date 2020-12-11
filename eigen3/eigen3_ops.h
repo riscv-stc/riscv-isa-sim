@@ -395,8 +395,58 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
         } \
         dest(0, _col) = odd_acc + even_acc; \
     } \
-} while (0);
+} while(0);
 
+#define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        dtype acc0 = dtype(0); \
+        dtype acc1 = dtype(0); \
+        dtype acc2 = dtype(0); \
+        dtype acc3 = dtype(0); \
+        for (int _row = 0; _row < row; _row++) { \
+            if ((_row % 4) == 0) \
+                acc0 += src(_row, _col); \
+            if ((_row % 4) == 1) \
+                acc1 += src(_row, _col); \
+            if ((_row % 4) == 2) \
+                acc2 += src(_row, _col); \
+            if ((_row % 4) == 3) \
+                acc3 += src(_row, _col); \
+        } \
+        acc0 += acc2; \
+        acc1 += acc3; \
+        dest(0, _col) = acc0 + acc1; \
+    } \
+} while(0);
+
+#define MATRIX_ACC_DIMW_PAIR(src, dest, dtype, row, column) do { \
+    dtype *pbuf = new dtype[column]; \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            pbuf[_col] = src(_row, _col); \
+        } \
+        int get_pos = 0; \
+        int put_pos = 0; \
+        int loop = column; \
+        while (loop > 1) { \
+            if (get_pos == (loop - 1)) { \
+                pbuf[put_pos] = pbuf[get_pos]; \
+            } else { \
+                pbuf[put_pos] = pbuf[get_pos] + pbuf[get_pos + 1]; \
+            } \
+            if (get_pos >= (loop - 2)) { \
+                loop = loop / 2 + loop % 2; \
+                get_pos = 0; \
+                put_pos = 0; \
+            } else { \
+                get_pos += 2; \
+                put_pos++; \
+            } \
+        } \
+        dest(_row, 0) = pbuf[0]; \
+    } \
+    delete[] pbuf; \
+} while(0);
 
 template <typename OutDType, typename InDType>
 int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
@@ -424,7 +474,12 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
         //rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
-        MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+            MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        } else {
+            MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        }
+
         if (GLOBAL_DBG)
             cout << "rdinner:\n" << rd_col_sum_inner << endl;
         //rd_col_sum = rd_col_sum_inner.cast<OutDType>();
@@ -436,7 +491,8 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
         Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
-        rd_row_sum_inner = rs1_matrix_inner.rowwise().sum();
+        //rd_row_sum_inner = rs1_matrix_inner.rowwise().sum();
+        MATRIX_ACC_DIMW_PAIR(rs1_matrix_inner, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         //rd_row_sum = rd_row_sum_inner.cast<OutDType>();
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -469,9 +525,18 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
-    rd_col_sum = rs1_matrix_inner.colwise().sum();
-    InDType rd_tmp = rd_col_sum.sum();
-    *rd = OutDType(rd_tmp);
+    //rd_col_sum = rs1_matrix_inner.colwise().sum();
+    if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+    } else {
+        MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+    }
+
+    //InDType rd_tmp = rd_col_sum.sum();
+    Matrix_InDType rd_acc(1, 1);
+    MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    //*rd = OutDType(rd_tmp);
+    *rd = OutDType(rd_acc(0, 0));
 
     if (GLOBAL_DBG)
         cout << "rd:\n" << *rd << endl;
