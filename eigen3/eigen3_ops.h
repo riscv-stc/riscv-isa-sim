@@ -23,7 +23,7 @@
 using namespace Eigen;
 using namespace std;
 
-#define GLOBAL_DBG      1
+#define GLOBAL_DBG      0
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -389,6 +389,14 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     return 0;
 }
 
+#define MATRIX_MUL_CONVERT(src1, src2, dest, row, column, dtype) do { \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            dest(_row, _col) = dtype::mulConvert(src1(_row, _col), src2(_row, _col)); \
+        } \
+    } \
+} while(0);
+
 #define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
         dtype odd_acc = dtype(0); \
@@ -553,6 +561,104 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
     return 0;
 }
 
+template <typename OutDType, typename InDType>
+int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_OutDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_OutDType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "dim: " << dim << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    InDType *mul_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
+    Map_InDType mul_result(mul_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+    MATRIX_MUL_CONVERT(rs1_matrix, rs2_matrix, mul_result, ss->shape1_row, ss->shape1_column, InDType);
+
+    if (dim == 0) {
+        Map_OutDType rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
+        InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
+        Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
+
+        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+            MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        } else {
+            MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        }
+
+        if (GLOBAL_DBG)
+            cout << "rdinner:\n" << rd_col_sum_inner << endl;
+
+        MATRIX_CAST(rd_col_sum_inner, rd_col_sum, OutDType, 1, ss->shape1_column);
+        free(rd_col_buf);
+        if (GLOBAL_DBG)
+            cout << "rd:\n" << rd_col_sum << endl;
+    } else {
+        Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+        InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
+        Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
+
+        MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+
+        MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
+        free(rd_row_buf);
+        if (GLOBAL_DBG)
+            cout << "rd:\n" << rd_row_sum << endl;
+    }
+
+    free(mul_buf);
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_OutDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_OutDType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    InDType *mul_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
+    Map_InDType mul_result(mul_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+    MATRIX_MUL_CONVERT(rs1_matrix, rs2_matrix, mul_result, ss->shape1_row, ss->shape1_column, InDType);
+
+    InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
+    Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
+
+    if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+    } else {
+        MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+    }
+
+    Matrix_InDType rd_acc(1, 1);
+    MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    *rd = OutDType(rd_acc(0, 0));
+
+    if (GLOBAL_DBG)
+        cout << "rd:\n" << *rd << endl;
+
+    free(pcol_sum);
+    free(mul_buf);
+
+    return 0;
+}
+
 /**
  * mov_m() mov.m
  * 
@@ -625,7 +731,7 @@ int mov_v(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
-    
+
     return 0;
 }
 
@@ -703,8 +809,6 @@ public:
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
     int veemul_x8_hf_mf(half *rs1, int8_t *rd, half rs2, struct ShapeStride *ss);
 
-    int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss);
-    int veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veemacc_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim);
     int veemacc_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss, int dim);
 

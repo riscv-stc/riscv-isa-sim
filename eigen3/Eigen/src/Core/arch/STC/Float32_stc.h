@@ -131,6 +131,8 @@ struct Float32 : public float32_impl::float32_base {
     x = other.x;
     return *this;
   }
+
+  static EIGEN_DEVICE_FUNC Float32 mulConvert(const half& a, const half& b);
 };
 
 } // end namespace Eigen

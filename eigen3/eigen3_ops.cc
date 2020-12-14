@@ -82,6 +82,17 @@ namespace Eigen {
       res.x = f16t.v;
       return res;
   }
+
+  EIGEN_DEVICE_FUNC Float32 Float32::mulConvert(const half& a, const half& b) {
+      float16_t f16a, f16b;
+      f16a.v = a.x;
+      f16b.v = b.x;
+      float32_t f32t;
+      f32t = f16_mul32(f16a, f16b);
+      Float32 f32;
+      f32.x = f32t.v;
+      return f32;
+  }
 }
 
 
@@ -772,82 +783,6 @@ int CustomInsns::veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeSt
         cout << "rd:" << endl << rd_matrix << endl;
 
     return 0;
-}
-
-
-/**
- * veemacc_mm() veemacc.mm
- * 
- * 矩阵和矩阵元素乘，再所有元素求和 M = sum(M1ij*M2ij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rs2 M2,源操作矩阵二基地址
- * @param rd s,目的数存放地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
-    }
-    
-    //first get the sum of col elment, then get the sum of row.
-    rd[0] = ((rs1_matrix.array() * rs2_matrix.array()).colwise().sum()).sum();
-
-    if (debug)
-        cout << "rd:" << endl << rd[0] << endl;
-
-    return 0;
-}
-
-/**
- * veemacc_mm() veemacc.mm dim = ?
- * 
- * 矩阵和矩阵元素乘，再按照某个方向元素求和
- * @param rs1 M1,源操作矩阵一基地址
- * @param rs2 M2,源操作矩阵二基地址
- * @param rd s,目的向量存放地址
- * @param ss 矩阵形状描述
- * @param dim 方向 dim = 0 v为行向量， dim = 1 v为列向量
- * @return 执行结果
- */
-int CustomInsns::veemacc_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half vector_dim1(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-    Map_half vector_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "dim: " << dim << endl;
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        vector_dim0 = (rs1_matrix.array() * rs2_matrix.array()).colwise().sum();
-        if (debug)
-           cout << "rd:" << endl << vector_dim0 << endl;
-        break;
-    case 1:
-        vector_dim1 = (rs1_matrix.array() * rs2_matrix.array()).rowwise().sum();
-        if (debug)
-           cout << "rd:" << endl << vector_dim1 << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    
-    return 0;  
 }
 
 /**
