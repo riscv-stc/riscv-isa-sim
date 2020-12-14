@@ -17,12 +17,45 @@ reg_t t_rd = RD;
 
   switch (p->get_csr(CSR_MME_DATA_TYPE)){
   case 0x0: // f16*f16 = f16
-    memul_sst_fill(sst, 2, 2, 2);
+    memul_sst_fill(sst, 2, 2, 2); 
     CusIns.memul_mm((half*)rs1, (half*)rs2, (half*)rd, &sst);
     break;
-  case 0x90300: // (float16->int8) * int8 = f16
+  case 0x90300: // (float16->int8,mf) * int8 = f16
     memul_sst_fill(sst, 2, 1, 2);
     CusIns.memul_mm((half*)rs1, (int8_t*)rs2, (half*)rd, &sst);
+    break;
+  case 0xa0300: // (float16->uint8,mf) * int8 = f16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0xb0300: // (float16->int8,mv) * int8 = f16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0xc0300: // (float16->uint8,mv) * int8 = f16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0xd0300: // (bfloat16->int8,mf) * int8 = bf16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0xe0300: // (bfloat16->uint8,mf) * int8 = bf16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0xf0300: // (bfloat16->int8,mv) * int8 = bf16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0x100300: // (bfloat16->uint8,mv) * int8 = bf16
+    memul_sst_fill(sst, 2, 1, 2);
+    break;
+  case 0x2: // f16 * f32 = f32
+    memul_sst_fill(sst, 2, 4, 4);
+    break;
+  case 0x10101: // bf16 * bf16 = bf16
+    memul_sst_fill(sst, 2, 2, 2);
+    break;
+  case 0x10102: // bf16 * bf16 = f32
+    memul_sst_fill(sst, 2, 2, 4);
+    break;
+  case 0x20202: // f32 * f32 = f32
+    memul_sst_fill(sst, 4, 4, 4);
     break;
   }
 //});

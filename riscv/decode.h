@@ -3253,7 +3253,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 #define DEBUG_START             (0x100)
 #define DEBUG_END               (0xc0501000 - 1)
 
-#define DTYPE_DECODING_TO_TYPE(...) \
+#define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \
     switch (VME_DTYPE) { \
     case 0x9: \

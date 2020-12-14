@@ -541,7 +541,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStr
             res = 0;
             for (k = 0; k < okh * okw * in_c; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, 1, true);
+                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
                 res += rs1_i8 * col_matrix(0, k);
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
@@ -1418,8 +1418,11 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
             res = 0;
             for (k = 0; k < ss->shape1_column; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, 1, true);
+                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, false);
                 res += rs1_i8 * rs2_matrix(k, j);
+                cout << "rs1: " << rs1_matrix(i, k).x;
+                cout << " rs1 * coeff: " << rs1_f16.v;
+                cout << " rs1 * coeff to int8: " << (int)rs1_i8<<endl;
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);        
         }
