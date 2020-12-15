@@ -40,7 +40,7 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 1;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        int8_t vs1 = RS1 & 0xff;
+        int8_t vs1 = bf16_to_i8(f32_to_bf16(f32(FRS1)), softfloat_round_near_maxMag, false);
         mov_f(vs1, (int8_t*)rd, &sst);
         break;
     }
@@ -49,7 +49,7 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 1;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        uint8_t vs1 = RS1 & 0xff;
+        uint8_t vs1 = bf16_to_ui8(f32_to_bf16(f32(FRS1)), softfloat_round_near_maxMag, false);
         mov_f(vs1, (uint8_t*)rd, &sst);
         break;
     }
@@ -58,7 +58,8 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 2;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        int16_t vs1 = RS1 & 0xffff;
+        long vs1_long = f32_to_i16(f32(FRS1), softfloat_round_near_maxMag, false);
+        int16_t vs1 = int16_t(vs1_long);
         mov_f(vs1, (int16_t*)rd, &sst);
         break;
     }
@@ -67,7 +68,8 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 2;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        uint16_t vs1 = RS1 & 0xffff;
+        long vs1_long = f32_to_ui16(f32(FRS1), softfloat_round_near_maxMag, false);
+        uint16_t vs1 = uint16_t(vs1_long);
         mov_f(vs1, (uint16_t*)rd, &sst);
         break;
     }
@@ -76,7 +78,7 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 4;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        int32_t vs1 = RS1 & 0xffffffff;
+        int32_t vs1 = f32_to_i16(f32(FRS1), softfloat_round_near_maxMag, false);
         mov_f(vs1, (int32_t*)rd, &sst);
         break;
     }
@@ -85,7 +87,7 @@ switch (MTE_DATA_TYPE_RS1)
         e_size = 4;
         check_traps_mov_f(e_size);
         sst_fill(sst, e_size, e_size);
-        uint32_t vs1 = RS1 & 0xffffffff;;
+        uint32_t vs1 = f32_to_ui16(f32(FRS1), softfloat_round_near_maxMag, false);
         mov_f(vs1, (uint32_t*)rd, &sst);
         break;
     }

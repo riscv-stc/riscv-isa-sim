@@ -582,6 +582,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(sync);
   DEFINE_RTYPE(pld);
   DEFINE_RTYPE(icmov);
+  DEFINE_R3TYPE(icmov_m)
   DEFINE_R3TYPE(mov_m);
   DEFINE_R1TYPE(mov_v);
   DEFINE_FXTYPE(mov_f);
