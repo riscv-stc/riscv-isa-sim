@@ -249,6 +249,12 @@ struct state_t
   uint32_t mme_sparseidx_stride;
   uint32_t vme_data_type;
   uint32_t mme_data_type;
+  uint32_t vme_fm_in;
+  uint32_t vme_depth_in;
+  uint32_t vme_fm_out;
+  uint32_t vme_stride_cout;
+  uint32_t vme_kernel_params;
+  uint32_t vme_fm_padding;
   uint32_t conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_coremap;

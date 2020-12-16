@@ -1102,6 +1102,24 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MME_DATA_TYPE:
       state.mme_data_type = val;
       break;
+    case CSR_VME_FM_IN:
+      state.vme_fm_in = val;
+      break;
+    case CSR_VME_DEPTH_IN:
+      state.vme_depth_in = val;
+      break;
+    case CSR_VME_FM_OUT:
+      state.vme_fm_out = val;
+      break;
+    case CSR_VME_STRIDE_COUT:
+      state.vme_stride_cout = val;
+      break;
+    case CSR_VME_KERNEL_PARAMS:
+      state.vme_kernel_params = val;
+      break;
+    case CSR_VME_FM_PADDING:
+      state.vme_fm_padding = val;
+      break;
     case CSR_NCP_BUSY:
         break; //read only
     case CSR_MTE_COREMAP:
@@ -1657,6 +1675,30 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.mme_data_type;
+    case CSR_VME_FM_IN:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_fm_in;
+    case CSR_VME_DEPTH_IN:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_depth_in;
+    case CSR_VME_FM_OUT:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_fm_out;
+    case CSR_VME_STRIDE_COUT:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_stride_cout;
+    case CSR_VME_KERNEL_PARAMS:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_kernel_params;
+    case CSR_VME_FM_PADDING:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_fm_padding;
     case CSR_NCP_BUSY:
       if(!supports_extension('V'))
         break;
