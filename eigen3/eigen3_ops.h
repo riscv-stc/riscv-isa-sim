@@ -98,6 +98,17 @@ using namespace std;
         } \
     } while(0)
 
+#define VME_SHAPE_STRIDE_INFO(vss) do { \
+    if (GLOBAL_DBG) { \
+        printf("\nVME ShapeStride:\n"); \
+        printf("input : (%d:%d:%d) stride(%d)\n", vss->row, vss->column, vss->cin, vss->ifm_c_stride); \
+        printf("output: (%d:%d) stride(%d)\n", vss->hout, vss->wout, vss->ofm_c_stride); \
+        printf("kernel: (%d:%d) step(%d:%d)\n", vss->kw, vss->kh, vss->sw, vss->sh); \
+        printf("padding: (u%d:d%d:l%d:r%d)\n", vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r); \
+        printf("k_c_stride: %d\n", vss->k_c_stride); \
+    } \
+} while(0);
+
 #define STRIDE_DEFAULT
 #ifdef STRIDE_DEFAULT
 #define SET_DEFAULT_STRIDE(stride, value) do { \
@@ -121,6 +132,143 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 		    dest(_row, _col) = tmp; \
 	    } \
     }
+
+#define MATRIX_MUL_CONVERT(src1, src2, dest, row, column, dtype) do { \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            dest(_row, _col) = dtype::mulConvert(src1(_row, _col), src2(_row, _col)); \
+        } \
+    } \
+} while(0);
+
+#define MATRIX_MUL_VEC_H_CONVERT(matrix, vec, dest, row, column, dtype) do { \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), vec(0, _col)); \
+        } \
+    } \
+} while(0);
+
+#define MATRIX_MUL_VEC_V_CONVERT(matrix, vec, dest, row, column, dtype) do { \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), vec(_row, 0)); \
+        } \
+    } \
+} while(0);
+
+#define MATRIX_MUL_SCALA_CONVERT(matrix, f, dest, row, column, dtype) do { \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), f); \
+        } \
+    } \
+} while(0);
+
+#define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        dtype odd_acc = dtype(0); \
+        dtype even_acc = dtype(0); \
+        for (int _row = 0; _row < row; _row++) { \
+            if (_row % 2) \
+                even_acc += src(_row, _col); \
+            else \
+                odd_acc += src(_row, _col); \
+        } \
+        dest(0, _col) = odd_acc + even_acc; \
+    } \
+} while(0);
+
+#define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        dtype acc0 = dtype(0); \
+        dtype acc1 = dtype(0); \
+        dtype acc2 = dtype(0); \
+        dtype acc3 = dtype(0); \
+        for (int _row = 0; _row < row; _row++) { \
+            if ((_row % 4) == 0) \
+                acc0 += src(_row, _col); \
+            if ((_row % 4) == 1) \
+                acc1 += src(_row, _col); \
+            if ((_row % 4) == 2) \
+                acc2 += src(_row, _col); \
+            if ((_row % 4) == 3) \
+                acc3 += src(_row, _col); \
+        } \
+        acc0 += acc2; \
+        acc1 += acc3; \
+        dest(0, _col) = acc0 + acc1; \
+    } \
+} while(0);
+
+#define MATRIX_ACC_DIMW_PAIR(src, dest, dtype, row, column) do { \
+    dtype *pbuf = new dtype[column]; \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            pbuf[_col] = src(_row, _col); \
+        } \
+        int get_pos = 0; \
+        int put_pos = 0; \
+        int loop = column; \
+        while (loop > 1) { \
+            if (get_pos == (loop - 1)) { \
+                pbuf[put_pos] = pbuf[get_pos]; \
+            } else { \
+                pbuf[put_pos] = pbuf[get_pos] + pbuf[get_pos + 1]; \
+            } \
+            if (get_pos >= (loop - 2)) { \
+                loop = loop / 2 + loop % 2; \
+                get_pos = 0; \
+                put_pos = 0; \
+            } else { \
+                get_pos += 2; \
+                put_pos++; \
+            } \
+        } \
+        dest(_row, 0) = pbuf[0]; \
+    } \
+    delete[] pbuf; \
+} while(0);
+
+#define PADDING_3D_HW_C(src, dest, padding, dest_row_2d, dest_row_3d, dest_column_3d, u, d, l, r) do { \
+    unsigned int src_row = 0; \
+    for (int _row = 0; _row < dest_row_2d; _row++) { \
+        if ((_row < (dest_column_3d * u)) || \
+                ((_row % dest_column_3d) < l) || \
+                (_row % dest_column_3d >= (dest_column_3d - r)) || \
+                (_row > (dest_column_3d * (dest_row_3d - d)))) { \
+            dest.row(_row) = padding.row(0); \
+        } else { \
+            dest.row(_row) = src.row(src_row); \
+            src_row++; \
+        } \
+    } \
+} while(0)
+
+#define LINE_WINDOWS_COMMON_LENGTH(pos, line, pre, window, common) do { \
+    if ((pos + line) <= pre) \
+        common = 0; \
+    else if (pos < pre) \
+        common = pos + line - pre; \
+    else if ((pos + line) < (pre + window)) \
+        common = line; \
+    else if (pos < (pre + window)) \
+        common = window + pre - pos; \
+    else \
+        common = 0; \
+} while(0);
+
+const uint16_t recip_table_half[65] = {
+    0x0000,0x3c00,0x3800,0x3555,0x3400,0x3266,0x3155,0x3092,
+    0x3000,0x2f1c,0x2e66,0x2dd1,0x2d55,0x2cec,0x2c92,0x2c44,
+    0x2c00,0x2b87,0x2b1c,0x2abc,0x2a66,0x2a18,0x29d1,0x2990,
+    0x2955,0x291e,0x28ec,0x28bd,0x2892,0x2869,0x2844,0x2821,
+    0x2800,0x27c1,0x2787,0x2750,0x271c,0x26eb,0x26bc,0x2690,
+    0x2666,0x263e,0x2618,0x25f4,0x25d1,0x25b0,0x2590,0x2572,
+    0x2555,0x2539,0x251e,0x2505,0x24ec,0x24d4,0x24bd,0x24a7,
+    0x2492,0x247d,0x2469,0x2456,0x2444,0x2432,0x2421,0x2410,
+    0x2400
+};
 
 /**
  * @brief 矩阵形状描述结构
@@ -148,6 +296,16 @@ struct ShapeStride
     /* quant_coeff */
     float32_t mme_quant_coeff;
     float32_t mme_dequant_coeff;
+};
+
+struct VmeShapeStride
+{
+    int row, column;
+    int ifm_c_stride, cin;
+    int wout, hout;
+    int ofm_c_stride, k_c_stride;
+    int kw, kh, sw, sh;
+    int n_pad_u, n_pad_d, n_pad_l, n_pad_r;
 };
 
 /**
@@ -388,103 +546,6 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 
     return 0;
 }
-
-#define MATRIX_MUL_CONVERT(src1, src2, dest, row, column, dtype) do { \
-    for (int _row = 0; _row < row; _row++) { \
-        for (int _col = 0; _col < column; _col++) { \
-            dest(_row, _col) = dtype::mulConvert(src1(_row, _col), src2(_row, _col)); \
-        } \
-    } \
-} while(0);
-
-#define MATRIX_MUL_VEC_H_CONVERT(matrix, vec, dest, row, column, dtype) do { \
-    for (int _row = 0; _row < row; _row++) { \
-        for (int _col = 0; _col < column; _col++) { \
-            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), vec(0, _col)); \
-        } \
-    } \
-} while(0);
-
-#define MATRIX_MUL_VEC_V_CONVERT(matrix, vec, dest, row, column, dtype) do { \
-    for (int _row = 0; _row < row; _row++) { \
-        for (int _col = 0; _col < column; _col++) { \
-            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), vec(_row, 0)); \
-        } \
-    } \
-} while(0);
-
-#define MATRIX_MUL_SCALA_CONVERT(matrix, f, dest, row, column, dtype) do { \
-    for (int _row = 0; _row < row; _row++) { \
-        for (int _col = 0; _col < column; _col++) { \
-            dest(_row, _col) = dtype::mulConvert(matrix(_row, _col), f); \
-        } \
-    } \
-} while(0);
-
-#define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
-    for (int _col = 0; _col < column; _col++) { \
-        dtype odd_acc = dtype(0); \
-        dtype even_acc = dtype(0); \
-        for (int _row = 0; _row < row; _row++) { \
-            if (_row % 2) \
-                even_acc += src(_row, _col); \
-            else \
-                odd_acc += src(_row, _col); \
-        } \
-        dest(0, _col) = odd_acc + even_acc; \
-    } \
-} while(0);
-
-#define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
-    for (int _col = 0; _col < column; _col++) { \
-        dtype acc0 = dtype(0); \
-        dtype acc1 = dtype(0); \
-        dtype acc2 = dtype(0); \
-        dtype acc3 = dtype(0); \
-        for (int _row = 0; _row < row; _row++) { \
-            if ((_row % 4) == 0) \
-                acc0 += src(_row, _col); \
-            if ((_row % 4) == 1) \
-                acc1 += src(_row, _col); \
-            if ((_row % 4) == 2) \
-                acc2 += src(_row, _col); \
-            if ((_row % 4) == 3) \
-                acc3 += src(_row, _col); \
-        } \
-        acc0 += acc2; \
-        acc1 += acc3; \
-        dest(0, _col) = acc0 + acc1; \
-    } \
-} while(0);
-
-#define MATRIX_ACC_DIMW_PAIR(src, dest, dtype, row, column) do { \
-    dtype *pbuf = new dtype[column]; \
-    for (int _row = 0; _row < row; _row++) { \
-        for (int _col = 0; _col < column; _col++) { \
-            pbuf[_col] = src(_row, _col); \
-        } \
-        int get_pos = 0; \
-        int put_pos = 0; \
-        int loop = column; \
-        while (loop > 1) { \
-            if (get_pos == (loop - 1)) { \
-                pbuf[put_pos] = pbuf[get_pos]; \
-            } else { \
-                pbuf[put_pos] = pbuf[get_pos] + pbuf[get_pos + 1]; \
-            } \
-            if (get_pos >= (loop - 2)) { \
-                loop = loop / 2 + loop % 2; \
-                get_pos = 0; \
-                put_pos = 0; \
-            } else { \
-                get_pos += 2; \
-                put_pos++; \
-            } \
-        } \
-        dest(_row, 0) = pbuf[0]; \
-    } \
-    delete[] pbuf; \
-} while(0);
 
 template <typename OutDType, typename InDType>
 int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
@@ -904,6 +965,8 @@ int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
 
     return 0;
 }
+
+extern int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
 
 /**
  * @brief custom扩展指令类

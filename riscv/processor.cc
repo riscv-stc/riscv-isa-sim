@@ -1111,8 +1111,8 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_VME_FM_OUT:
       state.vme_fm_out = val;
       break;
-    case CSR_VME_STRIDE_COUT:
-      state.vme_stride_cout = val;
+    case CSR_VME_DEPTH_STRIDE:
+      state.vme_depth_stride = val;
       break;
     case CSR_VME_KERNEL_PARAMS:
       state.vme_kernel_params = val;
@@ -1687,10 +1687,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_fm_out;
-    case CSR_VME_STRIDE_COUT:
+    case CSR_VME_DEPTH_STRIDE:
       if(!supports_extension('V'))
         break;
-      return state.vme_stride_cout;
+      return state.vme_depth_stride;
     case CSR_VME_KERNEL_PARAMS:
       if(!supports_extension('V'))
         break;

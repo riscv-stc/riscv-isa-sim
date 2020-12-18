@@ -267,6 +267,23 @@ private:
 #define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
 #define VME_DTYPE_VS2 ((STATE.vme_data_type & 0xFF0000) >> 16)
 
+#define VME_SHAPE1_COLUMN ((STATE.vme_fm_in & 0xFFFF0000) >> 16)
+#define VME_SHAPE1_ROW (STATE.vme_fm_in & 0xFFFF)
+#define VME_IFM_C_STRIDE ((STATE.vme_depth_in & 0xFFFF0000) >> 16)
+#define VME_CIN (STATE.vme_depth_in & 0xFFFF)
+#define VME_WOUT ((STATE.vme_fm_out & 0xFFFF0000) >> 16)
+#define VME_HOUT (STATE.vme_fm_out & 0xFFFF)
+#define VME_OFM_C_STRIDE ((STATE.vme_depth_stride & 0xFFFF0000) >> 16)
+#define VME_K_C_STRIDE (STATE.vme_depth_stride & 0xFFFF)
+#define VME_KW ((STATE.vme_kernel_params & 0xFF000000) >> 24)
+#define VME_KH ((STATE.vme_kernel_params & 0xFF0000) >> 16)
+#define VME_SW ((STATE.vme_kernel_params & 0xFF00) >> 8)
+#define VME_SH (STATE.vme_kernel_params & 0xFF)
+#define VME_N_PAD_U ((STATE.vme_fm_padding & 0xFF000000) >> 24)
+#define VME_N_PAD_D ((STATE.vme_fm_padding & 0xFF0000) >> 16)
+#define VME_N_PAD_L ((STATE.vme_fm_padding & 0xFF00) >> 8)
+#define VME_N_PAD_R (STATE.vme_fm_padding & 0xFF)
+
 #define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
 #define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
 #define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
@@ -491,6 +508,24 @@ private:
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
+#define vme_ss_fill(ss) do { \
+    ss.row = VME_SHAPE1_ROW; \
+    ss.column = VME_SHAPE1_COLUMN; \
+    ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE : VME_CIN; \
+    ss.cin = VME_CIN; \
+    ss.wout = VME_WOUT; \
+    ss.hout = VME_HOUT; \
+    ss.ofm_c_stride = VME_OFM_C_STRIDE ? VME_OFM_C_STRIDE : VME_CIN; \
+    ss.k_c_stride = VME_K_C_STRIDE; \
+    ss.kw = VME_KW; \
+    ss.kh = VME_KH; \
+    ss.sw = VME_SW; \
+    ss.sh = VME_SH; \
+    ss.n_pad_u = VME_N_PAD_U; \
+    ss.n_pad_d = VME_N_PAD_D; \
+    ss.n_pad_l = VME_N_PAD_L; \
+    ss.n_pad_r = VME_N_PAD_R; \
+} while (0);
 
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
            (x).shape1_column = BC_SHAPE1_COLUMN; \
