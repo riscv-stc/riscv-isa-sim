@@ -164,9 +164,9 @@ private:
 #define STATE (*p->get_state())
 
 // Seems that 0x0 doesn't work.
-#define DEBUG_BASE              (0xc0500000)
+#define DEBUG_BASE              (0xc0780000)
 #define DEBUG_START             (0x100)
-#define DEBUG_END               (0xc0501000 - 1)
+#define DEBUG_END               (0xc0781000 - 1)
 #define DEBUG_ROM_BASE          (DEBUG_BASE)
 #define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
