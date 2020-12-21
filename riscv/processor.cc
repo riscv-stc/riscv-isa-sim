@@ -1102,29 +1102,29 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MME_DATA_TYPE:
       state.mme_data_type = val;
       break;
+    case CSR_VME_RELU_THRESHHOLD:
+      state.vme_relu_threshhold = val;
+      break;
     case CSR_VME_FM_IN:
-      state.vme_fm_in = val;
+      state.vme_FM_in = val;
       break;
     case CSR_VME_DEPTH_IN:
       state.vme_depth_in = val;
       break;
     case CSR_VME_FM_OUT:
-      state.vme_fm_out = val;
+      state.vme_FM_out = val;
       break;
-    case CSR_VME_DEPTH_STRIDE:
-      state.vme_depth_stride = val;
+    case CSR_VME_DEPTH_OUT:
+      state.vme_depth_out = val;
       break;
     case CSR_VME_KERNEL_PARAMS:
       state.vme_kernel_params = val;
       break;
     case CSR_VME_FM_PADDING:
-      state.vme_fm_padding = val;
+      state.vme_FM_padding = val;
       break;
     case CSR_NCP_BUSY:
         break; //read only
-    case CSR_MTE_COREMAP:
-      state.mte_coremap = val;
-      break;
     case CSR_MTE_ICDEST:
       state.mte_icdest = val;
       break;
@@ -1675,10 +1675,14 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.mme_data_type;
+    case CSR_VME_RELU_THRESHHOLD:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_relu_threshhold;
     case CSR_VME_FM_IN:
       if(!supports_extension('V'))
         break;
-      return state.vme_fm_in;
+      return state.vme_FM_in;
     case CSR_VME_DEPTH_IN:
       if(!supports_extension('V'))
         break;
@@ -1686,11 +1690,11 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_VME_FM_OUT:
       if(!supports_extension('V'))
         break;
-      return state.vme_fm_out;
-    case CSR_VME_DEPTH_STRIDE:
+      return state.vme_FM_out;
+    case CSR_VME_DEPTH_OUT:
       if(!supports_extension('V'))
         break;
-      return state.vme_depth_stride;
+      return state.vme_depth_out;
     case CSR_VME_KERNEL_PARAMS:
       if(!supports_extension('V'))
         break;
@@ -1698,15 +1702,11 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_VME_FM_PADDING:
       if(!supports_extension('V'))
         break;
-      return state.vme_fm_padding;
+      return state.vme_FM_padding;
     case CSR_NCP_BUSY:
       if(!supports_extension('V'))
         break;
       return state.ncp_busy;
-    case CSR_MTE_COREMAP:
-      if(!supports_extension('V'))
-        break;
-      return state.mte_coremap;
     case CSR_MTE_ICDEST:
       if(!supports_extension('V'))
         break;
