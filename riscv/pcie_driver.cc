@@ -5,6 +5,8 @@
 #include <linux/socket.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "processor.h"
 #include "pcie_driver.h"
@@ -12,8 +14,9 @@
 #define PCIE_OK          (0)
 #define PCIE_UNINIT      (-1)
 #define ERROR_SOCK       (-2)
-#define ERROR_CONN       (-4)
 #define ERROR_BIND       (-3)
+#define ERROR_CONN       (-4)
+#define ERROR_LOCK       (-5)
 
 #define NETLINK_FAULT    (-1)
 
@@ -98,12 +101,16 @@ static const uint32_t noc_npc_base[] = {
 	NOC_NPC31_BASE,
 };
 
-std::function<int32_t(NL_STATUS)> pcie_driver_exit;
-pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id)
-  : procs(procs), mPSim(sim), mBankId(bank_id)
+pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
+                                 uint32_t bank_id) : procs(procs), mPSim(sim), mBankId(bank_id)
 {
   mStatus = PCIE_UNINIT;
-  init();
+  mDev = -1;
+
+  if (initialize() != PCIE_OK) {
+    std::cout << "PCIe driver init fail." << std::endl;
+    return;
+  }
 
   // To prepare create mssage head
   mSendBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
@@ -124,20 +131,25 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uin
   }
 
   memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
-  /* recheck netlink status */
-  if (NETLINK_FAULT == tell_peer_status(STATUS_OK))
+  /* Recheck netlink status */
+  if (NETLINK_FAULT == update_status(STATUS_OK))
     mStatus = ERROR_CONN;
 }
 
-void pcie_driver_t::init()
+int pcie_driver_t::initialize()
 {
-  int32_t rv = 0;
+  int rv = 0;
+
+  if (!lock_channel()) {
+    mStatus = ERROR_LOCK;
+    return ERROR_LOCK;
+  }
 
   // Create a socket
   mSockFd = socket(AF_NETLINK, SOCK_RAW, NL_PROTOCOL);
   if (mSockFd == NETLINK_FAULT) {
     mStatus = ERROR_SOCK;
-    return;
+    return ERROR_SOCK;
   }
 
   // To prepare binding
@@ -155,7 +167,7 @@ void pcie_driver_t::init()
     close(mSockFd);
     mSockFd = -1;
     mStatus = ERROR_BIND;
-    return;
+    return ERROR_BIND;
   }
 
   memset(&mDestAddr, 0, sizeof(mDestAddr));
@@ -171,9 +183,34 @@ void pcie_driver_t::init()
   auto thread = new std::thread(mainloop);
   thread->detach();
   mDriverThread.reset(thread);
-  pcie_driver_exit = std::bind(&pcie_driver_t::tell_peer_status,
-                               this,
-                               std::placeholders::_1);
+  return PCIE_OK;
+}
+
+bool pcie_driver_t::lock_channel(void)
+{
+  char magic_str[] = "lock";
+  int magic_len = 4;
+  char pathname[32];
+  int rc;
+
+  memset(pathname, 0, sizeof(pathname));
+  sprintf(pathname, "/proc/stc/stc_cluster_%d", mBankId);
+  if (access(pathname, F_OK)) {
+    std::cout << "Cluster["
+              << mBankId
+              << "] dev is not exist, please check driver."
+              << std::endl;
+    return false;
+  }
+
+  mDev = open(pathname, O_RDWR);
+  if (mDev < 0)
+    return false;
+
+  rc = write(mDev, magic_str, magic_len);
+  if (rc != magic_len)
+    return false;
+  return true;
 }
 
 /*
@@ -181,9 +218,9 @@ void pcie_driver_t::init()
  * data: command head info and src data that will send to
  * len:  length of commamd head and src data
  */
-int32_t pcie_driver_t::send(const uint8_t* data, size_t len)
+int pcie_driver_t::send(const uint8_t* data, size_t len)
 {
-  int32_t rv = 0;
+  int rv = 0;
 
   if (unlikely(PCIE_OK != mStatus))
     return mStatus;
@@ -214,10 +251,10 @@ int32_t pcie_driver_t::send(const uint8_t* data, size_t len)
  * Tell the peer status.
  * status: the status of this bank netlink connect.
  */
-int32_t pcie_driver_t::tell_peer_status(NL_STATUS status)
+int pcie_driver_t::update_status(NL_STATUS status)
 {
    command_head_t cmd;
-   int32_t rv;
+   int rv;
 
    cmd.code = CODE_STATUS;
    /* address is bankid */
@@ -231,13 +268,13 @@ int32_t pcie_driver_t::tell_peer_status(NL_STATUS status)
 
 /* get npc data for kernel at address in npc view */
 #define COMMAND_HEAD_SIZE (sizeof(command_head_t) - 4)
-int32_t pcie_driver_t::read(reg_t addr, size_t length)
+int pcie_driver_t::read(reg_t addr, size_t length)
 {
-  int32_t rv = 0;
-  int32_t result = 0;
-  int32_t size = 0;
+  int rv = 0;
+  int count = 0;
+  int size = 0;
   reg_t offset = 0;
-  int32_t block_size = 1024;
+  int block_size = 1024;
   command_head_t *pCmd = NULL;
 
   pCmd = NLMSG_DATA(mSendBuffer);
@@ -267,17 +304,17 @@ int32_t pcie_driver_t::read(reg_t addr, size_t length)
       return rv;
     }
 
-    result += rv;
+    count += rv;
   }
 
-  return result;
+  return count;
 }
 
 /* recv data from PCIe port, recv data length
    no bigger than 1024 byte once. */
-int32_t pcie_driver_t::recv()
+int pcie_driver_t::recv()
 {
-  int32_t rv;
+  int rv;
 
   /* check PCIe init status. */
   // if (unlikely(PCIE_OK != mStatus))
@@ -304,7 +341,7 @@ int32_t pcie_driver_t::recv()
 #define NPC_LOCAL_ADDR_START (0xc0000000)
 #define NPC_LOCAL_REGIN_SIZE (0x800000)
 #define IGNORE_BANKID(core_id) ((core_id) & CORE_ID_MASK)
-#define NPC_MBOX_TOTAL \
+#define NOC_NPC_TOTAL \
 	(sizeof(noc_npc_base) / \
 	sizeof(noc_npc_base[0]))
 
@@ -314,20 +351,20 @@ int32_t pcie_driver_t::recv()
 	((addr) < noc_npc_base[id] + NPC_LOCAL_REGIN_SIZE))
 
 /* change soc address to local address */
-#define switch_soc_to_local(addr, id) \
+#define soc_to_local(addr, id) \
 	((addr) - noc_npc_base[id] + NPC_LOCAL_ADDR_START)
 
 /* adjust which npc from addr. */
-int32_t which_npc(reg_t addr, reg_t *paddr)
+int which_npc(reg_t addr, reg_t *paddr)
 {
-  int32_t core_id = -1;
-  int32_t mbox_num;
+  int core_id = -1;
+  int mbox_num;
 
-  mbox_num = NPC_MBOX_TOTAL;
-  for (int32_t i = 0; i < mbox_num; i++) {
+  mbox_num = NOC_NPC_TOTAL;
+  for (int i = 0; i < mbox_num; i++) {
     if (IS_NPC(addr, i)) {
       core_id = i;
-      *paddr = switch_soc_to_local(addr, i);
+      *paddr = soc_to_local(addr, i);
       break;
     }
   }
@@ -340,7 +377,7 @@ int32_t which_npc(reg_t addr, reg_t *paddr)
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
   reg_t paddr;
-  int32_t core_id;
+  int core_id;
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(bytes, host_addr, len);
@@ -376,7 +413,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
   reg_t paddr;
-  int32_t core_id;
+  int core_id;
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(host_addr, bytes, len);
@@ -419,9 +456,9 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 /* sync state addr, just only read,
  * not realy phy_addr, just valid for PCIe dummy driver. */
 #define PCIE_SYNC_STATE_ADDR    (0xc07f3504)
-int32_t pcie_driver_t::get_sync_state()
+int pcie_driver_t::get_sync_state()
 {
-  int32_t rv;
+  int rv;
   uint32_t state = 0;
   command_head_t cmd;
 
@@ -431,10 +468,10 @@ int32_t pcie_driver_t::get_sync_state()
 
   for (reg_t i = 0; i < procs.size(); i++)
     if (procs[i]->async_state())
-      state |= 0x1 << i;
+      state |= 0x1 << procs[i]->id;
 
   /* each bank core_id in spike is start at 0. */
-  *(uint32_t *)cmd.data = state << (mBankId * CORE_NUM_OF_BANK);
+  *(uint32_t *)cmd.data = state;
   rv = send((const uint8_t *)&cmd, sizeof(cmd));
   return rv;
 }
@@ -446,7 +483,7 @@ void pcie_driver_t::task_doing()
 
   /* check PCIe init status. */
   if (unlikely(PCIE_OK != mStatus))
-    return mStatus;
+    return;
 
   std::cout << "driver transfer loop start." << std::endl;
   while (1) {
@@ -527,11 +564,15 @@ void pcie_driver_t::task_doing()
 
 pcie_driver_t::~pcie_driver_t()
 {
-  /* netlink exit, no care error. */
-  tell_peer_status(STATUS_EXIT);
+  update_status(STATUS_EXIT);
   if (mSockFd >= 0) {
     close(mSockFd);
     mSockFd = -1;
+  }
+
+  if (mDev != -1) {
+    close(mDev);
+    mDev = -1;
   }
 
   if (mSendBuffer) {

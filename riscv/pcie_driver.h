@@ -41,8 +41,8 @@ class pcie_driver_t {
   pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id);
   ~pcie_driver_t();
 
-  int32_t send(const uint8_t* data, size_t len);
-  int32_t get_sync_state();
+  int send(const uint8_t* data, size_t len);
+  int get_sync_state();
  private:
   std::vector<processor_t*>& procs;
   std::unique_ptr<std::thread> mDriverThread;
@@ -56,16 +56,18 @@ class pcie_driver_t {
   int mSockFd;
   int mStatus;
   uint32_t mBankId;
+  int mDev;
 
   reg_t mTxCfgAddr;
   reg_t mTxCmd;
   reg_t mTxExtCmd;
-  void init();
-  int32_t read(reg_t addr, size_t length);
-  int32_t recv();
+  int initialize();
+  int read(reg_t addr, size_t length);
+  int recv();
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
-  int32_t tell_peer_status(NL_STATUS status);
+  bool lock_channel(void);
+  int update_status(NL_STATUS status);
   void task_doing();
   std::mutex pcie_mutex;
 };
