@@ -1990,10 +1990,10 @@ int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss)
         // move point
         rd_row_idx++;
         start_col += vss->sw;
-        if (start_col + vss->kw >= row_3d_padded) {
+        if (start_col + vss->kw > row_3d_padded) {
             start_col = 0;
             start_row += vss->sh;
-            if (start_row + vss->kh >= column_3d_padded)
+            if (start_row + vss->kh > column_3d_padded)
                 break;
         }
         fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
