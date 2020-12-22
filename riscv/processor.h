@@ -263,7 +263,6 @@ struct state_t
   uint32_t mte_shape;
   uint32_t mte_stride;
   uint32_t mte_data_type;
-  uint32_t mte_stride_llb;
   uint32_t tmisc;
   uint32_t tcsr;
   uint32_t dma_shape_row;
