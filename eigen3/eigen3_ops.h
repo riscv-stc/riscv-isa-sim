@@ -19,11 +19,14 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <iostream>
+#include <bitset>
 
 using namespace Eigen;
 using namespace std;
 
-#define GLOBAL_DBG      0
+
+
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -292,6 +295,9 @@ struct ShapeStride
     /* CSR stride2 */
     unsigned short stride_rs2;
     unsigned short stride_rs1;
+
+    /* CSR sparse index stride*/
+    unsigned short stride_idx;
 
     /* quant_coeff */
     float32_t mme_quant_coeff;
@@ -997,6 +1003,7 @@ public:
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half *rs1, half *rs2, uint8_t *sp_index, half *rd, struct ShapeStride *ss);
     int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);

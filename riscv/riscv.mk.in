@@ -945,6 +945,8 @@ riscv_insn_stc = \
 	memin_m \
 	memax_m \
 	meacc_m \
+	memul_ts1_mm \
+	memul_sp_mm \
 	meconv_mm
 
 

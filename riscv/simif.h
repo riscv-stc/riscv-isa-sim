@@ -10,6 +10,7 @@ enum local_device_type {
   L1_BUFFER,
   IM_BUFFER,
   IO_DEVICE,
+  SP_BUFFER,
 };
 
 // this is the interface to the simulator used by the processors and memory
