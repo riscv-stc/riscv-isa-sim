@@ -973,6 +973,8 @@ int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
 }
 
 extern int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
+extern int vemaxpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
+extern int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss);
 
 /**
  * @brief custom扩展指令类

@@ -511,15 +511,15 @@ private:
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
 
-#define vme_ss_fill(ss) do { \
+#define vme_ss_fill(ss, esize) do { \
     ss.row = VME_SHAPE1_ROW; \
     ss.column = VME_SHAPE1_COLUMN; \
-    ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE : VME_CIN; \
+    ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE / esize : VME_CIN; \
     ss.cin = VME_CIN; \
     ss.wout = VME_WOUT; \
     ss.hout = VME_HOUT; \
-    ss.ofm_c_stride = VME_OFM_C_STRIDE ? VME_OFM_C_STRIDE : VME_CIN; \
-    ss.k_c_stride = VME_K_C_STRIDE; \
+    ss.ofm_c_stride = VME_OFM_C_STRIDE ? VME_OFM_C_STRIDE / esize : VME_CIN; \
+    ss.k_c_stride = VME_K_C_STRIDE ? VME_K_C_STRIDE / esize : VME_CIN; \
     ss.kw = VME_KW; \
     ss.kh = VME_KH; \
     ss.sw = VME_SW; \

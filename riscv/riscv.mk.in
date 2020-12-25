@@ -940,6 +940,8 @@ riscv_insn_stc = \
 	icmov \
 	icmov_m \
     veavgpool_m \
+    vemaxpool_m \
+    vedwconv_mm \
     \
     memul_mm \
 	memin_m \
