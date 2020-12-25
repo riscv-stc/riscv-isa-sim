@@ -34,10 +34,11 @@ class hwsync_t: public abstract_device_t {
     hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks);
     virtual ~hwsync_t();
 
-    bool enter(unsigned core_id);
+    bool sync_enter(unsigned core_id, uint32_t syncmap);
     bool enter(unsigned core_id, uint32_t coremap);
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
+    uint32_t get_masks();
 };
 
 #endif // __HWSYNC_H__

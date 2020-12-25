@@ -393,8 +393,9 @@ public:
   void register_insn(insn_desc_t);
   void register_extension(extension_t*);
 
-  void sync();
+  void sync(uint32_t syncmap);
   void pld(uint32_t coremap);
+  uint32_t get_sync_group();
 
   void run_async(std::function<void()> func);
   bool async_done();

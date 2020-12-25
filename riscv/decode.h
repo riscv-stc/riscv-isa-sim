@@ -232,9 +232,9 @@ private:
 #define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
 #define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
 
-#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
-#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
-#define MTE_CORE_MAP    (STATE.mte_coremap)
+#define SRC_CORE_ID     ((STATE.mte_icdest >> 16) & 0xF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0xF)
+//#define MTE_CORE_MAP    (STATE.mte_coremap)
 
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
@@ -354,9 +354,9 @@ private:
 #define DMA_SHAPE_ROW     (STATE.dma_shape_row)
 #define STRIDE_DDR        (STATE.dma_stride_ddr)
 
-#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
-#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
-#define MTE_CORE_MAP    (STATE.mte_coremap)
+//#define DST_CHIP_ID     ((STATE.mte_icdest >> 16) & 0xF)
+//#define DST_CORE_ID     (STATE.mte_icdest & 0x3F)
+//#define MTE_CORE_MAP    (STATE.mte_coremap)
 
 #define CONV_INFM_WH    (STATE.conv_FM_in)
 #define CONV_DEPTH_IN   (STATE.conv_Depth_in)
