@@ -949,7 +949,8 @@ riscv_insn_stc = \
 	meacc_m \
 	memul_ts1_mm \
 	memul_sp_mm \
-	meconv_mm
+	meconv_mm \
+	meconv_sp_mm
 
 
 riscv_insn_list = \
