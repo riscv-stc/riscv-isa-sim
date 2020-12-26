@@ -452,7 +452,7 @@ private:
 					 (x).conv_kernel_params2 = CONV_KERNEL_PARAMS2; \
 					 (x).conv_padding = CONV_PADDING; \
            (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
-           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF; \ 
+           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF; \
            (x).stride_idx = MME_SPARSE_STRIDE;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
