@@ -19,9 +19,12 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <iostream>
+#include <bitset>
 
 using namespace Eigen;
 using namespace std;
+
+
 
 #define GLOBAL_DBG      0
 #define DBG_VECTOR_VVM    do {                   \
@@ -293,6 +296,9 @@ struct ShapeStride
     unsigned short stride_rs2;
     unsigned short stride_rs1;
 
+    /* CSR sparse index stride*/
+    unsigned short stride_idx;
+
     /* quant_coeff */
     float32_t mme_quant_coeff;
     float32_t mme_dequant_coeff;
@@ -330,6 +336,9 @@ struct ConvShapeStride
 
     /* CSR padding */
     unsigned int conv_padding;
+
+    /* CSR sparse index stride*/
+    unsigned short stride_idx;
 
     /* quant_coeff */
     float32_t mme_quant_coeff;
@@ -967,6 +976,8 @@ int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
 }
 
 extern int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
+extern int vemaxpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
+extern int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss);
 
 /**
  * @brief custom扩展指令类
@@ -997,6 +1008,7 @@ public:
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
     int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
@@ -1038,6 +1050,7 @@ public:
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
 };
 
 /**

@@ -499,13 +499,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_BTYPE(bltu)
   DEFINE_BTYPE(bgeu)
   DEFINE_RTYPE(memul_mm)
-//  DEFINE_RTYPE(memul_sp_mm)
- DEFINE_RTYPE(memul_ts1_mm)
- DEFINE_R3TYPE(memin_m)
- DEFINE_R3TYPE(memax_m)
- DEFINE_R3TYPE(meacc_m)
+  DEFINE_RTYPE(memul_sp_mm)
+  DEFINE_RTYPE(memul_ts1_mm)
+  DEFINE_R3TYPE(memin_m)
+  DEFINE_R3TYPE(memax_m)
+  DEFINE_R3TYPE(meacc_m)
   DEFINE_RTYPE(meconv_mm)
-//  DEFINE_RTYPE(meconv_sp_mm)
+  DEFINE_RTYPE(meconv_sp_mm)
 
   DEFINE_LTYPE(lui);
   DEFINE_LTYPE(auipc);
@@ -779,6 +779,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(verecip_m);
   DEFINE_R3TYPE(vesqrt_m);
   DEFINE_R3TYPE(veexp_m);
+  DEFINE_R3TYPE(veavgpool_m)
+  DEFINE_R3TYPE(vemaxpool_m)
+  DEFINE_RTYPE(vedwconv_mm)
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

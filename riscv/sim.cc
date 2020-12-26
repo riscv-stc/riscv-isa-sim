@@ -26,6 +26,8 @@
 #define l1_buffer_size       (0x00140000)
 #define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00040000)
+#define sp_buffer_start      (0xc0500000)
+#define sp_buffer_size       (0x00040000)
 #define SRAM_START           (0xc1000000)
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
@@ -134,6 +136,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     }
 
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
+    local_bus[i]->add_device(sp_buffer_start, new mem_t(sp_buffer_size));
     local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
     local_bus[i]->add_device(MBOX_START, box);
     procs[i]->add_mbox(box);
@@ -793,6 +796,13 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       reg_t start_addr = l1_buffer_start;
       if (desc.first == start_addr && addr - desc.first <= l1_buffer_size) {
+        return true;
+      }
+    }
+  } else if ((type == SP_BUFFER)) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = sp_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= sp_buffer_size) {
         return true;
       }
     }

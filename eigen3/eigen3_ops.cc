@@ -153,7 +153,7 @@ half
 CustomInsns::int32_mul_f16(int a, float16_t b)
 {
     half res;
-    res.x = int32xfp16(a, b.v) & 0xfffff;
+    res.x = int32xfp16(a, b.v) & 0xffff;
     return res;
 }
 /**
@@ -317,6 +317,11 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     Map_half col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     float32_t first, second, third, forth, res12, res34, res;
     float32_t res_tmp;
+    if (debug) {
+        cout << "rs1: " << rs1_matrix << endl;
+        cout << "left: " << left_matrix << endl;
+        cout << "rs2: " << rs2_matrix << endl;
+    }
     //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -564,6 +569,199 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStr
 
     return 0;
 }
+
+
+int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss)
+{
+    int pad_top, pad_bottom, pad_left, pad_right;
+    int kw, kh, okw, okh, k_stride, sk, stride_idx;
+    int in_w, in_h, in_c, in_stride;
+    int out_w, out_h, out_c, out_stride;
+    int w, h, c;
+    int dilation;
+    int i, j, k, ii, jj, kk, index_cin, counter;
+    int row, col;
+    uint32_t sp_index1, sp_index2;
+    half *rs1_start;
+    half *left_val, *row_val, *col_val;
+    half *start;
+    half val;
+    uint8_t *sp_idx_data, * idx_val;
+
+    //get the padding
+    pad_top = (ss->conv_padding >> 24) & 0xff;
+    pad_bottom = (ss->conv_padding >> 16) & 0xff;
+    pad_left = (ss->conv_padding >> 8) & 0xff;
+    pad_right = ss->conv_padding & 0xff;
+
+    //get the input shape
+    in_w = (ss->conv_fm_in >> 16) & 0xffff;
+    in_h = (ss->conv_fm_in) & 0xffff;
+    in_c = (ss->conv_depth_in) & 0xffff;
+    assert(in_w > 0 && in_h > 0 && in_c > 0);
+    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+
+    //get the index stride
+    stride_idx = ss->stride_idx? ss->stride_idx>>1 : in_c>>1;
+
+    //get the output shape
+    out_w = (ss->conv_fm_out >> 16) & 0xffff;
+    out_h = (ss->conv_fm_out) & 0xffff;
+    out_c = (ss->conv_depth_out) & 0xffff;
+    assert(out_w > 0 && out_h > 0 && out_c > 0);
+    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+
+    //get the kernel shape
+    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params2) & 0xff;
+    assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
+    k_stride = ss->conv_kernel_params1 & 0xffff;
+    assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
+
+    /* split the 8bit index shape into 2bit */
+    i = (kw * kh * stride_idx * out_c + 3)/4;
+    Map_uint8_t tmp_matrix(sparseidx, 1, i, DynStride(i, 1));
+    sp_idx_data = (uint8_t *)malloc(kw * kh * (in_c/2) * out_c *sizeof(uint8_t));
+    Map_uint8_t sp_matrix(sp_idx_data, kh * kw * (in_c/2), out_c, DynStride(out_c, 1));
+    ii = 0;
+    
+    for (i = 0; i < kw * kh; i++){
+        for (j = 0; j < (in_c/2); j++)
+            for (k = 0; k < out_c; k++) {
+                sp_matrix(i*(in_c/2)+j, k) = (tmp_matrix(0, ii/4) >> (ii%4 *2)) &3;
+                ++ii;
+            }
+        for (j = 0; j < (stride_idx - in_c/2); j++)
+            for (k = 0; k < out_c; k++) 
+                ++ii;
+    }
+    /////////////////////////////////////////////////////////////
+
+    /*calculate the kernel shape*/
+    Map_half rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
+
+    h = dilation > 1 ? dilation * (kh - 1) + 1 : kh;
+    w = dilation > 1 ? dilation * (kw - 1) + 1 : kw;
+    okh = kh;
+    okw = kw;
+    kh = h;
+    kw = w;
+
+    /*calculate the input shape*/
+    Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
+
+    /*calculate the output shape*/
+    h = (in_h + pad_top + pad_bottom - kh + 1 + sk - 1) / sk;
+    w = (in_w + pad_left + pad_right - kw + 1 + sk - 1) / sk;
+    left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
+
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
+            rs1_start = rs1;
+
+            for (ii = 0; ii < kh; ii++) {
+                for (jj = 0; jj < kw; jj++) {
+                    for (kk = 0; kk < in_c; kk++) {
+                        row = i * sk + ii;
+                        col = j * sk + jj;
+
+                        if (ii % dilation)
+                            continue;
+                        else {
+                            if (jj % dilation)
+                                continue;
+                            else {
+				int start_offset = ii/dilation * okw * in_c + jj/dilation * in_c + kk;
+				int rs1_offset = (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk;
+                                if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
+                                    *(start + start_offset) = *(rs1_start + rs1_offset);
+                                    val = *(rs1_start + rs1_offset);
+                                }
+                                else {
+                                    *(start + start_offset) = (half)0;
+                                    val =  (half)0;
+                                }
+
+                                if (debug) {
+                                    printf("rd offset= %d val = 0x%x ",start_offset, val.x);
+                                    val = *(start + start_offset);
+                                    printf("rd val = 0x%x\n", val.x);
+                                }
+                            }//jj % dilation
+                        }//i % dilation
+                    }//kk
+                }//jj
+            }//ii
+        }//j
+    }//i
+
+    /*param check*/
+    if (debug)
+        printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
+    assert(h == out_h && w == out_w);
+
+    /*calculate convolution*/
+    Map_half left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
+    row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
+    col_val = (half *)malloc(okh * okw * in_c * sizeof(half));
+    idx_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
+    Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_half col_matrix(col_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
+    float32_t odd, even;
+    if (debug) {
+        cout << "rs1: " << rs1_matrix << endl;
+        cout << "left: " << left_matrix << endl;
+        cout << "rs2: " << rs2_matrix << endl;
+        cout << "origin idx:\n";
+        for (i = 0; i < (kw * kh * (stride_idx) * out_c + 3)/4; i++)
+            cout << (int32_t)tmp_matrix(0,i) << endl;
+        cout << "trans idx:\n";
+        for(i = 0; i < kw * kh * (in_c/2); i++){
+            for (j = 0; j < out_c; j++)
+                cout << (int32_t)sp_matrix(i,j) << "\t";
+            cout << endl;
+        }
+    }
+    //rd_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < out_c; j++) {
+            row_matrix = left_matrix.row(i);
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
+            counter = 0;
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                sp_index1 = (int32_t)idx_matrix(0, k/2);
+                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
+                even = f32_add(half_mul_f32(row_matrix(0, k+sp_index1), col_matrix(0, k/2)), even);
+                odd = f32_add(half_mul_f32(row_matrix(0, k+sp_index2), col_matrix(0, k/2+1)), odd);
+            }
+            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
+        }
+    }
+
+    if (debug)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    free(row_val);
+    free(col_val);
+    free(left_val);
+    free(idx_val);
+    return 0;
+}
+
+
 
 /**
  * veemul_mf() veemul.mf
@@ -1237,21 +1435,31 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2:\n" << rs2_matrix << endl;
+        cout << "rs2: \n";
+        for (i = 0; i < ss->shape2_row; i++){
+            for (j = 0; j < ss->shape2_column; j++){
+                cout << (((short)rs2_matrix(i, j))&0xff) << "\t";
+            }
+            cout << endl;
+        }
     }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            res = 0;
+            res = -0;
             for (k = 0; k < ss->shape1_column; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, false);
+                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
                 res += rs1_i8 * rs2_matrix(k, j);
-                cout << "rs1: " << rs1_matrix(i, k).x;
-                cout << " rs1 * coeff: " << rs1_f16.v;
-                cout << " rs1 * coeff to int8: " << (int)rs1_i8<<endl;
+                if (debug) {
+                    cout << i <<": rs1: " << rs1_matrix(i, k).x;
+                    cout << " rs1 * coeff: " << rs1_f16.v;
+                    cout << " rs1 * coeff to int8: " << (int)rs1_i8;
+                    cout << " rs2: " << (((short)rs2_matrix(k, j))&0xff);
+                    k == (ss->shape1_column - 1)? cout << " res " << res <<endl : cout << endl;
+                }
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);        
         }
@@ -1259,6 +1467,89 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
 
+    return 0;
+}
+
+
+/**
+ * memul_sp_mm() memul.sp.mm
+ * 
+ * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
+ * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param rs2 M2,源操作矩阵二基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ * 
+ * ss->sride_idx: bit
+ */
+int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss)
+{
+    uint8_t *sp_idx_data;
+    int i, j, k;
+    uint32_t sp_index1, sp_index2;
+    float32_t odd, even;
+    /* param check */
+    if (ss->shape1_column != (ss->shape2_row * 2) ) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row * 2" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    i = (ss->shape2_row * (ss->stride_idx/2) + 3)/4;
+    Map_uint8_t tmp_matrix(sparseidx, 1, i, DynStride(i, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+        cout << "rs2:\n" << rs2_matrix << endl;
+        cout << "idx:\n";
+        for(j = 0; j < i; j++)
+            cout << (int32_t)tmp_matrix(0,j) << endl;
+    }
+
+    sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
+    Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
+    k = 0;
+    for (i = 0; i < ss->shape2_row; i++){
+        for(j = 0; j < ss->shape2_column; j++){
+            sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
+            ++k;
+        }
+        for (j = 0; j < (ss->stride_idx/2 - ss->shape2_column); j++){
+            ++k;
+        }
+    }
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            odd.v = 0x0000000;
+            even.v = 0x0000000;
+            for (k = 0; k < ss->shape1_column; k+=4) {
+                sp_index1 = sp_matrix(k/2, j);
+                sp_index2 = sp_matrix(k/2+1, j);
+                odd = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)), odd);
+                even = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)), even);
+                if (debug ) {
+                    cout << sp_index1 << ":"<< rs1_matrix(i, k+sp_index1) << "*" << rs2_matrix(k/2, j) << endl;
+                    cout << sp_index2 << ":"<< rs1_matrix(i, k+sp_index2) << "*" << rs2_matrix(k/2+1, j);
+                    cout << endl;
+                }
+            }
+            rd_matrix(i, j) = f32_to_half(f32_add(odd, even));
+        }
+    }
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    free(sp_idx_data);
     return 0;
 }
 
@@ -1974,8 +2265,8 @@ int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss)
         // mul 1/n
         MATRIX_MUL_VEC_V_CONVERT(block_reshaped, vec_rescip, block_avged, row_block_reshaped, col_block_reshaped, Float32);
 
-        // acc and convert back to half
-        MATRIX_ACC_DIMH_4PART(block_avged, rd_row_intype, Float32, row_block_reshaped, col_block_reshaped);
+        // acc and convert back to half, only support odd&even mode
+        MATRIX_ACC_DIMH_PARITY(block_avged, rd_row_intype, Float32, row_block_reshaped, col_block_reshaped);
         MATRIX_CAST(rd_row_intype, rd_row, half, 1, column_2d_out);
 
         // get a row in output
@@ -1990,10 +2281,10 @@ int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss)
         // move point
         rd_row_idx++;
         start_col += vss->sw;
-        if (start_col + vss->kw >= row_3d_padded) {
+        if (start_col + vss->kw > row_3d_padded) {
             start_col = 0;
             start_row += vss->sh;
-            if (start_row + vss->kh >= column_3d_padded)
+            if (start_row + vss->kh > column_3d_padded)
                 break;
         }
         fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
@@ -2002,6 +2293,222 @@ int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss)
     free(rd_row_intype_buf);
     free(rd_row_buf);
     free(recip_buf);
+    free(block_indtype_buf);
+    free(fb_buf);
+    free(padding_buf);
+    free(padded_buf);
+
+    return 0;
+}
+
+int vemaxpool_m(half *rs1, half *rd, struct VmeShapeStride *vss)
+{
+    DEFINE_MAP_DTYPE(half)
+    DEFINE_MAP_DTYPE(Float32)
+
+    //param check
+    assert((vss->kw * vss->kh <= 64));
+    assert((vss->kw > 0) && (vss->kh) > 0);
+    assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
+    assert((vss->wout > 0) && (vss->hout > 0));
+
+    VME_SHAPE_STRIDE_INFO(vss);
+
+    // rs1 source
+    int row_2d, column_2d;
+    row_2d = vss->row * vss->column;
+    column_2d = vss->cin;
+    Map_half rs1_2d(rs1, row_2d, column_2d, DynStride(vss->ifm_c_stride, 1));
+
+    // rs1 with padding
+    int row_2d_padded, column_2d_padded, row_3d_padded, column_3d_padded;
+    row_3d_padded = vss->row + vss->n_pad_l + vss->n_pad_r;
+    column_3d_padded = vss->column + vss->n_pad_u + vss->n_pad_d;
+    row_2d_padded = row_3d_padded * column_3d_padded;
+    column_2d_padded = vss->cin;
+    half *padded_buf = (half *)malloc(row_2d_padded * column_2d_padded * sizeof(half));
+    Map_half rs1_2d_padded(padded_buf, row_2d_padded, column_2d_padded, DynStride(vss->cin, 1));
+
+    // zero padding
+    half *padding_buf = (half *)malloc(vss->cin * sizeof(half));
+    Map_half padding(padding_buf, 1, vss->cin, DynStride(1, 1));
+    padding = padding.Constant(1, vss->cin, half(0));
+    PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
+        vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
+
+    // to save fetched block
+    int row_2d_fetch, column_2d_fetch, stride_fetch;
+    row_2d_fetch = vss->kh;
+    column_2d_fetch = vss->cin * vss->kw;
+    stride_fetch = vss->cin * row_3d_padded;
+    half *fb_buf = (half *)malloc(row_2d_fetch * column_2d_fetch * sizeof(half));
+    Map_half fetch_block(fb_buf, row_2d_fetch, column_2d_fetch, DynStride(column_2d_fetch, 1));
+
+    // reshape fetched block by using same buf
+    int row_block_reshaped, col_block_reshaped;
+    row_block_reshaped = vss->kw * vss->kh;
+    col_block_reshaped = vss->cin;
+    Map_half block_reshaped(fb_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
+
+    // output, flatten to 2d
+    int row_2d_out, column_2d_out;
+    row_2d_out = vss->hout * vss->wout;
+    column_2d_out = vss->cin;
+    Map_half rd_2d(rd, row_2d_out, column_2d_out, DynStride(vss->ofm_c_stride, 1));
+
+    // internal result, one row, get rd_row_intype then convert to rd_row
+    half *rd_row_buf = (half *)malloc(column_2d_out * sizeof(half));
+    Map_half rd_row(rd_row_buf, 1, column_2d_out, DynStride(1, 1));
+
+    int start_row = 0;
+    int start_col = 0;
+    int rd_row_idx = 0;
+    half *recip_tab = (half *)recip_table_half;
+    half *fetch_base = padded_buf;
+    while (1) {
+        // fetch next block and reshape
+        Map_half fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
+        fetch_block = fetch;
+
+        // get a row in output
+        rd_2d.row(rd_row_idx) = block_reshaped.colwise().maxCoeff();
+
+        if (GLOBAL_DBG) {
+            std::cout << "output row index = " << rd_row_idx << std::endl;
+            std::cout << "current start point(" << start_row << "," << start_col << ")" << std::endl;
+        }
+
+        // move point
+        rd_row_idx++;
+        start_col += vss->sw;
+        if (start_col + vss->kw > row_3d_padded) {
+            start_col = 0;
+            start_row += vss->sh;
+            if (start_row + vss->kh > column_3d_padded)
+                break;
+        }
+        fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+    }
+
+    free(rd_row_buf);
+    free(fb_buf);
+    free(padding_buf);
+    free(padded_buf);
+
+    return 0;
+}
+
+int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss)
+{
+    DEFINE_MAP_DTYPE(half)
+    DEFINE_MAP_DTYPE(Float32)
+
+    //param check
+    assert((vss->kw * vss->kh <= 64));
+    assert((vss->kw > 0) && (vss->kh) > 0);
+    assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
+    assert((vss->wout > 0) && (vss->hout > 0));
+
+    VME_SHAPE_STRIDE_INFO(vss);
+
+    // rs1 source
+    int row_2d, column_2d;
+    row_2d = vss->row * vss->column;
+    column_2d = vss->cin;
+    Map_half rs1_2d(rs1, row_2d, column_2d, DynStride(vss->ifm_c_stride, 1));
+
+    // kernel matrix
+    int row_k_2d, col_k_2d;
+    row_k_2d = vss->kw * vss->kh;
+    col_k_2d = vss->cin;
+    Map_half kernel_2d(rs2, row_k_2d, col_k_2d, DynStride(vss->k_c_stride, 1));
+
+    // rs1 with padding
+    int row_2d_padded, column_2d_padded, row_3d_padded, column_3d_padded;
+    row_3d_padded = vss->row + vss->n_pad_l + vss->n_pad_r;
+    column_3d_padded = vss->column + vss->n_pad_u + vss->n_pad_d;
+    row_2d_padded = row_3d_padded * column_3d_padded;
+    column_2d_padded = vss->cin;
+    half *padded_buf = (half *)malloc(row_2d_padded * column_2d_padded * sizeof(half));
+    Map_half rs1_2d_padded(padded_buf, row_2d_padded, column_2d_padded, DynStride(vss->cin, 1));
+
+    // zero padding
+    half *padding_buf = (half *)malloc(vss->cin * sizeof(half));
+    Map_half padding(padding_buf, 1, vss->cin, DynStride(1, 1));
+    padding = padding.Constant(1, vss->cin, half(0));
+    PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
+        vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
+
+    // to save fetched block
+    int row_2d_fetch, column_2d_fetch, stride_fetch;
+    row_2d_fetch = vss->kh;
+    column_2d_fetch = vss->cin * vss->kw;
+    stride_fetch = vss->cin * row_3d_padded;
+    half *fb_buf = (half *)malloc(row_2d_fetch * column_2d_fetch * sizeof(half));
+    Map_half fetch_block(fb_buf, row_2d_fetch, column_2d_fetch, DynStride(column_2d_fetch, 1));
+
+    // reshape fetched block by using same buf
+    int row_block_reshaped, col_block_reshaped;
+    row_block_reshaped = vss->kw * vss->kh;
+    col_block_reshaped = vss->cin;
+    Map_half block_reshaped(fb_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
+
+    // save (block * kernel), inner dtype
+    Float32 *block_indtype_buf = (Float32 *)malloc(row_block_reshaped * col_block_reshaped * sizeof(Float32));
+    Map_Float32 block_muled(block_indtype_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
+
+    // output, flatten to 2d
+    int row_2d_out, column_2d_out;
+    row_2d_out = vss->hout * vss->wout;
+    column_2d_out = vss->cin;
+    Map_half rd_2d(rd, row_2d_out, column_2d_out, DynStride(vss->ofm_c_stride, 1));
+
+    // internal result, one row, get rd_row_intype then convert to rd_row
+    half *rd_row_buf = (half *)malloc(column_2d_out * sizeof(half));
+    Map_half rd_row(rd_row_buf, 1, column_2d_out, DynStride(1, 1));
+    Float32 *rd_row_intype_buf = (Float32 *)malloc(column_2d_out * sizeof(Float32));
+    Map_Float32 rd_row_intype(rd_row_intype_buf, 1, column_2d_out, DynStride(1, 1));
+
+    int n, row_valid, col_valid;
+    int start_row = 0;
+    int start_col = 0;
+    int rd_row_idx = 0;
+    half *fetch_base = padded_buf;
+    while (1) {
+        // fetch next block and reshape
+        Map_half fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
+        fetch_block = fetch;
+
+        // block * kernel
+        MATRIX_MUL_CONVERT(block_reshaped, kernel_2d, block_muled, row_block_reshaped, col_block_reshaped, Float32);
+
+        // acc and convert back to half
+        MATRIX_ACC_DIMH_PARITY(block_muled, rd_row_intype, Float32, row_block_reshaped, col_block_reshaped);
+        MATRIX_CAST(rd_row_intype, rd_row, half, 1, column_2d_out);
+
+        // get a row in output
+        rd_2d.row(rd_row_idx) = rd_row;
+
+        if (GLOBAL_DBG) {
+            std::cout << "n = " << n << std::endl;
+            std::cout << "output row index = " << rd_row_idx << std::endl;
+            std::cout << "current start point(" << start_row << "," << start_col << ")" << std::endl;
+        }
+
+        // move point
+        rd_row_idx++;
+        start_col += vss->sw;
+        if (start_col + vss->kw > row_3d_padded) {
+            start_col = 0;
+            start_row += vss->sh;
+            if (start_row + vss->kh > column_3d_padded)
+                break;
+        }
+        fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+    }
+
+    free(rd_row_intype_buf);
+    free(rd_row_buf);
     free(block_indtype_buf);
     free(fb_buf);
     free(padding_buf);

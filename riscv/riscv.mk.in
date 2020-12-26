@@ -942,6 +942,18 @@ riscv_insn_stc = \
 	icmov_m \
 	pld \
 	pld_rs2 \
+    veavgpool_m \
+    vemaxpool_m \
+    vedwconv_mm \
+    \
+    memul_mm \
+	memin_m \
+	memax_m \
+	meacc_m \
+	memul_ts1_mm \
+	memul_sp_mm \
+	meconv_mm \
+	meconv_sp_mm
 
 
 riscv_insn_list = \
@@ -950,8 +962,6 @@ riscv_insn_list = \
 	$(riscv_insn_ext_i) \
 	$(riscv_insn_ext_m) \
 	$(riscv_insn_ext_f) \
-	fshw \
-	flhw \
 	$(riscv_insn_ext_d) \
 	$(riscv_insn_ext_zfh) \
 	$(riscv_insn_ext_q) \
@@ -959,12 +969,7 @@ riscv_insn_list = \
 	$(if $(HAVE_INT128),$(riscv_insn_ext_v),) \
 	$(riscv_insn_ext_h) \
 	$(riscv_insn_priv) \
-	$(riscv_insn_stc) \
-	memul_mm \
-	memin_m \
-	memax_m \
-	meacc_m \
-	meconv_mm  
+	$(riscv_insn_stc)
 
 riscv_gen_srcs = \
 	$(addsuffix .cc,$(riscv_insn_list))
