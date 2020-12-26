@@ -902,6 +902,7 @@ riscv_insn_priv = \
 
 riscv_insn_stc = \
 	sync \
+	sync_rs2 \
     veacc_m \
 	veadd_mf \
 	veadd_mm \
@@ -940,6 +941,7 @@ riscv_insn_stc = \
 	icmov \
 	icmov_m \
 	pld \
+	pld_rs2 \
 
 
 riscv_insn_list = \

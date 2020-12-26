@@ -580,7 +580,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(ror);
   DEFINE_RTYPE(rol);
   DEFINE_RTYPE(sync);
+  DEFINE_RTYPE(sync_rs2);
   DEFINE_RTYPE(pld);
+  DEFINE_RTYPE(pld_rs2);
   DEFINE_RTYPE(icmov);
   DEFINE_R3TYPE(icmov_m)
   DEFINE_R3TYPE(mov_m);

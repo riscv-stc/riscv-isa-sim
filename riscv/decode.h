@@ -216,26 +216,6 @@ private:
 # define WRITE_VSTATUS STATE.log_reg_write[3] = {0, 0};
 #endif
 
-#define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
-#define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
-#define MTE_STRIDE_RS1        (STATE.mte_stride & 0xFFFF)
-#define MTE_STRIDE_RD        ((STATE.mte_stride & 0xFFFF0000) >> 16)
-#define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
-#define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
-
-#define DIM_DM (insn.dim()&1)
-#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
-#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
-#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
-#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
-#define STRIDE_RD (STATE.stride_d & 0xFFFF)
-#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
-#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
-
-#define SRC_CORE_ID     ((STATE.mte_icdest >> 16) & 0xF)
-#define DST_CORE_ID     (STATE.mte_icdest & 0xF)
-//#define MTE_CORE_MAP    (STATE.mte_coremap)
-
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
 #define WRITE_RVC_RS2S(value) WRITE_REG(insn.rvc_rs2s(), value)
@@ -252,16 +232,6 @@ private:
 #define VILL (P.VU.vill)
 
 // vme macros
-#define DIM (insn.dim())
-#define DIM_DM (insn.dim()&1)
-#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
-#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
-#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
-#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
-#define STRIDE_RD (STATE.stride_d & 0xFFFF)
-#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
-#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
-
 #define VME_DTYPE (STATE.vme_data_type)
 #define VME_DTYPE_VD (STATE.vme_data_type & 0xFF)
 #define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
@@ -284,19 +254,10 @@ private:
 #define VME_N_PAD_L ((STATE.vme_FM_padding & 0xFF00) >> 8)
 #define VME_N_PAD_R (STATE.vme_FM_padding & 0xFF)
 
-#define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
-#define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
-#define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
-#define BC_SHAPE2_ROW (STATE.m_shape_s2 & 0xFFFF)
-#define BC_STRIDE_RD (STATE.m_stride_d & 0xFFFF)
-#define BC_STRIDE_RS1 (STATE.m_stride_s & 0xFFFF)
-#define BC_STRIDE_RS2 ((STATE.m_stride_s & 0xFFFF0000) >> 16)
-
 // FPU macros
 #define FRS1 READ_FREG(insn.rs1())
 #define FRS2 READ_FREG(insn.rs2())
 #define FRS3 READ_FREG(insn.rs3())
-#define FLEN (p->get_flen())
 #define dirty_fp_state (STATE.mstatus |= MSTATUS_FS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define dirty_ext_state (STATE.mstatus |= MSTATUS_XS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define dirty_vs_state (STATE.mstatus |= MSTATUS_VS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
@@ -307,7 +268,6 @@ private:
 #define VRS1 READ_VREG(insn.rs1())
 #define VRS2 READ_VREG(insn.rs2())
 #define VRS3 READ_VREG(insn.rd())
-#define TS   (insn.ts())
 #define VR0  READ_VREG(0)
 #define VRD  READ_VREG(insn.rd())
 #define FRD  READ_FREG(insn.rd())
@@ -320,9 +280,7 @@ private:
 #define VLMAX_NO_LMUL	(VLEN/SEW)
 #define WRITE_VRD_H(value, idx) WRITE_VREG_H(insn.rd(), idx, value)
 #define WRITE_VRD_B(value, idx) WRITE_VREG_B(insn.rd(), idx, value)
-// #define VLEN (p->get_vlen())
-// #define SLEN (p->get_slen())
-// #define ELEN (p->get_elen())
+
 #define DIM (insn.dim())
 #define TS (insn.ts())
 #define DIM_DM (insn.dim()&1)
@@ -349,6 +307,13 @@ private:
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
 #define STRIDE_LLB        (STATE.mte_stride_llb & 0xFFFF)
+#define MTE_STRIDE_RS1        (STATE.mte_stride & 0xFFFF)
+#define MTE_STRIDE_RD        ((STATE.mte_stride & 0xFFFF0000) >> 16)
+#define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
+#define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
+
+#define SRC_CORE_ID     ((STATE.mte_icdest >> 16) & 0xFF)
+#define DST_CORE_ID     (STATE.mte_icdest & 0xFF)
 
 #define DMA_SHAPE_COLUMN  (STATE.dma_shape_col)
 #define DMA_SHAPE_ROW     (STATE.dma_shape_row)
@@ -422,75 +387,6 @@ private:
             !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
               p->get_sim()->in_local_mem(zext_xlen(x) + len-1, IM_BUFFER)))
 
-
-
-// throw trap if cust inst access out of l1&im buffer
-#define check_cust_access(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
-            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
-        }
-
-// throw trap if cust inst access out of l1 buffer
-#define check_cust_access_l1(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
-        }
-
-// throw trap if cust inst access out of im buffer
-#define check_cust_access_im(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
-        }
-
-// throw trap if cust inst access misaligned base address
-#define check_cust_misaligned_base(x, type) \
-        if (unlikely(x & (sizeof(type##_t)-1))) { \
-            throw trap_ncp_cust_misaligned_base(x, 0, 0); \
-        }
-
-// throw trap if cust inst source address access with misaligned stride
-#define check_cust_misaligned_stride_src(x, type, stride) \
-        if (unlikely(stride && (stride & (sizeof(type##_t)-1)))) { \
-            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
-        }
-
-// throw trap if cust inst dest access with misaligned stride, or stride < width
-#define check_cust_misaligned_stride_dst(x, type, stride, col) \
-        if (unlikely(stride && (stride & (sizeof(type##_t)-1) || stride < col*sizeof(type##_t)))) { \
-            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
-        }
-
-// throw trap if cust inst use invalid shape, col=0 or row=0
-#define check_cust_invalid_shape(col, row) \
-        if (unlikely(col == 0 || row == 0)) { \
-            throw trap_ncp_cust_invalid_param(); \
-        }
-
-//  throw trap if conv inst use invalid param
-#define check_cust_invalid_conv_param(fm_in, depth_in, kernel) ({\
-        int in_w = (fm_in >> 16) & 0xffff; \
-        int in_h = (fm_in) & 0xffff; \
-        int in_c = (depth_in) & 0xffff; \
-        if (unlikely(in_w == 0 || in_h == 0 || inc_c == 0)) { \
-            throw trap_ncp_cust_invalid_param(); \
-        } \
-        int dilation = (kernel >> 8) & 0xff; \
-        int kw = (ss->conv_kernel_params2 >> 24) & 0xff; \
-        int kh = (ss->conv_kernel_params2 >> 16) & 0xff; \
-        int sk = (kernel) & 0xff; \
-        if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
-            throw trap_ncp_cust_invalid_param(); \
-        } \
-  })
-
-#define check_ncp_vill_invalid() \
-        if (VILL) \
-             throw trap_ncp_vill_invalid_inst();
 
 //don't modify elment of big than vl
 #define vector_for_each(x) for(unsigned int (x) = VSTART; (x) < VL; (x)++)
