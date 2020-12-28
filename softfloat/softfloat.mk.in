@@ -8,6 +8,7 @@ softfloat_hdrs = \
   softfloat.h \
   softfloat_types.h \
   specialize.h \
+  opts-GCC.h \
 
 softfloat_srcs= \
 	eigen3_ops.cc \

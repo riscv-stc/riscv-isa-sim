@@ -50,4 +50,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 #define INLINE static inline
-
+#define SOFTFLOAT_BUILTIN_CLZ 1
+#include "opts-GCC.h"

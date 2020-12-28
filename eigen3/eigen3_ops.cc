@@ -2155,18 +2155,7 @@ int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
     Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     
     SHAPE_STRIDE_INFO(ss);
-    for (int row = 0; row < ss->shape1_row; row++)
-    {
-        for (int col = 0; col < ss->shape1_column; col++)
-	{
-	    if (rs1_matrix(row, col) > (half)127)
-		rd_matrix(row, col) = 127;
-	    else if (rs1_matrix(row, col) < (half)-128)
-		rd_matrix(row, col) = -128;
-	    else
-		rd_matrix(row, col) = (int8_t)rs1_matrix(row, col);
-	}
-    }
+    rd_matrix = rs1_matrix.cast<signed char>();
 
     if (debug) {
         cout << "rs1:" << endl << rs1_matrix << endl;
@@ -2469,7 +2458,7 @@ int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss)
     Float32 *rd_row_intype_buf = (Float32 *)malloc(column_2d_out * sizeof(Float32));
     Map_Float32 rd_row_intype(rd_row_intype_buf, 1, column_2d_out, DynStride(1, 1));
 
-    int n, row_valid, col_valid;
+    int row_valid, col_valid;
     int start_row = 0;
     int start_col = 0;
     int rd_row_idx = 0;
@@ -2490,7 +2479,6 @@ int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss)
         rd_2d.row(rd_row_idx) = rd_row;
 
         if (GLOBAL_DBG) {
-            std::cout << "n = " << n << std::endl;
             std::cout << "output row index = " << rd_row_idx << std::endl;
             std::cout << "current start point(" << start_row << "," << start_col << ")" << std::endl;
         }

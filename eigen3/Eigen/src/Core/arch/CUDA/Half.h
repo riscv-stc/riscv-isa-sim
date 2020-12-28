@@ -120,19 +120,42 @@ struct half : public half_impl::half_base {
       x = f.v;
   }
   explicit EIGEN_DEVICE_FUNC half(const Float32& f);
+  explicit EIGEN_DEVICE_FUNC half(signed char i) {
+    float16_t f16t;
+    f16t = i8_to_f16(i);
+    x = f16t.v;
+  }
+  explicit EIGEN_DEVICE_FUNC half(unsigned char ui) {
+    float16_t f16t;
+    f16t = ui8_to_f16(ui);
+    x = f16t.v;
+  }
+  explicit EIGEN_DEVICE_FUNC half(short s) {
+    float16_t f16t;
+    f16t = i16_to_f16(s);
+    x = f16t.v;
+  }
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
     return (x & 0x7fff) != 0;
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(signed char) const {
-    return static_cast<signed char>(half_impl::half_to_float(*this));
+    float16_t f16t;
+    f16t.v = this->x;
+    return f16_to_i8(f16t, softfloat_roundingMode, true);
   }
+
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(unsigned char) const {
-    return static_cast<unsigned char>(half_impl::half_to_float(*this));
+    float16_t f16t;
+    f16t.v = this->x;
+    return f16_to_ui8(f16t, softfloat_roundingMode, true);
   }
+
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(short) const {
-    return static_cast<short>(half_impl::half_to_float(*this));
+    float16_t f16t;
+    f16t.v = this->x;
+    return f16_to_i16(f16t, softfloat_roundingMode, true);
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(unsigned short) const {
     return static_cast<unsigned short>(half_impl::half_to_float(*this));
