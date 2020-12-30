@@ -26,7 +26,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      0
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -1051,6 +1051,9 @@ public:
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
     int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
+    int medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
+    
 };
 
 /**

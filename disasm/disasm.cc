@@ -506,6 +506,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(meacc_m)
   DEFINE_RTYPE(meconv_mm)
   DEFINE_RTYPE(meconv_sp_mm)
+  DEFINE_RTYPE(medeconv_mm)
+  DEFINE_RTYPE(medeconv_sp_mm)
 
   DEFINE_LTYPE(lui);
   DEFINE_LTYPE(auipc);
