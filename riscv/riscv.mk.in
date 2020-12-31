@@ -954,7 +954,8 @@ riscv_insn_stc = \
 	memul_sp_mm \
 	meconv_mm \
 	meconv_sp_mm \
-	medeconv_mm
+	medeconv_mm \
+	medeconv_sp_mm
 
 
 riscv_insn_list = \

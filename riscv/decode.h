@@ -1378,6 +1378,38 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access_im(RD, rd_size); \
   })
 
+// check traps for meconv.mm instructions
+#define check_traps_medeconv_sp_mm(in_type, out_type) ({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RS2, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        if (unlikely(MME_SPARSE_BASE & 1)) { \
+            throw trap_ncp_cust_misaligned_base(MME_SPARSE_BASE, 0, 0); \
+        } \
+        check_cust_invalid_shape(CONV_IN_ROW, CONV_IN_COLUMN); \
+        check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
+        check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
+        check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        check_cust_misaligned_stride_src(RS1, in_type, CONV_IN_STRIDE); \
+        check_cust_misaligned_stride_src(RS2, in_type, CONV_W_STRIDE); \
+        check_cust_misaligned_stride_dst(RD, out_type, CONV_OUT_STRIDE, CONV_COUT); \
+        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : (CONV_CIN * sizeof(in_type##_t))) * \
+                       (CONV_IN_COLUMN * CONV_IN_ROW); \
+        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : (CONV_COUT * sizeof(in_type##_t))) * \
+                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : (CONV_COUT * 2)) *  \
+                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : (CONV_COUT * sizeof(out_type##_t))) * \
+                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_l1(RS2, rs2_size); \
+        check_cust_access_im(RD, rd_size); \
+        check_cust_access_sp(MME_SPARSE_BASE, idx_size); \
+  })
+
 // check traps for meconv.sp.mm instructions
 #define check_traps_meconv_sp_mm(in_type, out_type) ({ \
         check_cust_misaligned_base(RS1, in_type); \
