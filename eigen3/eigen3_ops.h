@@ -975,6 +975,23 @@ int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
     return 0;
 }
 
+extern int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss);
+extern int vecvt_x16_hf_m(half *rs1, short *rd, struct ShapeStride *ss);
+extern int vecvt_f32_hf_m(half *rs1, Float32 *rd, struct ShapeStride *ss);
+extern int vecvt_hf_f32_m(Float32 *rs1, half *rd, struct ShapeStride *ss);
+extern int vecvt_bf_x8_m(int8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+extern int vecvt_bf_xu8_m(uint8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+extern int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss);
+extern int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss);
+extern int vecvt_bf_x16_m(int16_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+extern int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss);
+extern int vecvt_f32_bf_m(Bfloat16 *rs1, Float32 *rd, struct ShapeStride *ss);
+extern int vecvt_bf_f32_m(Float32 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+extern int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+extern int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss);
+extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
+extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss);
+
 extern int veavgpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
 extern int vemaxpool_m(half *rs1, half *rd, struct VmeShapeStride *vss);
 extern int vedwconv_mm(half *rs1, half *rs2, half *rd, struct VmeShapeStride *vss);

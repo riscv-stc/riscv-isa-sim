@@ -43,6 +43,7 @@
 namespace Eigen {
 struct Float32;
 struct half;
+struct Bfloat16;
 
 namespace float32_impl {
 
@@ -84,6 +85,10 @@ struct Float32 : public float32_impl::float32_base {
       x = f.v;
   }
   explicit EIGEN_DEVICE_FUNC Float32(const half& f);
+  explicit EIGEN_DEVICE_FUNC Float32(const Bfloat16& bf);
+  explicit EIGEN_DEVICE_FUNC Float32(int i) {
+      x = i32_to_f32(i).v;
+  }
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
@@ -102,7 +107,9 @@ struct Float32 : public float32_impl::float32_base {
     return static_cast<unsigned short>(float32_impl::float32_to_float(*this));
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(int) const {
-    return static_cast<int>(float32_impl::float32_to_float(*this));
+    float32_t f32t;
+    f32t.v = this->x;
+    return f32_to_i32(f32t, softfloat_roundingMode, true);
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(unsigned int) const {
     return static_cast<unsigned int>(float32_impl::float32_to_float(*this));
@@ -126,6 +133,7 @@ struct Float32 : public float32_impl::float32_base {
     return static_cast<double>(float32_impl::float32_to_float(*this));
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(half) const;
+  EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(Bfloat16) const;
 
   EIGEN_DEVICE_FUNC Float32& operator=(const Float32& other) {
     x = other.x;

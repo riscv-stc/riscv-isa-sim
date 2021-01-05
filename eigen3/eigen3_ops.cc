@@ -30,6 +30,7 @@ typedef Map<Matrix_##Type, Unaligned, Stride<Dynamic, Dynamic> > Map_##Type;
 
 /* Matrix_half   Map_half */
 MY_MATRIX_DEFINE(half)
+MY_MATRIX_DEFINE(Bfloat16)
 /* Matrix_uint8_t     Map_uint8_t */
 MY_MATRIX_DEFINE(uint8_t)
 MY_MATRIX_DEFINE(int8_t)
@@ -39,6 +40,8 @@ MY_MATRIX_DEFINE(int16_t)
 
 MY_MATRIX_DEFINE(uint32_t)
 MY_MATRIX_DEFINE(int32_t)
+
+MY_MATRIX_DEFINE(Float32)
 
 /*Matrix_float_t     Map_float_t */
 MY_MATRIX_DEFINE(float)
@@ -74,12 +77,28 @@ namespace Eigen {
       this->x = f32t.v;
   }
 
+  EIGEN_DEVICE_FUNC Float32::Float32(const Bfloat16& bf) {
+      bfloat16_t bf16t;
+      bf16t.v = bf.x;
+      float32_t f32t = bf16_to_f32(bf16t);
+      this->x = f32t.v;
+  }
+
   EIGEN_DEVICE_FUNC Float32::operator half() const {
       float32_t f32t;
       f32t.v = x;
       float16_t f16t = f32_to_f16(f32t);
       half res;
       res.x = f16t.v;
+      return res;
+  }
+
+  EIGEN_DEVICE_FUNC Float32::operator Bfloat16() const {
+      float32_t f32t;
+      f32t.v = x;
+      bfloat16_t bf16t = f32_to_bf16(f32t);
+      Bfloat16 res;
+      res.x = bf16t.v;
       return res;
   }
 
@@ -92,6 +111,38 @@ namespace Eigen {
       Float32 f32;
       f32.x = f32t.v;
       return f32;
+  }
+
+  EIGEN_DEVICE_FUNC Bfloat16::Bfloat16(const Float32& f32) {
+      float32_t f32t;
+      f32t.v = f32.x;
+      bfloat16_t bf16t = f32_to_bf16(f32t);
+      x = bf16t.v;
+  }
+
+  EIGEN_DEVICE_FUNC Bfloat16::Bfloat16(const half& h) {
+      float16_t f16t;
+      f16t.v = h.x;
+      bfloat16_t bf16t = f16_to_bf16(f16t);
+      x = bf16t.v;
+  }
+
+  EIGEN_DEVICE_FUNC Bfloat16::operator half() const {
+      bfloat16_t bf16t;
+      bf16t.v = x;
+      float16_t f16t = bf16_to_f16(bf16t);
+      half res;
+      res.x = f16t.v;
+      return res;
+  }
+
+  EIGEN_DEVICE_FUNC Bfloat16::operator Float32() const {
+      bfloat16_t bf16t;
+      bf16t.v = x;
+      float32_t f32 = bf16_to_f32(bf16t);
+      Float32 res;
+      res.x = f32.v;
+      return res;
   }
 }
 
@@ -2516,7 +2567,6 @@ int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss
     return 0;
 }
 
-
 /**
  * vecvt_x8_hf_m() vecvt.x8.hf.m
  * 
@@ -2536,6 +2586,278 @@ int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
     rd_matrix = rs1_matrix.cast<signed char>();
 
     if (debug) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_uint8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<unsigned char>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_x16_hf_m(half *rs1, short *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int16_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<short>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_f32_hf_m(half *rs1, Float32 *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Float32>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_hf_f32_m(Float32 *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<half>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_bf_x8_m(int8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_bf_xu8_m(uint8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<signed char>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_uint8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<unsigned char>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int16_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<short>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_bf_x16_m(int16_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_f32_bf_m(Bfloat16 *rs1, Float32 *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Float32>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_bf_f32_m(Float32 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<half>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss)
+{
+    Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<Float32>();
+
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss)
+{
+    Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    rd_matrix = rs1_matrix.cast<int>();
+
+    if (GLOBAL_DBG) {
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
     }

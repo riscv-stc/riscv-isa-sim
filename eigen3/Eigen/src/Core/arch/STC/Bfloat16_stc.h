@@ -42,6 +42,8 @@
 
 namespace Eigen {
 struct Bfloat16;
+struct Float32;
+struct half;
 
 namespace bfloat16_impl {
 
@@ -82,19 +84,36 @@ struct Bfloat16 : public bfloat16_impl::bfloat16_base {
   explicit EIGEN_DEVICE_FUNC Bfloat16(float32_t f) {
       x = f32_to_bf16(f).v;
   }
+  explicit EIGEN_DEVICE_FUNC Bfloat16(signed char i) {
+      x = i8_to_bf16(i).v;
+  }
+  explicit EIGEN_DEVICE_FUNC Bfloat16(unsigned char ui) {
+      x = ui8_to_bf16(ui).v;
+  }
+  explicit EIGEN_DEVICE_FUNC Bfloat16(short s) {
+      x = i16_to_bf16(s).v;
+  }
+  explicit EIGEN_DEVICE_FUNC Bfloat16(const Float32& f32);
+  explicit EIGEN_DEVICE_FUNC Bfloat16(const half& h);
 
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(bool) const {
     // +0.0 and -0.0 become false, everything else becomes true.
     return (x & 0x7fff) != 0;
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(signed char) const {
-    return static_cast<signed char>(bfloat16_impl::bfloat16_to_float(*this));
+    bfloat16_t bf16t;
+    bf16t.v = this->x;
+    return bf16_to_i8(bf16t, softfloat_roundingMode, true);
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(unsigned char) const {
-    return static_cast<unsigned char>(bfloat16_impl::bfloat16_to_float(*this));
+    bfloat16_t bf16t;
+    bf16t.v = this->x;
+    return bf16_to_ui8(bf16t, softfloat_roundingMode, true);
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(short) const {
-    return static_cast<short>(bfloat16_impl::bfloat16_to_float(*this));
+    bfloat16_t bf16t;
+    bf16t.v = this->x;
+    return bf16_to_i16(bf16t, softfloat_roundingMode, true);
   }
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(unsigned short) const {
     return static_cast<unsigned short>(bfloat16_impl::bfloat16_to_float(*this));
@@ -123,6 +142,8 @@ struct Bfloat16 : public bfloat16_impl::bfloat16_base {
   EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(double) const {
     return static_cast<double>(bfloat16_impl::bfloat16_to_float(*this));
   }
+  EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(half) const;
+  EIGEN_DEVICE_FUNC EIGEN_EXPLICIT_CAST(Float32) const;
 
   EIGEN_DEVICE_FUNC Bfloat16& operator=(const Bfloat16& other) {
     x = other.x;

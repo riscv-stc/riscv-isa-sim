@@ -909,6 +909,22 @@ riscv_insn_stc = \
 	veadd_mv \
 	vecvt_hf_x8_m \
 	vecvt_hf_xu8_m \
+    vecvt_xu8_hf_m \
+    vecvt_x16_hf_m \
+    vecvt_f32_hf_m \
+    vecvt_hf_f32_m \
+    vecvt_bf_x8_m \
+    vecvt_bf_xu8_m \
+    vecvt_x8_bf_m \
+    vecvt_xu8_bf_m \
+    vecvt_bf_x16_m \
+    vecvt_x16_bf_m \
+    vecvt_f32_bf_m \
+    vecvt_bf_f32_m \
+    vecvt_bf_hf_m \
+    vecvt_hf_bf_m \
+    vecvt_f32_x32_m \
+    vecvt_x32_f32_m \
 	veemacc_mf \
 	veemacc_mm \
 	veemacc_mv \
