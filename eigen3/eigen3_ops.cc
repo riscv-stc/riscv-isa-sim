@@ -813,7 +813,7 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     assert(sk > 0 && kw > 0 && kh > 0 && stride_h > 0 && stride_w > 0);
     k_stride = ss->conv_kernel_params1 & 0xffff;
     assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
+    k_stride = k_stride > 0 ? k_stride >> 1 : in_c;
 
     /*calculate & pad the rs1 shape*/
     in_pad_top = kh - pad_top - 1;
@@ -823,7 +823,7 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
     row = in_h + (in_h - 1) * (stride_h - 1) + in_pad_top + in_pad_bottom;
     col = in_w + (in_w - 1) * (stride_w - 1) + in_pad_right + in_pad_left;
-    rs1_pad = (half *)malloc(row * col * in_c *sizeof(half));
+    rs1_pad = (half *)malloc(row * col * in_c * sizeof(half));
     Map_half rs1_pad_matrix(rs1_pad, row * col, in_c, DynStride(in_c, 1));
     for (i = 0; i < row * col * in_c; i++)
         (*(rs1_pad+i)).x = 0.0;
@@ -837,12 +837,12 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     }
 
     /*kernel 上下左右翻转*/
-    ker_val = (half *)malloc(kh * kw * in_c * out_c * sizeof(half));
+    ker_val = (half *)malloc(kh * kw * out_c * in_c * sizeof(half));
     for (i = 0; i < kh; i++){
         for (j = 0; j < kw; j++){
             for (k = 0; k < out_c; k++){
                 for (m = 0; m < in_c; m++){
-                    rs2_offset = i * kw * in_c * out_c + j * in_c * out_c + k * in_c + m;
+                    rs2_offset = i * kw * k_stride * out_c + j * k_stride * out_c + k * k_stride + m;
                     ker_offset = (kh-i-1) * kw * in_c * out_c + (kw-j-1) * in_c * out_c + m * out_c + k;
                     *(ker_val + ker_offset) = *(rs2 + rs2_offset);
                 }
@@ -949,7 +949,7 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     int stride_w, stride_h;
     int i, j, k, m, ii, jj, kk;
     int row, col, row_pad, col_pad;
-    int rs2_offset, ker_offset;
+    int rs2_offset, ker_offset, idx_offset;
     uint32_t sp_index1, sp_index2;
     half *rs1_start, *rs1_pad;
     half *left_val, *row_val, *col_val, *ker_val;
@@ -992,7 +992,7 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     assert(kw > 0 && kh > 0 && stride_h > 0 && stride_w > 0);
     k_stride = ss->conv_kernel_params1 & 0xffff;
     assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
+    k_stride = k_stride > 0 ? k_stride >> 1 : in_c >> 1;
 
     /*calculate & pad the rs1 shape*/
     in_pad_top = kh - pad_top - 1;
@@ -1036,10 +1036,11 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
         for (j = 0; j < kw; j++){
             for (k = 0; k < out_c; k++){
                 for (m = 0; m < ker_c; m++){
-                    rs2_offset = i * kw * ker_c * out_c + j * ker_c * out_c + k * ker_c + m;
+                    rs2_offset = i * kw * k_stride * out_c + j * k_stride * out_c + k * k_stride + m;
+                    idx_offset = i * kw * ker_c * out_c + j * ker_c * out_c + k * ker_c + m;
                     ker_offset = (kh-i-1) * kw * ker_c * out_c + (kw-j-1) * ker_c * out_c + m * out_c + k;
                     *(ker_val + ker_offset) = *(rs2 + rs2_offset);
-                    *(sp_val + ker_offset) = *(sp_idx_data + rs2_offset);
+                    *(sp_val + ker_offset) = *(sp_idx_data + idx_offset);
                 }
             }
         }
