@@ -84,6 +84,9 @@ struct Bfloat16 : public bfloat16_impl::bfloat16_base {
   explicit EIGEN_DEVICE_FUNC Bfloat16(float32_t f) {
       x = f32_to_bf16(f).v;
   }
+  explicit EIGEN_DEVICE_FUNC Bfloat16(bfloat16_t f) {
+      x = f.v;
+  }
   explicit EIGEN_DEVICE_FUNC Bfloat16(signed char i) {
       x = i8_to_bf16(i).v;
   }
@@ -236,7 +239,10 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Bfloat16 operator - (const Bfloat16& a, co
 }
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Bfloat16 operator / (const Bfloat16& a, const Bfloat16& b) {
-  return Bfloat16(float(a) / float(b));
+  bfloat16_t bfa, bfb;
+  bfa.v = a.x;
+  bfb.v = b.x;
+  return Bfloat16(bf16_mul(bfa, bf16_reciprocal(bfb)));
 }
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Bfloat16 operator - (const Bfloat16& a) {

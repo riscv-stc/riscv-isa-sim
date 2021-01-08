@@ -415,10 +415,10 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator / (const half& a, const half
 #ifdef USING_RISCV_FP16
   //Make the spike result be consistent with the hardware
   //if one of the src is Nan, or the divisor is zero, the result of div is Nan(0x7c01)
-  //return float16_t_to_half(f16_div(half_to_float16_t(a), half_to_float16_t(b)));
-  if(isnan(a) ||  isnan(b) || iszero(b))
-    return Eigen::half_impl::raw_uint16_to_half(0x7c01);
-  return a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
+  return half(f16_div(half_to_float16_t(a), half_to_float16_t(b)));
+//   if(isnan(a) ||  isnan(b) || iszero(b))
+//     return Eigen::half_impl::raw_uint16_to_half(0x7c01);
+//   return a * Eigen::half_impl::raw_uint16_to_half(fp16_recip(b.x));
 #else
   return half(float(a) / float(b));
 #endif

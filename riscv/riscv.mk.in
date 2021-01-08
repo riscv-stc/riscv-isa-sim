@@ -907,6 +907,9 @@ riscv_insn_stc = \
 	veadd_mf \
 	veadd_mm \
 	veadd_mv \
+    vediv_mf \
+    vediv_mm \
+    vediv_mv \
 	vecvt_hf_x8_m \
 	vecvt_hf_xu8_m \
     vecvt_xu8_hf_m \

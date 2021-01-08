@@ -227,7 +227,10 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Float32 operator - (const Float32& a, cons
 }
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Float32 operator / (const Float32& a, const Float32& b) {
-  return float32_t_to_float32(f32_div(float32_to_float32_t(a), float32_to_float32_t(b)));
+    float32_t f32a, f32b;
+    f32a.v = a.x;
+    f32b.v = b.x;
+    return Float32(f32_div(f32a, f32b));
 }
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Float32 operator - (const Float32& a) {
