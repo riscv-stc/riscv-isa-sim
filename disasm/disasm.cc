@@ -761,6 +761,23 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecvt_hf_x8_m);
   DEFINE_R3TYPE(vecvt_hf_xu8_m);
   DEFINE_R3TYPE(vecvt_x8_hf_m);
+  DEFINE_R3TYPE(vecvt_xu8_hf_m);
+  DEFINE_R3TYPE(vecvt_hf_x16_m);
+  DEFINE_R3TYPE(vecvt_x16_hf_m);
+  DEFINE_R3TYPE(vecvt_f32_hf_m);
+  DEFINE_R3TYPE(vecvt_hf_f32_m);
+  DEFINE_R3TYPE(vecvt_bf_x8_m);
+  DEFINE_R3TYPE(vecvt_bf_xu8_m);
+  DEFINE_R3TYPE(vecvt_x8_bf_m);
+  DEFINE_R3TYPE(vecvt_bf_x16_m);
+  DEFINE_R3TYPE(vecvt_x16_bf_m);
+  DEFINE_R3TYPE(vecvt_f32_bf_m);
+  DEFINE_R3TYPE(vecvt_bf_f32_m);
+  DEFINE_R3TYPE(vecvt_bf_hf_m);
+  DEFINE_R3TYPE(vecvt_hf_bf_m);
+  DEFINE_R3TYPE(vecvt_f32_x32_m);
+  DEFINE_R3TYPE(vecvt_x32_f32_m);
+
   DEFINE_CV2TYPE(veemacc_mf);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);

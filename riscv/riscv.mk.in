@@ -914,6 +914,7 @@ riscv_insn_stc = \
 	vecvt_hf_xu8_m \
     vecvt_xu8_hf_m \
     vecvt_x16_hf_m \
+	vecvt_hf_x16_m \
     vecvt_f32_hf_m \
     vecvt_hf_f32_m \
     vecvt_bf_x8_m \
