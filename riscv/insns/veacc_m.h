@@ -15,13 +15,13 @@ if(DIM == 0){
 VME_DTYPE_DECODING_TO_TYPE_ACC({
     if(DIM == 0) {
         dtype_vd result;
-        veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, &result, &sst);
+        veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, &result, &sst, relu);
         Float32 f32res = Float32(result);
         float32_t f32reg;
         f32reg.v = f32res.x;
         WRITE_FRD(f32reg);
     } else {
         unsigned long rd = MMU.get_phy_addr(RD);
-        veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM);
+        veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM, relu);
     }
 })

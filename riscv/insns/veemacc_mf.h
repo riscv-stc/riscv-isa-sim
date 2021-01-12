@@ -6,7 +6,8 @@ struct ShapeStride sst;
 sst_fill(sst, 2, 2);
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
-half vr2;
-vr2.x = f32_to_f16(f32(FRS2)).v;
 
-veemacc_mf<half, Float32>((half*)rs1, (half*)rd, vr2, &sst, DIM_DM);
+VME_DTYPE_DECODING_TO_TYPE_ACC({
+    dtype_vd vr2(f32(FRS2));
+    veemacc_mf<dtype_vd, dtype_in>((dtype_vd*)rs1, (dtype_vd*)rd, vr2, &sst, DIM_DM, relu);
+})

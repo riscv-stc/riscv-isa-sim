@@ -141,6 +141,16 @@ struct Float32 : public float32_impl::float32_base {
   }
 
   static EIGEN_DEVICE_FUNC Float32 mulConvert(const half& a, const half& b);
+  static EIGEN_DEVICE_FUNC Float32 mulConvert(const Bfloat16& a, const Bfloat16& b);
+  static EIGEN_DEVICE_FUNC Float32 mulConvert(const Float32& a, const Float32& b) {
+    float32_t f32a, f32b;
+    f32a.v = a.x;
+    f32b.v = b.x;
+    float32_t res = f32_mul(f32a, f32b);
+    Float32 ret;
+    ret.x = res.v;
+    return ret;
+  }
 };
 
 } // end namespace Eigen

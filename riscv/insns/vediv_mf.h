@@ -9,5 +9,5 @@ unsigned long rd = MMU.get_phy_addr(RD);
 
 VME_DTYPE_DECODING_TO_TYPE({
     dtype_vd vr2(f32(FRS2));
-    vediv_mf<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, vr2, &sst);
+    vediv_mf<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, vr2, &sst, relu);
 })

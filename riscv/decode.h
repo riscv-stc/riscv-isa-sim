@@ -253,6 +253,7 @@ private:
 #define VME_N_PAD_D ((STATE.vme_FM_padding & 0xFF0000) >> 16)
 #define VME_N_PAD_L ((STATE.vme_FM_padding & 0xFF00) >> 8)
 #define VME_N_PAD_R (STATE.vme_FM_padding & 0xFF)
+#define VME_RELU_THRESHHOLD (STATE.vme_relu_threshhold & 0xFFFFFFFF)
 
 // FPU macros
 #define FRS1 READ_FREG(insn.rs1())
@@ -402,7 +403,8 @@ private:
 					 (x).shape2_row = SHAPE2_ROW; \
 					 (x).stride_rd = STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
-					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN; \
+                     (x).relu_threshhold = VME_RELU_THRESHHOLD;})
 
 #define vme_ss_fill(ss, esize) do { \
     ss.row = VME_SHAPE1_ROW; \
@@ -3418,6 +3420,22 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         relu = true; \
     case 0x0: { \
         using dtype_vd = half; \
+        using dtype_in = Float32; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x1010a: \
+        relu = true; \
+    case 0x10101: { \
+        using dtype_vd = Bfloat16; \
+        using dtype_in = Float32; \
+        __VA_ARGS__ \
+    } \
+        break; \
+    case 0x2020b: \
+        relu = true; \
+    case 0x20202: { \
+        using dtype_vd = Float32; \
         using dtype_in = Float32; \
         __VA_ARGS__ \
     } \

@@ -261,6 +261,20 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         common = 0; \
 } while(0);
 
+// threshhold typed float32_t
+#define MATRIX_RELU_THRESHHOLD(dest, src, row, column, dtype, threshhold) do { \
+    Float32 f32th; \
+    f32th.x = threshhold; \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            if (src(_row, _col) <= dtype(0)) \
+                dest(_row, _col) = dtype(0); \
+            else if ((f32th != Float32(0)) && (src(_row, _col) > dtype(f32th))) \
+                dest(_row, _col) = dtype(f32th); \
+        } \
+    } \
+} while(0);
+
 const uint16_t recip_table_half[65] = {
     0x0000,0x3c00,0x3800,0x3555,0x3400,0x3266,0x3155,0x3092,
     0x3000,0x2f1c,0x2e66,0x2dd1,0x2d55,0x2cec,0x2c92,0x2c44,
@@ -302,6 +316,8 @@ struct ShapeStride
     /* quant_coeff */
     float32_t mme_quant_coeff;
     float32_t mme_dequant_coeff;
+
+    unsigned int relu_threshhold;
 };
 
 struct VmeShapeStride
@@ -355,7 +371,7 @@ enum {
 
 
 template <typename DType>
-int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -373,6 +389,10 @@ int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 
     rd_matrix = rs1_matrix + rs2_matrix;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -380,7 +400,7 @@ int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -421,11 +441,16 @@ int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << " error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     return 0;
 }
 
 template <typename DType>
-int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -446,6 +471,10 @@ int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
     rd_matrix = rs1_matrix + const_matrix;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -453,7 +482,7 @@ int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
+int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -474,6 +503,10 @@ int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
      */
     rd_matrix = rs1_matrix + -rs2_matrix;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -481,7 +514,7 @@ int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -520,13 +553,18 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
     return 0;
 }
 
 template <typename DType>
-int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -550,6 +588,10 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, -rs2);
     rd_matrix = rs1_matrix + const_matrix;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -557,7 +599,7 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -575,6 +617,10 @@ int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 
     rd_matrix = rs1_matrix.array() / rs2_matrix.array();
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -582,7 +628,7 @@ int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -623,11 +669,16 @@ int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << " error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     return 0;
 }
 
 template <typename DType>
-int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -643,6 +694,10 @@ int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 
     rd_matrix = rs1_matrix.array() / rs2;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -650,7 +705,7 @@ int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename OutDType, typename InDType>
-int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
+int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -686,6 +741,11 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
         //rd_col_sum = rd_col_sum_inner.cast<OutDType>();
         MATRIX_CAST(rd_col_sum_inner, rd_col_sum, OutDType, 1, ss->shape1_column);
         free(rd_col_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_col_sum, rd_col_sum, 1, ss->shape1_column, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_col_sum << endl;
     } else {
@@ -697,6 +757,11 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
         //rd_row_sum = rd_row_sum_inner.cast<OutDType>();
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_sum, rd_row_sum, ss->shape1_row, 1, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_row_sum << endl;
     }
@@ -707,7 +772,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim)
 }
 
 template <typename OutDType, typename InDType>
-int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
+int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -737,6 +802,11 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
     Matrix_InDType rd_acc(1, 1);
     MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
     //*rd = OutDType(rd_tmp);
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+    }
+
     *rd = OutDType(rd_acc(0, 0));
 
     if (GLOBAL_DBG)
@@ -749,7 +819,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss)
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim)
+int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -785,6 +855,11 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         MATRIX_CAST(rd_col_sum_inner, rd_col_sum, OutDType, 1, ss->shape1_column);
         free(rd_col_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_col_sum, rd_col_sum, 1, ss->shape1_column, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_col_sum << endl;
     } else {
@@ -796,6 +871,11 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_sum, rd_row_sum, ss->shape1_row, 1, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_row_sum << endl;
     }
@@ -806,7 +886,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss)
+int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -835,6 +915,11 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
     Matrix_InDType rd_acc(1, 1);
     MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+    }
+
     *rd = OutDType(rd_acc(0, 0));
 
     if (GLOBAL_DBG)
@@ -847,7 +932,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim)
+int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -882,6 +967,11 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         Map_OutDType vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
         MATRIX_CAST(rd_col_sum_inner, vec_rd_dim0, OutDType, 1, ss->shape1_column);
         free(rd_col_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(vec_rd_dim0, vec_rd_dim0, 1, ss->shape1_column, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << vec_rd_dim0 << endl;
     } else {
@@ -899,6 +989,11 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_sum, rd_row_sum, ss->shape1_row, 1, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_row_sum << endl;
     }
@@ -908,7 +1003,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss, int dim)
+int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -943,6 +1038,11 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
 
         MATRIX_CAST(rd_col_sum_inner, rd_col_sum, OutDType, 1, ss->shape1_column);
         free(rd_col_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_col_sum, rd_col_sum, 1, ss->shape1_column, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_col_sum << endl;
     } else {
@@ -954,6 +1054,11 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_sum, rd_row_sum, ss->shape1_row, 1, OutDType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:\n" << rd_row_sum << endl;
     }
@@ -962,60 +1067,65 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
     return 0;
 }
 
+// template <typename DType>
+// int vemul_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
+// {
+//     DEFINE_MAP_DTYPE(DType)
+//     /* param check */
+//     if (ss->shape1_column != ss->shape2_row) {
+//         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+//         return -BR_EPARAM;
+//     }
+
+//     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+//     Map_DType rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+//     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+//     Map_DType rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+//     if (GLOBAL_DBG) {
+//         SHAPE_STRIDE_INFO(ss);
+//         cout << "rs1:\n" << rs1_matrix << endl;
+//         cout << "rs2:\n" << rs2_matrix << endl;
+//     }
+
+//     /* dot only support vector not support matrix, so we use '*' to do calculation */
+//     rd_matrix = rs1_matrix * rs2_matrix;
+
+//     if (relu) {
+//         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape2_column, DType, ss->relu_threshhold);
+//     }
+
+//     if (GLOBAL_DBG)
+//         cout << "rd:\n" << rd_matrix << endl;
+
+//     return 0;
+// }
+
+// template <typename DType>
+// int vemul_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss)
+// {
+//     DEFINE_MAP_DTYPE(DType)
+
+//     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+//     Map_DType rs2_vector(rs2, 1, ss->shape1_row, DynStride(1, 1));
+//     Map_DType rd_vector(rd, 1, ss->shape1_column, DynStride(1, 1));
+
+//     if (GLOBAL_DBG) {
+//         SHAPE_STRIDE_INFO(ss);
+//         cout << "rs1:\n" << rs1_matrix << endl;
+//         cout << "rs2:\n" << rs2_vector << endl;
+//     }
+
+//     /* dot only support vector not support matrix, so we use '*' to do calculation */
+//     rd_vector = rs2_vector * rs1_matrix;
+//     if (GLOBAL_DBG)
+//         cout << "rd:\n" << rd_vector << endl;
+
+//     return 0;
+// }
+
 template <typename DType>
-int vemul_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss)
-{
-    DEFINE_MAP_DTYPE(DType)
-    /* param check */
-    if (ss->shape1_column != ss->shape2_row) {
-        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
-        return -BR_EPARAM;
-    }
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_DType rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
-    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2:\n" << rs2_matrix << endl;
-    }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_matrix = rs1_matrix * rs2_matrix;
-    if (GLOBAL_DBG)
-        cout << "rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-template <typename DType>
-int vemul_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_DType rs2_vector(rs2, 1, ss->shape1_row, DynStride(1, 1));
-    Map_DType rd_vector(rd, 1, ss->shape1_column, DynStride(1, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2:\n" << rs2_vector << endl;
-    }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    rd_vector = rs2_vector * rs1_matrix;
-    if (GLOBAL_DBG)
-        cout << "rd:\n" << rd_vector << endl;
-
-    return 0;
-}
-
-template <typename DType>
-int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
+int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1032,6 +1142,10 @@ int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 
     rd_matrix = rs1_matrix.array() * rs2_matrix.array();
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -1039,7 +1153,7 @@ int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1072,11 +1186,16 @@ int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     return 0;
 }
 
 template <typename DType>
-int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1092,6 +1211,10 @@ int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 
     rd_matrix = rs1_matrix * rs2;
 
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
@@ -1099,7 +1222,7 @@ int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
+int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1116,11 +1239,21 @@ int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
     switch (dim) {
     case 0:
         rd_col_max = rs1_matrix.colwise().maxCoeff();
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_col_max, rd_col_max, 1, ss->shape1_column, DType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_col_max << endl;
         break;
     case 1:
         rd_row_max = rs1_matrix.rowwise().maxCoeff();
+
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_max, rd_row_max, ss->shape1_row, 1, DType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_row_max << endl;
         break;
@@ -1132,23 +1265,29 @@ int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
 }
 
 template <typename DType>
-int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Matrix_DType rd_matrix(1, 1);
 
     if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
-    *rd = rs1_matrix.maxCoeff();
+    rd_matrix(0, 0) = rs1_matrix.maxCoeff();
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, 1, 1, DType, ss->relu_threshhold);
+    }
+
+    *rd = rd_matrix(0, 0);
     return 0;
 }
 
 template <typename DType>
-int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
+int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
@@ -1164,6 +1303,9 @@ int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
     }
 
     rd_matrix = (rs1_matrix.array() > rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1172,7 +1314,7 @@ int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vemax_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int vemax_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1187,6 +1329,9 @@ int vemax_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     }
 
     rd_matrix = (rs1_matrix.array() > rs2).select(rs1_matrix, rs2);
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1195,7 +1340,7 @@ int vemax_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vemax_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int vemax_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1239,11 +1384,16 @@ int vemax_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     return 0;
 }
 
 template <typename DType>
-int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
+int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1260,11 +1410,19 @@ int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
     switch (dim) {
     case 0:
         rd_col_max = rs1_matrix.colwise().minCoeff();
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_col_max, rd_col_max, 1, ss->shape1_column, DType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_col_max << endl;
         break;
     case 1:
         rd_row_max = rs1_matrix.rowwise().minCoeff();
+        if (relu) {
+            MATRIX_RELU_THRESHHOLD(rd_row_max, rd_row_max, ss->shape1_row, 1, DType, ss->relu_threshhold);
+        }
+
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_row_max << endl;
         break;
@@ -1276,23 +1434,29 @@ int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
 }
 
 template <typename DType>
-int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
     Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Matrix_DType rd_matrix(1, 1);
 
     if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
-    *rd = rs1_matrix.minCoeff();
+    rd_matrix(0, 0) = rs1_matrix.minCoeff();
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, 1, 1, DType, ss->relu_threshhold);
+    }
+
+    *rd = rd_matrix(0, 0);
     return 0;
 }
 
 template <typename DType>
-int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
+int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1309,6 +1473,9 @@ int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
     }
 
     rd_matrix = (rs1_matrix.array() < rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1317,7 +1484,7 @@ int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1332,6 +1499,9 @@ int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
     }
 
     rd_matrix = (rs1_matrix.array() < rs2).select(rs1_matrix, rs2);
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1340,7 +1510,7 @@ int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 }
 
 template <typename DType>
-int vemin_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int vemin_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1377,6 +1547,11 @@ int vemin_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
     }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
     return 0;

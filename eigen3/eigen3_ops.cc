@@ -113,6 +113,17 @@ namespace Eigen {
       return f32;
   }
 
+  EIGEN_DEVICE_FUNC Float32 Float32::mulConvert(const Bfloat16& a, const Bfloat16& b) {
+      bfloat16_t bf16a, bf16b;
+      bf16a.v = a.x;
+      bf16b.v = b.x;
+      float32_t f32t;
+      f32t = bf16_mul32(bf16a, bf16b);
+      Float32 f32;
+      f32.x = f32t.v;
+      return f32;
+  }
+
   EIGEN_DEVICE_FUNC Bfloat16::Bfloat16(const Float32& f32) {
       float32_t f32t;
       f32t.v = f32.x;
