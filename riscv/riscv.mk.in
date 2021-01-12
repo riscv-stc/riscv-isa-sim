@@ -54,6 +54,7 @@ riscv_srcs = \
 	pcie_driver.cc \
 	rom.cc \
 	misc_device.cc \
+	uart_device.cc \
 	mbox_device.cc \
 	sysdma.cc \
 	clint.cc \

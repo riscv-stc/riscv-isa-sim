@@ -169,6 +169,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
       throw std::runtime_error("unsupported core id");
   }
 
+  bus.add_device(0xd801a000, new uart_device_t());
+
   clint.reset(new clint_t(procs));
   bus.add_device(CLINT_BASE, clint.get());
 
