@@ -470,7 +470,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       }
     } else if (mem == "llb") {
       // dump whole llb
-      snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
+      snprintf(fname, sizeof(fname), "%s/%s@llb%d.dat", path.c_str(), prefix.c_str(),bank_id);
       dump_mem(fname, LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
     } else {
       // dump memory range, format: <start>:<len>
