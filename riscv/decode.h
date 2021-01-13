@@ -423,6 +423,7 @@ private:
     ss.n_pad_d = VME_N_PAD_D; \
     ss.n_pad_l = VME_N_PAD_L; \
     ss.n_pad_r = VME_N_PAD_R; \
+    ss.relu_threshhold = VME_RELU_THRESHHOLD; \
 } while (0);
 
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
@@ -3321,13 +3322,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
 
 #define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \
+    using dtype_in = Float32; \
     switch (VME_DTYPE) { \
     case 0x9: \
         relu = true; \
     case 0x0: { \
         using dtype_vd = half; \
-        using dtype_vs1 = half; \
-        using dtype_vs2 = half; \
+        using dtype_lut = uint16_t; \
         __VA_ARGS__ \
     } \
         break; \
@@ -3335,8 +3336,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         relu = true; \
     case 0x10101: { \
         using dtype_vd = Bfloat16; \
-        using dtype_vs1 = Bfloat16; \
-        using dtype_vs2 = Bfloat16; \
+        using dtype_lut = uint16_t; \
         __VA_ARGS__ \
     } \
         break; \
@@ -3344,8 +3344,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         relu = true; \
     case 0x20202: { \
         using dtype_vd = Float32; \
-        using dtype_vs1 = Float32; \
-        using dtype_vs2 = Float32; \
+        using dtype_lut = uint32_t; \
         __VA_ARGS__ \
     } \
         break; \
@@ -3412,36 +3411,5 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     default: \
         throw trap_illegal_instruction(insn.bits()); \
   }
-
-#define VME_DTYPE_DECODING_TO_TYPE_ACC(...) \
-    bool relu = false; \
-    switch (VME_DTYPE) { \
-    case 0x9: \
-        relu = true; \
-    case 0x0: { \
-        using dtype_vd = half; \
-        using dtype_in = Float32; \
-        __VA_ARGS__ \
-    } \
-        break; \
-    case 0x1010a: \
-        relu = true; \
-    case 0x10101: { \
-        using dtype_vd = Bfloat16; \
-        using dtype_in = Float32; \
-        __VA_ARGS__ \
-    } \
-        break; \
-    case 0x2020b: \
-        relu = true; \
-    case 0x20202: { \
-        using dtype_vd = Float32; \
-        using dtype_in = Float32; \
-        __VA_ARGS__ \
-    } \
-        break; \
-    default: \
-        throw trap_illegal_instruction(insn.bits()); \
-    }
 
 #endif

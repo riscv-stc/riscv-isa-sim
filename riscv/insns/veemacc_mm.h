@@ -6,7 +6,7 @@ sst_fill(sst, 2, 2);
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rs2 = MMU.get_phy_addr(RS2);
 
-VME_DTYPE_DECODING_TO_TYPE_ACC({
+VME_DTYPE_DECODING_TO_TYPE({
     if(DIM == 0){
         check_traps_vexxx_mm_reduce_all;
         dtype_vd res;

@@ -12,7 +12,7 @@ if(DIM == 0){
     check_traps_vexxx_m_reduce_vector;
 }
 
-VME_DTYPE_DECODING_TO_TYPE_ACC({
+VME_DTYPE_DECODING_TO_TYPE({
     if(DIM == 0) {
         dtype_vd result;
         veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, &result, &sst, relu);
