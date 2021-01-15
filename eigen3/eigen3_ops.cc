@@ -1976,6 +1976,7 @@ int CustomInsns::velkrelu_mf(half *rs1, half rs2, half *rd, struct ShapeStride *
  */
 int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss, int dim)
 {
+    int i, j;
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
@@ -1990,10 +1991,16 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
 
     switch (dim) {
     case 0:
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() <= (half)0).select(
-                rs1_matrix.row(row).array() * vector_dim0.array(),
-                rs1_matrix.row(row));
+        for (i = 0; i < ss->shape1_row; i++){
+            for (j = 0; j < ss->shape1_column; j++){
+                if (iszero(rs1_matrix(i, j)))
+                   rd_matrix(i, j) = rs1_matrix(i, j);
+                else if (rs1_matrix(i, j) <= half(0))
+                   rd_matrix(i, j) = rs1_matrix(i, j) * vector_dim0(0, j);
+                else 
+                   rd_matrix(i, j) = rs1_matrix(i, j);
+            }
+        }
 
         if (debug) {
             cout << "rs2:" << endl << vector_dim0 << endl;
@@ -2001,11 +2008,17 @@ int CustomInsns::velkrelu_mv(half *rs1, half *rd, half *rs2, struct ShapeStride 
         }
         break;
     case 1:
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() <= (half)0).select(
-                rs1_matrix.col(col).array() * vector_dim1.array(),
-                rs1_matrix.col(col));
-                
+        for (i = 0; i < ss->shape1_row; i++){
+            for (j = 0; j < ss->shape1_column; j++){
+                if (iszero(rs1_matrix(i, j)))
+                   rd_matrix(i, j) = rs1_matrix(i, j);
+                else if (rs1_matrix(i, j) <= half(0))
+                   rd_matrix(i, j) = rs1_matrix(i, j) * vector_dim1(i, 0);
+                else 
+                   rd_matrix(i, j) = rs1_matrix(i, j);
+            }
+        }
+
         if (debug) {
             cout << "rs2:" << endl << vector_dim1 << endl;
             cout << "rd:" << endl << rd_matrix << endl;
