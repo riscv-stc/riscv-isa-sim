@@ -703,6 +703,45 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_DSCRATCH:
       state.dscratch = val;
       break;
+    case CSR_MHSP_CTL:
+      state.mhsp_ctl = val;
+      break;
+    case CSR_MSP_BOUND:
+    {
+      if (state.mhsp_ctl & (1 << 2)) //top of stack
+      {
+          if ((state.mhsp_ctl & (1 << 0)) && (val < state.msp_bound))
+          {
+            state.msp_bound = val;
+          }
+      }
+      else //stack overflow/underflow
+      {
+        if (state.mhsp_ctl & (1 << 0)) //stckoverflow enable
+        {
+          if (val < state.msp_bound)
+            throw trap_stack_overflow_exception();
+          else
+            state.msp_bound = val;
+        }
+        else
+          state.msp_bound = val;
+      }
+      break;
+    }
+    case CSR_MSP_BASE:
+    {
+      if (((state.mhsp_ctl & (1 << 2)) == 0) && (state.mhsp_ctl & (1 << 1)))
+      {
+        if (val > state.msp_base)
+          throw trap_stack_underflow_exception();
+        else
+          state.msp_base = val;
+      }
+      else
+        state.msp_base = val;
+      break;
+    }
     case CSR_MCACHE_CTL:
       break;
   }
@@ -995,6 +1034,12 @@ reg_t processor_t::get_csr(int which)
       return state.dpc & pc_alignment_mask();
     case CSR_DSCRATCH:
       return state.dscratch;
+    case CSR_MHSP_CTL:
+      return state.mhsp_ctl;
+    case CSR_MSP_BOUND:
+      return state.msp_bound;
+    case CSR_MSP_BASE:
+      return state.msp_base;
     case CSR_MCACHE_CTL:
       return 0;
   }

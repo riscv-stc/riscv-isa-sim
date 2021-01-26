@@ -124,6 +124,9 @@ struct state_t
   reg_t scause;
   reg_t dpc;
   reg_t dscratch;
+  reg_t mhsp_ctl;
+  reg_t msp_bound;
+  reg_t msp_base;
   dcsr_t dcsr;
   reg_t tselect;
   mcontrol_t mcontrol[num_triggers];
