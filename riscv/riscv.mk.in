@@ -964,7 +964,6 @@ riscv_insn_stc = \
 	pld_rs2 \
     veavgpool_m \
     vemaxpool_m \
-    vedwconv_mm \
     \
     memul_mm \
 	memin_m \
