@@ -237,22 +237,31 @@ private:
 #define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
 #define VME_DTYPE_VS2 ((STATE.vme_data_type & 0xFF0000) >> 16)
 
-#define VME_SHAPE1_COLUMN ((STATE.vme_FM_in & 0xFFFF0000) >> 16)
-#define VME_SHAPE1_ROW (STATE.vme_FM_in & 0xFFFF)
+#define VME_WIN ((STATE.vme_FM_in & 0xFFFF0000) >> 16)
+#define VME_HIN (STATE.vme_FM_in & 0xFFFF)
+
 #define VME_IFM_C_STRIDE ((STATE.vme_depth_in & 0xFFFF0000) >> 16)
 #define VME_CIN (STATE.vme_depth_in & 0xFFFF)
+
 #define VME_WOUT ((STATE.vme_FM_out & 0xFFFF0000) >> 16)
 #define VME_HOUT (STATE.vme_FM_out & 0xFFFF)
-#define VME_OFM_C_STRIDE ((STATE.vme_depth_stride & 0xFFFF0000) >> 16)
-#define VME_K_C_STRIDE (STATE.vme_depth_stride & 0xFFFF)
-#define VME_KW ((STATE.vme_kernel_params & 0xFF000000) >> 24)
-#define VME_KH ((STATE.vme_kernel_params & 0xFF0000) >> 16)
-#define VME_SW ((STATE.vme_kernel_params & 0xFF00) >> 8)
-#define VME_SH (STATE.vme_kernel_params & 0xFF)
+
+#define VME_OFM_C_STRIDE (STATE.vme_depth_out & 0xFFFF)
+
+#define VME_KW ((STATE.vme_kernel_param1 & 0xFF000000) >> 24)
+#define VME_KH ((STATE.vme_kernel_param1 & 0xFF0000) >> 16)
+#define VME_DILATION_H ((STATE.vme_kernel_param1 & 0xFF00) >> 8)
+#define VME_SH (STATE.vme_kernel_param1 & 0xFF)
+
 #define VME_N_PAD_U ((STATE.vme_FM_padding & 0xFF000000) >> 24)
 #define VME_N_PAD_D ((STATE.vme_FM_padding & 0xFF0000) >> 16)
 #define VME_N_PAD_L ((STATE.vme_FM_padding & 0xFF00) >> 8)
 #define VME_N_PAD_R (STATE.vme_FM_padding & 0xFF)
+
+#define VME_DILATION_W ((STATE.vme_kernel_param2 & 0xFF000000) >> 24)
+#define VME_SW ((STATE.vme_kernel_param2 & 0xFF0000) >> 16)
+#define VME_K_C_STRIDE (STATE.vme_kernel_param2 & 0xFFFF)
+
 #define VME_RELU_THRESHHOLD (STATE.vme_relu_threshhold & 0xFFFFFFFF)
 
 // FPU macros
@@ -407,8 +416,8 @@ private:
                      (x).relu_threshhold = VME_RELU_THRESHHOLD;})
 
 #define vme_ss_fill(ss, esize) do { \
-    ss.row = VME_SHAPE1_ROW; \
-    ss.column = VME_SHAPE1_COLUMN; \
+    ss.row = VME_HIN; \
+    ss.column = VME_WIN; \
     ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE / esize : VME_CIN; \
     ss.cin = VME_CIN; \
     ss.wout = VME_WOUT; \
@@ -417,12 +426,14 @@ private:
     ss.k_c_stride = VME_K_C_STRIDE ? VME_K_C_STRIDE / esize : VME_CIN; \
     ss.kw = VME_KW; \
     ss.kh = VME_KH; \
-    ss.sw = VME_SW; \
+    ss.sw = VME_SW ? VME_SW : VME_SH; \
     ss.sh = VME_SH; \
     ss.n_pad_u = VME_N_PAD_U; \
     ss.n_pad_d = VME_N_PAD_D; \
     ss.n_pad_l = VME_N_PAD_L; \
     ss.n_pad_r = VME_N_PAD_R; \
+    ss.k_dilaton_w = VME_DILATION_W; \
+    ss.k_dilation_h = VME_DILATION_H; \
     ss.relu_threshhold = VME_RELU_THRESHHOLD; \
 } while (0);
 
@@ -3324,24 +3335,18 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     bool relu = false; \
     using dtype_in = Float32; \
     switch (VME_DTYPE) { \
-    case 0x9: \
-        relu = true; \
     case 0x0: { \
         using dtype_vd = half; \
         using dtype_lut = uint16_t; \
         __VA_ARGS__ \
     } \
         break; \
-    case 0x1010a: \
-        relu = true; \
     case 0x10101: { \
         using dtype_vd = Bfloat16; \
         using dtype_lut = uint16_t; \
         __VA_ARGS__ \
     } \
         break; \
-    case 0x2020b: \
-        relu = true; \
     case 0x20202: { \
         using dtype_vd = Float32; \
         using dtype_lut = uint32_t; \

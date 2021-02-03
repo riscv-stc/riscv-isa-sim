@@ -328,6 +328,7 @@ struct VmeShapeStride
     int ofm_c_stride, k_c_stride;
     int kw, kh, sw, sh;
     int n_pad_u, n_pad_d, n_pad_l, n_pad_r;
+    int k_dilaton_w, k_dilation_h;
     unsigned int relu_threshhold;
 };
 

@@ -387,6 +387,7 @@ void state_t::reset(reg_t max_isa)
   vstval = 0;
   vsatp = 0;
   vme_data_type = 0;
+  vme_depth_out = 0;
   vme_relu_threshhold = 0;
 
   dpc = 0;
@@ -1118,8 +1119,8 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_VME_DEPTH_OUT:
       state.vme_depth_out = val;
       break;
-    case CSR_VME_KERNEL_PARAMS:
-      state.vme_kernel_params = val;
+    case CSR_VME_KERNEL_PARAM1:
+      state.vme_kernel_param1 = val;
       break;
     case CSR_VME_FM_PADDING:
       state.vme_FM_padding = val;
@@ -1735,10 +1736,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_depth_out;
-    case CSR_VME_KERNEL_PARAMS:
+    case CSR_VME_KERNEL_PARAM1:
       if(!supports_extension('V'))
         break;
-      return state.vme_kernel_params;
+      return state.vme_kernel_param1;
     case CSR_VME_FM_PADDING:
       if(!supports_extension('V'))
         break;

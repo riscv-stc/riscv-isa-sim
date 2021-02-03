@@ -257,9 +257,9 @@ struct state_t
   uint32_t vme_depth_in;
   uint32_t vme_FM_out;
   uint32_t vme_depth_out;
-  uint32_t vme_depth_stride; 
-  uint32_t vme_kernel_params;
+  uint32_t vme_kernel_param1;
   uint32_t vme_FM_padding;
+  uint32_t vme_kernel_param2;
   uint32_t conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_icdest;
