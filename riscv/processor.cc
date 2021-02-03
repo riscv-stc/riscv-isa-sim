@@ -707,41 +707,11 @@ void processor_t::set_csr(int which, reg_t val)
       state.mhsp_ctl = val;
       break;
     case CSR_MSP_BOUND:
-    {
-      if (state.mhsp_ctl & (1 << 2)) //top of stack
-      {
-          if ((state.mhsp_ctl & (1 << 0)) && (val < state.msp_bound))
-          {
-            state.msp_bound = val;
-          }
-      }
-      else //stack overflow/underflow
-      {
-        if (state.mhsp_ctl & (1 << 0)) //stckoverflow enable
-        {
-          if (val < state.msp_bound)
-            throw trap_stack_overflow_exception();
-          else
-            state.msp_bound = val;
-        }
-        else
-          state.msp_bound = val;
-      }
+      state.msp_bound = val;
       break;
-    }
     case CSR_MSP_BASE:
-    {
-      if (((state.mhsp_ctl & (1 << 2)) == 0) && (state.mhsp_ctl & (1 << 1)))
-      {
-        if (val > state.msp_base)
-          throw trap_stack_underflow_exception();
-        else
-          state.msp_base = val;
-      }
-      else
-        state.msp_base = val;
+      state.msp_base = val;
       break;
-    }
     case CSR_MCACHE_CTL:
       break;
   }
@@ -1213,4 +1183,28 @@ mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
 {
   mbox = box;
   return mbox;
+}
+
+void processor_t::check_sp_update_value(reg_t update_value)
+{
+  reg_t mhsp_ctl = get_csr(CSR_MHSP_CTL);
+  reg_t msp_bound = get_csr(CSR_MSP_BOUND);
+  reg_t msp_base = get_csr(CSR_MSP_BASE);
+
+  if (((mhsp_ctl >> 2) & 1) == 0) //stack overflow/underflow detection
+  {
+    if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
+      if (update_value < msp_bound)
+        throw trap_stack_overflow_exception();
+
+    if (((mhsp_ctl >> 1) & 1) == 1) //stack underflow protection enable
+      if (update_value > msp_base)
+         throw trap_stack_underflow_exception();
+  }
+  else //top-of-stack recording
+  {
+    if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
+      if (update_value < msp_bound)
+        set_csr(CSR_MSP_BOUND, update_value);
+  }
 }

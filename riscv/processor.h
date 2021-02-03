@@ -373,6 +373,8 @@ public:
   void trigger_updated();
   mbox_device_t* add_mbox(mbox_device_t *box);
 
+  void check_sp_update_value(reg_t update_value);
+
 private:
   simif_t* sim;
   hwsync_t *hwsync;
