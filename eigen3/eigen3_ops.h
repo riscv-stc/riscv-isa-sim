@@ -2014,6 +2014,36 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     return 0;
 }
 
+template <typename OutDType, typename InDType>
+int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_InDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_OutDType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul mf" << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            InDType val = rs2 * rs1_matrix(row, col);
+            rd_matrix(row, col) = (OutDType)val;
+        }
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
 
 /**
  * mov_m() mov.m
@@ -2175,7 +2205,6 @@ public:
 
     int veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss);
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
-    int veemul_x8_hf_mf(half *rs1, int8_t *rd, half rs2, struct ShapeStride *ss);
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);

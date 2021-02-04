@@ -12,4 +12,4 @@ unsigned long rd = MMU.get_phy_addr(RD);
 half vr2;
 vr2.x = f32_to_f16(f32(FRS2)).v;
 
-veemul_xx_xx_mf<signed char, half>((half *)rs1, (signed char *)rd, vr2, &sst);
+veemul_xx_xx_mf<unsigned char, half>((half *)rs1, (unsigned char *)rd, vr2, &sst);

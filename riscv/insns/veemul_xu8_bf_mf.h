@@ -9,7 +9,6 @@ sst.stride_rd = STRIDE_RD;
 
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
-half vr2;
-vr2.x = f32_to_f16(f32(FRS2)).v;
 
-veemul_xx_xx_mf<signed char, half>((half *)rs1, (signed char *)rd, vr2, &sst);
+Bfloat16 vr2(f32(FRS2));
+veemul_xx_xx_mf<unsigned char, Bfloat16>((Bfloat16 *)rs1, (unsigned char *)rd, vr2, &sst);

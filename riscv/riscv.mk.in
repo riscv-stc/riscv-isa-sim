@@ -906,6 +906,8 @@ riscv_insn_stc = \
     veacc_m \
 	veadd_mf \
 	veadd_mm \
+    veadd_relu_mm \
+    veadd_relu_mf \
 	veadd_mv \
     vediv_mf \
     vediv_mm \
@@ -933,7 +935,13 @@ riscv_insn_stc = \
 	veemacc_mm \
 	veemacc_mv \
 	veemul_mf \
+    veemul_relu_mf \
 	veemul_mm \
+    veemul_relu_mm \
+    veemul_x8_hf_mf \
+    veemul_xu8_hf_mf \
+    veemul_x8_bf_mf \
+    veemul_xu8_bf_mf \
 	veemul_mv \
 	velkrelu_mf \
 	velkrelu_mv \
@@ -964,6 +972,7 @@ riscv_insn_stc = \
 	pld_rs2 \
     veavgpool_m \
     vemaxpool_m \
+    vedwconv_mm \
     \
     memul_mm \
 	memin_m \

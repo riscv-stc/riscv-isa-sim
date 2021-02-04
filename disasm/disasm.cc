@@ -753,7 +753,9 @@ disassembler_t::disassembler_t(int xlen)
 
   DEFINE_R1TYPE(veacc_m);
   DEFINE_CV2TYPE(veadd_mf);
+  DEFINE_CV2TYPE(veadd_relu_mf);
   DEFINE_RTYPE(veadd_mm);
+  DEFINE_RTYPE(veadd_relu_mm);
   DEFINE_R2TYPE(veadd_mv);
   DEFINE_CV2TYPE(vediv_mf);
   DEFINE_RTYPE(vediv_mm);
@@ -782,7 +784,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
   DEFINE_CV2TYPE(veemul_mf);
+  DEFINE_CV2TYPE(veemul_relu_mf);
   DEFINE_RTYPE(veemul_mm);
+  DEFINE_RTYPE(veemul_relu_mm);
   DEFINE_R2TYPE(veemul_mv);
   DEFINE_R2TYPE(velkrelu_mv);
   DEFINE_CV2TYPE(velkrelu_mf);
@@ -803,6 +807,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(veexp_m);
   DEFINE_R3TYPE(veavgpool_m)
   DEFINE_R3TYPE(vemaxpool_m)
+  DEFINE_R3TYPE(vedwconv_mm)
+
+  DEFINE_CV2TYPE(veemul_x8_hf_mf);
+  DEFINE_CV2TYPE(veemul_xu8_hf_mf);
+  DEFINE_CV2TYPE(veemul_x8_bf_mf);
+  DEFINE_CV2TYPE(veemul_xu8_bf_mf);
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));
