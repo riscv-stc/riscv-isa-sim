@@ -1188,23 +1188,27 @@ mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
 void processor_t::check_sp_update_value(reg_t update_value)
 {
   reg_t mhsp_ctl = get_csr(CSR_MHSP_CTL);
-  reg_t msp_bound = get_csr(CSR_MSP_BOUND);
-  reg_t msp_base = get_csr(CSR_MSP_BASE);
 
-  if (((mhsp_ctl >> 2) & 1) == 0) //stack overflow/underflow detection
+  if ((mhsp_ctl & 0x7) != 0x0)
   {
-    if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
-      if (update_value < msp_bound)
-        throw trap_stack_overflow_exception();
+    reg_t msp_bound = get_csr(CSR_MSP_BOUND);
+    reg_t msp_base = get_csr(CSR_MSP_BASE);
 
-    if (((mhsp_ctl >> 1) & 1) == 1) //stack underflow protection enable
-      if (update_value > msp_base)
-         throw trap_stack_underflow_exception();
-  }
-  else //top-of-stack recording
-  {
-    if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
-      if (update_value < msp_bound)
-        set_csr(CSR_MSP_BOUND, update_value);
+    if (((mhsp_ctl >> 2) & 1) == 0) //stack overflow/underflow detection
+    {
+      if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
+        if (update_value < msp_bound)
+          throw trap_stack_overflow_exception();
+
+      if (((mhsp_ctl >> 1) & 1) == 1) //stack underflow protection enable
+        if (update_value > msp_base)
+          throw trap_stack_underflow_exception();
+    }
+    else //top-of-stack recording
+    {
+      if ((mhsp_ctl & 1) == 1) //stack overflow and recording mechanism enable
+        if (update_value < msp_bound)
+          set_csr(CSR_MSP_BOUND, update_value);
+    }
   }
 }
