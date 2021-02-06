@@ -839,6 +839,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
       return NULL;
     }
   }
+  return NULL;
 }
 
 char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
