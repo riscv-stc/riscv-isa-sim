@@ -9,7 +9,7 @@ reg_t t_rd = RD;
 //p->run_async([p, t_rs1, t_rs2, t_rd, pc]() {
   class CustomInsns CusIns;
   struct ShapeStride sst;
-  
+
 
   unsigned long rs1 = MMU.get_phy_addr(t_rs1);
   unsigned long rs2 = MMU.get_phy_addr(t_rs2);

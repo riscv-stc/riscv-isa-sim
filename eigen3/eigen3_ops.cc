@@ -235,8 +235,8 @@ void CustomInsns::meconv_dbg(struct ConvShapeStride *ss)
     printf("conv_depth_in(0x%x): scin = %d depth = %d\n", ss->conv_depth_in, (ss->conv_depth_in >> 16) & 0xffff, ss->conv_depth_in & 0xffff);
     printf("conv_fm_out(0x%x): w = %d h = %d\n", ss->conv_fm_out, (ss->conv_fm_out >> 16) & 0xffff, ss->conv_fm_out & 0xffff);
     printf("conv_depth_out(0x%x): scout = %d depth = %d\n", ss->conv_depth_out, (ss->conv_depth_out >> 16) & 0xffff, ss->conv_depth_out & 0xffff);
-    printf("conv_s_kernel(0x%x): stride = %d\n", ss->conv_kernel_params1, ss->conv_kernel_params1 & 0xffff);
-    printf("conv_kernel(0x%x): kw = %d kh = %d dilation = %d sk = %d\n", ss->conv_kernel_params2,(ss->conv_kernel_params2 >> 24) & 0xff,(ss->conv_kernel_params2 >> 16) & 0xff,(ss->conv_kernel_params2 >> 8) & 0xff, (ss->conv_kernel_params2 >> 0) & 0xff);
+    printf("conv_s_kernel(0x%x): stride = %d\n", ss->conv_kernel_params2, ss->conv_kernel_params2 & 0xffff);
+    printf("conv_kernel(0x%x): kw = %d kh = %d dilation = %d sk = %d\n", ss->conv_kernel_params1,(ss->conv_kernel_params1 >> 24) & 0xff,(ss->conv_kernel_params1 >> 16) & 0xff,(ss->conv_kernel_params1 >> 8) & 0xff, (ss->conv_kernel_params1 >> 0) & 0xff);
     printf("conv_padding(0x%x): top = %d bottom = %d left = %d right = %d\n", ss->conv_padding, (ss->conv_padding >> 24) & 0xff,(ss->conv_padding >> 16) & 0xff, (ss->conv_padding >> 8) & 0xff, (ss->conv_padding >> 0) & 0xff);
 }
 
@@ -278,8 +278,8 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     in_c = (ss->conv_depth_in) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    assert((in_stride % 2) == 0); //half
-    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+    //assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
@@ -287,18 +287,18 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    assert(out_stride % 2 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    //assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
-    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
-    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
-    sk = (ss->conv_kernel_params2) & 0xff;
+    kw = (ss->conv_kernel_params1 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params1 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params1 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params1) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_kernel_params1 & 0xffff;
-    assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
+    k_stride = ss->conv_kernel_params2 & 0xffff;
+    //assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : out_c;
 
     /*calculate the kernel shape*/
     Map_half rs2_matrix(rs2, kh * kw * in_c, out_c, DynStride(k_stride, 1)); // the depth is same as in_c
@@ -506,7 +506,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStr
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
     assert((in_stride % 2) == 0); //half
-    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+    in_stride = in_stride > 0 ? in_stride  : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
@@ -515,15 +515,15 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStr
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
     assert(out_stride % 2 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
-    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
-    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
-    sk = (ss->conv_kernel_params2) & 0xff;
+    kw = (ss->conv_kernel_params1 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params1 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params1 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params1) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_kernel_params1 & 0xffff;
+    k_stride = ss->conv_kernel_params2 & 0xffff;
     // assert(k_stride % 2 == 0);
     k_stride = k_stride > 0 ? k_stride : out_c;
 
@@ -662,8 +662,8 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     in_c = (ss->conv_depth_in) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    assert((in_stride % 2) == 0); //half
-    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+    // assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the index stride
     stride_idx = ss->stride_idx? ss->stride_idx>>1 : in_c>>1;
@@ -674,18 +674,18 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    assert(out_stride % 2 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    // assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
-    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
-    dilation = (ss->conv_kernel_params2 >> 8) & 0xff;
-    sk = (ss->conv_kernel_params2) & 0xff;
+    kw = (ss->conv_kernel_params1 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params1 >> 16) & 0xff;
+    dilation = (ss->conv_kernel_params1 >> 8) & 0xff;
+    sk = (ss->conv_kernel_params1) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && dilation > 0);
-    k_stride = ss->conv_kernel_params1 & 0xffff;
-    assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : out_c;
+    k_stride = ss->conv_kernel_params2 & 0xffff;
+    //assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : out_c;
 
     /* split the 8bit index shape into 2bit */
     i = (kw * kh * stride_idx * out_c + 3)/4;
@@ -854,8 +854,8 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     in_c = (ss->conv_depth_in) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    assert((in_stride % 2) == 0); //half
-    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+    // assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
@@ -863,19 +863,19 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    assert(out_stride % 2 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    // assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
-    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
-    sk = (ss->conv_kernel_params2) & 0xff;
-    stride_h = (ss->conv_kernel_params2) & 0xff;
-    stride_w = (ss-> conv_kernel_params1 >> 16) & 0xff;
+    kw = (ss->conv_kernel_params1 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params1 >> 16) & 0xff;
+    sk = (ss->conv_kernel_params1) & 0xff;
+    stride_h = (ss->conv_kernel_params1) & 0xff;
+    stride_w = (ss-> conv_kernel_params2 >> 16) & 0xff;
     assert(sk > 0 && kw > 0 && kh > 0 && stride_h > 0 && stride_w > 0);
-    k_stride = ss->conv_kernel_params1 & 0xffff;
-    assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : in_c;
+    k_stride = ss->conv_kernel_params2 & 0xffff;
+    // assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : in_c;
 
     /*calculate & pad the rs1 shape*/
     in_pad_top = kh - pad_top - 1;
@@ -1031,8 +1031,8 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     in_c = (ss->conv_depth_in) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = (ss->conv_depth_in >> 16) & 0xffff;
-    assert((in_stride % 2) == 0); //half
-    in_stride = in_stride > 0 ? in_stride >> 1 : in_c;
+    // assert((in_stride % 2) == 0); //half
+    in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the index stride
     stride_idx = ss->stride_idx? ss->stride_idx>>1 : in_c>>1;
@@ -1043,18 +1043,18 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     out_c = (ss->conv_depth_out) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
     out_stride = (ss->conv_depth_out >> 16) & 0xffff;
-    assert(out_stride % 2 == 0);
-    out_stride = out_stride > 0 ? out_stride >> 1 : out_c;
+    // assert(out_stride % 2 == 0);
+    out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
-    kw = (ss->conv_kernel_params2 >> 24) & 0xff;
-    kh = (ss->conv_kernel_params2 >> 16) & 0xff;
-    stride_h = (ss->conv_kernel_params2) & 0xff;
-    stride_w = (ss-> conv_kernel_params1 >> 16) & 0xff;
+    kw = (ss->conv_kernel_params1 >> 24) & 0xff;
+    kh = (ss->conv_kernel_params1 >> 16) & 0xff;
+    stride_h = (ss->conv_kernel_params1) & 0xff;
+    stride_w = (ss-> conv_kernel_params2 >> 16) & 0xff;
     assert(kw > 0 && kh > 0 && stride_h > 0 && stride_w > 0);
-    k_stride = ss->conv_kernel_params1 & 0xffff;
-    assert(k_stride % 2 == 0);
-    k_stride = k_stride > 0 ? k_stride >> 1 : in_c >> 1;
+    k_stride = ss->conv_kernel_params2 & 0xffff;
+    // assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : in_c >> 1;
 
     /*calculate & pad the rs1 shape*/
     in_pad_top = kh - pad_top - 1;

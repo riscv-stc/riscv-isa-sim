@@ -1,7 +1,7 @@
 require_extension('V');
 //check_ncp_vill_invalid()
-// if (p->get_csr(CSR_MTE_DATA_TYPE) == 0)
-//     check_traps_mexxx_m(int16, int16);
+ if (p->get_csr(CSR_MTE_DATA_TYPE) == 0)
+     check_traps_mexxx_m(int16, int16);
 
 reg_t t_rs1 = RS1;
 reg_t t_rd = RD;
