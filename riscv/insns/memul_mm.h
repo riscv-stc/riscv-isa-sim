@@ -20,7 +20,7 @@ reg_t t_rd = RD;
     memul_sst_fill(sst, 2, 2, 2); 
     CusIns.memul_mm((half*)rs1, (half*)rs2, (half*)rd, &sst);
     break;
-  case 0x90300: // (float16->int8,mf) * int8 = f16
+  case 0x03090b: // (float16->int8,mf) * int8 = f16
     memul_sst_fill(sst, 2, 1, 2);
     CusIns.memul_mm((half*)rs1, (int8_t*)rs2, (half*)rd, &sst);
     break;

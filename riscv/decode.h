@@ -455,7 +455,7 @@ private:
            (x).stride_rd = BC_STRIDE_RD; \
            (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 : BC_SHAPE1_COLUMN; \
            (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 : BC_SHAPE2_COLUMN; \
-           (x).stride_idx = MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : BC_SHAPE2_COLUMN * 2; \
+           (x).stride_idx = MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : BC_SHAPE2_COLUMN; \
            (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
            (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF;})
 
@@ -1310,13 +1310,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         } \
         if(BC_SHAPE2_ROW > 1)  {\
           check_cust_misaligned_stride_src(RS2, in_type, BC_STRIDE_RS2); \
-          if (unlikely(MME_SPARSE_STRIDE && (MME_SPARSE_STRIDE & 1))) { \
-            throw trap_ncp_cust_misaligned_stride(MME_SPARSE_STRIDE, 0, 0); \
-          } \
         } \
         int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) * BC_SHAPE1_ROW; \
         int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : (BC_SHAPE2_COLUMN * sizeof(in_type##_t))) * BC_SHAPE2_ROW; \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : (BC_SHAPE2_COLUMN * 2)) * BC_SHAPE2_ROW; \
+        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : BC_SHAPE2_COLUMN) * BC_SHAPE2_ROW; \
         int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE2_COLUMN * sizeof(out_type##_t))) * BC_SHAPE1_ROW;\
         check_cust_access(RS1, rs1_size); \
         check_cust_access_l1(RS2, rs2_size); \
@@ -1414,7 +1411,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
                        (CONV_IN_COLUMN * CONV_IN_ROW); \
         int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(in_type##_t) * \
                        (CONV_KH * CONV_KW * CONV_CIN); \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : (CONV_COUT * 2)) *  \
+        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : CONV_COUT) *  \
                        (CONV_KH * CONV_KW * CONV_CIN); \
         int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type##_t) * \
                       (CONV_OUT_COLUMN * CONV_OUT_ROW); \
@@ -1446,7 +1443,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
                        (CONV_IN_COLUMN * CONV_IN_ROW); \
         int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(in_type##_t) * \
                        (CONV_KH * CONV_KW * CONV_CIN / 2); \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : (CONV_COUT * 2)) *  \
+        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : CONV_COUT) *  \
                        (CONV_KH * CONV_KW * CONV_CIN); \
         int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type##_t) * \
                       (CONV_OUT_COLUMN * CONV_OUT_ROW); \

@@ -20,7 +20,7 @@ reg_t t_rd = RD;
   case 0x0: // f16*f16 = f16
     CusIns.meconv_mm((half*)rs1, (half*)rd, (half*)rs2, &sst);
     break;
-  case 0x90300: // (float16->int8) * int8 = f16
+  case 0x03090b: // (float16->int8) * int8 = f16
     CusIns.meconv_mm((half*)rs1, (half*)rd, (int8_t*)rs2, &sst);
     break;
   }
