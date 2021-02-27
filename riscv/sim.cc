@@ -258,6 +258,24 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
 {
   memif_t mem(this);
 
+  //check load address range is valid,just support dump ddr,
+  // l1,llb and im, but can not overlap betwwen them.
+  if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
+    ;
+  else if (addr >= l1_buffer_start && (addr + len) < (l1_buffer_start + l1_buffer_size))
+    ;
+  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) < (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+          (addr >= LLB_AXI1_BUFFER_START && (addr + len) < (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
+    ;
+  else if (addr >= im_buffer_start && (addr + len) < (im_buffer_start + im_buffer_size))
+    ;
+  else {
+    std::cout << "Load memory range invalid!"
+            << " addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len  << std::endl;
+    return;
+  }
+
   std::cout << "Load memory from " << fname
             << ", addr=0x" << std::hex << addr
             << ", len=0x" << std::hex << len << std::endl;
@@ -348,6 +366,24 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len, int proc_id)
 
 void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, bool space_end)
 {
+  //check dump address range check,just support dump ddr,
+  // l1,llb and im, but can not overlap betwwen them.
+  if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
+    ;
+  else if (addr >= l1_buffer_start && (addr + len) < (l1_buffer_start + l1_buffer_size))
+    ;
+  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) < (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+          (addr >= LLB_AXI1_BUFFER_START && (addr + len) < (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
+    ;
+  else if (addr >= im_buffer_start && (addr + len) < (im_buffer_start + im_buffer_size))
+    ;
+  else {
+    std::cout << "Dump memory range invalid!"
+            << " addr=0x" << std::hex << addr
+            << ", len=0x" << std::hex << len  << std::endl;
+    return;
+  }
+
   char *mem = (proc_id >= 0)?
               local_addr_to_mem_by_id(addr, proc_id) :
               addr_to_mem(addr);
