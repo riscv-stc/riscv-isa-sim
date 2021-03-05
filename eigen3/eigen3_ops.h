@@ -2208,10 +2208,18 @@ public:
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
     int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);
-    
+
+    int versqrt_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss);    
     int verecip_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss);
     int veexp_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int veln_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vesinh_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vecosh_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vetanh_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vesigmoid_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vesin_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int vecos_m(half *rs1, half *rd, struct ShapeStride *ss);
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);

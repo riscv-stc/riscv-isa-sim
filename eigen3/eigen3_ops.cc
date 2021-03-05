@@ -1658,100 +1658,7 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 }
 
 
-/**
- * verecip_m() verecip.m
- * 
- * 矩阵元素求倒运算，正常算术运算 M = 1/M1
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
 
-    half one = (half)1.0;
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-    }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++)
-		  rd_matrix(row, col) =  one / rs1_matrix(row, col);
-    if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-
-/**
- * vesqrt_m() vesqrt.m
- * 
- * 矩阵元素求平方根，正常算术运算 M = sqrt(M2)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-    }
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++)
-		  rd_matrix(row, col) =  sqrt(rs1_matrix(row, col));
-    if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * veexp_m() veexp.m
- * 
- * 矩阵元素指数运算，正常算术运算 M = e^Mij
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-    }
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  //cout << "rs1_matrix(" << row << "," << col << ")" << "= " << rs1_matrix(row, col) << endl;
-		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
-	   }
-    if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
 
 /**
  * metr_m() metr.m
@@ -2178,6 +2085,384 @@ int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss)
     if (GLOBAL_DBG) {
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * versqrt_m() versqrt.m
+ * 
+ * 矩阵元素rsqrt运算，正常算术运算 M = rsqrt(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::versqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "versqrt_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  rsqrt(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "versqrt_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vesqrt_m() vesqrt.m
+ * 
+ * 矩阵元素求平方根，正常算术运算 M = sqrt(M2)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vesqrt-rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+		  rd_matrix(row, col) =  sqrt(rs1_matrix(row, col));
+    if (debug)
+        cout << "vesqrt-rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * verecip_m() verecip.m
+ * 
+ * 矩阵元素求倒运算，正常算术运算 M = 1/M1
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "verecip-rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++)
+		  rd_matrix(row, col) =  recip( rs1_matrix(row, col) );
+    if (debug)
+        cout << "verecip-rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * veexp_m() veexp.m
+ * 
+ * 矩阵元素指数运算，正常算术运算 M = e^Mij
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "veexp-rs1:\n" << rs1_matrix << endl;
+    }
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
+	   }
+    if (debug)
+        cout << "veexp-rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * veln_m() veln.m
+ * 
+ * 矩阵元素ln运算，正常算术运算 M = ln(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::veln_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "veln_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  log(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "veln_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vesinh_m() vesinh.m
+ * 
+ * 矩阵元素sinh运算，正常算术运算 M = sinh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vesinh_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vesinh_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  sinh(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vesinh_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecosh_m() vecosh.m
+ * 
+ * 矩阵元素cosh运算，正常算术运算 M = cosh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vecosh_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vecosh_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  cosh(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vecosh_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vetanh_m() vetanh.m
+ * 
+ * 矩阵元素tanh运算，正常算术运算 M = tanh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vetanh_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vetanh_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  tanh(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vetanh_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vesigmoid_m() vesigmoid.m
+ * 
+ * 矩阵元素sigmoid运算，正常算术运算 M = sigmoid(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vesigmoid_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vesigmoid_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  sigmoid(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vesigmoid_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vesin_m() vesin.m
+ * 
+ * 矩阵元素sin运算，正常算术运算 M = sin(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vesin_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vesin_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  sin(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vesin_m-rd:\n" << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecos_m() vecos.m
+ * 
+ * 矩阵元素cos运算，正常算术运算 M = cos(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vecos_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (debug) 
+    {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "vecos_m-rs1:\n" << rs1_matrix << endl;
+    }
+
+    
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
+		  rd_matrix(row, col) =  cos(rs1_matrix(row, col));
+	   }
+    if (debug)
+    {
+        cout << "vecos_m-rd:\n" << rd_matrix << endl;
     }
 
     return 0;

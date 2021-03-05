@@ -11,13 +11,7 @@ float16_t f16_sqrt_( float16_t a )
   int_fast8_t expA;
   uint_fast16_t sigA;
 
-  struct exp8_sig16 normExpSig;
-
-  float16_t t;
-
   uint_fast16_t uiZ;
-  int_fast8_t expZ;
-  uint_fast16_t sigZ;
   union ui16_f16 uZ;
 
 
@@ -39,7 +33,7 @@ float16_t f16_sqrt_( float16_t a )
     }
     //if other negative numbers, invalid 
     softfloat_raiseFlags( softfloat_flag_invalid );
-    uiZ = defaultNaNF16UI;
+    uiZ = 0xfe00;//-NaN
     uZ.ui = uiZ;
     return uZ.f;
   }
@@ -50,7 +44,7 @@ float16_t f16_sqrt_( float16_t a )
     //if NaN input
     if( sigA )
     {
-      uiZ = softfloat_propagateNaNF16UI( uiA, 0 );
+      uiZ = 0x7e00; //NaN
       uZ.ui = uiZ;
       return uZ.f;
     }
@@ -58,23 +52,12 @@ float16_t f16_sqrt_( float16_t a )
     return a;
   }
 
-  //if 0 or positive subnormal number 
-  if( 0 == expA )
+  //if 0 
+  if( ( 0 == expA ) && ( 0 == sigA ) )
   {
-    //if +0, return 0
-    if( 0 == sigA )
-    {
-      uiZ = 0;
-      uZ.ui = uiZ;
-      return uZ.f;
-    }
-    //handle subnormal number
-    normExpSig = softfloat_normSubnormalF16Sig( sigA ); 
-    expA = normExpSig.exp;
-    sigA = normExpSig.sig;
-    uA.ui = packToF16UI( 0, expA, sigA);
-    uiA = uA.ui;
-    a = uA.f;
+    uiZ = 0;
+    uZ.ui = uiZ;
+    return uZ.f;
   }
 
   /*------------------------------------------------------------------------
@@ -82,9 +65,9 @@ float16_t f16_sqrt_( float16_t a )
   *------------------------------------------------------------------------*/
 
   //compute the rsqrt value of a
-  t = f16_rsqrt( a );
+  uZ.f = f16_rsqrt( a );
 
   //return the product of a and rsqrt value
-  return f16_mul( a, t );
+  return f16_mul( a, uZ.f );
 
 } 

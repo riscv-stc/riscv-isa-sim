@@ -954,13 +954,21 @@ riscv_insn_stc = \
 	vemin_m \
 	vemin_mm \
 	vemin_mv \
-    verecip_m \
-	vesqrt_m  \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
-    vecvt_x8_hf_m \
-    veexp_m \
+  vecvt_x8_hf_m \
+  verecip_m \
+	vesqrt_m  \
+	versqrt_m \
+  veexp_m \
+	vesigmoid_m \
+	vesinh_m \
+	vecosh_m \
+	vetanh_m \
+	veln_m \
+	vesin_m \
+	vecos_m \
 	mov_f \
 	mov_m \
 	mov_v \

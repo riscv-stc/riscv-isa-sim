@@ -804,7 +804,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R2TYPE(vesub_mv);
   DEFINE_R3TYPE(verecip_m);
   DEFINE_R3TYPE(vesqrt_m);
+  DEFINE_R3TYPE(versqrt_m);
   DEFINE_R3TYPE(veexp_m);
+  DEFINE_R3TYPE(vesigmoid_m);
+  DEFINE_R3TYPE(vesinh_m);
+  DEFINE_R3TYPE(vecosh_m);
+  DEFINE_R3TYPE(vetanh_m);
+  DEFINE_R3TYPE(veln_m);
   DEFINE_R3TYPE(veavgpool_m)
   DEFINE_R3TYPE(vemaxpool_m)
   DEFINE_R3TYPE(vedwconv_mm)

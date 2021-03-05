@@ -650,13 +650,44 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC float half_to_float(__half_raw h) {
 }
 
 // --- standard functions ---
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half rsqrt(const half& a) {
+#if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
+  return half(hrsqrt(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_rsqrt(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_rsqrt(a.x));
+#else
+    return half(::rsqrtf(float(a)));
+#endif
+}
+
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sqrt(const half& a) {
+#if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
+  return half(hsqrt(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_sqrt_(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_sqrt(a.x));
+#else
+    return half(::sqrtf(float(a)));
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half recip(const half& a) {
+#if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
+  return half(hrecip(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_reciprocal(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_recip(a.x));
+#else
+    return half(::recipf(float(a)));
+#endif
+}
 
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
   return half(hexp(a));
 #elif defined(USING_RISCV_FP16)
-  //return float16_t_to_half(f16_exp(half_to_float16_t(a)));
-  return Eigen::half_impl::raw_uint16_to_half(fp16_exp(a.x));
+  return float16_t_to_half(f16_exp(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_exp(a.x));
 #else
    return half(::expf(float(a)));
 #endif
@@ -664,8 +695,51 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half exp(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half log(const half& a) {
 #if defined(EIGEN_HAS_CUDA_FP16) && EIGEN_CUDACC_VER >= 80000 && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
   return half(::hlog(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_ln(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_log(a.x));
 #else
   return half(::logf(float(a)));
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sinh(const half& a) {
+#if defined(EIGEN_HAS_CUDA_FP16) && EIGEN_CUDACC_VER >= 80000 && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
+  return half(::hsinh(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_sinh(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_sinh(a.x));
+#else
+  return half(::sinhf(float(a)));
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half cosh(const half& a) {
+#if defined(EIGEN_HAS_CUDA_FP16) && EIGEN_CUDACC_VER >= 80000 && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
+  return half(::hcosh(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_cosh(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_cosh(a.x));
+#else
+  return half(::coshf(float(a)));
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half tanh(const half& a) {
+#if defined(EIGEN_HAS_CUDA_FP16) && EIGEN_CUDACC_VER >= 80000 && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
+  return half(::htanh(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_tanh(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_tanh(a.x));
+#else
+  return half(::tanhf(float(a)));
+#endif
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sigmoid(const half& a) {
+#if defined(EIGEN_HAS_CUDA_FP16) && EIGEN_CUDACC_VER >= 80000 && defined(EIGEN_CUDA_ARCH) && EIGEN_CUDA_ARCH >= 530
+  return half(::hsigmoid(a));
+#elif defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_sigmoid(half_to_float16_t(a)));
+  //return Eigen::half_impl::raw_uint16_to_half(fp16_sigmoid(a.x));
+#else
+  return half(::sigmoidf(float(a)));
 #endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half log1p(const half& a) {
@@ -674,30 +748,26 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half log1p(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half log10(const half& a) {
   return half(::log10f(float(a)));
 }
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sqrt(const half& a) {
-#if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 530
-  return half(hsqrt(a));
-#elif defined(USING_RISCV_FP16)
-  //return float16_t_to_half(f16_sqrt(half_to_float16_t(a)));
-  return Eigen::half_impl::raw_uint16_to_half(fp16_sqrt(a.x));
-#else
-    return half(::sqrtf(float(a)));
-#endif
-}
+
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half pow(const half& a, const half& b) {
   return half(::powf(float(a), float(b)));
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sin(const half& a) {
+#if defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_sin(half_to_float16_t(a)));
+#else
   return half(::sinf(float(a)));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half cos(const half& a) {
+#if defined(USING_RISCV_FP16)
+  return float16_t_to_half(f16_cos(half_to_float16_t(a)));
+#else
   return half(::cosf(float(a)));
+#endif
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half tan(const half& a) {
   return half(::tanf(float(a)));
-}
-EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half tanh(const half& a) {
-  return half(::tanhf(float(a)));
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half floor(const half& a) {
 #if EIGEN_CUDACC_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 300

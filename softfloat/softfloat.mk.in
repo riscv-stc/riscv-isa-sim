@@ -58,6 +58,17 @@ softfloat_c_srcs = \
 	f16_roundToInt.c \
 	f16_sqrt.c \
 	f16_sub.c \
+	f16_exp.c \
+	f16_ln.c \
+	f16_reciprocal.c \
+	f16_rsqrt.c \
+	f16_sqrt_.c \
+	f16_tanh.c \
+	f16_sinh.c \
+	f16_cosh.c \
+	f16_sigmoid.c \
+	f16_sin.c \
+	f16_cos.c \
 	f16_to_f128.c \
 	f16_to_f32.c \
 	f16_to_f64.c \
@@ -279,11 +290,6 @@ softfloat_c_srcs = \
 	bf16_to_ui8.c \
 	extF80M_isSignalingNaN.c \
 	f128M_isSignalingNaN.c \
-	f16_exp.c \
-	f16_ln.c \
-	f16_reciprocal.c \
-	f16_rsqrt.c \
-	f16_sqrt_.c \
 	f32_exp.c \
 	f32_reciprocal.c \
 	f32_rsqrt.c \
