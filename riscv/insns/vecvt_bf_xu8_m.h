@@ -1,6 +1,6 @@
 require_extension('V');
 check_ncp_vill_invalid()
-check_traps_vexxx_m_convert(int16, int8);
+check_traps_vexxx_m_convert(int16_t, int8_t);
 
 struct ShapeStride sst;
 sst_fill(sst, 1, 2);

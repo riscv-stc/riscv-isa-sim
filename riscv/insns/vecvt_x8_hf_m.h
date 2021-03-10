@@ -1,6 +1,6 @@
 require_extension('V');
 check_ncp_vill_invalid()
-check_traps_vexxx_m_convert(int8, int16);
+check_traps_vexxx_m_convert(int8_t, int16_t);
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
