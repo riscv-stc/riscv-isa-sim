@@ -57,6 +57,20 @@ MY_MATRIX_DEFINE(float)
             meconv_dbg(ss);\
         }\
     } while(0)
+
+half min_half(half a, half b){
+    if (isnan(a) || isnan(b))
+        return Eigen::half_impl::raw_uint16_to_half(0x7c01);
+    else 
+        return (a < b)? a : b;
+}
+
+half max_half(half a, half b){
+    if (isnan(a) || isnan(b))
+        return Eigen::half_impl::raw_uint16_to_half(0x7c01);
+    else 
+        return (a > b)? a : b;
+}
 /**
  * CustomInsns() 构造函数
  * 
@@ -1089,7 +1103,12 @@ int CustomInsns::vemax_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    rd_matrix = (rs1_matrix.array() > rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
+    int i, j;
+    for (i = 0; i < ss->shape1_row; i++){
+        for (j = 0; j < ss->shape1_column; j++){
+            rd_matrix(i, j) = max_half(rs1_matrix(i, j), rs2_matrix(i, j));
+        }
+    }
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1120,8 +1139,12 @@ int CustomInsns::vemax_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
     }
-
-    rd_matrix = (rs1_matrix.array() > rs2).select(rs1_matrix, rs2);
+    int i, j;
+    for (i = 0; i < ss->shape1_row; i++){
+        for (j = 0; j < ss->shape1_column; j++){
+            rd_matrix(i, j) = max_half(rs1_matrix(i, j), rs2);
+        }
+    }
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1148,6 +1171,7 @@ int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+    int i, j;
     
     switch (dim) {
     case 0:
@@ -1157,10 +1181,12 @@ int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             cout << "rs2:" << endl << vector_dim0 << endl;
         }
 
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() > vector_dim0.array()).select(
-                rs1_matrix.row(row), vector_dim0);
-        
+        for (i = 0; i < ss->shape1_row; i++){
+            for (j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i, j) = max_half(rs1_matrix(i, j), vector_dim0(0, j));
+            }
+        }
+
         if (debug)
             cout << "rd:" << endl << rd_matrix << endl;
         break;
@@ -1171,9 +1197,11 @@ int CustomInsns::vemax_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             cout << "rs2:" << endl << vector_dim1 << endl;
         }
 
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() > vector_dim1.array()).select(
-                rs1_matrix.col(col), vector_dim1);
+        for (i = 0; i < ss->shape1_row; i++){
+            for (j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i, j) = max_half(rs1_matrix(i, j), vector_dim1(i, 0));
+            }
+        }
         
         if (debug)
             cout << "rd:" << endl << rd_matrix << endl;
@@ -1273,7 +1301,13 @@ int CustomInsns::vemin_mm(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
         cout << "rd:" << endl << rd_matrix << endl;
     }
 
-    rd_matrix = (rs1_matrix.array() < rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
+    int i, j;
+    for (i = 0; i < ss->shape1_row; i++){
+        for (j = 0; j < ss->shape1_column; j++){
+            rd_matrix(i, j) = min_half(rs1_matrix(i, j), rs2_matrix(i, j));
+        }
+    }
+    // rd_matrix = (rs1_matrix.array() < rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1304,8 +1338,14 @@ int CustomInsns::vemin_mf(half *rs1, half *rd, half rs2, struct ShapeStride *ss)
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2 << endl;
     }
+    
+    int i, j;
+    for (i = 0; i < ss->shape1_row; i++){
+        for (j = 0; j < ss->shape1_column; j++){
+            rd_matrix(i, j) = min_half(rs1_matrix(i, j), rs2);
+        }
+    }
 
-    rd_matrix = (rs1_matrix.array() < rs2).select(rs1_matrix, rs2);
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1332,7 +1372,8 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
     Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
     Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
-    
+    int i, j;
+
     switch (dim) {
     case 0:
         if (debug) {
@@ -1341,9 +1382,12 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             cout << "rs2:" << endl << vector_dim0 << endl;
         }
 
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() < vector_dim0.array()).select(
-                rs1_matrix.row(row), vector_dim0);
+        for (i = 0; i < ss->shape1_row; i++){
+            for (j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i, j) = min_half(rs1_matrix(i, j), vector_dim0(0, j));
+            }
+        }
+        
         break;
     case 1:
         if (debug) {
@@ -1352,9 +1396,11 @@ int CustomInsns::vemin_mv(half *rs1, half *rd, half *rs2, struct ShapeStride *ss
             cout << "rs2:" << endl << vector_dim1 << endl;
         }
 
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() < vector_dim1.array()).select(
-                rs1_matrix.col(col), vector_dim1);
+        for (j = 0; j < ss->shape1_column; j++){
+            for (i = 0; i < ss->shape1_row; i++){
+            rd_matrix(i, j) = min_half(rs1_matrix(i, j), vector_dim1(i, 0));
+        }
+    }
         break;
     default:
         cout << __FUNCTION__ << "error dim" << endl;
