@@ -439,9 +439,9 @@ private:
           check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access(RD, rd_size); \
@@ -456,8 +456,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_src(RS2, int16, STRIDE_RS2); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
     })
@@ -475,8 +475,8 @@ private:
         if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rs2_size = (STRIDE_RS2 ? STRIDE_RS2 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         if (DIM_DM == 0) { \
@@ -497,7 +497,7 @@ private:
         if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)): (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
             check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
@@ -518,7 +518,7 @@ private:
         if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
             check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
@@ -537,8 +537,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
@@ -558,8 +558,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int32, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int32_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW - 1) + SHAPE1_COLUMN * sizeof(int32_t)) : (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW - 1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
@@ -578,8 +578,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -593,8 +593,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int32, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int32_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int32_t)) : (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -607,8 +607,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int8, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int8_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int8_t)) : (SHAPE1_COLUMN * sizeof(int8_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -623,8 +623,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -635,7 +635,7 @@ private:
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         if(SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
   })
 
@@ -649,7 +649,7 @@ private:
         if ((DIM_DM == 1) && (SHAPE1_ROW > 1)) { \
             check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, 1); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
@@ -668,8 +668,8 @@ private:
           check_cust_misaligned_stride_src(RS1, stype, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, dtype, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(stype##_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(dtype##_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(stype##_t)) : (SHAPE1_COLUMN * sizeof(stype##_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(stype##_t)) : (SHAPE1_COLUMN * sizeof(dtype##_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -684,8 +684,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, STRIDE_RS1); \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
         } \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, 0x10000); \
         check_cust_access(RD, rd_size); \
@@ -697,7 +697,7 @@ private:
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         if (SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)): (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RD, rd_size); \
   })
 
@@ -708,7 +708,7 @@ private:
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         if (SHAPE1_ROW > 1) \
           check_cust_misaligned_stride_dst(RD, int16, STRIDE_RD, SHAPE1_COLUMN); \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         if (DIM_DM == 0) { \
           check_cust_access(RS1, SHAPE1_COLUMN * sizeof(int16_t)); \
         } else { \
@@ -730,10 +730,10 @@ private:
         } \
         if(BC_SHAPE2_ROW > 1)  \
           check_cust_misaligned_stride_src(RS2, in_type, BC_STRIDE_RS2); \
-        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(in_type##_t))) * BC_SHAPE1_ROW; \
-        int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : (BC_SHAPE2_COLUMN * sizeof(in_type##_t))) * BC_SHAPE2_ROW; \
-        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE2_COLUMN * sizeof(out_type##_t))) * \
-                      (ts ? BC_SHAPE1_COLUMN : BC_SHAPE1_ROW); \
+        int rs1_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(in_type##_t)) : (BC_SHAPE1_COLUMN * sizeof(in_type##_t)) * BC_SHAPE1_ROW; \
+        int rs2_size = BC_STRIDE_RS2 ? (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(in_type##_t)) : (BC_SHAPE2_COLUMN * sizeof(in_type##_t)) * BC_SHAPE2_ROW; \
+        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * ((ts ? BC_SHAPE1_COLUMN : BC_SHAPE1_ROW) - 1) + BC_SHAPE2_COLUMN * sizeof(out_type##_t)) : \
+                      (BC_SHAPE2_COLUMN * sizeof(out_type##_t)) * (ts ? BC_SHAPE1_COLUMN : BC_SHAPE1_ROW); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access_l1(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -748,8 +748,8 @@ private:
           check_cust_misaligned_stride_src(RS1, int16, BC_STRIDE_RS1); \
         if(BC_SHAPE1_COLUMN > 1) \
           check_cust_misaligned_stride_dst(RD, int16, BC_STRIDE_RD, BC_SHAPE1_ROW); \
-        int rs_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : (BC_SHAPE1_COLUMN * sizeof(int16_t))) * BC_SHAPE1_ROW; \
-        int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : (BC_SHAPE1_ROW * sizeof(int16_t))) * BC_SHAPE1_COLUMN; \
+        int rs_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(int16_t)) : (BC_SHAPE1_COLUMN * sizeof(int16_t)) * BC_SHAPE1_ROW; \
+        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * (BC_SHAPE1_COLUMN - 1) + BC_SHAPE1_ROW * sizeof(int16_t)) : (BC_SHAPE1_ROW * sizeof(int16_t)) * BC_SHAPE1_COLUMN; \
         check_cust_access(RS1, rs_size); \
         check_cust_access_im(RD, rd_size); \
   })
