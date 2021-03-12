@@ -1001,49 +1001,49 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     })
 
 // check traps for ve***.mv reduce with vector result instructions
-#define check_traps_vexxx_mv_reduce_vector ({ \
-        check_cust_misaligned_base(RS1, int16_t); \
-        check_cust_misaligned_base(RS2, int16_t); \
-        check_cust_misaligned_base(RD, int16_t); \
+#define check_traps_vexxx_mv_reduce_vector(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RS2, etype); \
+        check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
-            check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
-            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+            check_cust_access(RS2, SHAPE1_ROW * sizeof(etype)); \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(etype)); \
         } else { \
-            check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
-            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+            check_cust_access(RS2, SHAPE1_COLUMN * sizeof(etype)); \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(etype)); \
         } \
     })
 
 // check traps for ve***.mf reduce with vector result instructions
-#define check_traps_vexxx_mf_reduce_vector ({ \
-        check_cust_misaligned_base(RS1, int16_t); \
-        check_cust_misaligned_base(RD, int16_t); \
+#define check_traps_vexxx_mf_reduce_vector(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
-            check_cust_access(RD, SHAPE1_COLUMN * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_COLUMN * sizeof(etype)); \
         } else { \
-            check_cust_access(RD, SHAPE1_ROW * sizeof(int16_t)); \
+            check_cust_access(RD, SHAPE1_ROW * sizeof(etype)); \
         } \
   })
 
 // check traps for ve***.mv instructions
-#define check_traps_vexxx_mv ({ \
-        check_cust_misaligned_base(RS1, int16_t); \
-        check_cust_misaligned_base(RS2, int16_t); \
-        check_cust_misaligned_base(RD, int16_t); \
+#define check_traps_vexxx_mv(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RS2, etype); \
+        check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
-          check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
+          check_cust_access(RS2, SHAPE1_COLUMN * sizeof(etype)); \
         } else { \
-          check_cust_access(RS2, SHAPE1_ROW * sizeof(int16_t)); \
+          check_cust_access(RS2, SHAPE1_ROW * sizeof(etype)); \
         } \
         check_cust_access(RD, rd_size); \
   })
@@ -1066,12 +1066,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   })
 
 // check traps for ve***.mf instructions
-#define check_traps_vexxx_mf ({ \
-        check_cust_misaligned_base(RS1, int16_t); \
-        check_cust_misaligned_base(RD, int16_t); \
+#define check_traps_vexxx_mf(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
-        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(int16_t))) * SHAPE1_ROW; \
+        int rs1_size = (STRIDE_RS1 ? STRIDE_RS1 : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
+        int rd_size = (STRIDE_RD ? STRIDE_RD : (SHAPE1_COLUMN * sizeof(etype))) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
