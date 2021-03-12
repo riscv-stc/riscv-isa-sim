@@ -262,12 +262,12 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
   // l1,llb and im, but can not overlap betwwen them.
   if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
     ;
-  else if (addr >= l1_buffer_start && (addr + len) < (l1_buffer_start + l1_buffer_size))
+  else if (addr >= l1_buffer_start && (addr + len) <= (l1_buffer_start + l1_buffer_size))
     ;
-  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) < (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-          (addr >= LLB_AXI1_BUFFER_START && (addr + len) < (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
+  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) <= (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+          (addr >= LLB_AXI1_BUFFER_START && (addr + len) <= (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
     ;
-  else if (addr >= im_buffer_start && (addr + len) < (im_buffer_start + im_buffer_size))
+  else if (addr >= im_buffer_start && (addr + len) <= (im_buffer_start + im_buffer_size))
     ;
   else {
     std::cout << "Load memory range invalid!"
@@ -370,12 +370,12 @@ void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, boo
   // l1,llb and im, but can not overlap betwwen them.
   if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
     ;
-  else if (addr >= l1_buffer_start && (addr + len) < (l1_buffer_start + l1_buffer_size))
+  else if (addr >= l1_buffer_start && (addr + len) <= (l1_buffer_start + l1_buffer_size))
     ;
-  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) < (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-          (addr >= LLB_AXI1_BUFFER_START && (addr + len) < (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
+  else if (addr >= LLB_AXI0_BUFFER_START && (addr + len) <= (LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+          (addr >= LLB_AXI1_BUFFER_START && (addr + len) <= (LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)))
     ;
-  else if (addr >= im_buffer_start && (addr + len) < (im_buffer_start + im_buffer_size))
+  else if (addr >= im_buffer_start && (addr + len) <= (im_buffer_start + im_buffer_size))
     ;
   else {
     std::cout << "Dump memory range invalid!"
