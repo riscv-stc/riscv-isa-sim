@@ -94,9 +94,17 @@ void sysdma_device_t::dma_core(int ch) {
       }
 
       // for linear mode, row is 1, col is xfer len, stride is 0
-      unsigned int col = desc->ctlr.bits.blk_en?
-                  desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width : desc->ctlr.bits.xfer_len;
-      unsigned int row =  desc->ctlr.bits.blk_en? desc->bkmr0.bits.height : 1;
+      // xfer_len 0 for 4M Bytes, width 0 for 4M Bytes, bkmr0.bits.height 0 for 65536 rows
+      unsigned int col = 0, width = 0;
+
+      if (desc->ctlr.bits.blk_en) {
+        width = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
+        col = width ? width : 0x400000;
+      } else {
+        col = desc->ctlr.bits.xfer_len ? desc->ctlr.bits.xfer_len : 0x400000;
+      }
+
+      unsigned int row =  desc->ctlr.bits.blk_en? (desc->bkmr0.bits.height ? desc->bkmr0.bits.height : 65536) : 1;
       unsigned int stride =  desc->ctlr.bits.blk_en? desc->bkmr1.bits.stride : 0;
 
       if(stride && stride < col)
