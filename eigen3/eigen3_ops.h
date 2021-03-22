@@ -2226,6 +2226,7 @@ public:
     int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
     int medeconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     
 };
 

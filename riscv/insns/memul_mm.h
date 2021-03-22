@@ -24,38 +24,14 @@ reg_t t_rd = RD;
     memul_sst_fill(sst, 2, 1, 2);
     CusIns.memul_mm((half*)rs1, (int8_t*)rs2, (half*)rd, &sst);
     break;
-  case 0xa0300: // (float16->uint8,mf) * int8 = f16
-    memul_sst_fill(sst, 2, 1, 2);
+  case 0x03030b: // int8 * int8 = f16(int32->f16,mf)
+    memul_sst_fill(sst, 1, 1, 2);
     break;
-  case 0xb0300: // (float16->int8,mv) * int8 = f16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0xc0300: // (float16->uint8,mv) * int8 = f16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0xd0300: // (bfloat16->int8,mf) * int8 = bf16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0xe0300: // (bfloat16->uint8,mf) * int8 = bf16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0xf0300: // (bfloat16->int8,mv) * int8 = bf16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0x100300: // (bfloat16->uint8,mv) * int8 = bf16
-    memul_sst_fill(sst, 2, 1, 2);
-    break;
-  case 0x2: // f16 * f32 = f32
-    memul_sst_fill(sst, 2, 4, 4);
-    break;
-  case 0x10101: // bf16 * bf16 = bf16
-    memul_sst_fill(sst, 2, 2, 2);
-    break;
-  case 0x10102: // bf16 * bf16 = f32
-    memul_sst_fill(sst, 2, 2, 4);
-    break;
-  case 0x20202: // f32 * f32 = f32
+  case 0x020202: // f32 * f32 = f32
     memul_sst_fill(sst, 4, 4, 4);
+    break;
+  case 0x010101: // bf16 * bf16 = bf16
+    memul_sst_fill(sst, 2, 2, 2);
     break;
   }
 //});

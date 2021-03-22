@@ -982,6 +982,7 @@ riscv_insn_stc = \
     vemaxpool_m \
     vedwconv_mm \
     \
+    metr_m \
     memul_mm \
 	memin_m \
 	memax_m \
@@ -991,7 +992,8 @@ riscv_insn_stc = \
 	meconv_mm \
 	meconv_sp_mm \
 	medeconv_mm \
-	medeconv_sp_mm
+	medeconv_sp_mm \
+	medwconv_mm
 
 
 riscv_insn_list = \
