@@ -77,9 +77,6 @@ void sysdma_device_t::dma_core(int ch) {
     while (!dma_channel_[ch].enabled)
       thread_cond_[ch].wait(lock);
 
-    //sleep 1s after notify_all() to start transfer
-    sleep(1);
-
     while (dma_channel_[ch].llp) {
       if(dma_channel_[ch].llp < sysdma_base[dma_idx_] + DMA_BUF_OFFSET ||
               dma_channel_[ch].llp >= sysdma_base[dma_idx_] + DMA_BUF_OFFSET+DMA_BUF_SIZE)
