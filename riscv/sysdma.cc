@@ -77,6 +77,9 @@ void sysdma_device_t::dma_core(int ch) {
     while (!dma_channel_[ch].enabled)
       thread_cond_[ch].wait(lock);
 
+    //sleep 1s after notify_all() to start transfer
+    sleep(1);
+
     while (dma_channel_[ch].llp) {
       if(dma_channel_[ch].llp < sysdma_base[dma_idx_] + DMA_BUF_OFFSET ||
               dma_channel_[ch].llp >= sysdma_base[dma_idx_] + DMA_BUF_OFFSET+DMA_BUF_SIZE)
@@ -115,12 +118,8 @@ void sysdma_device_t::dma_core(int ch) {
       char *src = sim->addr_to_mem(desc->dsar);
 
       if (stride == 0) {
-        //sleep 1s before memcpy(sysdma start transfer)
-        sleep(1);
         memcpy(dst, src, col * row);
       } else {
-        //sleep 1s before memcpy(sysdma start transfer)
-        sleep(1);
         for (int i = 0; i < row; i++) {
           memcpy(dst + i * col, src + i * stride, col);
         }
