@@ -8,16 +8,10 @@ float32_t f32_sqrt_( float32_t a )
   union ui32_f32 uA;
   uint_fast32_t uiA;
   bool signA;
-  int_fast8_t expA;
+  int_fast16_t expA;
   uint_fast32_t sigA;
 
-  struct exp16_sig32 normExpSig;
-
-  float32_t t;
-
   uint_fast32_t uiZ;
-  int_fast8_t expZ;
-  uint_fast32_t sigZ;
   union ui32_f32 uZ;
 
   //get the signal\exp\fraction bits from input float number a
@@ -37,7 +31,7 @@ float32_t f32_sqrt_( float32_t a )
     }
     //if other negative numbers, invalid 
     softfloat_raiseFlags( softfloat_flag_invalid );
-    uiZ = defaultNaNF32UI;
+    uiZ = 0xffc00000;  //-NaN
     uZ.ui = uiZ;
     return uZ.f;
   }
@@ -48,7 +42,7 @@ float32_t f32_sqrt_( float32_t a )
     //if NaN input
     if( sigA )
     {
-      uiZ = softfloat_propagateNaNF32UI( uiA, 0 );
+      uiZ = 0x7fc00000; //NaN
       uZ.ui = uiZ;
       return uZ.f;
     }
@@ -56,23 +50,12 @@ float32_t f32_sqrt_( float32_t a )
     return a;
   }
 
-  //if 0 or postiove subnormal number 
-  if( 0 == expA )
+  //if 0
+  if( ( 0 == expA ) && ( 0 == sigA ) )
   {
-    //if +0, return 0
-    if( 0 == sigA )
-    {
-      uiZ = 0;
-      uZ.ui = uiZ;
-      return uZ.f;
-    }
-    //handle subnormal number
-    normExpSig = softfloat_normSubnormalF32Sig( sigA ); 
-    expA = normExpSig.exp;
-    sigA = normExpSig.sig;
-    uA.ui = packToF32UI( 0, expA, sigA);
-    uiA = uA.ui;
-    a = uA.f;
+    uiZ = 0;
+    uZ.ui = uiZ;
+    return uZ.f;
   }
 
   /*------------------------------------------------------------------------
@@ -80,9 +63,9 @@ float32_t f32_sqrt_( float32_t a )
   *------------------------------------------------------------------------*/
 
   //compute the rsqrt value of a
-  t = f32_rsqrt( a );
+  uZ.f = f32_rsqrt( a );
 
   //return the product of a and rsqrt value
-  return f32_mul( a, t );
+  return f32_mul( a, uZ.f );
 
 } 

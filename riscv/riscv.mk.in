@@ -914,9 +914,10 @@ riscv_insn_stc = \
     vediv_mv \
 	vecvt_hf_x8_m \
 	vecvt_hf_xu8_m \
+    vecvt_x8_hf_m \
     vecvt_xu8_hf_m \
-    vecvt_x16_hf_m \
 	vecvt_hf_x16_m \
+    vecvt_x16_hf_m \
     vecvt_f32_hf_m \
     vecvt_hf_f32_m \
     vecvt_bf_x8_m \
@@ -957,11 +958,10 @@ riscv_insn_stc = \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
-  vecvt_x8_hf_m \
-  verecip_m \
+    verecip_m \
 	vesqrt_m  \
 	versqrt_m \
-  veexp_m \
+    veexp_m \
 	vesigmoid_m \
 	vesinh_m \
 	vecosh_m \

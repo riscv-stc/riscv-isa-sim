@@ -20,9 +20,11 @@
 #include <Eigen/Geometry>
 #include <iostream>
 #include <bitset>
+#include <type_traits>
 
 using namespace Eigen;
 using namespace std;
+
 
 
 
@@ -2151,22 +2153,732 @@ int mov_f(DType rs1, DType *rd, struct ShapeStride *ss)
     return 0;
 }
 
-extern int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss);
-extern int vecvt_x16_hf_m(half *rs1, short *rd, struct ShapeStride *ss);
+/**
+ * versqrt_m() versqrt.m
+ * 
+ * 矩阵元素rsqrt运算，正常算术运算 M = rsqrt(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int versqrt_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "versqrt_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_rsqrt( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_rsqrt( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_rsqrt( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "versqrt_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vesqrt_m() vesqrt.m
+ * 
+ * 矩阵元素sqrt运算，正常算术运算 M = sqrt(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vesqrt_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vesqrt_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_sqrt_( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_sqrt_( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_sqrt_( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vesqrt_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * verecip_m() verecip.m
+ * 
+ * 矩阵元素recip运算，正常算术运算 M = recip(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int verecip_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "verecip_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_reciprocal( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_reciprocal( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_reciprocal( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "verecip_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * veexp_m() veexp.m
+ * 
+ * 矩阵元素exp运算，正常算术运算 M = exp(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int veexp_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "veexp_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_exp( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_exp( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_exp( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "veexp_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vesigmoid_m() vesigmoid.m
+ * 
+ * 矩阵元素sigmoid运算，正常算术运算 M = sigmoid(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vesigmoid_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vesigmoid_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_sigmoid( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_sigmoid( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_sigmoid( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vesigmoid_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vesinh_m() vesinh.m
+ * 
+ * 矩阵元素sinh运算，正常算术运算 M = sinh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vesinh_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vesinh_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_sinh( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_sinh( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_sinh( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vesinh_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vecosh_m() vecosh.m
+ * 
+ * 矩阵元素cosh运算，正常算术运算 M = cosh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vecosh_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vecosh_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_cosh( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_cosh( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_cosh( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vecosh_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vetanh_m() vetanh.m
+ * 
+ * 矩阵元素tanh运算，正常算术运算 M = tanh(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vetanh_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vetanh_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_tanh( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_tanh( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_tanh( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vetanh_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * veln_m() veln.m
+ * 
+ * 矩阵元素ln运算，正常算术运算 M = ln(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int veln_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "veln_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_ln( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_ln( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_ln( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "veln_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vesin_m() vesin.m
+ * 
+ * 矩阵元素sin运算，正常算术运算 M = sin(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vesin_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vesin_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_sin( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_sin( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_sin( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vesin_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+/**
+ * vecos_m() vecos.m
+ * 
+ * 矩阵元素cos运算，正常算术运算 M = cos(Mij)
+ * @param rs1 M1,源操作矩阵一基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vecos_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG) {
+        
+        cout << "vecos_m-rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if( is_same< DType, half >::value )
+    {
+        half rs1;
+        float16_t rs1_f16, rd_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f16.v = rs1_matrix(row, col).x;
+            rd_f16 = f16_cos( rs1_f16 );
+            rd_matrix(row, col).x =  rd_f16.v;
+        }
+    }
+    else if( is_same< DType, Bfloat16 >::value )
+    {
+        Bfloat16 rs1;
+        bfloat16_t rs1_bf16, rd_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rd_bf16 = bf16_cos( rs1_bf16 );
+            rd_matrix(row, col).x =  rd_bf16.v;
+        }        
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        Float32 rs1;
+        float32_t rs1_f32, rd_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs1_f32.v = rs1_matrix(row, col).x;
+            rd_f32 = f32_cos( rs1_f32 );
+            rd_matrix(row, col).x =  rd_f32.v;
+        }          
+    }
+
+    if (GLOBAL_DBG)
+        cout << "vecos_m-rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+extern int vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss);
+extern int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
+extern int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
+extern int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
+extern int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
+extern int vecvt_x16_hf_m(half *rs1, int16_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern int vecvt_f32_hf_m(half *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_hf_f32_m(Float32 *rs1, half *rd, struct ShapeStride *ss);
 extern int vecvt_bf_x8_m(int8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
 extern int vecvt_bf_xu8_m(uint8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
-extern int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss);
-extern int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss);
+extern int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
+extern int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern int vecvt_bf_x16_m(int16_t *rs1, Bfloat16 *rd, struct ShapeStride *ss);
-extern int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss);
+extern int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern int vecvt_f32_bf_m(Bfloat16 *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_bf_f32_m(Float32 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
 extern int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss);
 extern int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss);
 extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
-extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss);
+extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
+
+
 
 /**
  * @brief custom扩展指令类
@@ -2190,11 +2902,6 @@ public:
 
     CustomInsns();
 
-    int vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss);
-    int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss);
-    int vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss);
-    int vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss);
-
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
     int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
@@ -2207,19 +2914,7 @@ public:
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss);
 
-    int versqrt_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss);    
-    int verecip_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int veexp_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int veln_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vesinh_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vecosh_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vetanh_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vesigmoid_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vesin_m(half *rs1, half *rd, struct ShapeStride *ss);
-    int vecos_m(half *rs1, half *rd, struct ShapeStride *ss);
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);

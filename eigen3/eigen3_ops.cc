@@ -1861,53 +1861,127 @@ int CustomInsns::metr_m(half *rs1, half *rd, struct ShapeStride *ss)
     return 0;
 }
 
+
 /**
- * vecvt_hf_xu8_m() vecvt.hf.xu8.m
+ * vecvt_hf_x8_m() vecvt.hf.x8.m
  * 
- * 将矩阵中的元素由 uint8 格式转换为 fp16
+ * 将矩阵中的元素由 int8 格式转换为 fp16格式
  * @param rs1 M1,源操作矩阵基地址
  * @param rd M,目的矩阵基地址
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
+int vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
 {
-    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
 
-    if (debug) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+    SHAPE_STRIDE_INFO(ss);
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = i8_to_f16( rs1_matrix(row, col) ).v;
+    }
+
+
+    if (GLOBAL_DBG) {
+        cout << "vecvt_hf_x8_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_hf_x8_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
 /**
- * vecvt_hf_x8_m() vecvt.hf.x8.m
+ * vecvt_hf_xu8_m() vecvt.hf.xu8.m
  * 
- * 将矩阵中的元素由 int8 格式转换为 fp16
+ * 将矩阵中的元素由 uint8 格式转换为 fp16格式
  * @param rs1 M1,源操作矩阵基地址
  * @param rd M,目的矩阵基地址
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
+int vecvt_hf_xu8_m(uint8_t *rs1, half *rd, struct ShapeStride *ss)
 {
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
 
-    if (debug) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+    SHAPE_STRIDE_INFO(ss);
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = ui8_to_f16( rs1_matrix(row, col) ).v;
+    }
+
+    if (GLOBAL_DBG) {
+        cout << "vecvt_hf_xu8_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_hf_xu8_m-rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecvt_x8_hf_m() vecvt.x8.hf.m
+ * 
+ * 将矩阵中的元素由 fp16 格式转换为 int8
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    float16_t rs1_f16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = f16_to_i8( rs1_f16, rounding_mode, true );
+    }
+
+    if (GLOBAL_DBG) {
+        cout << "vecvt_x8_hf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_x8_hf_m-rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecvt_xu8_hf_m() vecvt.xu8.hf.m
+ * 
+ * 将矩阵中的元素由 fp16 格式转换为 uint8
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_uint8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+
+    float16_t rs1_f16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = f16_to_ui8( rs1_f16, rounding_mode, true );
+    }
+
+    if (GLOBAL_DBG) {
+        cout << "vecvt_xu8_hf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_xu8_hf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
@@ -1922,109 +1996,69 @@ int CustomInsns::vecvt_hf_x8_m(int8_t *rs1, half *rd, struct ShapeStride *ss)
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::vecvt_hf_x16_m(int16_t *rs1, half *rd, struct ShapeStride *ss)
+int vecvt_hf_x16_m(short *rs1, half *rd,  struct ShapeStride *ss)
 {
     Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
 
-    if (debug) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+    SHAPE_STRIDE_INFO(ss);
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = i16_to_f16( rs1_matrix(row, col) ).v;
     }
-
-    return 0;
-}
-
-/**
- * vecvt_hf_xu16_m() vecvt.hf.xu16.m
- * 
- * 将矩阵中的元素由 uint16 格式转换为 fp16
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vecvt_hf_xu16_m(uint16_t *rs1, half *rd, struct ShapeStride *ss)
-{
-    Map_uint16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
-
-    if (debug) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vecvt_x8_hf_m() vecvt.x8.hf.m
- * 
- * 将矩阵中的元素由 int8 格式转换为 fp16
- * @param rs1 M1,源操作矩阵基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vecvt_x8_hf_m(half *rs1, int8_t *rd, struct ShapeStride *ss)
-{
-    Map_half   rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<signed char>();
-
-    if (debug) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-int vecvt_xu8_hf_m(half *rs1, uint8_t *rd, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_uint8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<unsigned char>();
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_hf_x16_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_hf_x16_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
-int vecvt_x16_hf_m(half *rs1, short *rd, struct ShapeStride *ss)
+/**
+ * vecvt_x16_hf_m() vecvt.x16.hf.m
+ * 
+ * 将矩阵中的元素由 fp16 格式转换为 int16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_x16_hf_m(half *rs1, short *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_int16_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<short>();
+
+    float16_t rs1_f16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = f16_to_i16( rs1_f16, rounding_mode, true );
+    }
+
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_x16_hf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_x16_hf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_f32_hf_m() vecvt.f32.hf.m
+ * 
+ * 将矩阵中的元素由 fp16 格式转换为 fp32
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_f32_hf_m(half *rs1, Float32 *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2032,16 +2066,31 @@ int vecvt_f32_hf_m(half *rs1, Float32 *rd, struct ShapeStride *ss)
     Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Float32>();
+
+    float16_t rs1_f16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = f16_to_f32( rs1_f16 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_f32_hf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_f32_hf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_hf_f32_m() vecvt.hf.f32.m
+ * 
+ * 将矩阵中的元素由 fp32 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_hf_f32_m(Float32 *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2049,16 +2098,31 @@ int vecvt_hf_f32_m(Float32 *rs1, half *rd, struct ShapeStride *ss)
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
+
+    float32_t rs1_f32;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f32.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = f32_to_f16( rs1_f32 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_hf_f32_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_hf_f32_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_bf_x8_m() vecvt.bf.x8.m
+ * 
+ * 将矩阵中的元素由 int8 格式转换为 bfp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_bf_x8_m(int8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
     Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2066,16 +2130,28 @@ int vecvt_bf_x8_m(int8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Bfloat16>();
 
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = i8_to_bf16( rs1_matrix(row, col) ).v;
+    }
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_bf_x8_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_bf_x8_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_bf_xu8_m() vecvt.bf.xu8.m
+ * 
+ * 将矩阵中的元素由 uint8 格式转换为 bfp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_bf_xu8_m(uint8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2083,67 +2159,95 @@ int vecvt_bf_xu8_m(uint8_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = ui8_to_bf16( rs1_matrix(row, col) ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_bf_xu8_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_bf_xu8_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
-int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss)
+/**
+ * vecvt_x8_bf_m() vecvt.x8.bf.m
+ * 
+ * 将矩阵中的元素由 bfp16 格式转换为 int8
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_x8_bf_m(Bfloat16 *rs1, int8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_int8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<signed char>();
+
+    bfloat16_t rs1_bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_bf16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = bf16_to_i8( rs1_bf16, rounding_mode, true );
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_x8_bf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_x8_bf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
-int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss)
+/**
+ * vecvt_xu8_bf_m() vecvt.xu8.bf.m
+ * 
+ * 将矩阵中的元素由 bfp16 格式转换为 uint8
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_xu8_bf_m(Bfloat16 *rs1, uint8_t *rd, struct ShapeStride *ss, uint32_t rounding_mode )
 {
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_uint8_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<unsigned char>();
+
+    bfloat16_t rs1_bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_bf16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = bf16_to_ui8( rs1_bf16, rounding_mode, true );
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_xu8_bf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_xu8_bf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
-int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss)
-{
-    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_int16_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<short>();
-
-    if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
+/**
+ * vecvt_bf_x16_m() vecvt.bf.x16.m
+ * 
+ * 将矩阵中的元素由 int16 格式转换为 bfp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_bf_x16_m(int16_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
     Map_int16_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2151,16 +2255,60 @@ int vecvt_bf_x16_m(int16_t *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Bfloat16>();
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = i16_to_bf16( rs1_matrix(row, col) ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_bf_x16_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_bf_x16_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_x16_bf_m() vecvt.x16.bf.m
+ * 
+ * 将矩阵中的元素由 bfp16 格式转换为 int16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_x16_bf_m(Bfloat16 *rs1, int16_t *rd, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_int16_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    SHAPE_STRIDE_INFO(ss);
+    bfloat16_t rs1_bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_bf16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = bf16_to_i16( rs1_bf16, rounding_mode, true );
+    }
+
+    if (GLOBAL_DBG) {
+        cout << "vecvt_x16_bf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_x16_bf_m-rd:" << endl << rd_matrix << endl;
+    }
+
+    return 0;
+}
+
+/**
+ * vecvt_f32_bf_m() vecvt.f32.bf.m
+ * 
+ * 将矩阵中的元素由 bfp16 格式转换为 fp32
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_f32_bf_m(Bfloat16 *rs1, Float32 *rd, struct ShapeStride *ss)
 {
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2168,16 +2316,31 @@ int vecvt_f32_bf_m(Bfloat16 *rs1, Float32 *rd, struct ShapeStride *ss)
     Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Float32>();
+
+    bfloat16_t rs1_bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_bf16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = bf16_to_f32( rs1_bf16 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_f32_bf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_f32_bf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_bf_f32_m() vecvt.bf.f32.m
+ * 
+ * 将矩阵中的元素由 fp32 格式转换为 bfp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_bf_f32_m(Float32 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
     Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2185,16 +2348,30 @@ int vecvt_bf_f32_m(Float32 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Bfloat16>();
+    float32_t rs1_f32;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f32.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = f32_to_bf16( rs1_f32 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_bf_f32_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_bf_f32_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_bf_hf_m() vecvt.bf.hf.m
+ * 
+ * 将矩阵中的元素由 fp16 格式转换为 bfp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2202,16 +2379,31 @@ int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Bfloat16>();
+
+    float16_t rs1_f16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = f16_to_bf16( rs1_f16 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_bf_hf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_bf_hf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_hf_bf_m() vecvt.hf.bf.m
+ * 
+ * 将矩阵中的元素由 bfp16 格式转换为 fp16
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss)
 {
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2219,16 +2411,31 @@ int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss)
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<half>();
+
+    bfloat16_t rs1_bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_bf16.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col).x = bf16_to_f16( rs1_bf16 ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_hf_bf_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_hf_bf_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
+/**
+ * vecvt_f32_x32_m() vecvt.f32.x32.m
+ * 
+ * 将矩阵中的元素由 int32 格式转换为 fp32
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
 int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss)
 {
     Map_int32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
@@ -2236,406 +2443,46 @@ int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss)
     Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<Float32>();
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rd_matrix(row, col).x = i32_to_f32( rs1_matrix(row, col) ).v;
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
+        cout << "vecvt_f32_x32_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_f32_x32_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;
 }
 
-int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss)
+/**
+ * vecvt_x32_f32_m() vecvt.x32.f32.m
+ * 
+ * 将矩阵中的元素由 fp32 格式转换为 int32
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd M,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @param rounding_mode 圆整模式
+ * @return 执行结果
+ */
+int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     Map_Float32 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
     Map_int32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
 
     SHAPE_STRIDE_INFO(ss);
-    rd_matrix = rs1_matrix.cast<int>();
+    float32_t rs1_f32;
+    for (int row = 0; row < rs1_matrix.rows(); row ++)
+    for (int col = 0; col < rs1_matrix.cols(); col ++) {
+        rs1_f32.v = rs1_matrix(row, col).x;
+        rd_matrix(row, col) = f32_to_i32( rs1_f32, rounding_mode, true );
+    }
 
     if (GLOBAL_DBG) {
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rd:" << endl << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * versqrt_m() versqrt.m
- * 
- * 矩阵元素rsqrt运算，正常算术运算 M = rsqrt(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::versqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "versqrt_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  rsqrt(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "versqrt_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vesqrt_m() vesqrt.m
- * 
- * 矩阵元素求平方根，正常算术运算 M = sqrt(M2)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesqrt_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vesqrt-rs1:\n" << rs1_matrix << endl;
-    }
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++)
-		  rd_matrix(row, col) =  sqrt(rs1_matrix(row, col));
-    if (debug)
-        cout << "vesqrt-rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * verecip_m() verecip.m
- * 
- * 矩阵元素求倒运算，正常算术运算 M = 1/M1
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::verecip_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "verecip-rs1:\n" << rs1_matrix << endl;
-    }
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++)
-		  rd_matrix(row, col) =  recip( rs1_matrix(row, col) );
-    if (debug)
-        cout << "verecip-rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * veexp_m() veexp.m
- * 
- * 矩阵元素指数运算，正常算术运算 M = e^Mij
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veexp_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "veexp-rs1:\n" << rs1_matrix << endl;
-    }
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  exp(rs1_matrix(row, col));
-	   }
-    if (debug)
-        cout << "veexp-rd:\n" << rd_matrix << endl;
-
-    return 0;
-}
-
-/**
- * veln_m() veln.m
- * 
- * 矩阵元素ln运算，正常算术运算 M = ln(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::veln_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "veln_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  log(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "veln_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vesinh_m() vesinh.m
- * 
- * 矩阵元素sinh运算，正常算术运算 M = sinh(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesinh_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vesinh_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  sinh(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vesinh_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vecosh_m() vecosh.m
- * 
- * 矩阵元素cosh运算，正常算术运算 M = cosh(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vecosh_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vecosh_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  cosh(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vecosh_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vetanh_m() vetanh.m
- * 
- * 矩阵元素tanh运算，正常算术运算 M = tanh(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vetanh_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vetanh_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  tanh(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vetanh_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vesigmoid_m() vesigmoid.m
- * 
- * 矩阵元素sigmoid运算，正常算术运算 M = sigmoid(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesigmoid_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vesigmoid_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  sigmoid(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vesigmoid_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vesin_m() vesin.m
- * 
- * 矩阵元素sin运算，正常算术运算 M = sin(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vesin_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vesin_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  sin(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vesin_m-rd:\n" << rd_matrix << endl;
-    }
-
-    return 0;
-}
-
-/**
- * vecos_m() vecos.m
- * 
- * 矩阵元素cos运算，正常算术运算 M = cos(Mij)
- * @param rs1 M1,源操作矩阵一基地址
- * @param rd M,目的矩阵基地址
- * @param ss 矩阵形状描述
- * @return 执行结果
- */
-int CustomInsns::vecos_m(half *rs1, half *rd, struct ShapeStride *ss)
-{
-
-    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) 
-    {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "vecos_m-rs1:\n" << rs1_matrix << endl;
-    }
-
-    
-
-    for (int row = 0; row < rs1_matrix.rows(); row ++)
-	   for (int col = 0; col < rs1_matrix.cols(); col ++) {
-		  rd_matrix(row, col) =  cos(rs1_matrix(row, col));
-	   }
-    if (debug)
-    {
-        cout << "vecos_m-rd:\n" << rd_matrix << endl;
+        cout << "vecvt_x32_f32_m-rs1:" << endl << rs1_matrix << endl;
+        cout << "vecvt_x32_f32_m-rd:" << endl << rd_matrix << endl;
     }
 
     return 0;

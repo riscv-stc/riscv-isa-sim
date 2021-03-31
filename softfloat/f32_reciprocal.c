@@ -8,16 +8,10 @@ float32_t f32_reciprocal( float32_t a )
   union ui32_f32 uA;
   uint_fast32_t uiA;
   bool signA;
-  int_fast8_t expA;
+  int_fast16_t expA;
   uint_fast32_t sigA;
 
-  struct exp16_sig32 normExpSig;
-
-  union ui32_f32 uT;
-
   uint_fast32_t uiZ;
-  int_fast8_t expZ;
-  uint_fast32_t sigZ;
   union ui32_f32 uZ;
 
   //get the signal\exp\fraction bits from input float number a
@@ -27,54 +21,42 @@ float32_t f32_reciprocal( float32_t a )
   expA = expF32UI( uiA );
   sigA = fracF32UI( uiA );
 
-
   //if expA = 0xff, handle the NaN and infinite number
   if( 0xFF == expA )
   {
     //if NaN input
     if( sigA )
     {
-      uiZ = softfloat_propagateNaNF32UI( uiA, 0 );
+      uiZ = signA ? 0xffc00000 : 0x7fc00000;//-NaN or NaN
       uZ.ui = uiZ;
       return uZ.f;
     }
+
     //infinite number input
-    uiZ = signA ? 0x80000000 : 0x0;
+    uiZ = signA ? 0x80000000 : 0x0;// -0 or 0
     uZ.ui = uiZ;
     return uZ.f;
   }
 
-  //if 0 or subnormal number 
-  if( 0 == expA )
+  //if 0 or little number 
+  if( ( a.v & 0x7FFFFFFF ) <= 0x200000 )
   {
-    //if 0, invalid 
-    if( 0 == sigA )
-    {
-      softfloat_raiseFlags( softfloat_flag_invalid );
-      uiZ = defaultNaNF32UI;
-      uZ.ui = uiZ;
-      return uZ.f;
-    }
-    //handle subnormal number
-    normExpSig = softfloat_normSubnormalF32Sig( sigA ); 
-    expA = normExpSig.exp;
-    sigA = normExpSig.sig;
-    uA.ui = packToF32UI( signA, expA, sigA);
-    uiA = uA.ui;
-    a = uA.f;
+    uiZ = signA ? 0xff800000 : 0x7f800000;//-inf or inf
+    uZ.ui = uiZ;
+    return uZ.f;
   }
 
   /*------------------------------------------------------------------------
   use the rsqrt value's square to compute the reciprocal value
   *------------------------------------------------------------------------*/
   //get the absolute value of a
-  uT.ui = uiA & 0x7FFFFFFF;
+  uZ.ui = uiA & 0x7FFFFFFF;
 
   //calculate the rsqrt value of a
-  uT.f = f32_rsqrt( uT.f );
+  uZ.f = f32_rsqrt( uZ.f );
 
   //calculate the reciprocal value 
-  uZ.f = f32_mul( uT.f, uT.f );
+  uZ.f = f32_mul( uZ.f, uZ.f );
 
   //recover the signal bit
   uZ.ui = uZ.ui | (signA << 31);

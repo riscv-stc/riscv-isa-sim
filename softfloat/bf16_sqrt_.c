@@ -9,16 +9,13 @@ bfloat16_t bf16_sqrt_( bfloat16_t a )
   union ui16_bf16 uA;
   uint_fast16_t uiA;
   bool signA;
-  int_fast8_t expA;
+  int_fast16_t expA;
   uint_fast8_t sigA;
 
-  struct exp8_sig16 normExpSig;
 
   bfloat16_t t;
 
   uint_fast16_t uiZ;
-  int_fast8_t expZ;
-  uint_fast8_t sigZ;
   union ui16_bf16 uZ;
 
 
@@ -40,7 +37,7 @@ bfloat16_t bf16_sqrt_( bfloat16_t a )
     }
     //if other negative numbers, invalid 
     softfloat_raiseFlags( softfloat_flag_invalid );
-    uiZ = defaultNaNBF16UI;
+    uiZ = 0xffc0;  //-NaN
     uZ.ui = uiZ;
     return uZ.f;
   }
@@ -51,7 +48,7 @@ bfloat16_t bf16_sqrt_( bfloat16_t a )
     //if NaN input
     if( sigA )
     {
-      uiZ = softfloat_propagateNaNBF16UI( uiA, 0 );
+      uiZ = 0x7fc0; //NaN
       uZ.ui = uiZ;
       return uZ.f;
     }
@@ -59,24 +56,12 @@ bfloat16_t bf16_sqrt_( bfloat16_t a )
     return a;
   }
 
-  //if 0 or postiove subnormal number 
-  if( 0 == expA )
+  //if 0
+  if( ( 0 == expA ) && ( 0 == sigA ) )
   {
-    //if +0, return 0
-    if( 0 == sigA )
-    {
-      uiZ = 0;
-      uZ.ui = uiZ;
-      return uZ.f;
-    }
-    //handle subnormal number
-    normExpSig = softfloat_normSubnormalBF16Sig( sigA ); 
-    expA = normExpSig.exp;
-    sigA = normExpSig.sig;
-    uA.ui = packToBF16UI( 0, expA, sigA);
-    uiA = uA.ui;
-    a = uA.f;
-
+    uiZ = 0;
+    uZ.ui = uiZ;
+    return uZ.f;
   }
 
   /*------------------------------------------------------------------------

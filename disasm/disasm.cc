@@ -772,6 +772,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecvt_bf_x8_m);
   DEFINE_R3TYPE(vecvt_bf_xu8_m);
   DEFINE_R3TYPE(vecvt_x8_bf_m);
+  DEFINE_R3TYPE(vecvt_xu8_bf_m);
   DEFINE_R3TYPE(vecvt_bf_x16_m);
   DEFINE_R3TYPE(vecvt_x16_bf_m);
   DEFINE_R3TYPE(vecvt_f32_bf_m);
@@ -812,6 +813,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecosh_m);
   DEFINE_R3TYPE(vetanh_m);
   DEFINE_R3TYPE(veln_m);
+  DEFINE_R3TYPE(vesin_m);
+  DEFINE_R3TYPE(vecos_m);  
   DEFINE_R3TYPE(veavgpool_m)
   DEFINE_R3TYPE(vemaxpool_m)
   DEFINE_R3TYPE(vedwconv_mm)
