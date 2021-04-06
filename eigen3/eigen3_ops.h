@@ -2904,24 +2904,54 @@ public:
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
     int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
-    int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int ts);
+    int memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, struct ShapeStride *ss);
+    int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
+    int memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_ts_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_ts_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
     int meacc_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int memin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
+    int memax_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
+    int meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
+    int memin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+    int memax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
+    int meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
 
     int veemul_x32_mf(int32_t *rs1, half *rd, half rs2, struct ShapeStride *ss);
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int metr_m(int8_t *rs1, int8_t *rd, struct ShapeStride *ss);
+    int metr_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
 
 
     int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
+    int meconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
+    int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
     int medeconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
+    int medeconv_mm(half *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
+    int medeconv_mm(int8_t *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
+    int medeconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
     int medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
+    int medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
     int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
+    int medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
     
 };
 

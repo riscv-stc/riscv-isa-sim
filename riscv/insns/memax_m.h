@@ -1,20 +1,32 @@
 require_extension('V');
-//check_ncp_vill_invalid()
- if (p->get_csr(CSR_MTE_DATA_TYPE) == 0)
-     check_traps_mexxx_m(int16_t, int16_t);
+
 
 reg_t t_rs1 = RS1;
 reg_t t_rd = RD;
 //p->run_async([p, t_rs1, t_rs2, t_rd, pc]() {
   class CustomInsns CusIns;
   struct ShapeStride sst;
-  bc_sst_fill(sst, 2, 2);
 
   unsigned long rs1 = MMU.get_phy_addr(t_rs1);
   unsigned long rd = MMU.get_phy_addr(t_rd);
 
-  if (p->get_csr(CSR_MTE_DATA_TYPE) == 0)
+  switch (p->get_csr(CSR_MME_DATA_TYPE)){
+  case 0x0: // f16*f16 = f16
+    check_traps_mexxx_m(int16_t, int16_t);
+    bc_sst_fill(sst, 2, 2);
     CusIns.memax_m((half*)rs1, (half*)rd, &sst);
+    break;
+  case 0x010101: // bf16 * bf16 = bf16
+    check_traps_mexxx_m(int16_t, int16_t);
+    bc_sst_fill(sst, 2, 2);
+    CusIns.memax_m((Bfloat16*)rs1, (Bfloat16*)rd, &sst);
+    break; 
+  case 0x020202: // f32 * f32 = f32
+    check_traps_mexxx_m(int16_t, int16_t);
+    bc_sst_fill(sst, 4, 4);
+    CusIns.memax_m((float32_t*)rs1, (float32_t*)rd, &sst);
+    break;
+  }
 //});
 
 //wfi();

@@ -138,6 +138,7 @@ softfloat_c_srcs = \
 	f32_to_i32.c \
 	f32_to_i32_r_minMag.c \
 	f32_to_i64.c \
+	f32_to_tf32.c \
 	f32_to_i64_r_minMag.c \
 	f32_to_ui16.c \
 	f32_to_ui32.c \
