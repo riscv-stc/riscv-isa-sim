@@ -1,0 +1,48 @@
+image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  RISCV: /usr/local
+  LD_LIBRARY_PATH: /usr/local/lib
+
+stages:
+  - build
+  - package
+
+cache:
+  paths:
+    - .cache
+    - .env
+    - build
+
+build:
+  stage : build
+  script:
+    - mkdir -p build
+    - cd build && ../configure --with-isa=rv64gcv --prefix=$PWD/../install && make -j`nproc` && cd -
+
+  artifacts:
+    paths:
+      - build
+    name: build_output
+
+package:
+  stage : package
+  script:
+    - cd build && make install && cd -
+    - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
+    - export LINK=latest
+    - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
+    - mkdir -p archive
+    - ./scripts/package.sh $PWD/install archive/spike-installer-$VER.sh
+    - ln -sf archive/spike-installer-$VER.sh $LINK
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$DEPLOY_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - tar -jc archive $LINK | ssh release@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
+  only:
+    - 2.x-dev
+    - tags
