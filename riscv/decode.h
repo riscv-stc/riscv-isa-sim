@@ -769,12 +769,15 @@ private:
         check_cust_misaligned_stride_src(RS1, in_type, CONV_IN_STRIDE); \
         check_cust_misaligned_stride_src(RS2, in_type, CONV_W_STRIDE); \
         check_cust_misaligned_stride_dst(RD, out_type, CONV_OUT_STRIDE, CONV_COUT); \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : (CONV_CIN * sizeof(in_type##_t))) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : (CONV_COUT * sizeof(in_type##_t))) * \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : (CONV_COUT * sizeof(out_type##_t))) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                  CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN * sizeof(in_type##_t): \
+                  CONV_CIN * sizeof(in_type##_t) * (CONV_IN_COLUMN * CONV_IN_ROW); \
+        int rs2_size = CONV_W_STRIDE ? \
+                  CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT * sizeof(in_type##_t): \
+                  CONV_COUT * sizeof(in_type##_t) * (CONV_KH * CONV_KW * CONV_CIN); \
+        int rd_size = CONV_OUT_STRIDE ? \
+                  CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT * sizeof(out_type##_t): \
+                  CONV_COUT * sizeof(out_type##_t) * (CONV_OUT_COLUMN * CONV_OUT_ROW); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access_l1(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
