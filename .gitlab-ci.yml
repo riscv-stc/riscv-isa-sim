@@ -20,7 +20,7 @@ build:
   stage : build
   script:
     - mkdir -p build
-    - cd build && ../configure --with-isa=rv32imafcv --prefix=$PWD/../install && make -j`nproc` && cd -
+    - cd build && ../configure --with-isa=rv32imafcv --enable-commitlog --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
