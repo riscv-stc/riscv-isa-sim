@@ -37,6 +37,31 @@ reg_t t_rd = RD;
   case 0x010101: // bf16 * bf16 = bf16
     memul_sst_fill(sst, 2, 2, 2);
     break;
+  case 0x03030f: // int8 * int8 = bf16(int32->bf16, mf)
+    check_traps_memul_mm(int8_t, int8_t, int16_t);
+    memul_sst_fill(sst, 1, 1, 2);
+    CusIns.memul_mm((int8_t*)rs1, (int8_t*)rs2, (Bfloat16*)rd, &sst);
+    break;
+  case 0x030310: // int * int8 = bf16(int32->bf16, mv)
+    check_traps_memul_mm(int8_t, int8_t, int16_t);
+    memul_sst_fill(sst, 1, 1, 2);
+    CusIns.memul_mm((int8_t*)rs1, (int8_t*)rs2, (Bfloat16*)rd, &sst);
+    break;
+  case 0x03030c: // int8 * int8 = f16(int32->f16,mv)
+    check_traps_memul_mm(int8_t, int8_t, int16_t); 
+    memul_sst_fill(sst, 1, 1, 2);
+    CusIns.memul_mm((int8_t*)rs1, (int8_t*)rs2, (half*)rd, &sst);
+    break;
+  case 0x03040b: // uint8 * int8 = f16(int32->f16,mf)
+    check_traps_memul_mm(int8_t, int8_t, int16_t); 
+    memul_sst_fill(sst, 1, 1, 2);
+    CusIns.memul_mm((uint8_t*)rs1, (int8_t*)rs2, (half*)rd, &sst);
+    break;
+  case 0x03040c: // uint8 * int8 = f16(int32->f16,mv)
+    check_traps_memul_mm(int8_t, int8_t, int16_t); 
+    memul_sst_fill(sst, 1, 1, 2);
+    CusIns.memul_mm((uint8_t*)rs1, (int8_t*)rs2, (half*)rd, &sst);
+    break;
   }
 //});
 

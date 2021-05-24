@@ -241,7 +241,7 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         if ((_row < (dest_column_3d * u)) || \
                 ((_row % dest_column_3d) < l) || \
                 (_row % dest_column_3d >= (dest_column_3d - r)) || \
-                (_row > (dest_column_3d * (dest_row_3d - d)))) { \
+                (_row >= (dest_column_3d * (dest_row_3d - d)))) { \
             dest.row(_row) = padding.row(0); \
         } else { \
             dest.row(_row) = src.row(src_row); \
@@ -288,6 +288,35 @@ const uint16_t recip_table_half[65] = {
     0x2492,0x247d,0x2469,0x2456,0x2444,0x2432,0x2421,0x2410,
     0x2400
 };
+
+const uint16_t recip_table_Bfloat16[65] = {
+    0x0000, 0x3f80, 0x3f00, 0x3eaa, 0x3e80, 0x3e4c,
+    0x3e2a, 0x3e12, 0x3e00, 0x3de3, 0x3dcc, 0x3dba,
+    0x3daa, 0x3d9d, 0x3d92, 0x3d88, 0x3d80, 0x3d70,
+    0x3d63, 0x3d57, 0x3d4c, 0x3d43, 0x3d3a, 0x3d32,
+    0x3d2a, 0x3d23, 0x3d1d, 0x3d17, 0x3d12, 0x3d0d,
+    0x3d08, 0x3d04, 0x3d00, 0x3cf8, 0x3cf0, 0x3cea,
+    0x3ce3, 0x3cdd, 0x3cd7, 0x3cd2, 0x3ccc, 0x3cc7,
+    0x3cc3, 0x3cbe, 0x3cba, 0x3cb6, 0x3cb2, 0x3cae,
+    0x3caa, 0x3ca7, 0x3ca3, 0x3ca0, 0x3c9d, 0x3c9a,
+    0x3c97, 0x3c94, 0x3c92, 0x3c8f, 0x3c8d, 0x3c8a,
+    0x3c88, 0x3c86, 0x3c84, 0x3c82, 0x3c80
+};
+
+const uint32_t recip_table_Float32[65] = {
+    0x00000000, 0x3f800000, 0x3f000000, 0x3eaaaaab, 0x3e800000, 0x3e4ccccd,
+    0x3e2aaaab, 0x3e124925, 0x3e000000, 0x3de38e39, 0x3dcccccd, 0x3dba2e8c,
+    0x3daaaaab, 0x3d9d89d9, 0x3d924925, 0x3d888889, 0x3d800000, 0x3d70f0f1,
+    0x3d638e39, 0x3d579436, 0x3d4ccccd, 0x3d430c31, 0x3d3a2e8c, 0x3d321643,
+    0x3d2aaaab, 0x3d23d70a, 0x3d1d89d9, 0x3d17b426, 0x3d124925, 0x3d0d3dcb,
+    0x3d088889, 0x3d042108, 0x3d000000, 0x3cf83e10, 0x3cf0f0f1, 0x3cea0ea1,
+    0x3ce38e39, 0x3cdd67c9, 0x3cd79436, 0x3cd20d21, 0x3ccccccd, 0x3cc7ce0c,
+    0x3cc30c31, 0x3cbe82fa, 0x3cba2e8c, 0x3cb60b61, 0x3cb21643, 0x3cae4c41,
+    0x3caaaaab, 0x3ca72f05, 0x3ca3d70a, 0x3ca0a0a1, 0x3c9d89d9, 0x3c9a90e8,
+    0x3c97b426, 0x3c94f209, 0x3c924925, 0x3c8fb824, 0x3c8d3dcb, 0x3c8ad8f3,
+    0x3c888889, 0x3c864b8a, 0x3c842108, 0x3c820821, 0x3c800000
+};
+
 
 /**
  * @brief 矩阵形状描述结构
@@ -1671,13 +1700,14 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
-
+    
     //param check
     assert((vss->kw * vss->kh <= 64));
     assert((vss->kw > 0) && (vss->kh) > 0);
     assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
     assert((vss->wout > 0) && (vss->hout > 0));
 
+    
     VME_SHAPE_STRIDE_INFO(vss);
 
     // rs1 source
@@ -1740,7 +1770,15 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     int start_row = 0;
     int start_col = 0;
     int rd_row_idx = 0;
-    OutDType *recip_tab = (OutDType *)recip_table_half;
+    OutDType *recip_tab = nullptr;
+    if (typeid(OutDType) == typeid(half))
+        recip_tab = (OutDType *)recip_table_half;
+    else if (typeid(OutDType) == typeid(Bfloat16))
+        recip_tab = (OutDType *)recip_table_Bfloat16;
+    else if (typeid(OutDType) == typeid(Float32))
+        recip_tab = (OutDType *)recip_table_Float32;
+
+
     OutDType *fetch_base = padded_buf;
     while (1) {
         // calculate n and creat a 1/n vector
@@ -1779,6 +1817,11 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
                 break;
         }
         fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+    }
+
+    if (GLOBAL_DBG){
+        cout << "rs1: \n" << rs1_2d << endl;
+        cout << "rd: \n" << rd_2d << endl;
     }
 
     free(rd_row_intype_buf);
@@ -1883,6 +1926,11 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
                 break;
         }
         fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+    }
+
+    if (GLOBAL_DBG){
+        cout << "rs1: \n" << rs1_2d << endl;
+        cout << "rd: \n" << rd_2d << endl;
     }
 
     free(rd_row_buf);
@@ -2006,6 +2054,11 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
         fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
     }
 
+    if (GLOBAL_DBG){
+        cout << "rs1: \n" << rs1_2d << endl;
+        cout << "rs2: \n" << kernel_2d << endl;
+        cout << "rd: \n" << rd_2d << endl;
+    }
     free(rd_row_intype_buf);
     free(rd_row_buf);
     free(block_indtype_buf);
@@ -2897,6 +2950,7 @@ private:
     half float16_t_to_half(float16_t f16);
     half f32_to_half(float32_t f32);
     half int32_mul_f16(int a, float16_t b);
+    Bfloat16 int32_mul_bf16(int a, Bfloat16 b);
 public:
     int debug;
 
@@ -2904,7 +2958,9 @@ public:
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
     int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isMv=false);
+    int memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss);
     int memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
     int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
     int memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);

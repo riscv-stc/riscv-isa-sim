@@ -18,6 +18,7 @@
 #include "fp16m.c"
 #include "fp16ext.c"
 #include "int32xfp16.c"
+#include "int32xbf16.c"
 #include "fp16convfp32.c"
 
 /* dynamic stride for map */
@@ -118,10 +119,10 @@ namespace Eigen {
       bfloat16_t bf16a, bf16b;
       bf16a.v = a.x;
       bf16b.v = b.x;
-      float32_t f32t;
-      f32t = bf16_mul32(bf16a, bf16b);
+      float32_t res;
+      res = bf16_mul32(bf16a, bf16b);
       Float32 f32;
-      f32.x = f32t.v;
+      f32.x = res.v;
       return f32;
   }
 
@@ -217,6 +218,14 @@ CustomInsns::int32_mul_f16(int a, float16_t b)
 {
     half res;
     res.x = int32xfp16(a, b.v) & 0xffff;
+    return res;
+}
+
+Bfloat16
+CustomInsns::int32_mul_bf16(int a, Bfloat16 b)
+{
+    Bfloat16 res;
+    res.x = int32xbf16(a, b.x);
     return res;
 }
 /**
@@ -402,7 +411,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
             res.v = 0x80000000;
             counter = 0;
             
-            if ((out_stride == out_c ) && (out_c <= 32)){
+            if ((k_stride == out_c ) && (out_c <= 32)){
                 if ((in_stride == in_c) && (dilation_h == 1)){
                      for (k = 0; k < okh; k++){
                         int offset = k * okw * in_c; 
@@ -436,7 +445,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
                         for (k = 0; k < (okh * okw); k++){
                             int offset = k * in_c;
                             for (index_cin = 0; index_cin < in_c; index_cin++){
-                                res_tmp = half_mul_f32(row_matrix(0, offset + index_cin), col_matrix(0, offset +index_cin));
+                                res_tmp = half_mul_f32(row_matrix(0, offset + index_cin),                      col_matrix(0, offset + index_cin));
                                 if(counter%4 == 0) first = f32_add(res_tmp, first);
                                 else if(counter%4 == 1) second = f32_add(res_tmp, second);
                                 else if(counter%4 == 2) third = f32_add(res_tmp, third);
@@ -962,7 +971,7 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct
             res.v = 0x80000000;
             counter = 0;
             
-            if ((out_stride == out_c ) && (out_c <= 32)){
+            if ((k_stride == out_c ) && (out_c <= 32)){
                 if ((in_stride == in_c) && (dilation_h == 1)){
                      for (k = 0; k < okh; k++){
                         int offset = k * okw * in_c; 
@@ -973,7 +982,8 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct
                             else if(counter%4 == 2) third = f32_add(res_tmp, third);
                             else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
                             ++counter;
-                            if (((in_c*okw) % 2 == 1) && (index_cin == (in_c * okw - 1))) ++counter;
+                            if (((in_c*okw) % 2 == 1) && (index_cin == (in_c * okw - 1))) 
+                                ++counter;
                         }
                     }
                     res12 = f32_add(first, third);
@@ -996,7 +1006,8 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct
                         for (k = 0; k < (okh * okw); k++){
                             int offset = k * in_c;
                             for (index_cin = 0; index_cin < in_c; index_cin++){
-                                res_tmp = tf32_mul(row_matrix(0, offset + index_cin), col_matrix(0, offset +index_cin));
+                                res_tmp = tf32_mul(row_matrix(0, offset + index_cin), 
+                                                   col_matrix(0, offset + index_cin));
                                 if(counter%4 == 0) first = f32_add(res_tmp, first);
                                 else if(counter%4 == 1) second = f32_add(res_tmp, second);
                                 else if(counter%4 == 2) third = f32_add(res_tmp, third);
@@ -1043,12 +1054,12 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     int dilation_h, dilation_w;
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
-    uint32_t sp_index1, sp_index2;
+    uint8_t sp_index1, sp_index2;
     half *rs1_start;
     half *left_val, *row_val, *col_val;
     half *start;
     half val;
-    uint8_t *sp_idx_data, * idx_val;
+    uint8_t *sp_idx_data, *idx_val;
 
     //get the padding
     pad_top = (ss->conv_padding >> 24) & 0xff;
@@ -1109,6 +1120,24 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
 
     /*calculate the kernel shape*/
     Map_half rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
+
+    // pad_vs2
+    half *rs2_pad = (half*)malloc(kh * kw * in_c * out_c * sizeof(half));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = (half)0;
+        }
+    }
+    Map_half rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
+
 
     h = dilation_h > 1 ? dilation_h * (kh - 1) + 1 : kh;
     w = dilation_w > 1 ? dilation_w * (kw - 1) + 1 : kw;
@@ -1175,16 +1204,17 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     Map_half left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
-    col_val = (half *)malloc(okh * okw * in_c * sizeof(half));
-    idx_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
+    col_val = (half *)malloc(okh * okw * in_c/2 * sizeof(half));
+    idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_half col_matrix(col_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
+    Map_half col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
     float32_t odd, even;
     if (debug) {
         cout << "rs1: " << rs1_matrix << endl;
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
+        cout << "rs2_pad: " << rs2_pad_matrix << endl;
         cout << "origin idx:\n";
         for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
             cout << (int32_t)tmp_matrix(0,i) << endl;
@@ -1195,7 +1225,6 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
             cout << endl;
         }
     }
-    //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1203,16 +1232,24 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
             idx_matrix = sp_matrix.col(j).transpose();
             odd.v = 0x80000000;
             even.v = 0x80000000;
-            counter = 0;
+            
             for (k = 0; k < okh * okw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
                 even = f32_add(half_mul_f32(row_matrix(0, k+sp_index1), col_matrix(0, k/2)), even);
                 odd = f32_add(half_mul_f32(row_matrix(0, k+sp_index2), col_matrix(0, k/2+1)), odd);
+                if (debug) {
+                    cout << "index: " << (int)sp_index1 << " " << (int)sp_index2 << endl;
+                    cout << row_matrix(0, k+sp_index1) << " * " << col_matrix(0, k/2) << " = ";
+                    cout << hex << even.v << endl;
+                    cout << row_matrix(0, k+sp_index2) << " * " << col_matrix(0, k/2+1) << " = ";
+                    cout << hex << odd.v << endl;
+                }
             }
             rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }
+    
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1303,7 +1340,23 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
 
     /*calculate the kernel shape*/
     Map_int8_t rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
-
+    // pad_vs2
+    int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = 0;
+        }
+    }
+    Map_int8_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
+    
     h = dilation_h > 1 ? dilation_h * (kh - 1) + 1 : kh;
     w = dilation_w > 1 ? dilation_w * (kw - 1) + 1 : kw;
     okh = kh;
@@ -1370,47 +1423,26 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
     col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
-    idx_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    int32_t odd, even;
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    int32_t res;
     float16_t rs1_f16;
     int8_t rs1_i8;
-    if (debug) {
-        cout << "rs1: " << rs1_matrix << endl;
-        cout << "rs2: " << rs2_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
-    }
     //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_matrix.col(j).transpose();
-            idx_matrix = sp_matrix.col(j).transpose();
-            odd = 0;
-            even = 0;
-            for (k = 0; k < okh * okw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
-                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index1)), quant_coeff);
+            col_matrix = rs2_pad_matrix.col(j).transpose();
+            res = 0;
+            for (k = 0; k < okh * okw * in_c; k++) {
+                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                even += rs1_i8 * col_matrix(0, k/2);
-                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index2)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                odd += rs1_i8 * col_matrix(0, k/2+1);
+                res += rs1_i8 * col_matrix(0, k);
             }
-            rd_matrix(i, j) = int32_mul_f16(odd+even, dequant_coeff);
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
         }
     }
+
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -1501,6 +1533,22 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
 
     /*calculate the kernel shape*/
     Map_int8_t rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
+    // pad_vs2
+    int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = 0;
+        }
+    }
+    Map_int8_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
 
     h = dilation_h > 1 ? dilation_h * (kh - 1) + 1 : kh;
     w = dilation_w > 1 ? dilation_w * (kw - 1) + 1 : kw;
@@ -1568,39 +1616,19 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
     col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
-    idx_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
     Map_int8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    int32_t odd, even;
-    if (debug) {
-        cout << "rs1: " << rs1_matrix << endl;
-        cout << "rs2: " << rs2_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
-    }
-    //rd_matrix = left_matrix * rs2_matrix;
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    
+    int32_t res;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_matrix.col(j).transpose();
-            idx_matrix = sp_matrix.col(j).transpose();
-            odd = 0;
-            even = 0;
-            for (k = 0; k < okh * okw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
-                even += row_matrix(0, k+sp_index1) * col_matrix(0, k/2);
-                odd += row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1);
+            col_matrix = rs2_pad_matrix.col(j).transpose();
+            res = 0;
+            for (k = 0; k < okh * okw * in_c; k++) {
+                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
             }
-            rd_matrix(i, j) = int32_mul_f16(odd+even, dequant_coeff);
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
         }
     }
 
@@ -1631,7 +1659,7 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
     float32_t *left_val, *row_val, *col_val;
     float32_t *start;
     float32_t val;
-    uint8_t *sp_idx_data, * idx_val;
+    uint8_t *sp_idx_data, *idx_val;
 
     //get the padding
     pad_top = (ss->conv_padding >> 24) & 0xff;
@@ -1692,6 +1720,23 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
 
     /*calculate the kernel shape*/
     Map_float32_t rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
+
+    // pad_vs2
+    float32_t *rs2_pad = (float32_t*)malloc(kh * kw * in_c * out_c * sizeof(float32_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = i32_to_f32(0);
+        }
+    }
+    Map_float32_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
 
     h = dilation_h > 1 ? dilation_h * (kh - 1) + 1 : kh;
     w = dilation_w > 1 ? dilation_w * (kw - 1) + 1 : kw;
@@ -1758,42 +1803,29 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
     Map_float32_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_float32_t rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (float32_t *)malloc(okh * okw * in_c * sizeof(float32_t));
-    col_val = (float32_t *)malloc(okh * okw * in_c * sizeof(float32_t));
-    idx_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
+    col_val = (float32_t *)malloc(okh * okw * in_c / 2 * sizeof(float32_t));
+    idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_float32_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_float32_t col_matrix(col_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * (in_c/2), DynStride(okh * okw * in_c/2, 1));
+    Map_float32_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c / 2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
     float32_t odd, even;
-    if (debug) {
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
-    }
-    //rd_matrix = left_matrix * rs2_matrix;
+
+
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
             idx_matrix = sp_matrix.col(j).transpose();
-            odd.v = 0x80000000;
             even.v = 0x80000000;
-            counter = 0;
+            odd.v = 0x80000000;
+            
             for (k = 0; k < okh * okw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
                 even = f32_add(tf32_mul(row_matrix(0, k+sp_index1), col_matrix(0, k/2)), even);
                 odd = f32_add(tf32_mul(row_matrix(0, k+sp_index2), col_matrix(0, k/2+1)), odd);
             }
             rd_matrix(i, j) = f32_add(even, odd);
-            
-            if (debug)
-                cout << "rd: " << hex << rd_matrix(i, j).v << endl;
         }
     }
 
@@ -1814,7 +1846,7 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int stride_w, stride_h;
-    int i, j, k, m, ii, jj, kk;
+    int i, j, k, m, ii, jj, kk, index_cin, counter;
     int row, col, row_pad, col_pad;
     int rs2_offset, ker_offset;
     uint32_t sp_index1, sp_index2;
@@ -1941,7 +1973,7 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     col_val = (half *)malloc(kh * kw * in_c * sizeof(half));
     Map_half row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_half col_matrix(col_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    float32_t odd, even;
+    float32_t odd, even, first, second, third, forth, res_tmp, res12, res34;
     if (debug) {
         cout << "rs1: " << rs1_matrix << endl;
         cout << "rs1_extend: " << rs1_pad_matrix << endl;
@@ -1955,23 +1987,41 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
             col_matrix = rs2_matrix.col(j).transpose();
             odd.v = 0;
             even.v = 0;
-            for (k = 0; k < kh * kw * in_c; k++){
-                if (debug) {
-                    cout << "computing" << endl;
-                    cout << row_matrix(0, k) << " * " << col_matrix(0, k) << endl;
+            first.v = 0;
+            second.v = 0;
+            third.v = 0;
+            forth.v = 0;
+            counter = 0;
+            if ((k_stride == out_c) && (out_c <= 32)) {
+                for (k = 0; k < kh *kw; k++){
+                    int offset = k * in_c;
+                    for (index_cin = 0; index_cin < in_c; index_cin++){
+                        res_tmp =  half_mul_f32(row_matrix(0, offset + index_cin),
+                                                col_matrix(0, offset + index_cin));
+                        if(counter%4 == 0) first = f32_add(res_tmp, first);
+                        else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                        else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                        else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                        ++counter;
+                        if ((in_c % 2) && (index_cin == (in_c - 1))) 
+                            ++counter;
+                    }
                 }
-                if (! (k % 2))
-                    even = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), even);
-                else
-                    odd = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), odd);
-            }
-            rd_matrix(i, j) = f32_to_half(f32_add(odd, even));
-            if (debug) {
-                cout << "left" << row_matrix << endl;
-                cout << "kernel" << col_matrix << endl;
+                res12 = f32_add(first, third);
+                res34 = f32_add(second,forth);
+                rd_matrix(i, j) = f32_to_half(f32_add(res12, res34));
+            } else {
+                for (k = 0; k < kh * kw * in_c; k++){
+                    if (! (k % 2))
+                        even = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), even);
+                    else
+                        odd = f32_add(half_mul_f32(row_matrix(0, k), col_matrix(0, k)), odd);
+                }
+                rd_matrix(i, j) = f32_to_half(f32_add(odd, even));
             }
         } 
     }
+
 
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
@@ -2280,7 +2330,7 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int stride_w, stride_h;
-    int i, j, k, m, ii, jj, kk;
+    int i, j, k, m, ii, jj, kk, index_cin, counter;
     int row, col, row_pad, col_pad;
     int rs2_offset, ker_offset;
     uint32_t sp_index1, sp_index2;
@@ -2330,13 +2380,15 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     col = in_w + (in_w - 1) * (stride_w - 1) + in_pad_right + in_pad_left;
     rs1_pad = (float32_t *)malloc(row * col * in_c * sizeof(float32_t));
     Map_float32_t rs1_pad_matrix(rs1_pad, row * col, in_c, DynStride(in_c, 1));
-    for (i = 0; i < row * col * in_c; i++)
-        (*(rs1_pad+i)).v = 0.0;
+    for (i = 0; i < row * col; i++)
+        for (j = 0; j < in_c; j++)
+            rs1_pad_matrix(i, j) = i32_to_f32(0);
     ii=0;
     for (i = in_pad_top; i < (row-in_pad_bottom); i+=stride_h) {
         for (j = in_pad_left; j < (col-in_pad_right); j+=stride_w){
-            for (k = 0; k < in_c; k++)
+            for (k = 0; k < in_c; k++){
                 rs1_pad_matrix(i*col+j, k) = rs1_matrix(ii,k);
+            }
             ++ii;
         }
     }
@@ -2372,11 +2424,6 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
                         *(start + start_offset) = *(rs1_start + rs1_offset);
                         val = *(rs1_start + rs1_offset);
 
-                        if (debug) {
-                            printf("rs1 offset= %d val = 0x%x ",start_offset, val.v);
-                            val = *(start + start_offset);
-                            printf("left val = 0x%x\n", val.v); 
-                        }
                     }
                 }
             }
@@ -2390,21 +2437,46 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     col_val = (float32_t *)malloc(kh * kw * in_c * sizeof(float32_t));
     Map_float32_t row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_float32_t col_matrix(col_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    float32_t odd, even;
+    float32_t odd, even, first, second, third, forth, res12, res34, res_tmp;
 
     for (i = 0; i < out_h * out_w; i++){
         for (j = 0; j < out_c; j++){
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
-            odd.v = 0;
-            even.v = 0;
-            for (k = 0; k < kh * kw * in_c; k++){
-                if (! (k % 2))
-                    even = f32_add(tf32_mul(row_matrix(0, k), col_matrix(0, k)), even);
-                else
-                    odd = f32_add(tf32_mul(row_matrix(0, k), col_matrix(0, k)), odd);
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
+            first.v = 0x80000000;
+            second.v = 0x80000000;
+            third.v = 0x80000000;
+            forth.v = 0x80000000;
+            counter = 0;
+            if ((k_stride == out_c ) && (out_c <= 32)){
+                for (k = 0; k < (kh * kw); k++){
+                    int offset = k * in_c;
+                    for (index_cin = 0; index_cin < in_c; index_cin++){
+                        res_tmp = tf32_mul(row_matrix(0, offset + index_cin), 
+                                           col_matrix(0, offset + index_cin));
+                        if(counter%4 == 0) first = f32_add(res_tmp, first);
+                        else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                        else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                        else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                        ++counter;
+                        if ((in_c%2) && (index_cin == (in_c - 1))) 
+                            ++counter;
+                    }
+                }
+                res12 = f32_add(first, third);
+                res34 = f32_add(second,forth);
+                rd_matrix(i, j) = f32_add(res12, res34);
+            } else { 
+                for (k = 0; k < kh * kw * in_c; k++){
+                    if (! (k % 2))
+                        even = f32_add(tf32_mul(row_matrix(0, k), col_matrix(0, k)), even);
+                    else
+                        odd = f32_add(tf32_mul(row_matrix(0, k), col_matrix(0, k)), odd);
+                }
+                rd_matrix(i, j) = f32_add(odd, even);
             }
-            rd_matrix(i, j) = f32_add(odd, even);
         } 
     }
 
@@ -2413,7 +2485,6 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     free(col_val);
     free(left_val);
     free(rs1_pad);
-    free(ker_val);
     return 0;
 }
 
@@ -2433,7 +2504,7 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int stride_w, stride_h;
-    int i, j, k, m, ii, jj, kk;
+    int i, j, k, m, ii, jj, kk, index_cin, counter;
     int row, col, row_pad, col_pad;
     int rs2_offset, ker_offset, idx_offset;
     uint32_t sp_index1, sp_index2;
@@ -2532,6 +2603,22 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     //     }
     // }
     Map_half rs2_matrix(rs2, kh * kw * ker_c, out_c, DynStride(k_stride, 1));    
+    // pad_vs2
+    half *rs2_pad = (half*)malloc(kh * kw * in_c * out_c * sizeof(half));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = (half)0;
+        }
+    }
+    Map_half rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
 
     /* 3. calculate the output shape;
        out_h = row + kernel_h -1; 
@@ -2577,11 +2664,11 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     Map_half left_matrix(left_val, h * w, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (half *)malloc(kh * kw * in_c * sizeof(half));
-    col_val = (half *)malloc(kh * kw * ker_c * sizeof(half));
-    idx_val = (uint8_t *)malloc(kh * kw * ker_c * sizeof(uint8_t));
+    col_val = (half *)malloc(kh * kw * in_c/2 * sizeof(half));
+    idx_val = (uint8_t *)malloc(kh * kw * in_c/2 * sizeof(uint8_t));
     Map_half row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    Map_half col_matrix(col_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
+    Map_half col_matrix(col_val, 1, kh * kw * in_c /2, DynStride(kh * kw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * in_c / 2, DynStride(kh * kw * in_c/2, 1));
     float32_t odd, even;
     if (debug) {
         cout << "rs1: " << rs1_matrix << endl;
@@ -2590,25 +2677,29 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
         cout << "rs2: " << rs2_matrix << endl;
     }
 
-    for (i = 0; i < out_h * out_w; i++){
-        for (j = 0; j < out_c; j++){
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
             idx_matrix = sp_matrix.col(j).transpose();
-            odd.v = 0;
-            even.v = 0;
-            for (k = 0; k < kh * kw * in_c; k+=4){
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
+            
+            for (k = 0; k < kh * kw * in_c; k+=4) {
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
                 even = f32_add(half_mul_f32(row_matrix(0, k+sp_index1), col_matrix(0, k/2)), even);
                 odd = f32_add(half_mul_f32(row_matrix(0, k+sp_index2), col_matrix(0, k/2+1)), odd);
+                if (debug) {
+                    cout << "index: " << (int)sp_index1 << " " << (int)sp_index2 << endl;
+                    cout << row_matrix(0, k+sp_index1) << " * " << col_matrix(0, k/2) << " = ";
+                    cout << hex << even.v << endl;
+                    cout << row_matrix(0, k+sp_index2) << " * " << col_matrix(0, k/2+1) << " = ";
+                    cout << hex << odd.v << endl;
+                }
             }
-            rd_matrix(i, j) = f32_to_half(f32_add(odd, even));
-            if (debug) {
-                cout << "left" << row_matrix << endl;
-                cout << "kernel" << col_matrix << endl;
-            }
-        } 
+            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
+        }
     }
 
     if (debug)
@@ -2723,7 +2814,22 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
 
   
     Map_int8_t rs2_matrix(rs2, kh * kw * ker_c, out_c, DynStride(k_stride, 1));    
-
+    // pad_vs2
+    int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = 0;
+        }
+    }
+    Map_int8_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
     /* 3. calculate the output shape;
        out_h = row + kernel_h -1; 
        out_w = col + kernel - 1
@@ -2762,34 +2868,26 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
     Map_half left_matrix(left_val, h * w, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (half *)malloc(kh * kw * in_c * sizeof(half));
-    col_val = (int8_t *)malloc(kh * kw * ker_c * sizeof(int8_t));
-    idx_val = (uint8_t *)malloc(kh * kw * ker_c * sizeof(uint8_t));
+    col_val = (int8_t *)malloc(kh * kw * in_c * sizeof(int8_t));
     Map_half row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    int32_t odd, even;
+    Map_int8_t col_matrix(col_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
+    int32_t res;
     float16_t rs1_f16;
     int8_t rs1_i8;
     
-    for (i = 0; i < out_h * out_w; i++) {
-        for (j = 0; j < out_c; j++) {
+     for (i = 0; i < out_h * out_w; i++){
+        for (j = 0; j < out_c; j++){
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_matrix.col(j).transpose();
-            idx_matrix = sp_matrix.col(j).transpose();
-            odd = 0;
-            even = 0;
-            for (k = 0; k < kh * kw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
-                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index1)), quant_coeff);
+            col_matrix = rs2_pad_matrix.col(j).transpose();
+            res = 0;
+            for (k = 0; k < kh * kw * in_c; k++){
+                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                even += rs1_i8 * col_matrix(0, k/2);
-                rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index2)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                odd += rs1_i8 * col_matrix(0, k/2+1);
+                res += rs1_i8 * col_matrix(0, k);
             }
-            rd_matrix(i, j) = int32_mul_f16(odd+even, dequant_coeff);
-        }
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
+            if (debug) cout << "rd: " << hex << rd_matrix(i, j).x << endl;
+        } 
     }
 
     if (debug)
@@ -2904,6 +3002,22 @@ int CustomInsns::medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, ha
 
   
     Map_int8_t rs2_matrix(rs2, kh * kw * ker_c, out_c, DynStride(k_stride, 1));    
+    // pad_vs2
+    int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = 0;
+        }
+    }
+    Map_int8_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
 
     /* 3. calculate the output shape;
        out_h = row + kernel_h -1; 
@@ -2937,27 +3051,21 @@ int CustomInsns::medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, ha
     Map_int8_t left_matrix(left_val, h * w, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (int8_t *)malloc(kh * kw * in_c * sizeof(int8_t));
-    col_val = (int8_t *)malloc(kh * kw * ker_c * sizeof(int8_t));
-    idx_val = (uint8_t *)malloc(kh * kw * ker_c * sizeof(uint8_t));
+    col_val = (int8_t *)malloc(kh * kw * in_c * sizeof(int8_t));
     Map_int8_t row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    int32_t odd, even;
-    for (i = 0; i < out_h * out_w; i++) {
-        for (j = 0; j < out_c; j++) {
+    Map_int8_t col_matrix(col_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
+    int32_t res;
+
+    for (i = 0; i < out_h * out_w; i++){
+        for (j = 0; j < out_c; j++){
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_matrix.col(j).transpose();
-            idx_matrix = sp_matrix.col(j).transpose();
-            odd = 0;
-            even = 0;
-            for (k = 0; k < kh * kw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
-                even += row_matrix(0, k+sp_index1) * col_matrix(0, k/2);
-                odd += row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1);
+            col_matrix = rs2_pad_matrix.col(j).transpose();
+            res = 0;
+            for (k = 0; k < kh * kw * in_c; k++){
+                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
             }
-            rd_matrix(i, j) = int32_mul_f16(odd+even, dequant_coeff);
-        }
+            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff); 
+        } 
     }
     
 
@@ -2982,7 +3090,7 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
     int out_w, out_h, out_c, out_stride;
     int w, h, c;
     int stride_w, stride_h;
-    int i, j, k, m, ii, jj, kk;
+    int i, j, k, m, ii, jj, kk, index_cin, counter;
     int row, col, row_pad, col_pad;
     int rs2_offset, ker_offset, idx_offset;
     uint32_t sp_index1, sp_index2;
@@ -3066,7 +3174,23 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
 
 
     Map_float32_t rs2_matrix(rs2, kh * kw * ker_c, out_c, DynStride(k_stride, 1));    
-
+    // pad_vs2
+    float32_t *rs2_pad = (float32_t*)malloc(kh * kw * in_c * out_c * sizeof(float32_t));
+    for (i = 0; i < kh * kw * in_c; i++){
+        for (j = 0; j < out_c; j++){
+            *(rs2_pad + i*out_c + j) = i32_to_f32(0);
+        }
+    }
+    Map_float32_t rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
+    for (i = 0; i < kh * kw * in_c; i+=4){
+        for (j = 0; j < out_c; j++){
+            sp_index1 = sp_matrix(i/2, j);
+            sp_index2 = sp_matrix(i/2+1, j);
+            rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
+            rs2_pad_matrix(i+sp_index2, j) = rs2_matrix(i/2+1, j);
+        }
+    }
+    
     /* 3. calculate the output shape;
        out_h = row + kernel_h -1; 
        out_w = col + kernel - 1
@@ -3100,11 +3224,11 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
     Map_float32_t left_matrix(left_val, h * w, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
     Map_float32_t rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     row_val = (float32_t *)malloc(kh * kw * in_c *  sizeof(float32_t));
-    col_val = (float32_t *)malloc(kh * kw * ker_c * sizeof(float32_t));
-    idx_val = (uint8_t *)malloc(kh * kw * ker_c * sizeof(uint8_t));
+    col_val = (float32_t *)malloc(kh * kw * in_c/2 * sizeof(float32_t));
+    idx_val = (uint8_t *)malloc(kh * kw * in_c/2 * sizeof(uint8_t));
     Map_float32_t row_matrix(row_val, 1, kh * kw * in_c, DynStride(kh * kw * in_c, 1));
-    Map_float32_t col_matrix(col_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
-    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * ker_c, DynStride(kh * kw * ker_c, 1));
+    Map_float32_t col_matrix(col_val, 1, kh * kw * in_c/2, DynStride(kh * kw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, kh * kw * in_c / 2, DynStride(kh * kw * in_c/2, 1));
     float32_t odd, even;
 
 
@@ -3113,20 +3237,16 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
             row_matrix = left_matrix.row(i);
             col_matrix = rs2_matrix.col(j).transpose();
             idx_matrix = sp_matrix.col(j).transpose();
-            odd.v = 0x80000000;
             even.v = 0x80000000;
+            odd.v = 0x80000000;
+            
             for (k = 0; k < kh * kw * in_c; k+=4) {
-                sp_index1 = (int32_t)idx_matrix(0, k/2);
-                sp_index2 = (int32_t)idx_matrix(0, k/2+1);
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
                 even = f32_add(tf32_mul(row_matrix(0, k+sp_index1), col_matrix(0, k/2)), even);
                 odd = f32_add(tf32_mul(row_matrix(0, k+sp_index2), col_matrix(0, k/2+1)), odd);
             }
             rd_matrix(i, j) = f32_add(even, odd);
-            if(debug){
-                cout << "rd(" << i << ", " << j << "): "; 
-                cout << hex << rd_matrix(i, j).v << " (";
-                printf("%f)\n", (float)rd_matrix(i, j).v);
-            }
         }
     }
 
@@ -3812,8 +3932,8 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 {
     half *row_val;
     half *col_val;
-    int i, j, k;
-    float32_t odd, even;
+    int i, j, k, counter;
+    float32_t first, second, third, forth, res_tmp, res12, res34;
     /* param check */
     if (ss->shape1_column != ss->shape2_row) {
         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
@@ -3835,22 +3955,31 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            even.v = 0x80000000;
-            odd.v = 0x80000000;
-            for (k = 0; k < ss->shape1_column; k++) {
-                if (debug){
-                    cout << "calculating: (" << i << " " << j << ")" << endl;
-                    cout << "rs1(" << i << ", " << k << "): " << rs1_matrix(i, k) << " * ";
-                    cout << "rs2(" << k << ", " << j << "): " << rs2_matrix(k ,j) << endl;
+            first.v = 0x80000000;
+            second.v = 0x80000000;
+            third.v = 0x80000000;
+            forth.v = 0x80000000;
+            counter = 0;
+            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+                for (k = 0; k < ss->shape1_column; k++) {
+                    res_tmp = half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j));
+                    if(counter%4 == 0) first = f32_add(res_tmp, first);
+                    else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                    else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                    else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                    ++counter;
                 }
-                if (!(k % 2))
-                    even = f32_add(even, half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)));
-                else
-                    odd = f32_add(odd, half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)));
-            }
-            rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
-            if (debug) {
-                cout << "rd(" << i << ", " << j << "): " << rd_matrix(i ,j) << endl;
+                res12 = f32_add(first, third);
+                res34 = f32_add(second, forth);
+                rd_matrix(i, j) = f32_to_half(f32_add(res12, res34));
+            } else {
+                for (k = 0; k < ss->shape1_column; k++) {
+                    if (! (k % 2))
+                        first = f32_add(half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)), first);
+                    else
+                        second = f32_add(half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)), second);
+                }
+                rd_matrix(i, j) = f32_to_half(f32_add(first, second));
             }
         }
     }
@@ -3891,17 +4020,6 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:\n" << rs1_matrix << endl;
-        cout << "rs2: \n";
-        for (i = 0; i < ss->shape2_row; i++){
-            for (j = 0; j < ss->shape2_column; j++){
-                cout << (((short)rs2_matrix(i, j))&0xff) << "\t";
-            }
-            cout << endl;
-        }
-    }
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
@@ -3912,19 +4030,10 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
                 rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
                 rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
                 res += rs1_i8 * rs2_matrix(k, j);
-                if (debug) {
-                    cout << i <<": rs1: " << rs1_matrix(i, k).x;
-                    cout << " rs1 * coeff: " << rs1_f16.v;
-                    cout << " rs1 * coeff to int8: " << (int)rs1_i8;
-                    cout << " rs2: " << (((short)rs2_matrix(k, j))&0xff);
-                    k == (ss->shape1_column - 1)? cout << " res " << res <<endl : cout << endl;
-                }
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);        
         }
     }
-    if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }
@@ -3942,7 +4051,51 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
  * @return 执行结果
  */
 
-int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss)
+int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isMv)
+{
+    int i, j, k;
+    int even, odd;
+    int32_t res;
+
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+    
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+    half *dequant = (half *)malloc(ss->shape2_column * sizeof(half));
+    if (isMv)
+        memcpy(dequant, (half *)ss->mme_dequant_coeff.v, sizeof(dequant));
+    else {
+        half dequant_coeff = f32_to_half(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+            *(dequant+i) = dequant_coeff;
+    }
+    Map_half dequant_matrix(dequant, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
+
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            res = 0;
+            for (k = 0; k < ss->shape1_column; k++) {
+                res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
+            }
+            rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
+
+        }
+    }
+
+    free(dequant);
+
+    return 0;
+}
+
+
+int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss)
 {
     int i, j, k;
     int even, odd;
@@ -3956,28 +4109,10 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
 
     float16_t dequant_coeff = f32_to_f16(ss->mme_dequant_coeff);
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1\n";
-        for (i = 0; i < ss->shape1_row; i++){
-            for (j = 0; j < ss->shape1_column; j++){
-                cout << (((short)rs1_matrix(i, j))&0xff) << "\t";
-            }
-            cout << endl;
-        }
-        cout << "rs2\n";
-        for (i = 0; i < ss->shape2_row; i++){
-            for (j = 0; j < ss->shape2_column; j++){
-                cout << (((short)rs2_matrix(i, j))&0xff) << "\t";
-            }
-            cout << endl;
-        }
-    }
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
@@ -3986,21 +4121,47 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
                 res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);
-
-            if (debug) {
-                cout << "rd(" << i << ", " << j << "): " << rd_matrix(i ,j) << endl;
-            }
         }
     }
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    //rd_matrix = rs1_matrix * rs2_matrix;
-    if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
 }
 
 
+int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    int i, j, k;
+    int even, odd;
+    int32_t res;
+
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Bfloat16 dequant_coeff = Bfloat16(ss->mme_dequant_coeff);
+
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            res = 0;
+            for (k = 0; k < ss->shape1_column; k++)
+                res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
+            
+            rd_matrix(i, j) = int32_mul_bf16(res, dequant_coeff);
+        }
+    }
+    
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
 /**
  * memul_mm() memul.mm
  * 
@@ -4015,8 +4176,8 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
 
 int CustomInsns::memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss)
 {
-    int i, j, k;
-    float32_t even, odd;
+    int i, j, k, counter;
+    float32_t first, second, third, forth, res12, res34, res_tmp;
     float32_t res;
 
     /* param check */
@@ -4030,48 +4191,37 @@ int CustomInsns::memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
      
-    ios::fmtflags fmtf(cout.flags()); //save old flags
-
-    if (debug) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1\n";
-        for (i = 0; i < ss->shape1_row; i++){
-            for (j = 0; j < ss->shape1_column; j++){
-                cout << rs1_matrix(i, j).v << "\t";
-            }
-            cout << endl;
-        }
-        cout << "rs2\n";
-        for (i = 0; i < ss->shape2_row; i++){
-            for (j = 0; j < ss->shape2_column; j++){
-                cout << hex << rs2_matrix(i, j).v << "\t";
-            }
-            cout << endl;
-        }
-    }
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            even.v = 0;
-            odd.v =0;
-            for (k = 0; k < ss->shape1_column; k++) {
-                if (debug){
-                    cout << "calculating: (" << i << " " << j << ")" << endl;
-                    cout << "rs1(" << i << ", " << k << "): " << hex << rs1_matrix(i, k).v << " * ";
-                    cout << "rs2(" << k << ", " << j << "): " << hex << rs2_matrix(k ,j).v << endl;
+            first.v = 0x80000000;
+            second.v = 0x80000000;
+            third.v = 0x80000000;
+            forth.v = 0x80000000;
+            counter = 0;
+            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+                for (k = 0; k < ss->shape1_column; k++) {
+                    res_tmp = tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j));
+                    if(counter%4 == 0) first = f32_add(res_tmp, first);
+                    else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                    else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                    else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                    ++counter;
                 }
-                if (!(k % 2))
-                    even = f32_add(even, tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j)));
-                else
-                    odd = f32_add(odd, tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j)));
-            }
-            rd_matrix(i, j) = f32_add(even, odd);
-            if (debug) {
-                cout << "rd(" << i << ", " << j << "): " << hex << rd_matrix(i ,j).v << endl;
+                res12 = f32_add(first, third);
+                res34 = f32_add(second, forth);
+                rd_matrix(i, j) = f32_add(res12, res34);
+            } else {
+                for (k = 0; k < ss->shape1_column; k++) {
+                    if (! (k % 2))
+                        first = f32_add(tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j)), first);
+                    else
+                        second = f32_add(tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j)), second);
+                }
+                rd_matrix(i, j) = f32_add(first, second);
             }
         }
     }
-    cout.flags(fmtf);
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
     // if (debug)
@@ -4726,11 +4876,15 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     }
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t res= half_to_f32(rs1_matrix(i, 0));
-        for(j = 1; j < ss->shape1_column; j++){
-            res = f32_add(res, half_to_f32(rs1_matrix(i, j)));
+        float32_t odd = i32_to_f32(0);
+        float32_t even = i32_to_f32(0);
+        for(j = 0; j < ss->shape1_column; j++){
+            if (i%2)
+                odd = f32_add(odd, half_to_f32(rs1_matrix(i, j)));
+            else
+                even = f32_add(even, half_to_f32(rs1_matrix(i, j)));
         }
-        rd_matrix(i, 0) = f32_to_half(res);
+        rd_matrix(i, 0) = f32_to_half(f32_add(odd, even));
     }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
@@ -4748,11 +4902,15 @@ int CustomInsns::meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t res= rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            res = f32_add(res, rs1_matrix(i, j));
+        float32_t odd = i32_to_f32(0);
+        float32_t even = i32_to_f32(0);
+        for(j = 0; j < ss->shape1_column; j++){
+            if (j%2)
+                odd = f32_add(odd, rs1_matrix(i,j));
+            else 
+                even = f32_add(even, rs1_matrix(i, j));
         }
-        rd_matrix(i, 0) = res;
+        rd_matrix(i, 0) = f32_add(odd, even);
     }
         
     return 0;
@@ -4768,11 +4926,15 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        Bfloat16 res = rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            res += rs1_matrix(i, j);
+        Float32 odd = Float32(0);
+        Float32 even = Float32(0);
+        for(j = 0; j < ss->shape1_column; j++){
+            if (j%2)
+                odd += Float32(rs1_matrix(i, j));
+            else
+                even += Float32(rs1_matrix(i, j));
         }
-        rd_matrix(i, 0) = res;
+        rd_matrix(i, 0) = Bfloat16(odd + even);
     }
     if (debug) {
         cout << "rs1: \n" << rs1_matrix << endl;

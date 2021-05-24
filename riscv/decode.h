@@ -418,12 +418,12 @@ private:
 #define vme_ss_fill(ss, esize) do { \
     ss.row = VME_HIN; \
     ss.column = VME_WIN; \
-    ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE / esize : VME_CIN; \
+    ss.ifm_c_stride = VME_IFM_C_STRIDE ? VME_IFM_C_STRIDE : VME_CIN; \
     ss.cin = VME_CIN; \
     ss.wout = VME_WOUT; \
     ss.hout = VME_HOUT; \
-    ss.ofm_c_stride = VME_OFM_C_STRIDE ? VME_OFM_C_STRIDE / esize : VME_CIN; \
-    ss.k_c_stride = VME_K_C_STRIDE ? VME_K_C_STRIDE / esize : VME_CIN; \
+    ss.ofm_c_stride = VME_OFM_C_STRIDE ? VME_OFM_C_STRIDE : VME_CIN; \
+    ss.k_c_stride = VME_K_C_STRIDE ? VME_K_C_STRIDE : VME_CIN; \
     ss.kw = VME_KW; \
     ss.kh = VME_KH; \
     ss.sw = VME_SW ? VME_SW : VME_SH; \
