@@ -242,9 +242,9 @@ void CustomInsns::meconv_dbg(struct ConvShapeStride *ss)
 
     printf("\nMeconv info:\n");
     printf("conv_fm_in(0x%x): w = %d h = %d\n", ss->conv_fm_in, (ss->conv_fm_in >> 16) & 0xffff, ss->conv_fm_in & 0xffff);
-    printf("conv_depth_in(0x%x): scin = %d depth = %d\n", ss->conv_depth_in, (ss->conv_depth_in >> 16) & 0xffff, ss->conv_depth_in & 0xffff);
+    printf("conv_cin(0x%x): scin = %d depth = %d\n", ss->conv_cin, (ss->conv_cin >> 16) & 0xffff, ss->conv_cin & 0xffff);
     printf("conv_fm_out(0x%x): w = %d h = %d\n", ss->conv_fm_out, (ss->conv_fm_out >> 16) & 0xffff, ss->conv_fm_out & 0xffff);
-    printf("conv_depth_out(0x%x): scout = %d depth = %d\n", ss->conv_depth_out, (ss->conv_depth_out >> 16) & 0xffff, ss->conv_depth_out & 0xffff);
+    printf("conv_cout(0x%x): scout = %d depth = %d\n", ss->conv_cout, (ss->conv_cout >> 16) & 0xffff, ss->conv_cout & 0xffff);
     printf("conv_s_kernel(0x%x): stride = %d\n", ss->conv_kernel_params2, ss->conv_kernel_params2 & 0xffff);
     printf("conv_kernel(0x%x): kw = %d kh = %d dilation = %d sk = %d\n", ss->conv_kernel_params1,(ss->conv_kernel_params1 >> 24) & 0xff,(ss->conv_kernel_params1 >> 16) & 0xff,(ss->conv_kernel_params1 >> 8) & 0xff, (ss->conv_kernel_params1 >> 0) & 0xff);
     printf("conv_padding(0x%x): top = %d bottom = %d left = %d right = %d\n", ss->conv_padding, (ss->conv_padding >> 24) & 0xff,(ss->conv_padding >> 16) & 0xff, (ss->conv_padding >> 8) & 0xff, (ss->conv_padding >> 0) & 0xff);
@@ -285,18 +285,18 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStrid
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     //assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     //assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -515,18 +515,18 @@ int CustomInsns::meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStr
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     //assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride  : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     //assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -683,18 +683,18 @@ int CustomInsns::meconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeS
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     //assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride  : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     //assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -845,18 +845,18 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     //assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     //assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -1070,18 +1070,18 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     // assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     // assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -1289,17 +1289,17 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -1482,17 +1482,17 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -1670,18 +1670,18 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     // assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     // assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -1864,18 +1864,18 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     // assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     // assert(out_stride % 2 == 0);
     out_stride = out_stride > 0 ? out_stride : out_c;
 
@@ -2062,18 +2062,18 @@ int CustomInsns::medeconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeS
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     // assert((in_stride % 2) == 0); //half
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
@@ -2215,17 +2215,17 @@ int CustomInsns::medeconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShap
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
@@ -2348,17 +2348,17 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the kernel shape
@@ -2523,17 +2523,17 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -2745,17 +2745,17 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -2933,17 +2933,17 @@ int CustomInsns::medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, ha
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -3109,17 +3109,17 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
-    out_c = (ss->conv_depth_out) & 0xffff;
+    out_c = (ss->conv_cout) & 0xffff;
     assert(out_w > 0 && out_h > 0 && out_c > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : out_c;
 
     //get the index stride
@@ -3297,16 +3297,16 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     assert(out_w > 0 && out_h > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : in_c;
 
     //get the kernel shape
@@ -3458,16 +3458,16 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     assert(out_w > 0 && out_h > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : in_c;
 
     //get the kernel shape
@@ -3606,16 +3606,16 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     assert(out_w > 0 && out_h > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : in_c;
 
     //get the kernel shape
@@ -3748,16 +3748,16 @@ int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, stru
     //get the input shape
     in_w = (ss->conv_fm_in >> 16) & 0xffff;
     in_h = (ss->conv_fm_in) & 0xffff;
-    in_c = (ss->conv_depth_in) & 0xffff;
+    in_c = (ss->conv_cin) & 0xffff;
     assert(in_w > 0 && in_h > 0 && in_c > 0);
-    in_stride = (ss->conv_depth_in >> 16) & 0xffff;
+    in_stride = (ss->conv_cin >> 16) & 0xffff;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = (ss->conv_fm_out >> 16) & 0xffff;
     out_h = (ss->conv_fm_out) & 0xffff;
     assert(out_w > 0 && out_h > 0);
-    out_stride = (ss->conv_depth_out >> 16) & 0xffff;
+    out_stride = (ss->conv_cout >> 16) & 0xffff;
     out_stride = out_stride > 0 ? out_stride : in_c;
 
     //get the kernel shape

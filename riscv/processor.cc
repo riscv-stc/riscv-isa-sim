@@ -387,7 +387,7 @@ void state_t::reset(reg_t max_isa)
   vstval = 0;
   vsatp = 0;
   vme_data_type = 0;
-  vme_depth_out = 0;
+  vme_Cout = 0;
   vme_relu_threshhold = 0;
 
   dpc = 0;
@@ -1041,41 +1041,38 @@ void processor_t::set_csr(int which, reg_t val)
       state.medeleg = (state.medeleg & ~mask) | (val & mask);
       break;
     }
-    case CSR_SHAPE_S1:
-      state.shape_s1 = val;
+    case CSR_VME_SHAPE_S:
+      state.vme_shape_s = val;
       break;
-    case CSR_SHAPE_S2:
-      state.shape_s2 = val;
+    case CSR_VME_STRIDE_D:
+      state.vme_stride_d = val;
       break;
-    case CSR_STRIDE_D:
-      state.stride_d = val;
+    case CSR_VME_STRIDE_S:
+      state.vme_stride_s = val;
       break;
-    case CSR_STRIDE_S:
-      state.stride_s = val;
+    case CSR_MME_SHAPE_S1:
+      state.mme_shape_s1 = val;
       break;
-    case CSR_M_SHAPE_S1:
-      state.m_shape_s1 = val;
+    case CSR_MME_SHAPE_S2:
+      state.mme_shape_s2 = val;
       break;
-    case CSR_M_SHAPE_S2:
-      state.m_shape_s2 = val;
+    case CSR_MME_STRIDE_D:
+      state.mme_stride_d = val;
       break;
-    case CSR_M_STRIDE_D:
-      state.m_stride_d = val;
-      break;
-    case CSR_M_STRIDE_S:
-      state.m_stride_s = val;
+    case CSR_MME_STRIDE_S:
+      state.mme_stride_s = val;
       break;
     case CSR_CONV_FM_IN:
       state.conv_FM_in = val;
       break;
-    case CSR_CONV_DEPTH_IN:
-      state.conv_Depth_in = val;
+    case CSR_CONV_CIN:
+      state.conv_Cin = val;
       break;
     case CSR_CONV_FM_OUT:
       state.conv_FM_out = val;
       break;
-    case CSR_CONV_DEPTH_OUT:
-      state.conv_Depth_out = val;
+    case CSR_CONV_COUT:
+      state.conv_Cout = val;
       break;
     case CSR_CONV_KERNEL_PARAMS1:
       state.conv_kernel_params1 = val;
@@ -1110,14 +1107,14 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_VME_FM_IN:
       state.vme_FM_in = val;
       break;
-    case CSR_VME_DEPTH_IN:
-      state.vme_depth_in = val;
+    case CSR_VME_CIN:
+      state.vme_Cin = val;
       break;
     case CSR_VME_FM_OUT:
       state.vme_FM_out = val;
       break;
-    case CSR_VME_DEPTH_OUT:
-      state.vme_depth_out = val;
+    case CSR_VME_COUT:
+      state.vme_Cout = val;
       break;
     case CSR_VME_KERNEL_PARAM1:
       state.vme_kernel_param1 = val;
@@ -1127,6 +1124,8 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_VME_FM_PADDING:
       state.vme_FM_padding = val;
+      break;
+    case CSR_VME_MAX_MIN_IDX:
       break;
     case CSR_NCP_BUSY:
         break; //read only
@@ -1635,54 +1634,50 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret((VU.vxsat << VCSR_VXSAT_SHIFT) | (VU.vxrm << VCSR_VXRM_SHIFT));
-    case CSR_SHAPE_S1:
+    case CSR_VME_SHAPE_S:
       if(!supports_extension('V'))
         break;
-      return state.shape_s1;
-    case CSR_SHAPE_S2:
+      return state.vme_shape_s;
+    case CSR_VME_STRIDE_D:
       if(!supports_extension('V'))
         break;
-      return state.shape_s2;
-    case CSR_STRIDE_D:
+      return state.vme_stride_d;
+    case CSR_VME_STRIDE_S:
       if(!supports_extension('V'))
         break;
-      return state.stride_d;
-    case CSR_STRIDE_S:
+      return state.vme_stride_s;
+    case CSR_MME_SHAPE_S1:
       if(!supports_extension('V'))
         break;
-      return state.stride_s;
-    case CSR_M_SHAPE_S1:
+      return state.mme_shape_s1;
+    case CSR_MME_SHAPE_S2:
       if(!supports_extension('V'))
         break;
-      return state.m_shape_s1;
-    case CSR_M_SHAPE_S2:
+      return state.mme_shape_s2;
+    case CSR_MME_STRIDE_D:
       if(!supports_extension('V'))
         break;
-      return state.m_shape_s2;
-    case CSR_M_STRIDE_D:
+      return state.mme_stride_d;
+    case CSR_MME_STRIDE_S:
       if(!supports_extension('V'))
         break;
-      return state.m_stride_d;
-    case CSR_M_STRIDE_S:
-      if(!supports_extension('V'))
-        break;
-      return state.m_stride_s;
+      return state.mme_stride_s;
     case CSR_CONV_FM_IN:
       if(!supports_extension('V'))
         break;
       return state.conv_FM_in;
-    case CSR_CONV_DEPTH_IN:
+    case CSR_CONV_CIN:
       if(!supports_extension('V'))
         break;
-      return state.conv_Depth_in;
+      return state.conv_Cin;
     case CSR_CONV_FM_OUT:
       if(!supports_extension('V'))
         break;
       return state.conv_FM_out;
-    case CSR_CONV_DEPTH_OUT:
+    case CSR_CONV_COUT:
       if(!supports_extension('V'))
         break;
-      return state.conv_Depth_out;
+      return state.conv_Cout;
     case CSR_CONV_KERNEL_PARAMS1:
       if(!supports_extension('V'))
         break;
@@ -1727,18 +1722,18 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_FM_in;
-    case CSR_VME_DEPTH_IN:
+    case CSR_VME_CIN:
       if(!supports_extension('V'))
         break;
-      return state.vme_depth_in;
+      return state.vme_Cin;
     case CSR_VME_FM_OUT:
       if(!supports_extension('V'))
         break;
       return state.vme_FM_out;
-    case CSR_VME_DEPTH_OUT:
+    case CSR_VME_COUT:
       if(!supports_extension('V'))
         break;
-      return state.vme_depth_out;
+      return state.vme_Cout;
     case CSR_VME_KERNEL_PARAM1:
       if(!supports_extension('V'))
         break;
@@ -1747,6 +1742,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_kernel_param2;
+    case CSR_VME_MAX_MIN_IDX:
+      if(!supports_extension('V'))
+        break;
+      return state.vme_max_min_idx;
     case CSR_VME_FM_PADDING:
       if(!supports_extension('V'))
         break;

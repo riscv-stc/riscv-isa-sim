@@ -373,11 +373,11 @@ struct ConvShapeStride
 {
     /* CSR FM in */
     unsigned int conv_fm_in;
-    unsigned int conv_depth_in;
+    unsigned int conv_cin;
 
     /* CSR  FM out*/
     unsigned int conv_fm_out;
-    unsigned int conv_depth_out;
+    unsigned int conv_cout;
 
     /* CSR kernel */
     unsigned int conv_kernel_params1;

@@ -240,13 +240,13 @@ private:
 #define VME_WIN ((STATE.vme_FM_in & 0xFFFF0000) >> 16)
 #define VME_HIN (STATE.vme_FM_in & 0xFFFF)
 
-#define VME_IFM_C_STRIDE ((STATE.vme_depth_in & 0xFFFF0000) >> 16)
-#define VME_CIN (STATE.vme_depth_in & 0xFFFF)
+#define VME_IFM_C_STRIDE ((STATE.vme_Cin & 0xFFFF0000) >> 16)
+#define VME_CIN (STATE.vme_Cin & 0xFFFF)
 
 #define VME_WOUT ((STATE.vme_FM_out & 0xFFFF0000) >> 16)
 #define VME_HOUT (STATE.vme_FM_out & 0xFFFF)
 
-#define VME_OFM_C_STRIDE (STATE.vme_depth_out & 0xFFFF)
+#define VME_OFM_C_STRIDE (STATE.vme_Cout & 0xFFFF)
 
 #define VME_KW ((STATE.vme_kernel_param1 & 0xFF000000) >> 24)
 #define VME_KH ((STATE.vme_kernel_param1 & 0xFF0000) >> 16)
@@ -298,23 +298,21 @@ private:
 #define VLMUL_I (insn.vlmul())
 #define VSEW_I (insn.vsew())
 #define VEDIV_I (insn.vediv())
-#define SHAPE1_COLUMN ((STATE.shape_s1 & 0xFFFF0000) >> 16)
-#define SHAPE1_ROW (STATE.shape_s1 & 0xFFFF)
-#define SHAPE2_COLUMN ((STATE.shape_s2 & 0xFFFF0000) >> 16)
-#define SHAPE2_ROW (STATE.shape_s2 & 0xFFFF)
-#define STRIDE_RD (STATE.stride_d & 0xFFFF)
-#define STRIDE_RS1 (STATE.stride_s & 0xFFFF)
-#define STRIDE_RS2 ((STATE.stride_s & 0xFFFF0000) >> 16)
+#define SHAPE1_COLUMN ((STATE.vme_shape_s & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW (STATE.vme_shape_s & 0xFFFF)
+#define STRIDE_RD (STATE.vme_stride_d & 0xFFFF)
+#define STRIDE_RS1 (STATE.vme_stride_s & 0xFFFF)
+#define STRIDE_RS2 ((STATE.vme_stride_s & 0xFFFF0000) >> 16)
 #define MME_SPARSE_BASE (STATE.mme_sparseidx_base)
 #define MME_SPARSE_STRIDE (STATE.mme_sparseidx_stride & 0xFFFF)
 
-#define BC_SHAPE1_COLUMN ((STATE.m_shape_s1 & 0xFFFF0000) >> 16)
-#define BC_SHAPE1_ROW (STATE.m_shape_s1 & 0xFFFF)
-#define BC_SHAPE2_COLUMN ((STATE.m_shape_s2 & 0xFFFF0000) >> 16)
-#define BC_SHAPE2_ROW (STATE.m_shape_s2 & 0xFFFF)
-#define BC_STRIDE_RD (STATE.m_stride_d & 0xFFFF)
-#define BC_STRIDE_RS1 (STATE.m_stride_s & 0xFFFF)
-#define BC_STRIDE_RS2 ((STATE.m_stride_s & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_COLUMN ((STATE.mme_shape_s1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW (STATE.mme_shape_s1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN ((STATE.mme_shape_s2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW (STATE.mme_shape_s2 & 0xFFFF)
+#define BC_STRIDE_RD (STATE.mme_stride_d & 0xFFFF)
+#define BC_STRIDE_RS1 (STATE.mme_stride_s & 0xFFFF)
+#define BC_STRIDE_RS2 ((STATE.mme_stride_s & 0xFFFF0000) >> 16)
 
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
@@ -332,9 +330,9 @@ private:
 #define STRIDE_DDR        (STATE.dma_stride_ddr)
 
 #define CONV_INFM_WH    (STATE.conv_FM_in)
-#define CONV_DEPTH_IN   (STATE.conv_Depth_in)
+#define CONV_CIN_REG   (STATE.conv_Cin)
 #define CONV_OUTFM_WH   (STATE.conv_FM_out)
-#define CONV_DEPTH_OUT  (STATE.conv_Depth_out)
+#define CONV_COUT_REG  (STATE.conv_Cout)
 #define CONV_KERNEL_PARAMS1   (STATE.conv_kernel_params1)
 #define CONV_KERNEL_PARAMS2     (STATE.conv_kernel_params2)
 #define CONV_PADDING    (STATE.conv_padding)
@@ -345,11 +343,11 @@ private:
 #define CONV_IN_ROW	(STATE.conv_FM_in & 0xFFFF)
 #define CONV_OUT_COLUMN	((STATE.conv_FM_out & 0xFFFF0000) >> 16)
 #define CONV_OUT_ROW	(STATE.conv_FM_out & 0xFFFF)
-#define CONV_CIN	(STATE.conv_Depth_in & 0xFFFF)
-#define CONV_COUT	(STATE.conv_Depth_out & 0xFFFF)
-#define CONV_IN_STRIDE	((STATE.conv_Depth_in & 0xFFFF0000) >> 16)
+#define CONV_CIN	(STATE.conv_Cin & 0xFFFF)
+#define CONV_COUT	(STATE.conv_Cout & 0xFFFF)
+#define CONV_IN_STRIDE	((STATE.conv_Cin & 0xFFFF0000) >> 16)
 #define CONV_W_STRIDE	(STATE.conv_kernel_params1 & 0xFF)
-#define CONV_OUT_STRIDE	((STATE.conv_Depth_out & 0xFFFF0000) >> 16)
+#define CONV_OUT_STRIDE	((STATE.conv_Cout & 0xFFFF0000) >> 16)
 #define CONV_KW 	((STATE.conv_kernel_params1 & 0xFF000000) >> 24)
 #define CONV_KH 	((STATE.conv_kernel_params1 & 0xFF0000) >> 16)
 #define CONV_DL 	((STATE.conv_kernel_params1 & 0xFF00) >> 8)
@@ -408,8 +406,6 @@ private:
 
 #define sst_fill(x, esize_in, esize_out) ({(x).shape1_column = SHAPE1_COLUMN; \
 					 (x).shape1_row = SHAPE1_ROW; \
-					 (x).shape2_column = SHAPE2_COLUMN; \
-					 (x).shape2_row = SHAPE2_ROW; \
 					 (x).stride_rd = STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN; \
@@ -461,9 +457,9 @@ private:
 
 
 #define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
-           (x).conv_depth_in = CONV_DEPTH_IN; \
+           (x).conv_cin = CONV_CIN_REG; \
            (x).conv_fm_out = CONV_OUTFM_WH; \
-           (x).conv_depth_out = CONV_DEPTH_OUT; \
+           (x).conv_cout = CONV_COUT_REG; \
            (x).conv_kernel_params1 = CONV_KERNEL_PARAMS1; \
            (x).conv_kernel_params2 = CONV_KERNEL_PARAMS2; \
            (x).conv_padding = CONV_PADDING; \

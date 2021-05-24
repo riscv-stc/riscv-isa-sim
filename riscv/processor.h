@@ -223,14 +223,13 @@ struct state_t
 
   uint32_t fflags;
   uint32_t frm;
- uint32_t shape_s1;
-  uint32_t shape_s2;
-  uint32_t stride_d;
-  uint32_t stride_s;
-  uint32_t m_shape_s1;
-  uint32_t m_shape_s2;
-  uint32_t m_stride_d;
-  uint32_t m_stride_s;
+  uint32_t vme_shape_s;
+  uint32_t vme_stride_d;
+  uint32_t vme_stride_s;
+  uint32_t mme_shape_s1;
+  uint32_t mme_shape_s2;
+  uint32_t mme_stride_d;
+  uint32_t mme_stride_s;
   
   uint32_t vstart;
   uint32_t vxsat;
@@ -240,9 +239,9 @@ struct state_t
   const uint32_t vlenb = VREG_LENGTH;
   
   uint32_t conv_FM_in;
-  uint32_t conv_Depth_in;
+  uint32_t conv_Cin;
   uint32_t conv_FM_out;
-  uint32_t conv_Depth_out;
+  uint32_t conv_Cout;
   uint32_t conv_kernel_params1;
   uint32_t conv_kernel_params2;
   uint32_t conv_padding;
@@ -254,12 +253,13 @@ struct state_t
   uint32_t mme_data_type;
   uint32_t vme_relu_threshhold;
   uint32_t vme_FM_in;
-  uint32_t vme_depth_in;
+  uint32_t vme_Cin;
   uint32_t vme_FM_out;
-  uint32_t vme_depth_out;
+  uint32_t vme_Cout;
   uint32_t vme_kernel_param1;
   uint32_t vme_FM_padding;
   uint32_t vme_kernel_param2;
+  uint32_t vme_max_min_idx;
   uint32_t conv_dequant_coeff;
   uint32_t ncp_busy;
   uint32_t mte_icdest;
