@@ -199,8 +199,8 @@ private:
     STATE.log_reg_write = (commit_log_reg_t){((reg) << 1) | 1, wdata}; \
     DO_WRITE_FREG(reg, wdata); \
   })
-# define WRITE_VREG_H(reg_h, idx, value)
-# define WRITE_VREG_B(reg_b, idx, value)
+# define WRITE_VREG_H(reg_h, idx, value) STATE.VPR.write_vh(reg_h, idx, value)
+# define WRITE_VREG_B(reg_b, idx, value) STATE.VPR.write_vb(reg_b, idx, value)
 #endif
 
 // RVC macros
