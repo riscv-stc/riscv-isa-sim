@@ -28,7 +28,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      0
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -2957,11 +2957,17 @@ public:
     CustomInsns();
 
     int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isMv=false);
-    int memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss);
+    int memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct ShapeStride *ss);
     int memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isSign, half *deq_addr=nullptr);
+    int memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    
     int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
     int memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
     int memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
