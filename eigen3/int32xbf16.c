@@ -1,4 +1,6 @@
-
+#ifndef _INT32_X_BF16
+#define _INT32_X_BF16
+ 
  int int32xbf16(int a,int w){  //a:int32 from int8 , w: fp16 from dequal
   int w_frac;
   int w_exp;
@@ -80,3 +82,6 @@
   
   return  cal_res;
 }
+
+
+#endif

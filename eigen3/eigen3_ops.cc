@@ -3989,6 +3989,164 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     return 0;
 }
 
+int CustomInsns::memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStride *ss)
+{
+    int i, j, k, counter;
+    float32_t first, second, third, forth, res_tmp, res12, res34;
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            first.v = 0x80000000;
+            second.v = 0x80000000;
+            third.v = 0x80000000;
+            forth.v = 0x80000000;
+            counter = 0;
+            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+                for (k = 0; k < ss->shape1_column; k++) {
+                    res_tmp = half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j));
+                    if(counter%4 == 0) first = f32_add(res_tmp, first);
+                    else if(counter%4 == 1) second = f32_add(res_tmp, second);
+                    else if(counter%4 == 2) third = f32_add(res_tmp, third);
+                    else if(counter%4 == 3) forth = f32_add(res_tmp, forth);
+                    ++counter;
+                }
+                res12 = f32_add(first, third);
+                res34 = f32_add(second, forth);
+                rd_matrix(i, j) = f32_add(res12, res34);
+            } else {
+                for (k = 0; k < ss->shape1_column; k++) {
+                    if (! (k % 2))
+                        first = f32_add(half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)), first);
+                    else
+                        second = f32_add(half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j)), second);
+                }
+                rd_matrix(i, j) = f32_add(first, second);
+            }
+        }
+    }
+
+    return 0;
+}
+
+int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    int i, j, k, counter;
+    Float32 first, second, third, forth, res_tmp, res12, res34;
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_Bfloat16 rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            first.x = 0x80000000;
+            second.x = 0x80000000;
+            third.x = 0x80000000;
+            forth.x = 0x80000000;
+            counter = 0;
+            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+                for (k = 0; k < ss->shape1_column; k++) {
+                    res_tmp = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j));
+                    if(counter%4 == 0) first =  res_tmp + first;
+                    else if(counter%4 == 1) second = res_tmp + second;
+                    else if(counter%4 == 2) third = res_tmp + third;
+                    else if(counter%4 == 3) forth = res_tmp + forth;
+                    ++counter;
+                }
+                res12 = first + third;
+                res34 = second + forth;
+                rd_matrix(i, j) = Bfloat16(res12 + res34);
+            } else {
+                for (k = 0; k < ss->shape1_column; k++) {
+                    if (! (k % 2))
+                        first = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j)) + first;
+                    else
+                        second = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j)) + second;
+                }
+                rd_matrix(i, j) = Bfloat16(first + second);
+            }
+        }
+    }
+    
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct ShapeStride *ss)
+{
+    int i, j, k, counter;
+    Float32 first, second, third, forth, res_tmp, res12, res34;
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_Bfloat16 rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            first.x = 0x80000000;
+            second.x = 0x80000000;
+            third.x = 0x80000000;
+            forth.x = 0x80000000;
+            counter = 0;
+            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+                for (k = 0; k < ss->shape1_column; k++) {
+                    res_tmp = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j));
+                    if(counter%4 == 0) first =  res_tmp + first;
+                    else if(counter%4 == 1) second = res_tmp + second;
+                    else if(counter%4 == 2) third = res_tmp + third;
+                    else if(counter%4 == 3) forth = res_tmp + forth;
+                    ++counter;
+                }
+                res12 = first + third;
+                res34 = second + forth;
+                rd_matrix(i, j) = res12 + res34;
+            } else {
+                for (k = 0; k < ss->shape1_column; k++) {
+                    if (! (k % 2))
+                        first = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j)) + first;
+                    else
+                        second = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j)) + second;
+                }
+                rd_matrix(i, j) = first + second;
+            }
+        }
+    }
+
+    if (debug)
+       cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
 /**
  * memul_mm() memul.mm
  * 
@@ -4000,15 +4158,14 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss)
+int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss,
+                          bool isSign, half *deq_addr)
 {
     int i, j, k;
     float16_t rs1_f16;
-    int8_t rs1_i8;
     int32_t res;
 
     float16_t quant_coeff = f32_to_f16(ss->mme_quant_coeff);
-    float16_t dequant_coeff = f32_to_f16(ss->mme_dequant_coeff);
     /* param check */
     if (ss->shape1_column != ss->shape2_row) {
         cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
@@ -4020,6 +4177,71 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    half *deq_val =  nullptr;
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        deq_val = (half *)malloc(ss->shape2_column * sizeof(half));
+        half dequant = f32_to_half(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+           *(deq_val + i) = dequant;
+    }
+    Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
+    /* dot only support vector not support matrix, so we use '*' to do calculation */
+    //rd_matrix = rs1_matrix * rs2_matrix;
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            res = 0;
+            for (k = 0; k < ss->shape1_column; k++) {
+                rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
+                if(isSign) {
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    res += rs1_i8 * rs2_matrix(k, j);
+                } else {
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    res += rs1_ui8 * rs2_matrix(k, j);
+                }
+            }
+            rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
+        }
+    }
+
+    if (debug)
+       cout << "rd:\n" << rd_matrix << endl;
+
+    return 0;
+}
+
+int CustomInsns::memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss,
+                          bool isSign, Bfloat16 *deq_addr)
+{
+    int i, j, k;
+    Bfloat16 rs1_f16;
+    int32_t res;
+
+    Bfloat16 quant_coeff = Bfloat16(ss->mme_quant_coeff);
+ 
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    Bfloat16 *deq_val =  (Bfloat16 *)malloc(ss->shape2_column * sizeof(Bfloat16));
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        Bfloat16 dequant = Bfloat16(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+           *(deq_val + i) = dequant;
+    }
+    Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
@@ -4027,13 +4249,23 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
         for (j = 0; j < ss->shape2_column; j++) {
             res = -0;
             for (k = 0; k < ss->shape1_column; k++) {
-                rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                res += rs1_i8 * rs2_matrix(k, j);
+                rs1_f16 = rs1_matrix(i, k) * quant_coeff;
+                if (isSign) {
+                    int8_t rs1_i8 = int8_t(rs1_f16);
+                    res += rs1_i8 * rs2_matrix(k, j);
+                } else {
+                    uint8_t rs1_i8 = uint8_t(rs1_f16);
+                    res += rs1_i8 * rs2_matrix(k, j);
+                }
+                
             }
-            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);        
+            rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));        
         }
     }
+
+    if (debug)
+       cout << "rd:\n" << rd_matrix << endl;
+
 
     return 0;
 }
@@ -4051,7 +4283,8 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
  * @return 执行结果
  */
 
-int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isMv)
+
+int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr)
 {
     int i, j, k;
     int even, odd;
@@ -4067,15 +4300,16 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-    half *dequant = (half *)malloc(ss->shape2_column * sizeof(half));
-    if (isMv)
-        memcpy(dequant, (half *)ss->mme_dequant_coeff.v, sizeof(dequant));
-    else {
-        half dequant_coeff = f32_to_half(ss->mme_dequant_coeff);
+    
+    half *deq_val =  (half *)malloc(ss->shape2_column * sizeof(half));
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        half dequant = f32_to_half(ss->mme_dequant_coeff);
         for (i = 0; i < ss->shape2_column; i++)
-            *(dequant+i) = dequant_coeff;
+           *(deq_val + i) = dequant;
     }
-    Map_half dequant_matrix(dequant, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
+    Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
 
     for (i = 0; i < ss->shape1_row; i++) {
@@ -4085,17 +4319,17 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
                 res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
-
         }
     }
-
-    free(dequant);
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+    
 
     return 0;
 }
 
 
-int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss)
+int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr)
 {
     int i, j, k;
     int even, odd;
@@ -4107,12 +4341,21 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStrid
         return -BR_EPARAM;
     }
 
-    float16_t dequant_coeff = f32_to_f16(ss->mme_dequant_coeff);
-
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    half *deq_val =  (half *)malloc(ss->shape2_column * sizeof(half));
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        half dequant = f32_to_half(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+           *(deq_val + i) = dequant;
+    }
+    Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
@@ -4120,7 +4363,8 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStrid
             for (k = 0; k < ss->shape1_column; k++) {
                 res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
             }
-            rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);
+            
+            rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
         }
     }
 
@@ -4128,7 +4372,52 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStrid
 }
 
 
-int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss)
+int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr)
+{
+    int i, j, k;
+    int even, odd;
+    int32_t res;
+
+    /* param check */
+    if (ss->shape1_column != ss->shape2_row) {
+        cout << __FUNCTION__ << ": shape1_column must equal shape2_row" << endl;
+        return -BR_EPARAM;
+    }
+
+    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    Bfloat16 *deq_val =  (Bfloat16 *)malloc(ss->shape2_column * sizeof(Bfloat16));
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        Bfloat16 dequant = Bfloat16(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+           *(deq_val + i) = dequant;
+    }
+    Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
+
+    for (i = 0; i < ss->shape1_row; i++) {
+        for (j = 0; j < ss->shape2_column; j++) {
+            res = 0;
+            for (k = 0; k < ss->shape1_column; k++)
+                res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
+            
+            rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
+        }
+    }
+    
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;
+
+
+    return 0;
+}
+
+
+int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr)
 {
     int i, j, k;
     int even, odd;
@@ -4142,10 +4431,20 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeSt
 
     Bfloat16 dequant_coeff = Bfloat16(ss->mme_dequant_coeff);
 
-    Map_int8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
+
+    Bfloat16 *deq_val =  (Bfloat16 *)malloc(ss->shape2_column * sizeof(Bfloat16));
+    if (deq_addr) {
+        deq_val = deq_addr;
+    } else {
+        Bfloat16 dequant = Bfloat16(ss->mme_dequant_coeff);
+        for (i = 0; i < ss->shape2_column; i++)
+           *(deq_val + i) = dequant;
+    }
+    Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
@@ -4153,7 +4452,7 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeSt
             for (k = 0; k < ss->shape1_column; k++)
                 res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
             
-            rd_matrix(i, j) = int32_mul_bf16(res, dequant_coeff);
+            rd_matrix(i, j) = dequant_matrix(0, j) * res;
         }
     }
     
@@ -4162,6 +4461,8 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeSt
 
     return 0;
 }
+
+
 /**
  * memul_mm() memul.mm
  * 
