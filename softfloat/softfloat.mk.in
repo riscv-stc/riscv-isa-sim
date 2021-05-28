@@ -44,6 +44,7 @@ softfloat_c_srcs = \
 	f16_add.c \
 	f16_classify.c \
 	f16_div.c \
+	f16_div_.c \
 	f16_eq.c \
 	f16_eq_signaling.c \
 	f16_isSignalingNaN.c \
@@ -87,6 +88,7 @@ softfloat_c_srcs = \
 	bf16_add.c  \
 	bf16_mul32.c  \
 	bf16_mul.c  \
+	bf16_div_.c  \
 	bf16_sub.c  \
 	bf16_exp.c \
 	bf16_ln.c \
@@ -107,6 +109,7 @@ softfloat_c_srcs = \
 	f32_add.c \
 	f32_classify.c \
 	f32_div.c \
+	f32_div_.c \
 	f32_eq.c \
 	f32_eq_signaling.c \
 	f32_isSignalingNaN.c \

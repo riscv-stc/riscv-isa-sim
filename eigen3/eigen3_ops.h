@@ -648,7 +648,42 @@ int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    rd_matrix = rs1_matrix.array() / rs2_matrix.array();
+    if(is_same< DType, half >::value)
+    {
+        float16_t rs1_f16, rs2_f16, rd_f16;
+
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_f16.v = rs1_matrix(row, col).x;
+                rs2_f16.v = rs2_matrix(row, col).x;
+                rd_f16 = f16_div_(rs2_f16, rs1_f16);
+                rd_matrix(row, col).x =  rd_f16.v;
+            }
+    }
+    else if(is_same< DType, Bfloat16 >::value)
+    {
+        bfloat16_t rs1_bf16, rs2_bf16, rd_bf16;
+
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_bf16.v = rs1_matrix(row, col).x;
+                rs2_bf16.v = rs2_matrix(row, col).x;
+                rd_bf16 = bf16_div_(rs2_bf16, rs1_bf16);
+                rd_matrix(row, col).x =  rd_bf16.v;
+            }        
+    }
+    else if(is_same< DType, Float32 >::value)
+    {
+        float32_t rs1_f32, rs2_f32, rd_f32;
+
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_f32.v = rs1_matrix(row, col).x;
+                rs2_f32.v = rs2_matrix(row, col).x;
+                rd_f32 = f32_div_(rs2_f32, rs1_f32);
+                rd_matrix(row, col).x =  rd_f32.v;
+            }         
+    }
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
@@ -679,8 +714,42 @@ int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
             cout << "rs2:" << endl << vector_dim0 << endl;
         }
 
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = rs1_matrix.row(row).array() / vector_dim0.array();
+        if(is_same< DType, half >::value)
+        {
+            float16_t rs1_f16, rs2_f16, rd_f16;
+
+            for (int row = 0; row < rs1_matrix.rows(); row ++)
+                for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                    rs1_f16.v = rs1_matrix(row, col).x;
+                    rs2_f16.v = vector_dim0(0, col).x;
+                    rd_f16 = f16_div_(rs2_f16, rs1_f16);
+                    rd_matrix(row, col).x =  rd_f16.v;
+                }
+        }
+        else if(is_same< DType, Bfloat16 >::value)
+        {
+            bfloat16_t rs1_bf16, rs2_bf16, rd_bf16;
+       
+            for (int row = 0; row < rs1_matrix.rows(); row ++)
+                for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                    rs1_bf16.v = rs1_matrix(row, col).x;
+                    rs2_bf16.v = vector_dim0(0, col).x;
+                    rd_bf16 = bf16_div_(rs2_bf16, rs1_bf16);
+                    rd_matrix(row, col).x =  rd_bf16.v;
+                }        
+        }
+        else if(is_same< DType, Float32 >::value)
+        {
+            float32_t rs1_f32, rs2_f32, rd_f32;
+
+            for (int row = 0; row < rs1_matrix.rows(); row ++)
+                for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                    rs1_f32.v = rs1_matrix(row, col).x;
+                    rs2_f32.v = vector_dim0(0, col).x;
+                    rd_f32 = f32_div_(rs2_f32, rs1_f32);
+                    rd_matrix(row, col).x =  rd_f32.v;
+                }          
+        }
 
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_matrix << endl;
@@ -692,8 +761,42 @@ int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
             cout << "rs2:" << endl << vector_dim1 << endl;
         }
 
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = rs1_matrix.col(col).array() / vector_dim1.array();
+        if(is_same< DType, half >::value)
+        {
+            float16_t rs1_f16, rs2_f16, rd_f16;
+
+            for (int col = 0; col < rs1_matrix.cols(); col++)
+                for (int row = 0; row < rs1_matrix.rows(); row ++) {
+                    rs1_f16.v = rs1_matrix(row, col).x;
+                    rs2_f16.v = vector_dim1(row, 0).x;
+                    rd_f16 = f16_div_(rs2_f16, rs1_f16);
+                    rd_matrix(row, col).x =  rd_f16.v;
+                }
+        }
+        else if(is_same< DType, Bfloat16 >::value)
+        {
+            bfloat16_t rs1_bf16, rs2_bf16, rd_bf16;
+       
+            for (int col = 0; col < rs1_matrix.cols(); col++)
+                for (int row = 0; row < rs1_matrix.rows(); row ++) {
+                    rs1_bf16.v = rs1_matrix(row, col).x;
+                    rs2_bf16.v = vector_dim1(row, 0).x;
+                    rd_bf16 = bf16_div_(rs2_bf16, rs1_bf16);
+                    rd_matrix(row, col).x =  rd_bf16.v;
+                }        
+        }
+        else if(is_same< DType, Float32 >::value)
+        {
+            float32_t rs1_f32, rs2_f32, rd_f32;
+
+            for (int col = 0; col < rs1_matrix.cols(); col++)
+                for (int row = 0; row < rs1_matrix.rows(); row ++) {
+                    rs1_f32.v = rs1_matrix(row, col).x;
+                    rs2_f32.v = vector_dim1(row, 0).x;
+                    rd_f32 = f32_div_(rs2_f32, rs1_f32);
+                    rd_matrix(row, col).x =  rd_f32.v;
+                }          
+        }
 
         if (GLOBAL_DBG)
             cout << "rd:" << endl << rd_matrix << endl;
@@ -725,7 +828,39 @@ int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
         cout << "rs2:" << endl << rs2 << endl;
     }
 
-    rd_matrix = rs1_matrix.array() / rs2;
+    if(is_same< DType, half >::value)
+    {
+        float16_t rs1_f16, rs2_f16, rd_f16;
+        rs2_f16.v = rs2.x;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_f16.v = rs1_matrix(row, col).x;
+                rd_f16 = f16_div_(rs2_f16, rs1_f16);
+                rd_matrix(row, col).x =  rd_f16.v;
+            }
+    }
+    else if(is_same< DType, Bfloat16 >::value)
+    {
+        bfloat16_t rs1_bf16, rs2_bf16, rd_bf16;
+        rs2_bf16.v = rs2.x;        
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_bf16.v = rs1_matrix(row, col).x;
+                rd_bf16 = bf16_div_(rs2_bf16, rs1_bf16);
+                rd_matrix(row, col).x =  rd_bf16.v;
+            }        
+    }
+    else if(is_same< DType, Float32 >::value)
+    {
+        float32_t rs1_f32, rs2_f32, rd_f32;
+        rs2_f32.v = rs2.x;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+            for (int col = 0; col < rs1_matrix.cols(); col ++) {
+                rs1_f32.v = rs1_matrix(row, col).x;
+                rd_f32 = f32_div_(rs2_f32, rs1_f32);
+                rd_matrix(row, col).x =  rd_f32.v;
+            }          
+    }
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
@@ -763,7 +898,13 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
         //rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        uint32_t COLUMN_NUM;
+        if(is_same< InDType, Float32 >::value)
+            COLUMN_NUM = 32;
+        else
+            COLUMN_NUM = 64;
+
+        if (ss->shape1_column <= COLUMN_NUM && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -824,8 +965,14 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
+    uint32_t COLUMN_NUM;
+    if(is_same< InDType, Float32 >::value)
+        COLUMN_NUM = 32;
+    else
+        COLUMN_NUM = 64;
+
     //rd_col_sum = rs1_matrix_inner.colwise().sum();
-    if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+    if (ss->shape1_column <= COLUMN_NUM && ss->stride_rs1 == ss->shape1_column) {
         MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
@@ -1604,7 +1751,7 @@ int velkrelu_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool r
         cout << "rs1:\n" << rs1_matrix << endl;
     }
 
-    rd_matrix = (rs1_matrix.array() <= (DType)0).select(rs1_matrix * rs2, rs1_matrix);
+    rd_matrix = (rs1_matrix.array() < (DType)0).select(rs1_matrix * rs2, rs1_matrix);
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
     }
@@ -1645,7 +1792,7 @@ int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int d
         break;
     case 1:
         for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() <= (DType)0).select(
+            rd_matrix.col(col) = (rs1_matrix.col(col).array() < (DType)0).select(
                 rs1_matrix.col(col).array() * vector_dim1.array(),
                 rs1_matrix.col(col));
 
@@ -2091,6 +2238,138 @@ int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
         for (int col = 0; col < rs1_matrix.cols(); col++) {
             InDType val = rs2 * rs1_matrix(row, col);
             rd_matrix(row, col) = (OutDType)val;
+        }
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veemul_x8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_InDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_OutDType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul mf" << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    InDType val;
+    float16_t f16;
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            val =  rs1_matrix(row, col) * rs2;
+            f16.v = val.x;
+            rd_matrix(row, col) = f16_to_i8(f16, rounding_mode, true);
+        }
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veemul_xu8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_InDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_OutDType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul mf" << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    InDType val;
+    float16_t f16;
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            val = rs1_matrix(row, col) * rs2;
+            f16.v = val.x;
+            rd_matrix(row, col) = f16_to_ui8(f16, rounding_mode, true);
+        }
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_InDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_OutDType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul mf" << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    InDType val;
+    bfloat16_t bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            val = rs1_matrix(row, col) * rs2;
+            bf16.v = val.x;
+            rd_matrix(row, col) = bf16_to_i8(bf16, rounding_mode, true);
+        }
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename OutDType, typename InDType>
+int veemul_xu8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+{
+    DEFINE_MAP_DTYPE(OutDType)
+    DEFINE_MAP_DTYPE(InDType)
+
+    Map_InDType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_OutDType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG)  {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "Start veemul mf" << endl;
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    InDType val;
+    bfloat16_t bf16;
+    for (int row = 0; row < rs1_matrix.rows(); row++) {
+        for (int col = 0; col < rs1_matrix.cols(); col++) {
+            val = rs1_matrix(row, col) * rs2;
+            bf16.v = val.x;
+            rd_matrix(row, col) = bf16_to_ui8(bf16, rounding_mode, true);
         }
     }
 
