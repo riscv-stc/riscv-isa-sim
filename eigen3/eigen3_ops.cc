@@ -4429,8 +4429,6 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeS
         return -BR_EPARAM;
     }
 
-    Bfloat16 dequant_coeff = Bfloat16(ss->mme_dequant_coeff);
-
     Map_uint8_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_int8_t rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
@@ -4452,7 +4450,7 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeS
             for (k = 0; k < ss->shape1_column; k++)
                 res += (int32_t)(rs1_matrix(i, k) * rs2_matrix(k, j));
             
-            rd_matrix(i, j) = dequant_matrix(0, j) * res;
+            rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));
         }
     }
     
