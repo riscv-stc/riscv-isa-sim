@@ -23,7 +23,7 @@
 //im buffer size adjust to 256K
 #define ddr_mem_start        (0x00000000)
 #define l1_buffer_start      (0xc0000000)
-#define l1_buffer_size       (0x00140000)
+#define l1_buffer_size       (0x00148000)
 #define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00040000)
 #define sp_buffer_start      (0xc0500000)
