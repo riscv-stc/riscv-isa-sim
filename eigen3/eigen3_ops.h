@@ -21,6 +21,7 @@
 #include <iostream>
 #include <bitset>
 #include <type_traits>
+#include <queue>
 
 using namespace Eigen;
 using namespace std;
@@ -134,7 +135,7 @@ typedef Stride<Dynamic, Dynamic> DynStride;
     for (int _row = 0; _row < row; _row++) { \
         for (int _col = 0; _col < column; _col++) { \
             destDtype tmp = destDtype(src(_row, _col)); \
-		    dest(_row, _col) = tmp; \
+            dest(_row, _col) = tmp; \
 	    } \
     }
 
@@ -172,13 +173,15 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype odd_acc = dtype(0); \
-        dtype even_acc = dtype(0); \
+        dtype odd_acc = dtype(-0); \
+        dtype even_acc = dtype(-0); \
+        \
         for (int _row = 0; _row < row; _row++) { \
-            if (_row % 2) \
-                even_acc += src(_row, _col); \
-            else \
-                odd_acc += src(_row, _col); \
+            if ((_row % 2) == 1) {\
+                odd_acc = src(_row, _col) + odd_acc; \
+            } else {\
+                even_acc = src(_row, _col) + even_acc; \
+            } \
         } \
         dest(0, _col) = odd_acc + even_acc; \
     } \
@@ -235,6 +238,75 @@ typedef Stride<Dynamic, Dynamic> DynStride;
     delete[] pbuf; \
 } while(0);
 
+#define MATRIX_ACC_DIMW(src, dest, dtype, row, column) do { \
+    uint8_t once_max = 128; \
+    queue<dtype> dat_q; \
+    queue<dtype> dat_q_128;\
+    queue<dtype> acc_dat_q; \
+    queue<dtype> acc_dat_q_tmp; \
+    queue<dtype> acc_last; \
+    dtype mul_ret, a, b, acc_ab, acc_current, new_last, old_last; \
+    if(is_same< dtype, Float32 >::value) {\
+        once_max = 64; \
+    } \
+    \
+    for (int _row = 0; _row < row; _row++) { \
+        for (int _col = 0; _col < column; _col++) { \
+            mul_ret = src(_row, _col); \
+            dat_q.push(mul_ret); \
+            cout << mul_ret << endl; \
+        } \
+        while (dat_q.size() != 0) { \
+            dat_q_128 = queue<dtype>(); \
+            for(int i = 0; i < once_max; i++) { \
+                if(dat_q.size() != 0) { \
+                    dat_q_128.push(dat_q.front()); \
+                    dat_q.pop(); \
+                } \
+            } \
+            \
+            acc_dat_q = queue<dtype>(); \
+            int end_flag = 0; \
+            while(end_flag == 0) { \
+                acc_dat_q = queue<dtype>(); \
+                while(dat_q_128.size() >=2) { \
+                    a = dat_q_128.front(); \
+                    dat_q_128.pop(); \
+                    b = dat_q_128.front(); \
+                    dat_q_128.pop(); \
+                    acc_ab = a + b; \
+                    acc_dat_q.push(acc_ab); \
+                } \
+                if(dat_q_128.size() ==1) {\
+                    acc_dat_q.push(dat_q_128.front()); \
+                    dat_q_128.pop(); \
+                } \
+                int q_size = acc_dat_q.size(); \
+                if (q_size == 1) { \
+                    end_flag = 1;\
+                } else { \
+                    for(auto i = 0; i < q_size; i++) {\
+                        dat_q_128.push(acc_dat_q.front()); \
+                        acc_dat_q.pop(); \
+                    } \
+                } \
+            } \
+            acc_current = acc_dat_q.front(); \
+            acc_dat_q.pop(); \
+            if (acc_last.size() !=0) { \
+                old_last = acc_last.front(); \
+                acc_last.pop(); \
+                new_last = acc_current + old_last; \
+                acc_last.push(new_last); \
+            } else \
+                acc_last.push(acc_current); \
+        } \
+        \
+        dest(_row, 0) = acc_last.front(); \
+        acc_last.pop(); \
+    } \
+} while(0);
+
 #define PADDING_3D_HW_C(src, dest, padding, dest_row_2d, dest_row_3d, dest_column_3d, u, d, l, r) do { \
     unsigned int src_row = 0; \
     for (int _row = 0; _row < dest_row_2d; _row++) { \
@@ -269,10 +341,30 @@ typedef Stride<Dynamic, Dynamic> DynStride;
     f32th.x = threshhold; \
     for (int _row = 0; _row < row; _row++) { \
         for (int _col = 0; _col < column; _col++) { \
-            if (src(_row, _col) <= dtype(0)) \
-                dest(_row, _col) = dtype(0); \
-            else if ((f32th != Float32(0)) && (src(_row, _col) > dtype(f32th))) \
+            if (src(_row, _col) <= dtype(0)) {\
+                if(is_same< dtype, Float32 >::value) {\
+                    dest(_row, _col).x = 0x00000000; \
+                } else {\
+                    dest(_row, _col).x = 0x0000; \
+                } \
+            \
+            } else if ((f32th != Float32(0)) && (src(_row, _col) > dtype(f32th))) \
                 dest(_row, _col) = dtype(f32th); \
+            else \
+                dest(_row, _col) = src(_row, _col); \
+            \
+            if(is_same< dtype, half >::value) { \
+                if ((dest(_row, _col).x & 0x3ff) && ((dest(_row, _col).x & 0x7c00) == 0x7c00)) \
+                    dest(_row, _col).x = 0xfe00; \
+            } else if(is_same< dtype, Bfloat16 >::value) { \
+                if ((dest(_row, _col).x & 0x7f) && ((dest(_row, _col).x & 0x7f80) == 0x7f80)) \
+                    dest(_row, _col).x = 0xffc0; \
+                if ((dest(_row, _col).x & 0xffff) == 0x8000) \
+                    dest(_row, _col).x = 0x0000; \
+            } else if(is_same< dtype, Float32 >::value) {\
+                if ((dest(_row, _col).x & 0x7fffff) && ((dest(_row, _col).x & 0x7f800000) == 0x7f800000)) \
+                    dest(_row, _col).x = 0xffc00000; \
+            } \
         } \
     } \
 } while(0);
@@ -570,7 +662,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
         }
 
         for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = rs1_matrix.row(row).array() + -vector_dim0.array();
+            rd_matrix.row(row) = rs1_matrix.row(row).array() - vector_dim0.array();
         break;
     case 1:
         if (GLOBAL_DBG) {
@@ -580,7 +672,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
         }
 
         for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = rs1_matrix.col(col).array() + -vector_dim1.array();
+            rd_matrix.col(col) = rs1_matrix.col(col).array() - vector_dim1.array();
         break;
     default:
         cout << __FUNCTION__ << "error dim" << endl;
@@ -1047,7 +1139,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
 
-        MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1137,12 +1229,12 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
-            MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        } else {
-            MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        }
-
+        //if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        //    MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        //} else {
+        //    MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        //}
+        MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
 
         Map_OutDType vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
         MATRIX_CAST(rd_col_sum_inner, vec_rd_dim0, OutDType, 1, ss->shape1_column);
@@ -1164,8 +1256,8 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
-        MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-
+        //MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1207,12 +1299,12 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
-            MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        } else {
-            MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        }
-
+        //if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        //    MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        //} else {
+        //    MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        //}
+        MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         if (GLOBAL_DBG)
             cout << "rdinner:\n" << rd_col_sum_inner << endl;
 
@@ -1230,7 +1322,8 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
 
-        MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        //MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -2331,11 +2424,12 @@ int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
     }
 
     InDType val;
-    bfloat16_t bf16;
+    bfloat16_t bf16, rs1_bf16, rs2_bf16;
     for (int row = 0; row < rs1_matrix.rows(); row++) {
         for (int col = 0; col < rs1_matrix.cols(); col++) {
-            val = rs1_matrix(row, col) * rs2;
-            bf16.v = val.x;
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rs2_bf16.v = rs2.x;
+            bf16 = bf16_mul(rs1_bf16, rs2_bf16);
             rd_matrix(row, col) = bf16_to_i8(bf16, rounding_mode, true);
         }
     }
@@ -2364,11 +2458,12 @@ int veemul_xu8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride
     }
 
     InDType val;
-    bfloat16_t bf16;
+    bfloat16_t bf16, rs1_bf16, rs2_bf16;
     for (int row = 0; row < rs1_matrix.rows(); row++) {
         for (int col = 0; col < rs1_matrix.cols(); col++) {
-            val = rs1_matrix(row, col) * rs2;
-            bf16.v = val.x;
+            rs1_bf16.v = rs1_matrix(row, col).x;
+            rs2_bf16.v = rs2.x;
+            bf16 = bf16_mul(rs1_bf16, rs2_bf16);
             rd_matrix(row, col) = bf16_to_ui8(bf16, rounding_mode, true);
         }
     }
