@@ -409,7 +409,8 @@ private:
 					 (x).stride_rd = STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
 					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN; \
-                     (x).relu_threshhold = VME_RELU_THRESHHOLD;})
+                     (x).relu_threshhold = VME_RELU_THRESHHOLD;\
+                     softfloat_roundingMode = STATE.frm;})
 
 #define vme_ss_fill(ss, esize) do { \
     ss.row = VME_HIN; \
@@ -431,6 +432,7 @@ private:
     ss.k_dilaton_w = VME_DILATION_W; \
     ss.k_dilation_h = VME_DILATION_H; \
     ss.relu_threshhold = VME_RELU_THRESHHOLD; \
+    softfloat_roundingMode = STATE.frm; \
 } while (0);
 
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
@@ -440,7 +442,8 @@ private:
            (x).shape2_row = BC_SHAPE2_ROW; \
            (x).stride_rd = BC_STRIDE_RD; \
            (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1: BC_SHAPE1_COLUMN; \
-           (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2: BC_SHAPE2_COLUMN;})
+           (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2: BC_SHAPE2_COLUMN;\
+           softfloat_roundingMode = STATE.frm;})
 
 
 #define memul_sst_fill(x, esize_src1, esize_src2, esize_out) ({ \
@@ -453,7 +456,8 @@ private:
            (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 : BC_SHAPE2_COLUMN; \
            (x).stride_idx = MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : BC_SHAPE2_COLUMN; \
            (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
-           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF;})
+           (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF;\
+           softfloat_roundingMode = STATE.frm;})
 
 
 #define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
@@ -465,7 +469,8 @@ private:
            (x).conv_padding = CONV_PADDING; \
            (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
            (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF; \
-           (x).stride_idx = MME_SPARSE_STRIDE;})
+           (x).stride_idx = MME_SPARSE_STRIDE;\
+           softfloat_roundingMode = STATE.frm;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
