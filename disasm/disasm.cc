@@ -423,16 +423,15 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_FSTORE(code) DISASM_INSN(#code, code, 0, {&frs2, &store_address})
   #define DEFINE_FRTYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1, &frs2})
   #define DEFINE_FR1TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1})
+  #define DEFINE_FR2TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1, &dmx})
   #define DEFINE_FR3TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs1, &frs2, &frs3})
   #define DEFINE_FXTYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &frs1})
   #define DEFINE_FX2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &frs1, &frs2})
   #define DEFINE_XFTYPE(code) DISASM_INSN(#code, code, 0, {&frd, &xrs1})
   #define DEFINE_SFENCE_TYPE(code) DISASM_INSN(#code, code, 0, {&xrs1, &xrs2})
 
-  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
   #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
-  #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
-  #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+  #define DEFINE_CV3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2, &dmx})
 
 
   DEFINE_XLOAD(lb)
@@ -752,7 +751,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FX2TYPE(flt_q);
   DEFINE_FX2TYPE(fle_q);
 
-  DEFINE_R1TYPE(veacc_m);
+  DEFINE_FR2TYPE(veacc_m);
   DEFINE_CV2TYPE(veadd_mf);
   DEFINE_CV2TYPE(veadd_relu_mf);
   DEFINE_RTYPE(veadd_mm);
@@ -782,7 +781,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(vecvt_f32_x32_m);
   DEFINE_R3TYPE(vecvt_x32_f32_m);
 
-  DEFINE_CV2TYPE(veemacc_mf);
+  DEFINE_CV3TYPE(veemacc_mf);
   DEFINE_R2TYPE(veemacc_mm);
   DEFINE_R2TYPE(veemacc_mv);
   DEFINE_CV2TYPE(veemul_mf);
