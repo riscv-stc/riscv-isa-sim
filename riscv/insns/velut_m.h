@@ -9,5 +9,5 @@ unsigned long rs2 = MMU.get_phy_addr(RS2);
 unsigned long rd = MMU.get_phy_addr(RD);
 
 VME_DTYPE_DECODING_TO_TYPE({
-    velut_m<dtype_lut, dtype_vd>((dtype_lut*)rs1, rs2, (dtype_vd*)rd, &sst, relu);
+    velut_m<uint16_t, dtype_vd>((uint16_t*)rs1, rs2, (dtype_vd*)rd, &sst, relu);
 })
