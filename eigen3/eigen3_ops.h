@@ -189,10 +189,10 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype acc0 = dtype(0); \
-        dtype acc1 = dtype(0); \
-        dtype acc2 = dtype(0); \
-        dtype acc3 = dtype(0); \
+        dtype acc0 = dtype(-0); \
+        dtype acc1 = dtype(-0); \
+        dtype acc2 = dtype(-0); \
+        dtype acc3 = dtype(-0); \
         for (int _row = 0; _row < row; _row++) { \
             if ((_row % 4) == 0) \
                 acc0 += src(_row, _col); \
@@ -1110,13 +1110,20 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     InDType *mul_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
     Map_InDType mul_result(mul_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
     MATRIX_MUL_CONVERT(rs1_matrix, rs2_matrix, mul_result, ss->shape1_row, ss->shape1_column, InDType);
+    
+    uint32_t MAX_COLUMN;
+    if (is_same< InDType, Float32 >::value) {
+        MAX_COLUMN = 32;
+    } else {
+        MAX_COLUMN = 64;
+    }
 
     if (dim == 0) {
         Map_OutDType rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1179,7 +1186,14 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
-    if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+    uint32_t MAX_COLUMN;
+    if (is_same< InDType, Float32 >::value) {
+        MAX_COLUMN = 32;
+    } else {
+        MAX_COLUMN = 64;
+    }
+
+    if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
         MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
@@ -1219,6 +1233,13 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     InDType *mul_buf = (InDType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(InDType));
     Map_InDType mul_result(mul_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
+    uint32_t MAX_COLUMN;
+    if (is_same< InDType, Float32 >::value) {
+        MAX_COLUMN = 32;
+    } else {
+        MAX_COLUMN = 64;
+    }
+
     if (0 == dim) {
         Map_OutDType vec_rs2_dim0(rs2, ss->shape1_row, 1, DynStride(1, 1));
         if (GLOBAL_DBG) {
@@ -1229,7 +1250,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1293,12 +1314,19 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
 
     MATRIX_MUL_SCALA_CONVERT(rs1_matrix, rs2, mul_result, ss->shape1_row, ss->shape1_column, InDType);
 
+    uint32_t MAX_COLUMN;
+    if (is_same< InDType, Float32 >::value) {
+        MAX_COLUMN = 32;
+    } else {
+        MAX_COLUMN = 64;
+    }
+
     if (dim == 0) {
         Map_OutDType rd_col_sum(rd, 1, ss->shape1_column, DynStride(1, 1));
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
