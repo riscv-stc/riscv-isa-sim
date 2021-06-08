@@ -1229,12 +1229,11 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        //if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
-        //    MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        //} else {
-        //    MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        //}
-        MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+            MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        } else {
+            MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        }
 
         Map_OutDType vec_rd_dim0(rd, 1, ss->shape1_column, DynStride(1, 1));
         MATRIX_CAST(rd_col_sum_inner, vec_rd_dim0, OutDType, 1, ss->shape1_column);
@@ -1299,12 +1298,12 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        //if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
-        //    MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        //} else {
-        //    MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        //}
-        MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        if (ss->shape1_column <= 64 && ss->stride_rs1 == ss->shape1_column) {
+            MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        } else {
+            MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        }
+
         if (GLOBAL_DBG)
             cout << "rdinner:\n" << rd_col_sum_inner << endl;
 
