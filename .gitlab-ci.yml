@@ -32,10 +32,6 @@ test:
   script:
     - export PATH=$CI_PROJECT_DIR/build:$RISCV/bin:$PATH
     - which spike
-    - curl http://releases.streamcomputing.com/host-sdk/hpe/libnpurt-latest | bash
-    - curl http://releases.streamcomputing.com/toolchain/llvm-toolchain/latest | bash
-    - git clone --recurse-submodules http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/riscv-tests.git
-    - cd riscv-tests/isa && make test -j`nproc` && cd -
 
 package:
   stage : package
