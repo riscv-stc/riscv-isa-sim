@@ -13,7 +13,6 @@ cache:
   paths:
     - .cache
     - .env
-    - build
 
 build:
   stage : build
