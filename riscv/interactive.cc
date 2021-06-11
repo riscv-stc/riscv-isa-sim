@@ -80,6 +80,7 @@ void sim_t::interactive()
   funcs["while"] = &sim_t::interactive_until_silent;
   funcs["quit"] = &sim_t::interactive_quit;
   funcs["q"] = funcs["quit"];
+  funcs["dump"] = &sim_t::interactive_dump_mem;
   funcs["help"] = &sim_t::interactive_help;
   funcs["h"] = funcs["help"];
 
@@ -425,4 +426,9 @@ void sim_t::interactive_until(const std::string& cmd, const std::vector<std::str
     set_procs_debug(noisy);
     step(1);
   }
+}
+
+void sim_t::interactive_dump_mem(const std::string& cmd, const std::vector<std::string>& args)
+{
+  dump_mems("interactive_output_mem",  args,  "./");
 }
