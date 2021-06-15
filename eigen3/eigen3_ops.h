@@ -254,7 +254,6 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         for (int _col = 0; _col < column; _col++) { \
             mul_ret = src(_row, _col); \
             dat_q.push(mul_ret); \
-            cout << mul_ret << endl; \
         } \
         while (dat_q.size() != 0) { \
             dat_q_128 = queue<dtype>(); \
@@ -1901,7 +1900,7 @@ int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int d
     switch (dim) {
     case 0:
         for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() <= (DType)0).select(
+            rd_matrix.row(row) = (rs1_matrix.row(row).array() < (DType)0).select(
                 rs1_matrix.row(row).array() * vector_dim0.array(),
                 rs1_matrix.row(row));
 

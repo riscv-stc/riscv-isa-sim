@@ -1,6 +1,3 @@
-require_extension('V');
-check_ncp_vill_invalid()
-
 struct ShapeStride sst;
 sst_fill(sst, 1, 1);
 

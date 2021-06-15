@@ -1,5 +1,3 @@
-require_extension('V');
-
 struct VmeShapeStride vss;
 vme_ss_fill(vss, 2);
 

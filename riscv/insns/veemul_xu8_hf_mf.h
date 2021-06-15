@@ -1,5 +1,3 @@
-require_extension('V');
-check_ncp_vill_invalid()
 check_traps_vexxx_mf_x8out;
 
 struct ShapeStride sst;
