@@ -139,6 +139,7 @@ void sim_t::interactive_help(const std::string& cmd, const std::vector<std::stri
     "rs [count]                      # Resume silent execution (until CTRL+C, or [count] insns)\n"
     "quit                            # End the simulation\n"
     "q                                 Alias for quit\n"
+    "dump                            #dump memory, cmd support: dump l1 or dump llb or dump <start>:<len>\n"
     "help                            # This screen!\n"
     "h                                 Alias for help\n"
     "Note: Hitting enter is the same as: run 1\n"
