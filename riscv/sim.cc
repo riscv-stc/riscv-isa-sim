@@ -37,6 +37,9 @@ volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed) {
+    chmod("/dev/shm/HWSYNC", 0666);
+    chmod("/dev/shm/L1", 0666);
+    chmod("/dev/shm/LLB", 0666);
     shm_unlink("HWSYNC");
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
@@ -70,6 +73,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   signal(SIGINT, &handle_signal);
 
   if ((bank_id == 0) && has_hwsync_masks()) {
+    chmod("/dev/shm/L1", 0666);
+    chmod("/dev/shm/LLB", 0666);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
   }

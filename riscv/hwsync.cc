@@ -28,8 +28,11 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 
         shm_name = "HWSYNC";
         shm_size = 256;
+        char file_name[64];
+        sprintf(file_name, "/dev/shm/%s", shm_name);
 
         if (bank_id == 0) {
+            chmod(file_name, 0666);
             munmap(shm_start, shm_size);
             shm_unlink(shm_name);
         }
@@ -38,6 +41,7 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
         if (shm_id == -1)
             throw std::runtime_error("hwsync shmget failed");
 
+        chmod(file_name, 0666);
         ftruncate(shm_id, shm_size);
         shm_ptr = (char *)mmap(0, shm_size, PROT_WRITE, MAP_SHARED, shm_id, 0);
         if (shm_ptr == (void *)-1)
@@ -122,9 +126,12 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 
 hwsync_t::~hwsync_t() {
     if (shm_start) {
+        char file_name[64];
+        sprintf(file_name, "/dev/shm/%s", shm_name);
+
         *req_sync = ~0;
         pthread_cond_broadcast(pcond_sync);
-
+        chmod(file_name, 0666);
         munmap(shm_start, shm_size);
         shm_unlink(shm_name);
     } else {

@@ -219,6 +219,7 @@ class share_mem_t : public abstract_device_t {
 
   public:
     share_mem_t(size_t size, char* name, size_t offset) : len(size) {
+      char file_name[64];
       if (!size)
         throw std::runtime_error("zero bytes of target memory requested");
 
@@ -227,6 +228,8 @@ class share_mem_t : public abstract_device_t {
         throw std::runtime_error("shmget failed");
       }
 
+      sprintf(file_name, "/dev/shm/%s", name);
+      chmod(file_name, 0666);
       ftruncate(shm_id, size);
       start_ptr = (char *)mmap(0, size, PROT_WRITE, MAP_SHARED, shm_id, 0);
       if (start_ptr == (void *)-1)
@@ -237,6 +240,10 @@ class share_mem_t : public abstract_device_t {
 
     share_mem_t(const share_mem_t& that) = delete;
     ~share_mem_t() {
+      char file_name[64];
+      sprintf(file_name, "/dev/shm/%s", shm_name);
+      chmod(file_name, 0666);
+
       munmap(start_ptr, len);
       shm_unlink(shm_name);
     }
