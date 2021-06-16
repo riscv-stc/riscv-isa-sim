@@ -8,8 +8,8 @@
 #define DUMP_BASE  0x600
 
 #define DUMP_START_OFFSET   0x0
-#define DUMP_ADDR_OFFSET    0x4
-#define DUMP_LEN_OFFSET     0x8
+#define DUMP_ADDR_OFFSET    0x8
+#define DUMP_LEN_OFFSET     0x10
 
 
 misc_device_t::misc_device_t(processor_t* proc)
