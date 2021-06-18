@@ -17,18 +17,18 @@ cache:
 build:
   stage : build
   script:
-    - mkdir -p build
-    - cd build && ../configure --with-isa=rv64gcv --prefix=$PWD/../install && make -j`nproc` && cd -
+    - mkdir -p build_v2
+    - cd build_v2 && ../configure --with-isa=rv64gcv --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
-      - build
+      - build_v2
     name: build_output
 
 package:
   stage : package
   script:
-    - cd build && make install && cd -
+    - cd build_v2 && make install && cd -
     - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
     - export LINK=latest
     - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
