@@ -1,5 +1,4 @@
 require_extension('V');
-check_ncp_vill_invalid()
 
 uint8_t e_size = 2;
 

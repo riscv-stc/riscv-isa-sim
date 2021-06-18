@@ -10,7 +10,6 @@ else
     e_size = 1;
 
 check_traps_mov_llb_l1(e_size);
-check_ncp_vill_invalid()
 
 uint8_t* src = (uint8_t*)MMU.get_phy_addr(RS1);
 uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));

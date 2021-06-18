@@ -1,5 +1,4 @@
 require_extension('V');
-//check_ncp_vill_invalid()
 
 reg_t t_rs1 = RS1;
 reg_t t_rs2 = RS2;

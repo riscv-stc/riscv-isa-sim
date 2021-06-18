@@ -1,5 +1,4 @@
 require_extension('V');
-check_ncp_vill_invalid()
 
 class CustomInsns CusIns;
 struct ShapeStride sst;

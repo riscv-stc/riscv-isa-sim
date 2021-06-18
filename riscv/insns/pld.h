@@ -9,7 +9,6 @@ else
     e_size = 1;
 
 check_traps_pld(e_size);
-//check_ncp_vill_invalid()
 
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;

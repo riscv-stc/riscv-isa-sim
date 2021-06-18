@@ -1,4 +1,3 @@
-//check_ncp_vill_invalid()
 
 reg_t rs2 = RS2;
 
