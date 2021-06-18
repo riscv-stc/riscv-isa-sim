@@ -172,8 +172,6 @@ void processor_t::step(size_t n)
      /* check current core wfi state, if it is in wfi state, swap current core to idle,
       * and let other core to execute insn. */
       if (unlikely(state.wfi_flag)) {
-        //sleep 100ms in wfi
-        usleep(100000);
         break;
       }
 
