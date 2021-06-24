@@ -1205,10 +1205,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN * sizeof(rs2_type)); \
         int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : BC_SHAPE1_COLUMN) * sizeof(rs2_type) * BC_SHAPE1_ROW; \
         int rs2_size = (BC_STRIDE_RS2 ? BC_STRIDE_RS2 : BC_SHAPE2_COLUMN) * sizeof(rs2_type) * BC_SHAPE2_ROW; \
-        unsigned int rd_stride, rd_col; \
-        if (TS == 0){ \
-          rd_stride = BC_SHAPE2_COLUMN; rd_col = BC_SHAPE1_COLUMN; \
-        } \
+        unsigned int rd_stride = BC_SHAPE2_COLUMN; \
+        unsigned int rd_col = BC_SHAPE1_COLUMN; \
         int rd_size = (BC_STRIDE_RD ? BC_STRIDE_RD : rd_stride) * sizeof(out_type) * rd_col;\
         check_cust_access(RS1, rs1_size); \
         check_cust_access_l1(RS2, rs2_size); \
