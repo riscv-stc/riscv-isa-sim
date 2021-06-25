@@ -1023,13 +1023,14 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
         //rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
-        uint32_t COLUMN_NUM;
+        uint32_t MAX_COLUMN;
         if(is_same< InDType, Float32 >::value)
-            COLUMN_NUM = 32;
+            MAX_COLUMN = 32;
         else
-            COLUMN_NUM = 64;
+            MAX_COLUMN = 64;
 
-        if (ss->shape1_column <= COLUMN_NUM && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1090,14 +1091,15 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
-    uint32_t COLUMN_NUM;
+    uint32_t MAX_COLUMN;
     if(is_same< InDType, Float32 >::value)
-        COLUMN_NUM = 32;
+        MAX_COLUMN = 32;
     else
-        COLUMN_NUM = 64;
+        MAX_COLUMN = 64;
 
     //rd_col_sum = rs1_matrix_inner.colwise().sum();
-    if (ss->shape1_column <= COLUMN_NUM && ss->stride_rs1 == ss->shape1_column) {
+    if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
         MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
@@ -1156,7 +1158,8 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1226,7 +1229,8 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         MAX_COLUMN = 64;
     }
 
-    if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
+    if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
         MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
@@ -1283,7 +1287,8 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1359,7 +1364,8 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= MAX_COLUMN && ss->stride_rs1 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
+            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
