@@ -316,11 +316,20 @@ private:
 
 #define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
-#define STRIDE_LLB        (STATE.mte_stride_llb & 0xFFFF)
-#define MTE_STRIDE_RS1        (STATE.mte_stride & 0xFFFF)
-#define MTE_STRIDE_RD        ((STATE.mte_stride & 0xFFFF0000) >> 16)
+#define MTE_STRIDE_RS1        (STATE.mte_stride_s & 0xFFFFFF)
+#define MTE_STRIDE_RD        (STATE.mte_stride_d & 0xFFFFFF)
 #define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
 #define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
+
+#define DMAE_DATA_TYPE   (STATE.dmae_data_type & 0xFFFF)
+#define DMAE_SHAPE_X    (STATE.dmae_shape_1 & 0xFFFF)
+#define DMAE_SHAPE_Y    ((STATE.dmae_shape_1 & 0xFFFF0000) >> 16)
+#define DMAE_SHAPE_Z    (STATE.dmae_shape_2 & 0xFFFF)
+
+#define DMAE_STRIDE_S_X   (STATE.dmae_stride_s1)
+#define DMAE_STRIDE_S_Y   (STATE.dmae_stride_s2)
+#define DMAE_STRIDE_D_X   (STATE.dmae_stride_d1)
+#define DMAE_STRIDE_D_Y   (STATE.dmae_stride_d2)
 
 #define SRC_CORE_ID     ((STATE.mte_icdest >> 16) & 0xFF)
 #define DST_CORE_ID     (STATE.mte_icdest & 0xFF)
@@ -3295,55 +3304,87 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   switch (MTE_DATA_TYPE_RS1) { \
     case 0x0: {\
       using dtype_vd = half; \
-      using dtype_vs1 = half; \
+      using dtype_lut = uint16_t; \
        __VA_ARGS__ \
     } \
       break; \
-    case 0x1: {\
+    case 0x101: {\
+      using dtype_vd = Bfloat16; \
+      using dtype_lut = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x202: {\
+      using dtype_vd = Float32; \
+      using dtype_lut = uint32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x303: {\
+      using dtype_vd = int8_t; \
+      using dtype_lut = int8_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    default: \
+        throw trap_illegal_instruction(insn.bits()); \
+  }
+
+#define DMAE_DTYPE_DECODING_TO_TYPE(...) \
+  switch (DMAE_DATA_TYPE) { \
+    case 0x0: {\
+      using dtype_vd = half; \
+      using dtype_vs1 = half; \
+      using dtype_lut = uint16_t; \
+       __VA_ARGS__ \
+    } \
+      break; \
+    case 0x101: {\
       using dtype_vd = Bfloat16; \
       using dtype_vs1 = Bfloat16; \
+      using dtype_lut = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x202: {\
+      using dtype_vd = Float32; \
+      using dtype_vs1 = Float32; \
+      using dtype_lut = uint32_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x303: {\
+      using dtype_vd = int8_t; \
+      using dtype_vs1 = int8_t; \
+      using dtype_lut = int8_t; \
       __VA_ARGS__ \
     } \
       break; \
     case 0x2: {\
       using dtype_vd = Float32; \
+      using dtype_vs1 = half; \
+      using dtype_lut = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x102: {\
+      using dtype_vd = Float32; \
+      using dtype_vs1 = Bfloat16; \
+      using dtype_lut = uint16_t; \
+      __VA_ARGS__ \
+    } \
+      break; \
+    case 0x201: {\
+      using dtype_vd = Bfloat16; \
       using dtype_vs1 = Float32; \
+      using dtype_lut = uint32_t; \
       __VA_ARGS__ \
     } \
       break; \
-    case 0x3: {\
-      using dtype_vd = int8_t; \
-      using dtype_vs1 = int8_t; \
-      __VA_ARGS__ \
-    } \
-      break; \
-    case 0x4: {\
-      using dtype_vd = uint8_t; \
-      using dtype_vs1 = uint8_t; \
-      __VA_ARGS__ \
-    } \
-      break; \
-    case 0x5: {\
-      using dtype_vd = int16_t; \
-      using dtype_vs1 = int16_t; \
-      __VA_ARGS__ \
-    } \
-      break; \
-    case 0x6: {\
-      using dtype_vd = uint16_t; \
-      using dtype_vs1 = uint16_t; \
-      __VA_ARGS__ \
-    } \
-      break; \
-    case 0x7: {\
-      using dtype_vd = int32_t; \
-      using dtype_vs1 = int32_t; \
-      __VA_ARGS__ \
-    } \
-      break; \
-    case 0x8: {\
-      using dtype_vd = uint32_t; \
-      using dtype_vs1 = uint32_t; \
+    case 0x200: {\
+      using dtype_vd = half; \
+      using dtype_vs1 = Float32; \
+      using dtype_lut = uint32_t; \
       __VA_ARGS__ \
     } \
       break; \

@@ -902,7 +902,9 @@ riscv_insn_priv = \
 
 riscv_insn_stc = \
 	sync \
-	sync_rs2 \
+	sync_dmae \
+	sync_dmae_r \
+	sync_dmae_w \
     veacc_m \
 	veadd_mf \
 	veadd_mm \
@@ -974,10 +976,14 @@ riscv_insn_stc = \
 	mov_v \
 	mov_l1_llb \
 	mov_llb_l1 \
-	icmov \
+	mov_l1_glb \
+	mov_llb_glb \
+	mov_glb_l1 \
+	mov_glb_llb \
+	mov_glb_glb \
+	mov_llb_llb \
 	icmov_m \
 	pld \
-	pld_rs2 \
     veavgpool_m \
     vemaxpool_m \
     vedwconv_mm \

@@ -193,19 +193,39 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         dtype acc1 = dtype(-0); \
         dtype acc2 = dtype(-0); \
         dtype acc3 = dtype(-0); \
-        for (int _row = 0; _row < row; _row++) { \
-            if ((_row % 4) == 0) \
-                acc0 += src(_row, _col); \
-            if ((_row % 4) == 1) \
-                acc1 += src(_row, _col); \
-            if ((_row % 4) == 2) \
-                acc2 += src(_row, _col); \
-            if ((_row % 4) == 3) \
-                acc3 += src(_row, _col); \
+        int new_row = row % 2  == 0 ? row :  row + 1; \
+        for (int _row = 0; _row < new_row; _row++) { \
+            if (_row < row) { \
+                if ((_row % 4) == 0) {\
+                    acc0 += src(_row, _col); \
+                } \
+                if ((_row % 4) == 1) {\
+                    acc1 += src(_row, _col); \
+                } \
+                if ((_row % 4) == 2) {\
+                    acc2 += src(_row, _col); \
+                } \
+                if ((_row % 4) == 3) {\
+                    acc3 += src(_row, _col); \
+                } \
+            } else { \
+                if ((_row % 4) == 0) {\
+                    acc0 += dtype(0); \
+                } \
+                if ((_row % 4) == 1) {\
+                    acc1 += dtype(0); \
+                } \
+                if ((_row % 4) == 2) {\
+                    acc2 += dtype(0); \
+                } \
+                if ((_row % 4) == 3) {\
+                    acc3 += dtype(0); \
+                } \
+            } \
         } \
-        acc0 += acc2; \
-        acc1 += acc3; \
-        dest(0, _col) = acc0 + acc1; \
+        acc2 += acc0; \ 
+        acc3 += acc1; \
+        dest(0, _col) = acc2 + acc3; \
     } \
 } while(0);
 
@@ -440,6 +460,20 @@ struct ShapeStride
     float32_t mme_dequant_coeff;
 
     unsigned int relu_threshhold;
+};
+
+struct DmaeShapeStride
+{
+    unsigned short shape_x;
+    unsigned short shape_y;
+    unsigned short shape_z;
+
+    unsigned short stride_s_x;
+    unsigned short stride_s_y;
+
+    unsigned short stride_d_x;
+    unsigned short stride_d_y;
+
 };
 
 struct VmeShapeStride
@@ -3330,7 +3364,7 @@ extern int vecvt_bf_hf_m(half *rs1, Bfloat16 *rd, struct ShapeStride *ss);
 extern int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss);
 extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
-
+extern void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 
 
 /**

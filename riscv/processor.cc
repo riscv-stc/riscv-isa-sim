@@ -1134,11 +1134,35 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MTE_SHAPE:
       state.mte_shape = val;
       break;
-    case CSR_MTE_STRIDE:
-      state.mte_stride = val;
+    case CSR_MTE_STRIDE_S:
+      state.mte_stride_s = val;
+      break;
+    case CSR_MTE_STRIDE_D:
+      state.mte_stride_d = val;
+      break;
+    case CSR_DMAE_DATA_TYPE:
+      state.dmae_data_type = val;
       break;
     case CSR_MTE_DATA_TYPE:
       state.mte_data_type = val;
+      break;
+    case CSR_DMAE_SHAPE_1:
+      state.dmae_shape_1 = val;
+      break;
+    case CSR_DMAE_SHAPE_2:
+      state.dmae_shape_2 = val;
+      break;
+    case CSR_DMAE_STRIDE_S1:
+      state.dmae_stride_s1 = val;
+      break;
+    case CSR_DMAE_STRIDE_S2:
+      state.dmae_stride_s2 = val;
+      break;
+    case CSR_DMAE_STRIDE_D1:
+      state.dmae_stride_d1 = val;
+      break;
+    case CSR_DMAE_STRIDE_D2:
+      state.dmae_stride_d2 = val;
       break;
     case CSR_MINSTRET:
     case CSR_MCYCLE:
@@ -1761,11 +1785,14 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.mte_shape;
-    case CSR_MTE_STRIDE:
+    case CSR_MTE_STRIDE_S:
       if(!supports_extension('V'))
         break;
-      return state.mte_stride;
-      
+      return state.mte_stride_s;
+    case CSR_MTE_STRIDE_D:
+      if(!supports_extension('V'))
+        break;
+      return state.mte_stride_d;
     case CSR_TID:
       if(!supports_extension('V'))
         break;
@@ -1782,6 +1809,34 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.mte_data_type;
+    case CSR_DMAE_DATA_TYPE:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_data_type;
+    case CSR_DMAE_SHAPE_1:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_shape_1;
+    case CSR_DMAE_SHAPE_2:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_shape_2;
+    case CSR_DMAE_STRIDE_S1:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_stride_s1;
+    case CSR_DMAE_STRIDE_S2:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_stride_s2;
+    case CSR_DMAE_STRIDE_D1:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_stride_d1;
+    case CSR_DMAE_STRIDE_D2:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_stride_d2;
     case CSR_MICM_CFG:
     case CSR_MDCM_CFG:
     case CSR_MCCTLBEGINADDR:

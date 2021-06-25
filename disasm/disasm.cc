@@ -582,16 +582,23 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(ror);
   DEFINE_RTYPE(rol);
   DEFINE_RTYPE(sync);
-  DEFINE_RTYPE(sync_rs2);
+  DEFINE_RTYPE(sync_dmae);
+  DEFINE_RTYPE(sync_dmae_r);
+  DEFINE_RTYPE(sync_dmae_w);
   DEFINE_RTYPE(pld);
-  DEFINE_RTYPE(pld_rs2);
-  DEFINE_RTYPE(icmov);
   DEFINE_R3TYPE(icmov_m)
   DEFINE_R3TYPE(mov_m);
   DEFINE_R1TYPE(mov_v);
   DEFINE_FXTYPE(mov_f);
   DEFINE_R3TYPE(mov_llb_l1);
   DEFINE_R3TYPE(mov_l1_llb);
+  DEFINE_R3TYPE(mov_l1_glb);
+  DEFINE_R3TYPE(mov_llb_glb);
+  DEFINE_R3TYPE(mov_glb_l1);
+  DEFINE_R3TYPE(mov_glb_llb);
+  DEFINE_R3TYPE(mov_glb_glb);
+  DEFINE_R3TYPE(mov_llb_llb)
+
   DEFINE_ITYPE_SHIFT(rori);
 
   DEFINE_NOARG(ecall);

@@ -1,10 +1,8 @@
 uint8_t e_size = 2;
 
-if (MTE_DATA_TYPE_RS1 == 0 || MTE_DATA_TYPE_RS1 == 1 ||
-    MTE_DATA_TYPE_RS1 == 5 || MTE_DATA_TYPE_RS1 == 6)
+if (MTE_DATA_TYPE_RS1 == 0x0 || MTE_DATA_TYPE_RS1 == 0x101)
     e_size = 2;
-else if (MTE_DATA_TYPE_RS1 == 2 || MTE_DATA_TYPE_RS1 == 7 ||
-  MTE_DATA_TYPE_RS1 == 8)
+else if (MTE_DATA_TYPE_RS1 == 0x202)
     e_size = 4;
 else
     e_size = 1;

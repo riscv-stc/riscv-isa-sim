@@ -264,8 +264,16 @@ struct state_t
   uint32_t ncp_busy;
   uint32_t mte_icdest;
   uint32_t mte_shape;
-  uint32_t mte_stride;
+  uint32_t mte_stride_s;
+  uint32_t mte_stride_d;
   uint32_t mte_data_type;
+  uint32_t dmae_data_type;
+  uint32_t dmae_shape_1;
+  uint32_t dmae_shape_2;
+  uint32_t dmae_stride_s1;
+  uint32_t dmae_stride_s2;
+  uint32_t dmae_stride_d1;
+  uint32_t dmae_stride_d2;
   uint32_t tmisc;
   uint32_t tcsr;
   uint32_t dma_shape_row;
