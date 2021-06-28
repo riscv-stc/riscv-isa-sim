@@ -4,4 +4,6 @@ p->run_async([p, insn, pc]() {
   p->sync();
 });
 
+p->clearRequest();
+
 wfi();

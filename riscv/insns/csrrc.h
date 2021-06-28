@@ -6,3 +6,6 @@ if (write) {
 }
 WRITE_RD(sext_xlen(old));
 serialize();
+
+if (csr >= 0x400 && csr <= 0x426)
+   p->check_intersection(0, 0, 0);
