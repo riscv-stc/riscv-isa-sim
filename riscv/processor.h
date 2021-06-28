@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <list>
 #include "simif.h"
 #include "debug_rom_defines.h"
 
@@ -376,6 +377,21 @@ public:
   mbox_device_t* add_mbox(mbox_device_t *box);
 
   void check_sp_update_value(reg_t update_value);
+  struct CPURequest {
+        unsigned long addr;
+        unsigned size;
+        bool isLoad;
+        CPURequest(unsigned long addr_, unsigned size_, bool isLoad_):
+            addr(addr_), size(size_), isLoad(isLoad_) {
+        };
+  };
+
+  std::list<std::list<CPURequest>> cpuRequests; 
+  bool check_intersection(unsigned long addr1, unsigned size1, bool isLoad1,
+                          unsigned long addr2=0, unsigned size2=0, bool isLoad2=false,
+                          unsigned long addr3=0, unsigned size3=0, bool isLoad3=false);
+  void clearRequest(int num);
+  bool isIntersects(std::list<CPURequest> req_list);
 
 private:
   simif_t* sim;
@@ -433,6 +449,8 @@ private:
 
   // Track repeated executions for processor_t::disasm()
   uint64_t last_pc, last_bits, executions;
+
+  
 };
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);

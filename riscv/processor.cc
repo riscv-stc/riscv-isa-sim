@@ -1228,3 +1228,56 @@ void processor_t::check_sp_update_value(reg_t update_value)
     }
   }
 }
+
+bool processor_t::isIntersects(std::list<CPURequest> req_list)
+{
+  bool isCorr = false;
+  
+    int i = 0;
+    for(auto it = cpuRequests.begin(); it != cpuRequests.end(); it++, i++) {
+      for(auto it_req = it->begin(); it_req != it->end(); it_req++) {
+        for (auto req: req_list){
+          if ((it_req->size > 0) && (req.size > 0) &&
+              !(req.isLoad && it_req->isLoad) &&
+              !(((req.addr + req.size) < it_req->addr) ||
+                 (req.addr > (it_req->addr + it_req->size)))) {
+              isCorr = true;
+              break;
+          }
+        }
+        if (isCorr){
+          if (i >= 64) return true;
+          else return false;
+        }
+      }
+    }
+  return false; 
+}
+
+
+bool
+processor_t::check_intersection(unsigned long addr1, unsigned size1, bool isLoad1,
+                                unsigned long addr2, unsigned size2, bool isLoad2,
+                                unsigned long addr3, unsigned size3, bool isLoad3) {
+    std::list<CPURequest> req_list;
+    req_list.emplace_back(addr1, size1, isLoad1);
+    req_list.emplace_back(addr2, size2, isLoad2);
+    req_list.emplace_back(addr3, size3, isLoad3);
+    if (isIntersects(req_list))
+      cout << "Warning: Address correlation error" << endl;
+
+    cpuRequests.push_front(req_list);
+
+    if (cpuRequests.size() > 256)
+        cpuRequests.pop_back();
+
+    return true;
+}
+
+void
+processor_t::clearRequest(int num) {
+  int size = cpuRequests.size();
+  num = std::min(size, num);
+  for(int i = 0; i < num; i++)
+    cpuRequests.pop_front();
+}
