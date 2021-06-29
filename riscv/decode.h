@@ -318,6 +318,7 @@ private:
 #define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
 #define MTE_STRIDE_RS1        (STATE.mte_stride_s & 0xFFFFFF)
 #define MTE_STRIDE_RD        (STATE.mte_stride_d & 0xFFFFFF)
+#define MTE_DATA_TYPE     (STATE.mte_data_type)
 #define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
 #define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
 
@@ -3301,7 +3302,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     }
 
 #define MTE_DTYPE_DECODING_TO_TYPE(...) \
-  switch (MTE_DATA_TYPE_RS1) { \
+  switch (MTE_DATA_TYPE) { \
     case 0x0: {\
       using dtype_vd = half; \
       using dtype_lut = uint16_t; \

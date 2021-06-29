@@ -1024,7 +1024,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
         //rd_col_sum_inner = rs1_matrix_inner.colwise().sum();
         uint32_t MAX_COLUMN;
-        if(is_same< InDType, Float32 >::value)
+        if(is_same< OutDType, Float32 >::value)
             MAX_COLUMN = 32;
         else
             MAX_COLUMN = 64;
@@ -1092,7 +1092,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
     uint32_t MAX_COLUMN;
-    if(is_same< InDType, Float32 >::value)
+    if(is_same< OutDType, Float32 >::value)
         MAX_COLUMN = 32;
     else
         MAX_COLUMN = 64;
@@ -1147,7 +1147,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     MATRIX_MUL_CONVERT(rs1_matrix, rs2_matrix, mul_result, ss->shape1_row, ss->shape1_column, InDType);
     
     uint32_t MAX_COLUMN;
-    if (is_same< InDType, Float32 >::value) {
+    if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
     } else {
         MAX_COLUMN = 64;
@@ -1223,7 +1223,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
     uint32_t MAX_COLUMN;
-    if (is_same< InDType, Float32 >::value) {
+    if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
     } else {
         MAX_COLUMN = 64;
@@ -1271,7 +1271,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     Map_InDType mul_result(mul_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     uint32_t MAX_COLUMN;
-    if (is_same< InDType, Float32 >::value) {
+    if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
     } else {
         MAX_COLUMN = 64;
@@ -1287,8 +1287,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
-        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
-            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2 && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1353,7 +1352,7 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
     MATRIX_MUL_SCALA_CONVERT(rs1_matrix, rs2, mul_result, ss->shape1_row, ss->shape1_column, InDType);
 
     uint32_t MAX_COLUMN;
-    if (is_same< InDType, Float32 >::value) {
+    if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
     } else {
         MAX_COLUMN = 64;
@@ -1364,8 +1363,7 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         InDType *rd_col_buf = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
         Map_InDType rd_col_sum_inner(rd_col_buf, 1, ss->shape1_column, DynStride(1, 1));
 
-        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
-            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
+        if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2 && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
