@@ -40,6 +40,7 @@ class hwsync_t: public abstract_device_t {
 
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
+    uint32_t get_hwsync() {*req_sync;};
 };
 
 #endif // __HWSYNC_H__

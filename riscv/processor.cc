@@ -1107,6 +1107,11 @@ void processor_t::pld(uint32_t coremap) {
   hwsync->enter(id, coremap);
 }
 
+uint32_t processor_t::get_hwsync_status()
+{
+  return hwsync->get_hwsync();
+}
+
 void processor_t::run_async(std::function<void()> func) {
   {
     std::lock_guard<std::mutex> lock(async_mutex);
