@@ -361,6 +361,7 @@ public:
   simif_t* get_sim() { return sim; };
   uint32_t get_syncs() {return synctimes; };
   uint32_t set_syncs(uint32_t times) {return synctimes = times; };
+  uint32_t get_hwsync_status();
   uint32_t get_idx() {return idx; };
   uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }

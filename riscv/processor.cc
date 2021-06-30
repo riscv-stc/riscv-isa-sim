@@ -2249,6 +2249,10 @@ void processor_t::sync(uint32_t syncmap) {
 void processor_t::pld(uint32_t coremap) {
   hwsync->enter(id, coremap);
 }
+uint32_t processor_t::get_hwsync_status()
+{
+    return hwsync->get_hwsync();
+}
 
 void processor_t::run_async(std::function<void()> func) {
   {

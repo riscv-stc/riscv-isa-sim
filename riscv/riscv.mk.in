@@ -988,6 +988,11 @@ riscv_insn_stc = \
     vemaxpool_m \
     vedwconv_mm \
     \
+	versub_mv \
+	versub_mf \
+	verot180_m \
+	verev_m \
+	\
     metr_m \
     memul_mm \
 	memin_m \

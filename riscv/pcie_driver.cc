@@ -432,7 +432,7 @@ int32_t pcie_driver_t::get_sync_state()
 
 
   for (reg_t i = 0; i < procs.size(); i++)
-    if (procs[i]->async_state())
+    if ((procs[i]->get_hwsync_status() & (1 << (mBankId * 8 + i))) != 0)
       state |= 0x1 << i;
   /* each bank core_id in spike is start at 0. */
   *(uint32_t *)cmd.data = state << (mBankId * CORE_NUM_OF_BANK);
