@@ -722,6 +722,56 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
+int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_DType vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_DType vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    /* our half not support operator - (const half& a, const half& b),
+     * but can support operator - (const half& a),
+     *  so we use (a + -b) to instead
+     */
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+
+        for (int row = 0; row < rs1_matrix.rows(); row++)
+            rd_matrix.row(row) = vector_dim0.array() - rs1_matrix.row(row).array();
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+
+        for (int col = 0; col < rs1_matrix.cols(); col++)
+            rd_matrix.col(col) = vector_dim1.array() - rs1_matrix.col(col).array();
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+template <typename DType>
 int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
@@ -753,6 +803,121 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
+    return 0;
+}
+
+template <typename DType>
+int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+
+    /* eigen not support matrix + scalar, so we creat a matrix init to const f, to
+     * convert this operation to matrix + matrix
+     * Our half not support operator - (const half& a, const half& b),
+     * but can support operator - (const half& a),
+     *  so we use (a + -b) to instead
+     */
+    Matrix_DType const_matrix(ss->shape1_row, ss->shape1_column);
+    const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
+    rd_matrix =  const_matrix - rs1_matrix;
+
+    if (relu) {
+        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int verev_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+        }
+
+        for (int col = 0; col < ss->shape1_column; col++)
+            for (int row = ss->shape1_row -1, dst_row = 0; row >= 0; row--, dst_row++)
+                rd_matrix(dst_row, col) = rs1_matrix(row, col);
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+        }
+
+        for (int row = 0; row < ss->shape1_row; row++)
+             for (int col = ss->shape1_column - 1, dst_col = 0; col >= 0; col--, dst_col++) {
+                rd_matrix(row, dst_col) = rs1_matrix(row, col);
+             }
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int verot180_m(DType *rs1, DType *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    uint8_t esise = 0;
+    if(is_same< DType, Float32 >::value)
+        esise = sizeof(uint32_t);
+    else
+        esise = sizeof(uint16_t);
+
+    DType *rd_tmp_buf = (DType *)malloc(ss->shape1_column * ss->shape1_row * esise);
+    Map_DType rd_h_rev(rd_tmp_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    for (int col = 0; col < ss->shape1_column; col++)
+        for (int row = ss->shape1_row -1, dst_row = 0; row >= 0; row--, dst_row++)
+            rd_h_rev(dst_row, col) = rs1_matrix(row, col);
+
+    for (int row = 0; row < ss->shape1_row; row++)
+        for (int col = ss->shape1_column - 1, dst_col = 0; col >= 0; col--, dst_col++)
+            rd_matrix(row, dst_col) = rd_h_rev(row, col);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    
+    free(rd_tmp_buf);
     return 0;
 }
 
@@ -1030,7 +1195,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
             MAX_COLUMN = 64;
 
         if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
-            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
+            && ss->stride_rs1 == ss->shape1_column) {
             MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         } else {
             MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
@@ -1053,7 +1218,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
         //rd_row_sum_inner = rs1_matrix_inner.rowwise().sum();
-        MATRIX_ACC_DIMW_PAIR(rs1_matrix_inner, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(rs1_matrix_inner, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
         //rd_row_sum = rd_row_sum_inner.cast<OutDType>();
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1099,7 +1264,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
 
     //rd_col_sum = rs1_matrix_inner.colwise().sum();
     if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
-            && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
+            && ss->stride_rs1 == ss->shape1_column) {
         MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
@@ -1107,7 +1272,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
 
     //InDType rd_tmp = rd_col_sum.sum();
     Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
     //*rd = OutDType(rd_tmp);
 
     if (relu) {
@@ -1237,7 +1402,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
     }
 
     Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW_PAIR(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
