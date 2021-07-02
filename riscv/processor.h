@@ -184,7 +184,7 @@ struct state_t
   bool serialized; // whether timer CSRs are in a well-defined state
 
   bool async_started = false;
-
+  bool pld = false;
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
   enum {
@@ -274,6 +274,7 @@ public:
   void pld(uint32_t coremap);
 
   void run_async(std::function<void()> func);
+  void run_async(std::function<void()> func, bool flag);
   bool async_done();
   bool async_state() { return state.async_started; };
 

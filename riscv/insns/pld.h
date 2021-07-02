@@ -30,6 +30,6 @@ p->run_async([p, insn, pc, xlen]() {
           }
       }
   }
-});
+}, true);
 
 wfi();
