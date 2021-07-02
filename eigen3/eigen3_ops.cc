@@ -5934,8 +5934,8 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
     uint16_t copy_stride_s_y = 0;
     uint16_t copy_stride_d_x = 0;
     uint16_t copy_stride_d_y = 0;
-    uint16_t copy_s_yz_offset = 0;
-    uint16_t copy_d_yz_offset = 0;
+    uint16_t copy_s_xy_size = 0;
+    uint16_t copy_d_xy_size = 0;
     uint8_t e_size = 2;
     if (GLOBAL_DBG) {
         cout << "data type=" << data_type << endl;
@@ -5967,23 +5967,19 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
         copy_stride_d_y = (dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y) * e_size;
 
         if ((dmae_ss->stride_s_x | dmae_ss->stride_s_y | dmae_ss->stride_d_x | dmae_ss->stride_d_y) == 0) {
-            memcpy(dst, src, (shape_x * shape_y + shape_y * shape_z) * e_size);
+            memcpy(dst, src, shape_x * shape_y * shape_z * e_size);
         }
         else {
-            //x,y
-            for (int i = 0; i < shape_y; i++) {
-                memcpy(dst + i * copy_stride_d_x, src + i * copy_stride_s_x, shape_x * e_size);
+            copy_s_xy_size = copy_stride_s_y * copy_stride_s_x / e_size;
+            copy_d_xy_size = copy_stride_d_y * copy_stride_d_x / e_size;
+            if (GLOBAL_DBG) {
+                cout << "copy_s_xy_size=" << copy_s_xy_size << endl;
+                cout << "copy_d_xy_size=" << copy_d_xy_size << endl;
             }
 
-            copy_s_yz_offset = shape_y * copy_stride_s_x;
-            copy_d_yz_offset = shape_y * copy_stride_d_x;
-            if (GLOBAL_DBG) {
-                cout << "copy_s_yz_offset=" << copy_s_yz_offset << endl;
-                cout << "copy_d_yz_offset=" << copy_d_yz_offset << endl;
-            }
-            //y,z
-            for (int j = 0; j < shape_z; j++) {
-                memcpy(dst + copy_d_yz_offset + j * copy_stride_d_y, src + copy_s_yz_offset + j * copy_stride_s_y, shape_y * e_size);
+            for (int j = 0; j < shape_z; j++) { //z
+                for (int i = 0; i < shape_y; i++) //xy
+                    memcpy(dst + j * copy_d_xy_size + i * copy_stride_d_x, src + j * copy_s_xy_size + i * copy_stride_s_x, shape_x * e_size);
             }
         }
     } else {
@@ -5996,19 +5992,14 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
 
                 float16_t *src_fp16 = (float16_t*)src;
                 float32_t *dst_fp32 = (float32_t*)dst;
-                //x,y
-                for (int i = 0; i < shape_y; i++) {
-                    for (int j = 0; j < shape_x; j++ ) {
-                        dst_fp32[i * copy_stride_d_x + j] = f16_to_f32(src_fp16[i * copy_stride_s_x + j]);
-                    }
-                }
 
-                copy_s_yz_offset = shape_y * copy_stride_s_x;
-                copy_d_yz_offset = shape_y * copy_stride_d_x;
-                //y,z
+                copy_s_xy_size = copy_stride_s_y * copy_stride_s_x;
+                copy_d_xy_size = copy_stride_d_y * copy_stride_d_x;
+
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        dst_fp32[copy_d_yz_offset + i * copy_stride_d_y + j] = f16_to_f32(src_fp16[copy_s_yz_offset + i * copy_stride_s_y + j]);
+                        for (int k = 0; k < shape_x; k++)
+                            dst_fp32[i * copy_d_xy_size + j * copy_stride_d_x + k] = f16_to_f32(src_fp16[i * copy_s_xy_size + j * copy_stride_s_x + k]);
                     }
                 }
             }
@@ -6020,19 +6011,14 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
                 copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
                 bfloat16_t *src_bf16 = (bfloat16_t*)src;
                 float32_t *dst_fp32 = (float32_t*)dst;
-                //x,y
-                for (int i = 0; i < shape_y; i++) {
-                    for (int j = 0; j < shape_x; j++ ) {
-                        dst_fp32[i * copy_stride_d_x + j] = bf16_to_f32(src_bf16[i * copy_stride_s_x + j]);
-                    }
-                }
 
-                copy_s_yz_offset = shape_y * copy_stride_s_x;
-                copy_d_yz_offset = shape_y * copy_stride_d_x;
-                //y,z
+                copy_s_xy_size = copy_stride_s_y * copy_stride_s_x;
+                copy_d_xy_size = copy_stride_d_y * copy_stride_d_x;
+
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        dst_fp32[copy_d_yz_offset + i * copy_stride_d_y + j] = bf16_to_f32(src_bf16[copy_s_yz_offset + i * copy_stride_s_y + j]);
+                        for (int k = 0; k < shape_x; k++)
+                            dst_fp32[i * copy_d_xy_size + j * copy_stride_d_x + k] = bf16_to_f32(src_bf16[i * copy_s_xy_size + j * copy_stride_s_x + k]);
                     }
                 }
             }
@@ -6044,19 +6030,14 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
                 copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
                 float32_t *src_f32 = (float32_t*)src;
                 bfloat16_t *dst_bf16 = (bfloat16_t*)dst;
-                //x,y
-                for (int i = 0; i < shape_y; i++) {
-                    for (int j = 0; j < shape_x; j++ ) {
-                        dst_bf16[i * copy_stride_d_x + j] = f32_to_bf16(src_f32[i * copy_stride_s_x + j]);
-                    }
-                }
 
-                copy_s_yz_offset = shape_y * copy_stride_s_x;
-                copy_d_yz_offset = shape_y * copy_stride_d_x;
-                //y,z
+                copy_s_xy_size = copy_stride_s_y * copy_stride_s_x;
+                copy_d_xy_size = copy_stride_d_y * copy_stride_d_x;
+
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        dst_bf16[copy_d_yz_offset + i * copy_stride_d_y + j] = f32_to_bf16(src_f32[copy_s_yz_offset + i * copy_stride_s_y + j]);
+                        for (int k = 0; k < shape_x; k++)
+                            dst_bf16[i * copy_d_xy_size + j * copy_stride_d_x + k] = f32_to_bf16(src_f32[i * copy_s_xy_size + j * copy_stride_s_x + k]);
                     }
                 }
             }
@@ -6068,19 +6049,14 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
                 copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
                 float32_t *src_f32 = (float32_t*)src;
                 float16_t *dst_fp16 = (float16_t*)dst;
-                //x,y
-                for (int i = 0; i < shape_y; i++) {
-                    for (int j = 0; j < shape_x; j++ ) {
-                        dst_fp16[i * copy_stride_d_x + j] = f32_to_f16(src_f32[i * copy_stride_s_x + j]);
-                    }
-                }
 
-                copy_s_yz_offset = shape_y * copy_stride_s_x;
-                copy_d_yz_offset = shape_y * copy_stride_d_x;
-                //y,z
+                copy_s_xy_size = copy_stride_s_y * copy_stride_s_x;
+                copy_d_xy_size = copy_stride_d_y * copy_stride_d_x;
+
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        dst_fp16[copy_d_yz_offset + i * copy_stride_d_y + j] = f32_to_f16(src_f32[copy_s_yz_offset + i * copy_stride_s_y + j]);
+                        for (int k = 0; k < shape_x; k++)
+                            dst_fp16[i * copy_d_xy_size + j * copy_stride_d_x + k] = f32_to_f16(src_f32[i * copy_s_xy_size + j * copy_stride_s_x + k]);
                     }
                 }
             }
