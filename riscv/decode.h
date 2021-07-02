@@ -439,7 +439,7 @@ private:
     ss.n_pad_d = VME_N_PAD_D; \
     ss.n_pad_l = VME_N_PAD_L; \
     ss.n_pad_r = VME_N_PAD_R; \
-    ss.k_dilaton_w = VME_DILATION_W; \
+    ss.k_dilation_w = VME_DILATION_W; \
     ss.k_dilation_h = VME_DILATION_H; \
     ss.relu_threshhold = VME_RELU_THRESHHOLD; \
     softfloat_roundingMode = STATE.frm; \

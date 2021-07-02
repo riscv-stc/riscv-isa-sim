@@ -484,7 +484,7 @@ struct VmeShapeStride
     int ofm_c_stride, k_c_stride;
     int kw, kh, sw, sh;
     int n_pad_u, n_pad_d, n_pad_l, n_pad_r;
-    int k_dilaton_w, k_dilation_h;
+    int k_dilation_w, k_dilation_h;
     unsigned int relu_threshhold;
 };
 
@@ -2381,8 +2381,10 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         rd_2d.row(rd_row_idx) = block_reshaped.colwise().maxCoeff();
 
         if (GLOBAL_DBG) {
-            std::cout << "output row index = " << rd_row_idx << std::endl;
-            std::cout << "current start point(" << start_row << "," << start_col << ")" << std::endl;
+            for (int ii=0; ii < col_block_reshaped; ii++) {
+                cout << block_reshaped.col(ii).transpose() << endl;
+                cout << "res" << rd_row_idx*col_block_reshaped + ii << ": " << rd_2d(rd_row_idx, ii) << endl;
+            }
         }
 
         // move point
@@ -2417,124 +2419,146 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 template <typename OutDType, typename InDType>
 int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStride *vss)
 {
+    int pad_top, pad_bottom, pad_left, pad_right;
+    int kw, kh, okw, okh, k_stride, sk_h, sk_w;
+    int in_w, in_h, in_c, in_stride;
+    int out_w, out_h, out_stride;
+    int w, h, c;
+    int dilation_h, dilation_w;
+    int i, j, k, ii, jj, kk, index_cin, counter;
+    int row, col;
+    OutDType *rs1_start;
+    OutDType *left_val, *row_val, *col_val;
+    OutDType *start;
+    OutDType val;
+
+    //get the padding
+    pad_top = vss->n_pad_u;
+    pad_bottom = vss->n_pad_d;
+    pad_left = vss->n_pad_l;
+    pad_right = vss->n_pad_r;
+
+    //get the input shape
+    in_w = vss->column;
+    in_h = vss->row;
+    in_c = vss->cin;
+    assert(in_w > 0 && in_h > 0 && in_c > 0);
+    in_stride = vss->ifm_c_stride;
+    in_stride = in_stride > 0 ? in_stride : in_c;
+
+    //get the output shape
+    out_w = vss->wout;
+    out_h = vss->hout;
+    assert(out_w > 0 && out_h > 0);
+    out_stride = vss->ofm_c_stride;
+    out_stride = out_stride > 0 ? out_stride : in_c;
+
+    //get the kernel shape
+    kw = vss->kw;
+    kh = vss->kh;
+    dilation_h = vss->k_dilation_h;
+    dilation_w = vss->k_dilation_w;
+    sk_h = vss->sh;
+    sk_w = vss->sw == 0? vss->sh: vss->sw;
+    assert((kw > 0) && (kh > 0) && (vss->kw * vss->kh <= 64));
+    assert(dilation_h > 0 && dilation_w > 0 && sk_h >0 && sk_w > 0);
+    k_stride = vss->k_c_stride;
+    k_stride = k_stride > 0 ? k_stride : in_c;
+
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
 
-    //param check
-    assert((vss->kw * vss->kh <= 64));
-    assert((vss->kw > 0) && (vss->kh) > 0);
-    assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
-    assert((vss->wout > 0) && (vss->hout > 0));
-
     VME_SHAPE_STRIDE_INFO(vss);
 
-    // rs1 source
-    int row_2d, column_2d;
-    row_2d = vss->row * vss->column;
-    column_2d = vss->cin;
-    Map_OutDType rs1_2d(rs1, row_2d, column_2d, DynStride(vss->ifm_c_stride, 1));
+    /*calculate the kernel shape*/
+    Map_OutDType rs2_matrix(rs2, kh * kw, in_c, DynStride(k_stride, 1)); // the depth is same as in_c
 
-    // kernel matrix
-    int row_k_2d, col_k_2d;
-    row_k_2d = vss->kw * vss->kh;
-    col_k_2d = vss->cin;
-    Map_OutDType kernel_2d(rs2, row_k_2d, col_k_2d, DynStride(vss->k_c_stride, 1));
+    h = dilation_h > 1 ? dilation_h * (kh - 1) + 1 : kh;
+    w = dilation_w > 1 ? dilation_w * (kw - 1) + 1 : kw;
+    okh = kh;
+    okw = kw;
+    kh = h;
+    kw = w;
 
-    // rs1 with padding
-    int row_2d_padded, column_2d_padded, row_3d_padded, column_3d_padded;
-    row_3d_padded = vss->row + vss->n_pad_l + vss->n_pad_r;
-    column_3d_padded = vss->column + vss->n_pad_u + vss->n_pad_d;
-    row_2d_padded = row_3d_padded * column_3d_padded;
-    column_2d_padded = vss->cin;
-    OutDType *padded_buf = (OutDType *)malloc(row_2d_padded * column_2d_padded * sizeof(OutDType));
-    Map_OutDType rs1_2d_padded(padded_buf, row_2d_padded, column_2d_padded, DynStride(vss->cin, 1));
+    /*calculate the input shape*/
+    Map_OutDType rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
-    // zero padding
-    OutDType *padding_buf = (OutDType *)malloc(vss->cin * sizeof(OutDType));
-    Map_OutDType padding(padding_buf, 1, vss->cin, DynStride(1, 1));
-    padding = padding.Constant(1, vss->cin, OutDType(0));
-    PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
-        vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
-
-    // to save fetched block
-    int row_2d_fetch, column_2d_fetch, stride_fetch;
-    row_2d_fetch = vss->kh;
-    column_2d_fetch = vss->cin * vss->kw;
-    stride_fetch = vss->cin * row_3d_padded;
-    OutDType *fb_buf = (OutDType *)malloc(row_2d_fetch * column_2d_fetch * sizeof(OutDType));
-    Map_OutDType fetch_block(fb_buf, row_2d_fetch, column_2d_fetch, DynStride(column_2d_fetch, 1));
-
-    // reshape fetched block by using same buf
-    int row_block_reshaped, col_block_reshaped;
-    row_block_reshaped = vss->kw * vss->kh;
-    col_block_reshaped = vss->cin;
-    Map_OutDType block_reshaped(fb_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
-
-    // save (block * kernel), inner dtype
-    InDType *block_indtype_buf = (InDType *)malloc(row_block_reshaped * col_block_reshaped * sizeof(InDType));
-    Map_InDType block_muled(block_indtype_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
-
-    // output, flatten to 2d
-    int row_2d_out, column_2d_out;
-    row_2d_out = vss->hout * vss->wout;
-    column_2d_out = vss->cin;
-    Map_OutDType rd_2d(rd, row_2d_out, column_2d_out, DynStride(vss->ofm_c_stride, 1));
-
-    // internal result, one row, get rd_row_intype then convert to rd_row
-    OutDType *rd_row_buf = (OutDType *)malloc(column_2d_out * sizeof(OutDType));
-    Map_OutDType rd_row(rd_row_buf, 1, column_2d_out, DynStride(1, 1));
-    InDType *rd_row_intype_buf = (InDType *)malloc(column_2d_out * sizeof(InDType));
-    Map_InDType rd_row_intype(rd_row_intype_buf, 1, column_2d_out, DynStride(1, 1));
-
-    int row_valid, col_valid;
-    int start_row = 0;
-    int start_col = 0;
-    int rd_row_idx = 0;
-    OutDType *fetch_base = padded_buf;
-    while (1) {
-        // fetch next block and reshape
-        Map_OutDType fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
-        fetch_block = fetch;
-
-        // block * kernel
-        MATRIX_MUL_CONVERT(block_reshaped, kernel_2d, block_muled, row_block_reshaped, col_block_reshaped, InDType);
-
-        // acc and convert back to OutDType
-        MATRIX_ACC_DIMH_PARITY(block_muled, rd_row_intype, InDType, row_block_reshaped, col_block_reshaped);
-        MATRIX_CAST(rd_row_intype, rd_row, OutDType, 1, column_2d_out);
-
-        // get a row in output
-        rd_2d.row(rd_row_idx) = rd_row;
-
-        if (GLOBAL_DBG) {
-            std::cout << "output row index = " << rd_row_idx << std::endl;
-            std::cout << "current start point(" << start_row << "," << start_col << ")" << std::endl;
-        }
-
-        // move point
-        rd_row_idx++;
-        start_col += vss->sw;
-        if (start_col + vss->kw > row_3d_padded) {
-            start_col = 0;
-            start_row += vss->sh;
-            if (start_row + vss->kh > column_3d_padded)
-                break;
-        }
-        fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    if (GLOBAL_DBG){
-        cout << "rs1: \n" << rs1_2d << endl;
-        cout << "rs2: \n" << kernel_2d << endl;
-        cout << "rd: \n" << rd_2d << endl;
-    }
-    free(rd_row_intype_buf);
-    free(rd_row_buf);
-    free(block_indtype_buf);
-    free(fb_buf);
-    free(padding_buf);
-    free(padded_buf);
+    /*calculate the output shape*/
+    h = (in_h + pad_top + pad_bottom - kh + 1 + sk_h - 1) / sk_h;
+    w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
+    left_val = (OutDType *)malloc(h * w * okh * okw * in_c * sizeof(OutDType));
 
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
+            rs1_start = rs1;
+
+            for (ii = 0; ii < kh; ii++) {
+                for (jj = 0; jj < kw; jj++) {
+                    for (kk = 0; kk < in_c; kk++) {
+                        row = i * sk_h + ii;
+                        col = j * sk_w + jj;
+
+                        if (ii % dilation_h)
+                            continue;
+                        else {
+                            if (jj % dilation_w)
+                                continue;
+                            else {
+				int start_offset = ii/dilation_h * okw * in_c + jj/dilation_w * in_c + kk;
+				int rs1_offset = (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk;
+                                if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
+                                    *(start + start_offset) = *(rs1_start + rs1_offset);
+                                    val = *(rs1_start + rs1_offset);
+                                }
+                                else {
+                                    *(start + start_offset) = OutDType(0);
+                                    val =  OutDType(0);
+                                }
+                            }//jj % dilation_w
+                        }//ii % dilation_h
+                    }//kk
+                }//jj
+            }//ii
+        }//j
+    }//i
+
+    if (GLOBAL_DBG)
+        printf("h = %d w = %d out_c = %d\n", h, w, in_c);
+    assert(h == out_h && w == out_w);
+
+    /*calculate convolution*/
+    Map_OutDType left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_OutDType rd_matrix(rd, out_h * out_w, in_c, DynStride(out_stride, 1));
+    InDType odd, even;
+    InDType res_tmp;
+
+    //rd_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < in_c; j++) {
+            odd = InDType(0);
+            even = InDType(0);
+            for (k = 0; k < okh * okw; k++) {
+                if (k%2)
+                    odd = InDType::mulConvert(left_matrix(i, k*in_c+j), rs2_matrix(k, j)) + odd;
+                else
+                    even = InDType::mulConvert(left_matrix(i, k*in_c+j), rs2_matrix(k, j)) + even;
+            }
+            rd_matrix(i, j) = OutDType(odd+even);
+        }
+    }
+    if (GLOBAL_DBG) {
+        cout << "rd: " << rd_matrix << endl;
+    }
+
+    free(row_val);
+    free(col_val);
+    free(left_val);
     return 0;
 }
 
