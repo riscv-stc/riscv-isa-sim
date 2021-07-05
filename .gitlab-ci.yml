@@ -41,7 +41,7 @@ test:
 package:
   stage : package
   script:
-    - cd build && make install && cd -
+    - cd build && ../configure --with-isa=rv32imafcv --prefix=$PWD/../install && make -j`nproc` && make install && cd -
     - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
     - export LINK=latest
     - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
