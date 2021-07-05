@@ -45,6 +45,6 @@ p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
       }
     }
   }
-});
+}, true);
 
 wfi();

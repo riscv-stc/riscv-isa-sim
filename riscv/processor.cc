@@ -339,7 +339,7 @@ void processor_t::parse_isa_string(const char* str)
 void state_t::reset(reg_t max_isa)
 {
   bool async_status = false;
-  if (async_started)
+  if (async_started && (!pld))
     async_status = async_started;
 
   async_started = async_status;
@@ -500,6 +500,12 @@ void processor_t::enable_log_commits()
 
 void processor_t::reset()
 {
+  bool pld = state.pld;
+  if (pld) {
+    if (hwsync)
+      hwsync->reset(id);
+  }
+
   state.reset(max_isa);
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   if (mmu->is_target_big_endian())
@@ -2262,6 +2268,11 @@ void processor_t::run_async(std::function<void()> func) {
     async_function = func;
   }
   async_cond.notify_all();
+}
+
+void processor_t::run_async(std::function<void()> func, bool flag) {
+  state.pld = flag;
+  run_async(func);
 }
 
 bool processor_t::async_done() {
