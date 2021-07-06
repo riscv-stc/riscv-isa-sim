@@ -33,8 +33,8 @@ p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
   unsigned int core_id = p->get_csr(CSR_TID);
 
   if (core_map != 0 && (core_map & (1 << core_id))) {
-    copy_stride_rs1 = MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : (col * e_size);
-    copy_stride_rd = MTE_STRIDE_RD ? MTE_STRIDE_RD : (col * e_size);
+    copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
+    copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
     if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {
       memcpy(dst, src, col * row * e_size);
