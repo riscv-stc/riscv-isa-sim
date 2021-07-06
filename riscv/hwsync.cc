@@ -139,33 +139,21 @@ uint32_t hwsync_t::get_masks()
 }
 
 bool
-hwsync_t::sync_enter(unsigned core_id, uint32_t syncmap) {
+hwsync_t::enter(unsigned core_id) {
 #ifdef DEBUG
     std::cout << "core" << core_id << ": start sync" << std::endl;
 #endif
-    if (syncmap > (~masks[0])) {
-        trap_tcp_invalid_param();
-    }
 
     if (shm_start) {
         pthread_mutex_lock(pmutex_sync);
         *req_sync &= ~(1 << core_id);
 
-        if (syncmap == 0) {
-            for (int i = 0; i < group_count; i++) {
-                if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
-                    // all enter, clear enter requests
-                    *req_sync |= ~masks[i];
-                    pthread_cond_broadcast(pcond_sync);
-                    break;
-                }
-            }
-        }
-        else {
-            if ((*req_sync | ~syncmap) == ~syncmap) {
+        for (int i = 0; i < group_count; i++) {
+            if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
                 // all enter, clear enter requests
-                *req_sync |= syncmap;
+                *req_sync |= ~masks[i];
                 pthread_cond_broadcast(pcond_sync);
+                break;
             }
         }
 
@@ -180,21 +168,13 @@ hwsync_t::sync_enter(unsigned core_id, uint32_t syncmap) {
     {
         std::unique_lock<std::mutex> lock(mutex_sync);
         *req_sync &= ~(1 << core_id);
-        if (syncmap == 0) {
-            for (int i=0; i< group_count; i++) {
-                if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
-                    // all enter, clear enter requests
-                    *req_sync |= ~masks[i];
-                    cond_sync.notify_all();
-                    break;
-                }
-            }
-        }
-        else {
-            if ((*req_sync | ~syncmap) == ~syncmap) {
+
+        for (int i=0; i< group_count; i++) {
+            if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
                 // all enter, clear enter requests
-                *req_sync |= syncmap;
+                *req_sync |= ~masks[i];
                 cond_sync.notify_all();
+                break;
             }
         }
 
@@ -221,23 +201,12 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
         pthread_mutex_lock(pmutex_pld);
         *req_pld &= ~(1 << core_id);
 
-        if (coremap == 0) {
-            for (int i = 0; i < group_count; i++) {
-                if ((*req_pld | masks[i]) == masks[i] && ~masks[i] != 0) {
-                    // all enter, clear enter requests
-                    *req_pld |=  ~masks[i];
-                    pthread_cond_broadcast(pcond_pld);
-                    break;
-                }
-            }
+        if ((*req_pld | ~coremap) == ~coremap) {
+            // all enter, clear enter requests
+            *req_pld |= coremap;
+            pthread_cond_broadcast(pcond_pld);
         }
-        else {
-            if ((*req_pld | ~coremap) == ~coremap) {
-                // all enter, clear enter requests
-                *req_pld |= coremap;
-                pthread_cond_broadcast(pcond_pld);
-            }
-        }
+
         pthread_mutex_unlock(pmutex_pld);
 
         pthread_mutex_lock(pmutex_pld);
@@ -250,22 +219,10 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
         std::unique_lock<std::mutex> lock(mutex_pld);
         *req_pld &= ~(1 << core_id);
 
-        if (coremap == 0) {
-            for (int i = 0; i < group_count; i++) {
-                if ((*req_pld | masks[i]) == masks[i] && ~masks[i] != 0) {
-                    // all enter, clear enter requests
-                    *req_pld |= ~masks[i];
-                    cond_pld.notify_all();
-                    break;
-                }
-            }
-        }
-        else {
-             if ((*req_pld | ~coremap) == ~coremap) {
-                // all enter, clear enter requests
-                *req_pld |= coremap;
-                cond_pld.notify_all();
-            }
+        if ((*req_pld | ~coremap) == ~coremap) {
+            // all enter, clear enter requests
+            *req_pld |= coremap;
+            cond_pld.notify_all();
         }
 
         cond_pld.wait(lock, [&]{ return (*req_pld & 1 << core_id) != 0; });

@@ -2248,8 +2248,8 @@ uint32_t processor_t::get_sync_group()
 {
   return ~(hwsync->get_masks());
 }
-void processor_t::sync(uint32_t syncmap) {
-  hwsync->sync_enter(id, syncmap);
+void processor_t::sync() {
+  hwsync->enter(id);
 }
 
 void processor_t::pld(uint32_t coremap) {
