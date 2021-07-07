@@ -722,7 +722,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -745,7 +745,12 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
         }
 
         for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = vector_dim0.array() - rs1_matrix.row(row).array();
+            for (int column = 0; column < rs1_matrix.cols(); column++) {
+                if (isnan(rs1_matrix(row, column)) && isnan(vector_dim0(0, column)))
+                    rd_matrix(row, column) = rs1_matrix(row, column);
+                else
+                    rd_matrix(row, column) = vector_dim0(0, column) - rs1_matrix(row, column);
+            }
         break;
     case 1:
         if (GLOBAL_DBG) {
@@ -754,16 +759,18 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
             cout << "rs2:" << endl << vector_dim1 << endl;
         }
 
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = vector_dim1.array() - rs1_matrix.col(col).array();
+        
+        for (int row = 0; row < rs1_matrix.rows(); row++)
+            for (int column = 0; column < rs1_matrix.cols(); column++) {
+                if (isnan(rs1_matrix(row, column)) && isnan(vector_dim1(row, 0)))
+                    rd_matrix(row, column) = rs1_matrix(row, column);
+                else
+                    rd_matrix(row, column) = vector_dim1(row, 0) - rs1_matrix(row, column);
+            }
         break;
     default:
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
-    }
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
     }
 
     if (GLOBAL_DBG)
@@ -807,7 +814,7 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -829,11 +836,14 @@ int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool rel
      */
     Matrix_DType const_matrix(ss->shape1_row, ss->shape1_column);
     const_matrix = const_matrix.Constant(ss->shape1_row, ss->shape1_column, rs2);
-    rd_matrix =  const_matrix - rs1_matrix;
 
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
+    for (int row = 0; row < rs1_matrix.rows(); row++)
+        for (int column = 0; column < rs1_matrix.cols(); column++) {
+            if (isnan(rs1_matrix(row, column)) && isnan(const_matrix(row, column)))
+                rd_matrix(row, column) = rs1_matrix(row, column);
+            else
+                rd_matrix(row, column) =  const_matrix(row, column) - rs1_matrix(row, column);
+        }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
