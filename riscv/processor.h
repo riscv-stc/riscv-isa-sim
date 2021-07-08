@@ -269,7 +269,7 @@ struct state_t
   uint32_t mte_data_type;
   uint32_t dmae_data_type;
   uint32_t dmae_shape_1;
-  uint32_t dmae_shape_2;
+  uint32_t dmae_shape_2 = 1; //default z=1
   uint32_t dmae_stride_s1;
   uint32_t dmae_stride_s2;
   uint32_t dmae_stride_d1;
