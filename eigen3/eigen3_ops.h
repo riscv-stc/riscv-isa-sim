@@ -468,11 +468,11 @@ struct DmaeShapeStride
     unsigned short shape_y;
     unsigned short shape_z;
 
-    unsigned short stride_s_x;
-    unsigned short stride_s_y;
+    unsigned int stride_s_x;
+    unsigned int stride_s_y;
 
-    unsigned short stride_d_x;
-    unsigned short stride_d_y;
+    unsigned int stride_d_x;
+    unsigned int stride_d_y;
 
 };
 

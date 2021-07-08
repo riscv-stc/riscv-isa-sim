@@ -5930,12 +5930,12 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
-    uint16_t copy_stride_s_x = 0;
-    uint16_t copy_stride_s_y = 0;
-    uint16_t copy_stride_d_x = 0;
-    uint16_t copy_stride_d_y = 0;
-    uint16_t copy_s_xy_size = 0;
-    uint16_t copy_d_xy_size = 0;
+    uint64_t copy_stride_s_x = 0;
+    uint64_t copy_stride_s_y = 0;
+    uint64_t copy_stride_d_x = 0;
+    uint64_t copy_stride_d_y = 0;
+    uint64_t copy_s_xy_size = 0;
+    uint64_t copy_d_xy_size = 0;
     uint8_t e_size = 2;
     if (GLOBAL_DBG) {
         cout << "data type=" << data_type << endl;

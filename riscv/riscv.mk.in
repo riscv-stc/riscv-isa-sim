@@ -905,6 +905,9 @@ riscv_insn_stc = \
 	sync_dmae \
 	sync_dmae_r \
 	sync_dmae_w \
+	sync_mte \
+	sync_mte_r \
+	sync_mte_w \
     veacc_m \
 	veadd_mf \
 	veadd_mm \
