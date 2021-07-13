@@ -29,7 +29,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      0
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -2551,8 +2551,8 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     //rd_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < in_c; j++) {
-            odd = InDType(0);
-            even = InDType(0);
+            odd.x = 0x80000000;
+            even.x = 0x80000000;
             for (k = 0; k < okh * okw; k++) {
                 if (k%2)
                     odd = InDType::mulConvert(left_matrix(i, k*in_c+j), rs2_matrix(k, j)) + odd;
