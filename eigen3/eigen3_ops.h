@@ -2321,108 +2321,136 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 template <typename OutDType>
 int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool relu)
 {
-    DEFINE_MAP_DTYPE(OutDType)
+    int pad_top, pad_bottom, pad_left, pad_right;
+    int kw, kh, okw, okh, k_stride, sk_h, sk_w;
+    int in_w, in_h, in_c, in_stride;
+    int out_w, out_h, out_stride;
+    int w, h, c;
+    int dilation_h, dilation_w;
+    int i, j, k, ii, jj, kk, index_cin, counter;
+    int row, col;
+    OutDType *rs1_start;
+    OutDType *left_val, *row_val, *col_val;
+    OutDType *start;
+    OutDType val;
 
-    //param check
-    assert((vss->kw * vss->kh <= 64));
-    assert((vss->kw > 0) && (vss->kh) > 0);
-    assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
-    assert((vss->wout > 0) && (vss->hout > 0));
+    //get the padding
+    pad_top = vss->n_pad_u;
+    pad_bottom = vss->n_pad_d;
+    pad_left = vss->n_pad_l;
+    pad_right = vss->n_pad_r;
+
+    //get the input shape
+    in_w = vss->column;
+    in_h = vss->row;
+    in_c = vss->cin;
+    assert(in_w > 0 && in_h > 0 && in_c > 0);
+    in_stride = vss->ifm_c_stride;
+    in_stride = in_stride > 0 ? in_stride : in_c;
+
+    //get the output shape
+    out_w = vss->wout;
+    out_h = vss->hout;
+    assert(out_w > 0 && out_h > 0);
+    out_stride = vss->ofm_c_stride;
+    out_stride = out_stride > 0 ? out_stride : in_c;
+
+    //get the kernel shape
+    kw = vss->kw;
+    kh = vss->kh;
+    sk_h = vss->sh;
+    sk_w = vss->sw == 0? vss->sh: vss->sw;
+    assert((kw > 0) && (kh > 0) && (vss->kw * vss->kh <= 64));
+    assert(sk_h >0 && sk_w > 0);
+    k_stride = vss->k_c_stride;
+    k_stride = k_stride > 0 ? k_stride : in_c;
+
+    DEFINE_MAP_DTYPE(OutDType)
 
     VME_SHAPE_STRIDE_INFO(vss);
 
-    // rs1 source
-    int row_2d, column_2d;
-    row_2d = vss->row * vss->column;
-    column_2d = vss->cin;
-    Map_OutDType rs1_2d(rs1, row_2d, column_2d, DynStride(vss->ifm_c_stride, 1));
 
-    // rs1 with padding
-    int row_2d_padded, column_2d_padded, row_3d_padded, column_3d_padded;
-    row_3d_padded = vss->row + vss->n_pad_l + vss->n_pad_r;
-    column_3d_padded = vss->column + vss->n_pad_u + vss->n_pad_d;
-    row_2d_padded = row_3d_padded * column_3d_padded;
-    column_2d_padded = vss->cin;
-    OutDType *padded_buf = (OutDType *)malloc(row_2d_padded * column_2d_padded * sizeof(OutDType));
-    Map_OutDType rs1_2d_padded(padded_buf, row_2d_padded, column_2d_padded, DynStride(vss->cin, 1));
+    h = kh;
+    w = kw;
+    okh = kh;
+    okw = kw;
+    kh = h;
+    kw = w;
 
-    // zero padding
-    OutDType *padding_buf = (OutDType *)malloc(vss->cin * sizeof(OutDType));
-    Map_OutDType padding(padding_buf, 1, vss->cin, DynStride(1, 1));
-    padding = padding.Constant(1, vss->cin, OutDType(0));
-    PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
-        vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
+    /*calculate the input shape*/
+    Map_OutDType rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
-    // to save fetched block
-    int row_2d_fetch, column_2d_fetch, stride_fetch;
-    row_2d_fetch = vss->kh;
-    column_2d_fetch = vss->cin * vss->kw;
-    stride_fetch = vss->cin * row_3d_padded;
-    OutDType *fb_buf = (OutDType *)malloc(row_2d_fetch * column_2d_fetch * sizeof(OutDType));
-    Map_OutDType fetch_block(fb_buf, row_2d_fetch, column_2d_fetch, DynStride(column_2d_fetch, 1));
+    if (GLOBAL_DBG) {
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
 
-    // reshape fetched block by using same buf
-    int row_block_reshaped, col_block_reshaped;
-    row_block_reshaped = vss->kw * vss->kh;
-    col_block_reshaped = vss->cin;
-    Map_OutDType block_reshaped(fb_buf, row_block_reshaped, col_block_reshaped, DynStride(col_block_reshaped, 1));
+    /*calculate the output shape*/
+    h = (in_h + pad_top + pad_bottom - kh + 1 + sk_h - 1) / sk_h;
+    w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
+    left_val = (OutDType *)malloc(h * w * okh * okw * in_c * sizeof(OutDType));
 
-    // output, flatten to 2d
-    int row_2d_out, column_2d_out;
-    row_2d_out = vss->hout * vss->wout;
-    column_2d_out = vss->cin;
-    Map_OutDType rd_2d(rd, row_2d_out, column_2d_out, DynStride(vss->ofm_c_stride, 1));
+    for (i = 0; i < h; i++) {
+        for (j = 0; j < w; j++) {
+            start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
+            rs1_start = rs1;
 
-    // internal result, one row, get rd_row_intype then convert to rd_row
-    OutDType *rd_row_buf = (OutDType *)malloc(column_2d_out * sizeof(OutDType));
-    Map_OutDType rd_row(rd_row_buf, 1, column_2d_out, DynStride(1, 1));
+            for (ii = 0; ii < kh; ii++) {
+                for (jj = 0; jj < kw; jj++) {
+                    for (kk = 0; kk < in_c; kk++) {
+                        row = i * sk_h + ii;
+                        col = j * sk_w + jj;
+				        int start_offset = ii * okw * in_c + jj * in_c + kk;
+				        int rs1_offset = (row - pad_top) * in_w * in_stride + (col - pad_left) * in_stride + kk;
+                        if (row >= pad_top && row < pad_top + in_h && col >= pad_left && col < pad_left + in_w) {
+                            *(start + start_offset) = *(rs1_start + rs1_offset);
+                            val = *(rs1_start + rs1_offset);
+                        } else {
+                            *(start + start_offset) = OutDType(0);
+                            val =  OutDType(0);
+                        }
+                    }//kk
+                }//jj
+            }//ii
+        }//j
+    }//i
 
-    int start_row = 0;
-    int start_col = 0;
-    int rd_row_idx = 0;
-    OutDType *recip_tab = (OutDType *)recip_table_half;
-    OutDType *fetch_base = padded_buf;
-    while (1) {
-        // fetch next block and reshape
-        Map_OutDType fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
-        fetch_block = fetch;
+    if (GLOBAL_DBG)
+        printf("h = %d w = %d out_c = %d\n", h, w, in_c);
+    assert(h == out_h && w == out_w);
 
-        // get a row in output
-        rd_2d.row(rd_row_idx) = block_reshaped.colwise().maxCoeff();
+    /*calculate convolution*/
+    Map_OutDType left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_OutDType rd_matrix(rd, out_h * out_w, in_c, DynStride(out_stride, 1));
+    OutDType res;
 
-        if (GLOBAL_DBG) {
-            for (int ii=0; ii < col_block_reshaped; ii++) {
-                cout << block_reshaped.col(ii).transpose() << endl;
-                cout << "res" << rd_row_idx*col_block_reshaped + ii << ": " << rd_2d(rd_row_idx, ii) << endl;
+    //rd_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < out_h * out_w; i++) {
+        for (j = 0; j < in_c; j++) {
+            counter=0;
+            for (k = 0; k < okh; k++) {
+                if (((i / out_w) * sk_h + k) < pad_top) continue;
+                if (((i / out_w) * sk_h + k) >= (in_h + pad_top)) continue;
+                for (ii = 0; ii < okw; ii++) {
+                    if ((((i % out_w) * sk_w) + ii) < pad_left) continue;
+                    if ((((i % out_w) * sk_w) + ii) >= (in_w + pad_left)) continue;
+                    if (counter == 0) 
+                        res = left_matrix(i, (okw*k+ii)*in_c+j);
+                    if (res < left_matrix(i, (okw*k+ii)*in_c+j))
+                        res = left_matrix(i, (okw*k+ii)*in_c+j);
+                    counter++;
+                }
             }
+            rd_matrix(i, j) = res;
         }
-
-        // move point
-        rd_row_idx++;
-        start_col += vss->sw;
-        if (start_col + vss->kw > row_3d_padded) {
-            start_col = 0;
-            start_row += vss->sh;
-            if (start_row + vss->kh > column_3d_padded)
-                break;
-        }
-        fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+        
+    }
+    if (GLOBAL_DBG) {
+        cout << "rd: " << rd_matrix << endl;
     }
 
-    if (GLOBAL_DBG){
-        cout << "rs1: \n" << rs1_2d << endl;
-        cout << "rd: \n" << rd_2d << endl;
-    }
-
-    free(rd_row_buf);
-    free(fb_buf);
-    free(padding_buf);
-    free(padded_buf);
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_2d, rd_2d, row_2d_out, column_2d_out, OutDType, vss->relu_threshhold);
-    }
-
+    free(row_val);
+    free(col_val);
+    free(left_val);
     return 0;
 }
 
