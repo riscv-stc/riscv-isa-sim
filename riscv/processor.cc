@@ -1264,7 +1264,8 @@ processor_t::check_intersection(unsigned long addr1, unsigned size1, bool isLoad
     req_list.emplace_back(addr2, size2, isLoad2);
     req_list.emplace_back(addr3, size3, isLoad3);
     if (isIntersects(req_list))
-      cout << "Warning: Address correlation error" << endl;
+      fprintf(stderr, "Warning: core %3d: epc 0x%016" PRIx64 ", Address correlation error!\n", 
+              id, state.pc);
 
     cpuRequests.push_front(req_list);
 
