@@ -1484,7 +1484,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for pld instruction
 #define check_traps_pld(esize) ({ \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
         check_tcp_data_type \
         check_tcp_access_start_l1(RD) \
         check_tcp_access_start_llb_pld(RS1) \
@@ -1494,7 +1493,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for mov.l1.llb instruction
 #define check_traps_mov_l1_llb(esize) ({ \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
         check_tcp_data_type \
         check_tcp_access_start_llb_mov(RS1) \
         check_tcp_access_start_l1(RD) \
@@ -1504,7 +1502,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for mov.llb.l instruction
 #define check_traps_mov_llb_l1(esize) ({ \
-        check_tcp_invalid_param(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW, MTE_STRIDE_RS1) \
         check_tcp_data_type \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_llb_mov(RD) \
