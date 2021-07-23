@@ -29,7 +29,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      1
+#define GLOBAL_DBG      0
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
