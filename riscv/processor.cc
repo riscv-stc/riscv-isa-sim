@@ -1499,6 +1499,9 @@ void processor_t::set_csr(int which, reg_t val)
       dirty_vs_state;
       VU.vxrm = val & 0x3ul;
       break;
+    case CSR_MCACHE_CTL:
+      break;
+
   }
 
 #if defined(RISCV_ENABLE_COMMITLOG)
@@ -2121,6 +2124,9 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret(VU.vlenb);
+    case CSR_MCACHE_CTL:
+      return 0;
+
   }
 
 #undef ret
