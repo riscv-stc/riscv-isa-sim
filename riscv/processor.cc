@@ -342,15 +342,74 @@ void state_t::reset(reg_t max_isa)
   if (async_started && (!pld))
     async_status = async_started;
 
-  memset(this, 0, sizeof(*this));
   async_started = async_status;
 
   pc = DEFAULT_RSTVEC;
+  XPR.reset();
+  FPR.reset();
+
   prv = PRV_M;
+  v = false;
   misa = max_isa;
+  mstatus = 0;
+  mepc = 0;
+  mtval = 0;
+  mscratch = 0;
+  mtvec = 0;
+  mcause = 0;
+  minstret = 0;
+  mie = 0;
+  mip = 0;
+  medeleg = 0;
+  mideleg = 0;
+  mcounteren = 0;
+  scounteren = 0;
+  sepc = 0;
+  stval = 0;
+  sscratch = 0;
+  stvec = 0;
+  satp = 0;
+  scause = 0;
+  mtval2 = 0;
+  mtinst = 0;
+  hstatus = 0;
+  hideleg = 0;
+  hedeleg = 0;
+  hcounteren = 0;
+  htval = 0;
+  htinst = 0;
+  hgatp = 0;
+  vsstatus = 0;
+  vstvec = 0;
+  vsscratch = 0;
+  vsepc = 0;
+  vscause = 0;
+  vstval = 0;
+  vsatp = 0;
+  vme_data_type = 0;
+  vme_Cout = 0;
+  vme_relu_threshhold = 0;
+
+  dpc = 0;
+  dscratch0 = 0;
+  dscratch1 = 0;
+  memset(&this->dcsr, 0, sizeof(this->dcsr));
+
+  tselect = 0;
   memset(this->mcontrol, 0, sizeof(this->mcontrol));
   for (auto &item : mcontrol)
     item.type = 2;
+
+  memset(this->tdata2, 0, sizeof(this->tdata2));
+  debug_mode = false;
+  single_step = STEP_NONE;
+
+  memset(this->pmpcfg, 0, sizeof(this->pmpcfg));
+  memset(this->pmpaddr, 0, sizeof(this->pmpaddr));
+
+  fflags = 0;
+  frm = 0;
+  serialized = false;
 
 #ifdef RISCV_ENABLE_COMMITLOG
   log_reg_write.clear();
