@@ -274,6 +274,7 @@ struct state_t
   uint32_t dmae_stride_s2;
   uint32_t dmae_stride_d1;
   uint32_t dmae_stride_d2;
+  uint32_t dmae_ctrl;
   uint32_t tmisc;
   uint32_t tcsr;
   uint32_t dma_shape_row;

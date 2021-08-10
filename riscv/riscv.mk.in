@@ -913,6 +913,7 @@ riscv_insn_stc = \
 	veadd_mm \
     veadd_relu_mm \
     veadd_relu_mf \
+	veadd_relu_mv \
 	veadd_mv \
     vediv_mf \
     vediv_mm \
@@ -944,6 +945,7 @@ riscv_insn_stc = \
     veemul_relu_mf \
 	veemul_mm \
     veemul_relu_mm \
+	veemul_relu_mv \
     veemul_x8_hf_mf \
     veemul_xu8_hf_mf \
     veemul_x8_bf_mf \

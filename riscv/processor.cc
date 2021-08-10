@@ -1170,6 +1170,9 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_DMAE_STRIDE_D2:
       state.dmae_stride_d2 = val;
       break;
+    case CSR_DMAE_CTRL:
+      state.dmae_ctrl = val;
+      break;
     case CSR_MINSTRET:
     case CSR_MCYCLE:
       if (xlen == 32)
@@ -1846,6 +1849,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.dmae_stride_d2;
+    case CSR_DMAE_CTRL:
+      if(!supports_extension('V'))
+        break;
+      return state.dmae_ctrl;
     case CSR_MICM_CFG:
     case CSR_MDCM_CFG:
     case CSR_MCCTLBEGINADDR:

@@ -767,6 +767,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(veadd_mm);
   DEFINE_RTYPE(veadd_relu_mm);
   DEFINE_R2TYPE(veadd_mv);
+  DEFINE_R2TYPE(veadd_relu_mv);
   DEFINE_CV2TYPE(vediv_mf);
   DEFINE_RTYPE(vediv_mm);
   DEFINE_R2TYPE(vediv_mv);
@@ -799,6 +800,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(veemul_mm);
   DEFINE_RTYPE(veemul_relu_mm);
   DEFINE_R2TYPE(veemul_mv);
+  DEFINE_R2TYPE(veemul_relu_mv);
   DEFINE_R2TYPE(velkrelu_mv);
   DEFINE_CV2TYPE(velkrelu_mf);
   DEFINE_RTYPE(velut_m);
