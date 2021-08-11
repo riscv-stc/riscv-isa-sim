@@ -805,10 +805,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_CV2TYPE(velkrelu_mf);
   DEFINE_RTYPE(velut_m);
   DEFINE_R1TYPE(vemax_m);
+  DEFINE_R1TYPE(veargmax_m);
   DEFINE_RTYPE(vemax_mm);
   DEFINE_CV2TYPE(vemax_mf);
   DEFINE_R2TYPE(vemax_mv);
   DEFINE_R1TYPE(vemin_m);
+  DEFINE_R1TYPE(veargmin_m);
   DEFINE_RTYPE(vemin_mm);
   DEFINE_CV2TYPE(vemin_mf);
   DEFINE_R2TYPE(vemin_mv);

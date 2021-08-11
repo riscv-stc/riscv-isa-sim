@@ -1799,6 +1799,175 @@ int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
 }
 
 template <typename DType>
+int veargmax_m(DType *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE(DType)
+    DEFINE_MAP_DTYPE(uint16_t)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    Index maxRow, maxCol;
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    switch (dim) {
+    case 0:
+        for (uint32_t i = 0; i < ss->shape1_column; i++) {
+            rs1_matrix.col(i).maxCoeff(&maxRow, &maxCol);
+            rd_col_max(0, i) = maxRow;
+        }
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+    case 1:
+        for (uint32_t i = 0; i < ss->shape1_row; i++) {
+            rs1_matrix.row(i).maxCoeff(&maxRow, &maxCol);
+            rd_row_max(i, 0) = maxCol;
+        }
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+template <typename DType>
+int veargmax_m(DType *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    Index maxRow, maxCol;
+    DType max, max1;
+    //rs1_matrix.maxCoeff(&maxRow, &maxCol);
+    max = rs1_matrix(0, 0);
+    maxRow = 0;
+    maxCol = 0;
+
+    for (uint32_t i = 0; i < ss->shape1_row; i++) {
+        for (uint32_t j = 0; j < ss->shape1_column; j++) {
+            max1 = rs1_matrix(i, j);
+            if (max < max1) {
+                max = max1;
+                maxRow = i;
+                maxCol = j;
+            }
+        }
+    }
+
+    *(uint32_t *)rd = maxCol << 16 | maxRow;
+
+    if (GLOBAL_DBG) {
+        std::cout << "max:" << max << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+
+    return 0;
+}
+
+template <typename DType>
+int veargmin_m(DType *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    DEFINE_MAP_DTYPE(DType)
+    DEFINE_MAP_DTYPE(uint16_t)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    Index minRow, minCol;
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    switch (dim) {
+    case 0:
+        for (uint32_t i = 0; i < ss->shape1_column; i++) {
+            rs1_matrix.col(i).minCoeff(&minRow, &minCol);
+            rd_col_max(0, i) = minRow;
+        }
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+    case 1:
+        for (uint32_t i = 0; i < ss->shape1_row; i++) {
+            rs1_matrix.row(i).minCoeff(&minRow, &minCol);
+            rd_row_max(i, 0) = minCol;
+        }
+
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+template <typename DType>
+int veargmin_m(DType *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    Index minRow, minCol;
+    //rs1_matrix.minCoeff(&minRow, &minCol);
+
+    DType min, min1;
+    min = rs1_matrix(0, 0);
+    minRow = 0;
+    minCol = 0;
+
+    for (uint32_t i = 0; i < ss->shape1_row; i++) {
+        for (uint32_t j = 0; j < ss->shape1_column; j++) {
+            min1 = rs1_matrix(i, j);
+            if (min > min1) {
+                min = min1;
+                minRow = i;
+                minCol = j;
+            }
+        }
+    }
+
+    *(uint32_t *)rd = minCol << 16 | minRow;
+
+    if (GLOBAL_DBG) {
+        std::cout << "min:" << min << std::endl;
+        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+
+    return 0;
+}
+
+template <typename DType>
 int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)

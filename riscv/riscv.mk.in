@@ -958,10 +958,12 @@ riscv_insn_stc = \
 	vemax_m \
 	vemax_mm \
 	vemax_mv \
+	veargmax_m \
 	vemin_mf \
 	vemin_m \
 	vemin_mm \
 	vemin_mv \
+	veargmin_m \
 	vesub_mf \
 	vesub_mm \
 	vesub_mv \
