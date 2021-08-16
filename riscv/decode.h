@@ -900,7 +900,8 @@ private:
 					 (x).shape2_row = SHAPE2_ROW; \
 					 (x).stride_rd = STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = STRIDE_RS1 ? STRIDE_RS1 / esize_in : SHAPE1_COLUMN; \
-					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN;})
+					 (x).stride_rs2 = STRIDE_RS2 ? STRIDE_RS2 / esize_in : SHAPE1_COLUMN; \
+           softfloat_roundingMode = STATE.frm;})
 
 #define bc_sst_fill(x, esize_in, esize_out) ({ \
                                          (x).shape1_column = BC_SHAPE1_COLUMN; \
@@ -909,7 +910,8 @@ private:
 					 (x).shape2_row = BC_SHAPE2_ROW; \
 					 (x).stride_rd = BC_STRIDE_RD / esize_out; \
 					 (x).stride_rs1 = BC_STRIDE_RS1 ? BC_STRIDE_RS1 / esize_in : BC_SHAPE1_COLUMN; \
-					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN;})
+					 (x).stride_rs2 = BC_STRIDE_RS2 ? BC_STRIDE_RS2 / esize_in : BC_SHAPE2_COLUMN; \
+           softfloat_roundingMode = STATE.frm;})
 
 #define conv_fill(x) ({(x).conv_fm_in = CONV_INFM_WH; \
 					 (x).conv_depth_in = CONV_DEPTH_IN; \
@@ -917,7 +919,8 @@ private:
 					 (x).conv_depth_out = CONV_DEPTH_OUT; \
 					 (x).conv_s_kernel = CONV_S_KERNEL; \
 					 (x).conv_kernel = CONV_KERNEL; \
-					 (x).conv_padding = CONV_PADDING;})
+					 (x).conv_padding = CONV_PADDING; \
+           softfloat_roundingMode = STATE.frm;})
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
