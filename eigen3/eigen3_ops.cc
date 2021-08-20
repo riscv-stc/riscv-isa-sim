@@ -5010,7 +5010,7 @@ int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -5040,7 +5040,7 @@ int CustomInsns::memin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     /* param check */
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
@@ -5060,7 +5060,7 @@ int CustomInsns::memin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
     /* param check */
     Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         float32_t res= rs1_matrix(i, 0);
@@ -5089,7 +5089,7 @@ int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -5117,7 +5117,7 @@ int CustomInsns::memax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         Bfloat16 res= rs1_matrix(i, 0);
@@ -5137,7 +5137,7 @@ int CustomInsns::memax_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
 
     Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         float32_t res= rs1_matrix(i, 0);
@@ -5167,7 +5167,7 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
 
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     if (debug) {
         SHAPE_STRIDE_INFO(ss);
@@ -5198,7 +5198,7 @@ int CustomInsns::meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
 
     Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         float32_t odd = i32_to_f32(0);
@@ -5222,7 +5222,7 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(1, 1));
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
         Float32 odd = Float32(0);
