@@ -180,14 +180,12 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   if (hwsync_masks[0] != 0) {
-    llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
-    bus.add_device(LLB_AXI0_BUFFER_START, llb);
-    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+    llb = new share_mem_t(LLB_TOTAL_BUFFER_SIZE, shm_llb_name, 0);
+    bus.add_device(LLB_AXI_BUFFER_START, llb);
   }
   else {
-    mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
-    bus.add_device(LLB_AXI0_BUFFER_START, llb);
-    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+    mem_t *llb = new mem_t(LLB_TOTAL_BUFFER_SIZE);
+    bus.add_device(LLB_AXI_BUFFER_START, llb);
   }
 
   make_dtb();
@@ -825,8 +823,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = bus.find_device(addr);
 
   if ((in_local_mem(addr, L1_BUFFER) ||
-   (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+   (addr >= LLB_AXI_BUFFER_START) && (addr < LLB_AXI_BUFFER_START + LLB_TOTAL_BUFFER_SIZE)) &&
     has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size())
@@ -849,8 +846,7 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
   if ((in_local_mem(addr, L1_BUFFER) ||
-    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+    (addr >= LLB_AXI_BUFFER_START) && (addr < LLB_AXI_BUFFER_START + LLB_TOTAL_BUFFER_SIZE)) &&
     has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size()) {

@@ -226,6 +226,9 @@
 #define LLB_BUFFER_SIZE 0x2800000
 #define LLB_BANK_BUFFER_SIZE 0xa00000
 
+#define LLB_AXI_BUFFER_START  LLB_AXI0_BUFFER_START
+#define LLB_TOTAL_BUFFER_SIZE (LLB_BUFFER_SIZE*2)
+
 #define GET_LLB_OFF(src, dst) do {                                                 \
     if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
         dst = src - LLB_AXI0_BUFFER_START;                                         \
