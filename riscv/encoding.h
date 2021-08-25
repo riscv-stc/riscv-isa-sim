@@ -222,9 +222,9 @@
 #define SYSDMA7_BASE       0xE7F00000
 
 #define LLB_AXI0_BUFFER_START 0xf8000000
-#define LLB_AXI1_BUFFER_START 0xfa000000
-#define LLB_BUFFER_SIZE 0x2000000
-#define LLB_BANK_BUFFER_SIZE 0x800000
+#define LLB_AXI1_BUFFER_START 0xfa800000
+#define LLB_BUFFER_SIZE 0x2800000
+#define LLB_BANK_BUFFER_SIZE 0xa00000
 
 #define GET_LLB_OFF(src, dst) do {                                                 \
     if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \

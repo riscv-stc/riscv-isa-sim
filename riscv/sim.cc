@@ -19,20 +19,22 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 
-//L1 buffer size adjust to 1.25M
-//im buffer size adjust to 256K
+//L1 buffer size adjust to 1.288M, 0xc0000000-0xc0148000
+//im buffer size adjust to 256K, 0xc0400000-0xc0440000
+//Index RAM size 80k, 0xc0500000-0xc0514000
 #define ddr_mem_start        (0x00000000)
 #define l1_buffer_start      (0xc0000000)
 #define l1_buffer_size       (0x00148000)
 #define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00040000)
 #define sp_buffer_start      (0xc0500000)
-#define sp_buffer_size       (0x00040000)
+#define sp_buffer_size       (0x00014000)
 #define SRAM_START           (0xc1000000)
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
 
-//llb size 0x2000000 =32MB
+//LLB0：0xf8000000~0xfa800000，LLB1:0xfa800000~0xf9400000
+//llb size 0x2800000 =40MB
 char *shm_l1_name = "L1";
 char *shm_llb_name = "LLB";
 
