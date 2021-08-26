@@ -29,11 +29,6 @@
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
 
-//ddr 3G -4G address size=1GB-8MB-128MB,
-//range is 0xc0800000 ~ 0xf8000000
-#define GLB_HIGHMEM_SIZE     (0x40000000 - 0x800000 - 0x8000000)
-#define GLB_HIGHMEM_BASE	   (0xc0000000 + 0x800000)
-
 //llb size 0x2000000 =32MB
 char *shm_l1_name = "L1";
 char *shm_llb_name = "LLB";
@@ -89,7 +84,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   core_reset_n = 0;
   pcie_driver = new pcie_driver_t(this, procs, bank_id);
-  //bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
+  bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
   // bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
 
   for (auto& x : mems) {
@@ -192,9 +187,6 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
 
-  //add 1G hight memory device
-  bus.add_device(GLB_HIGHMEM_BASE, new mem_t(GLB_HIGHMEM_SIZE));
-
   if (hwsync_masks[0] != 0) {
     llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
     bus.add_device(LLB_AXI0_BUFFER_START, llb);
@@ -256,8 +248,7 @@ void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) 
 
   // dump single memory range
   char fname[256];
-  if ((start >= l1_buffer_start && start + len < l1_buffer_start + l1_buffer_size) ||
-      (start >= im_buffer_start && (start + len) <= (im_buffer_start + im_buffer_size))) {
+  if (start >= l1_buffer_start && start + len < SRAM_START) {
     snprintf(fname, sizeof(fname), "%s/%s@%d.0x%lx_0x%lx.dat",
           dump_path.c_str(), prefix.c_str(), proc_id, start, len);
     dump_mem(fname, start, len, proc_id, false);
@@ -275,8 +266,6 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
   //check load address range is valid,just support dump ddr,
   // l1,llb and im, but can not overlap betwwen them.
   if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
-    ;
-  else if (addr >= GLB_HIGHMEM_BASE && (addr + len) <= (GLB_HIGHMEM_BASE + GLB_HIGHMEM_SIZE))
     ;
   else if (addr >= l1_buffer_start && (addr + len) <= (l1_buffer_start + l1_buffer_size))
     ;
@@ -385,8 +374,6 @@ void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, boo
   //check dump address range check,just support dump ddr,
   // l1,llb and im, but can not overlap betwwen them.
   if (addr >= ddr_mem_start && (addr + len) < l1_buffer_start)
-    ;
-  else if (addr >= GLB_HIGHMEM_BASE && (addr + len) <= (GLB_HIGHMEM_BASE + GLB_HIGHMEM_SIZE))
     ;
   else if (addr >= l1_buffer_start && (addr + len) <= (l1_buffer_start + l1_buffer_size))
     ;
@@ -538,8 +525,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       }
       auto start = std::stoul(match[1], nullptr, 16);
       auto len = std::stoul(match[2], nullptr, 16);
-      if ((start >= l1_buffer_start && start + len < l1_buffer_start + l1_buffer_size) ||
-        (start >= im_buffer_start && (start + len) <= (im_buffer_start + im_buffer_size))) {
+      if (start >= l1_buffer_start && start + len < SRAM_START) {
         // dump l1 address range
         for (auto i=0u; i< nprocs(); i++) {
           snprintf(fname, sizeof(fname),
