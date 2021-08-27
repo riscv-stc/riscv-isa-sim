@@ -13,11 +13,11 @@ uint8_t* src = (uint8_t*)MMU.get_phy_addr(RS1);
 uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));
 
 //src shape
-unsigned short col = MTE_SHAPE_COLUMN;
-unsigned short row = MTE_SHAPE_ROW; 
+uint16_t col = MTE_SHAPE_COLUMN;
+uint16_t row = MTE_SHAPE_ROW;
 
-unsigned short copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
-unsigned short copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
+uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
+uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
 if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {
     memcpy(dst, src, col * row * e_size);
