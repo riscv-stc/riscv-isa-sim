@@ -5962,26 +5962,26 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
         }
 
         copy_stride_s_x = (dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x) * e_size;
-        copy_stride_s_y = (dmae_ss->stride_s_y ? dmae_ss->stride_s_y : 0) * e_size;
+        copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y * e_size : shape_y * copy_stride_s_x;
         copy_stride_d_x = (dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x) * e_size;
-        copy_stride_d_y = (dmae_ss->stride_d_y ? dmae_ss->stride_d_y : 0) * e_size;
+        copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y * e_size : shape_y * copy_stride_d_x;
 
         if ((dmae_ss->stride_s_x | dmae_ss->stride_s_y | dmae_ss->stride_d_x | dmae_ss->stride_d_y) == 0) {
             memcpy(dst, src, shape_x * shape_y * shape_z * e_size);
         }
         else {
-            for (int j = 0; j < shape_z; j++) { //z
-                for (int i = 0; i < shape_y; i++) //y
-                    memcpy(dst + i * copy_stride_d_x + j * copy_stride_d_y, src + i * copy_stride_s_x + j * copy_stride_s_y, shape_x * e_size);
+            for (int i = 0; i < shape_z; i++) { //z
+                for (int j = 0; j < shape_y; j++) //y
+                    memcpy(dst + j * copy_stride_d_x + i * copy_stride_d_y, src + j * copy_stride_s_x + i * copy_stride_s_y, shape_x * e_size);
             }
         }
     } else {
         switch (data_type) {
             case 0x2: { //half->float32_t
                 copy_stride_s_x = dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x;
-                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y;
+                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y * copy_stride_s_x;
                 copy_stride_d_x = dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x;
-                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
+                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y * copy_stride_d_x;
 
                 float16_t *src_fp16 = (float16_t*)src;
                 float32_t *dst_fp32 = (float32_t*)dst;
@@ -5996,9 +5996,9 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
             break;
             case 0x102: { //Bfloat16->Float32
                 copy_stride_s_x = dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x;
-                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y;
+                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y * copy_stride_s_x;
                 copy_stride_d_x = dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x;
-                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
+                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y * copy_stride_d_x;
                 bfloat16_t *src_bf16 = (bfloat16_t*)src;
                 float32_t *dst_fp32 = (float32_t*)dst;
 
@@ -6012,9 +6012,9 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
             break;
             case 0x201: { //Float32->Bfloat16
                 copy_stride_s_x = dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x;
-                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y;
+                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y * copy_stride_s_x;
                 copy_stride_d_x = dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x;
-                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
+                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y * copy_stride_d_x;
                 float32_t *src_f32 = (float32_t*)src;
                 bfloat16_t *dst_bf16 = (bfloat16_t*)dst;
 
@@ -6028,9 +6028,9 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
             break;
             case 0x200: { //Float32->half
                 copy_stride_s_x = dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x;
-                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y;
+                copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y : shape_y * copy_stride_s_x;
                 copy_stride_d_x = dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x;
-                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y;
+                copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y : shape_y * copy_stride_d_x;
                 float32_t *src_f32 = (float32_t*)src;
                 float16_t *dst_fp16 = (float16_t*)dst;
 
