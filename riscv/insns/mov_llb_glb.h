@@ -1,4 +1,8 @@
 
+DMAE_DTYPE_DECODING_TO_ESIZE();
+
+check_trap_mov_llb_glb(out_esize);
+
 uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RS1));
 uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));
 

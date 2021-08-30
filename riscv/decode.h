@@ -1509,6 +1509,43 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_tcp_access_end_llb(RD + (MTE_STRIDE_RD ? MTE_STRIDE_RD * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
 })
 
+//check trap mov.l1.glb
+#define check_trap_mov_l1_glb(esize)({ \
+        check_tcp_access_start_l1(RD) \
+        check_tcp_access_end_l1(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * esize) \
+})
+
+//check trap mov.glb.l1
+#define check_trap_mov_glb_l1(esize)({ \
+        check_tcp_access_start_l1(RS1) \
+        check_tcp_access_end_l1(RS1 + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * esize) \
+})
+
+//check trap mov.llb.glb
+#define check_trap_mov_llb_glb(esize) ({ \
+  check_tcp_access_start_llb_mov(RD) \
+  check_tcp_access_end_llb(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * esize) \
+})
+
+//check trap mov.glb.llb
+#define check_trap_mov_glb_llb(esize) ({ \
+  check_tcp_access_start_llb_mov(RS1) \
+  check_tcp_access_end_llb(RS1 + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * esize) \
+})
+
+//check trap mov.llb.llb
+#define check_trap_mov_llb_llb(in_esize, out_esize) ({ \
+  check_tcp_access_start_llb_mov(RS1) \
+  check_tcp_access_end_llb(RS1 + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * in_esize) \
+  check_tcp_access_start_llb_mov(RD) \
+  check_tcp_access_end_llb(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
+            (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : 0)) * DMAE_SHAPE_Z * out_esize) \
+})
 
 //
 // vector: loop header and end helper
@@ -3328,66 +3365,50 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         throw trap_illegal_instruction(insn.bits()); \
   }
 
-#define DMAE_DTYPE_DECODING_TO_TYPE(...) \
+#define DMAE_DTYPE_DECODING_TO_ESIZE() \
+  uint8_t in_esize = 2; \
+  uint8_t out_esize = 2; \
   switch (DMAE_DATA_TYPE) { \
     case 0x0: {\
-      using dtype_vd = half; \
-      using dtype_vs1 = half; \
-      using dtype_lut = uint16_t; \
-       __VA_ARGS__ \
+      in_esize = 2; \
+      out_esize = 2; \
     } \
       break; \
     case 0x101: {\
-      using dtype_vd = Bfloat16; \
-      using dtype_vs1 = Bfloat16; \
-      using dtype_lut = uint16_t; \
-      __VA_ARGS__ \
+      in_esize = 2; \
+      out_esize = 2; \
     } \
       break; \
     case 0x202: {\
-      using dtype_vd = Float32; \
-      using dtype_vs1 = Float32; \
-      using dtype_lut = uint32_t; \
-      __VA_ARGS__ \
+      in_esize = 4; \
+      out_esize = 4; \
     } \
       break; \
     case 0x303: {\
-      using dtype_vd = int8_t; \
-      using dtype_vs1 = int8_t; \
-      using dtype_lut = int8_t; \
-      __VA_ARGS__ \
+      in_esize = 1; \
+      out_esize = 1; \
     } \
       break; \
     case 0x2: {\
-      using dtype_vd = Float32; \
-      using dtype_vs1 = half; \
-      using dtype_lut = uint16_t; \
-      __VA_ARGS__ \
+      in_esize = 2; \
+      out_esize = 4; \
     } \
       break; \
     case 0x102: {\
-      using dtype_vd = Float32; \
-      using dtype_vs1 = Bfloat16; \
-      using dtype_lut = uint16_t; \
-      __VA_ARGS__ \
+      in_esize = 2; \
+      out_esize = 4; \
     } \
       break; \
     case 0x201: {\
-      using dtype_vd = Bfloat16; \
-      using dtype_vs1 = Float32; \
-      using dtype_lut = uint32_t; \
-      __VA_ARGS__ \
+      in_esize = 4; \
+      out_esize = 2; \
     } \
       break; \
     case 0x200: {\
-      using dtype_vd = half; \
-      using dtype_vs1 = Float32; \
-      using dtype_lut = uint32_t; \
-      __VA_ARGS__ \
+      in_esize = 4; \
+      out_esize = 2; \
     } \
       break; \
-    default: \
-        throw trap_illegal_instruction(insn.bits()); \
   }
 
 #endif
