@@ -1512,39 +1512,39 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 //check trap mov.l1.glb
 #define check_trap_mov_l1_glb(esize)({ \
         check_tcp_access_start_l1(RD) \
-        check_tcp_access_end_l1(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-          (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * esize) \
+        check_tcp_access_end_l1(RD + (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : \
+          (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * esize) \
 })
 
 //check trap mov.glb.l1
 #define check_trap_mov_glb_l1(esize)({ \
         check_tcp_access_start_l1(RS1) \
-        check_tcp_access_end_l1(RS1 + ((DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-          (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * esize) \
+        check_tcp_access_end_l1(RS1 + (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : \
+          (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * esize) \
 })
 
 //check trap mov.llb.glb
 #define check_trap_mov_llb_glb(esize) ({ \
   check_tcp_access_start_llb_mov(RD) \
-  check_tcp_access_end_llb(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-    (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * esize) \
+  check_tcp_access_end_llb(RD + (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : \
+    (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * esize) \
 })
 
 //check trap mov.glb.llb
 #define check_trap_mov_glb_llb(esize) ({ \
   check_tcp_access_start_llb_mov(RS1) \
-  check_tcp_access_end_llb(RS1 + ((DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-    (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * esize) \
+  check_tcp_access_end_llb(RS1 + (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : \
+    (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * esize) \
 })
 
 //check trap mov.llb.llb
 #define check_trap_mov_llb_llb(in_esize, out_esize) ({ \
   check_tcp_access_start_llb_mov(RS1) \
-  check_tcp_access_end_llb(RS1 + ((DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-    (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * in_esize) \
+  check_tcp_access_end_llb(RS1 + (DMAE_STRIDE_S_Y ? DMAE_STRIDE_S_Y : \
+    (DMAE_STRIDE_S_X ? DMAE_STRIDE_S_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * in_esize) \
   check_tcp_access_start_llb_mov(RD) \
-  check_tcp_access_end_llb(RD + ((DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y + \
-    (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y)) * DMAE_SHAPE_Z * out_esize) \
+  check_tcp_access_end_llb(RD + (DMAE_STRIDE_D_Y ? DMAE_STRIDE_D_Y : \
+    (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * out_esize) \
 })
 
 //
