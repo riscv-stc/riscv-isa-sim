@@ -32,7 +32,7 @@ enum NL_STATUS {
 struct command_head_t {
     unsigned short code;
     unsigned short len;
-    unsigned int addr;
+    uint64_t addr;
     unsigned char data[4];
 };
 

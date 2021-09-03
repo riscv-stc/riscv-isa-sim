@@ -110,9 +110,19 @@ void sysdma_device_t::dma_core(int ch) {
       if(stride && stride < col)
         throw std::runtime_error("stride is smaller than col");
 
+      char *dst;
+      char *src;
+
       simif_t *sim = procs_[0]->get_sim();
-      char *dst = sim->addr_to_mem(desc->ddar);
-      char *src = sim->addr_to_mem(desc->dsar);
+      if (sim->in_high_mem(dma_channel_[ch].ddr_base[DDR_DIR_DST] + desc->ddar))
+        dst = sim->sub_bus_addr_to_mem(dma_channel_[ch].ddr_base[DDR_DIR_DST] + desc->ddar);
+      else
+        dst = sim->addr_to_mem(desc->ddar);
+
+      if (sim->in_high_mem(dma_channel_[ch].ddr_base[DDR_DIR_SRC] + desc->dsar))
+        src = sim->sub_bus_addr_to_mem(dma_channel_[ch].ddr_base[DDR_DIR_SRC] + desc->dsar);
+      else
+        src = sim->addr_to_mem(desc->dsar);
 
       if (stride == 0) {
         memcpy(dst, src, col * row);
@@ -193,6 +203,14 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     case DMA_C1_PCNT_OFFSET:
       *((uint32_t*)bytes) = 0;
       return true;
+
+    case DMA_CABR_OFFSET:
+      *((uint32_t*)bytes) = (dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] >> 32) & 0xff;
+      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] >> 24) & 0xff00;
+      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] >> 16) & 0xff0000;
+      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] >> 8) & 0xff000000;
+
+      break;
 
     default:
       if (addr >=DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
@@ -279,10 +297,10 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
 
     case DMA_CABR_OFFSET:
       // don't set ddr base address, since local address is enough
-      // dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
-      // dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
-      // dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
-      // dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
+      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
+      dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
+      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
+      dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
       break;
 
     // DMA Channel x Control Register

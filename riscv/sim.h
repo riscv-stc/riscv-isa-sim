@@ -80,6 +80,7 @@ private:
   std::unique_ptr<clint_t> clint;
   bus_t bus;
   std::vector<bus_t*> local_bus;
+  std::vector<bus_t*> sub_bus;
   pcie_driver_t *pcie_driver;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
@@ -115,6 +116,10 @@ private:
   bool local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx);
   bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx);
   void make_dtb();
+
+  int8_t high_mem_bank_id_from_addr(reg_t addr);
+  bool in_high_mem(reg_t addr);
+  char* sub_bus_addr_to_mem(reg_t addr);
 
   // presents a prompt for introspection into the simulation
   void interactive();

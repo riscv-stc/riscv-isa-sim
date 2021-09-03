@@ -29,6 +29,9 @@ public:
   virtual bool local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx) = 0;
   virtual bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx) = 0;
 
+  virtual bool in_high_mem(reg_t addr) = 0;
+  virtual char* sub_bus_addr_to_mem(reg_t addr) = 0;
+
   // Callback for processors to let the simulation know they were reset.
   virtual void proc_reset(unsigned id) = 0;
   virtual void hart_reset(reg_t hart_map) = 0;
