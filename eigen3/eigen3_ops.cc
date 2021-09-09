@@ -5923,6 +5923,82 @@ int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t 
     return 0;
 }
 
+uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
+{
+    //src shape
+    uint16_t shape_x = dmae_ss->shape_x;
+    uint16_t shape_y = dmae_ss->shape_y;
+    uint16_t shape_z = dmae_ss->shape_z;
+
+    uint64_t copy_stride_s_x = 0;
+    uint64_t copy_stride_s_y = 0;
+    uint64_t len = 0;
+    uint8_t e_size = 2;
+
+    switch (data_type) {
+        case 0x0: // half
+        case 0x101: //Bfloat16
+        case 0x2: //fp16->fp32
+        case 0x102: //bfp16->fp32
+            e_size = 2;
+            break;
+        case 0x202: //Float32
+        case 0x201: //fp32->bfp16
+        case 0x200: //fp32->fp16
+            e_size = 4;
+            break;
+        case 0x303: //int8_t
+            e_size = 1;
+            break;
+        default:
+        break;
+    }
+
+    copy_stride_s_x = (dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x) * e_size;
+    copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y * e_size : shape_y * copy_stride_s_x;
+
+    len = shape_y * copy_stride_s_x + shape_z * copy_stride_s_y;
+    return len;
+}
+
+uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
+{
+    //src shape
+    uint16_t shape_x = dmae_ss->shape_x;
+    uint16_t shape_y = dmae_ss->shape_y;
+    uint16_t shape_z = dmae_ss->shape_z;
+
+    uint64_t copy_stride_d_x = 0;
+    uint64_t copy_stride_d_y = 0;
+    uint64_t len = 0;
+    uint8_t e_size = 2;
+
+    switch (data_type) {
+        case 0x0: // half
+        case 0x101: //Bfloat16
+        case 0x2: //fp16->fp32
+        case 0x102: //bfp16->fp32
+            e_size = 2;
+            break;
+        case 0x202: //Float32
+        case 0x201: //fp32->bfp16
+        case 0x200: //fp32->fp16
+            e_size = 4;
+            break;
+        case 0x303: //int8_t
+            e_size = 1;
+            break;
+        default:
+        break;
+    }
+
+    copy_stride_d_x = (dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x) * e_size;
+    copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y * e_size : shape_y * copy_stride_d_x;
+
+    len = shape_y * copy_stride_d_x + shape_z * copy_stride_d_y;
+    return len;
+}
+
 void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape

@@ -1547,6 +1547,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     (DMAE_STRIDE_D_X ? DMAE_STRIDE_D_X : DMAE_SHAPE_X) * DMAE_SHAPE_Y) * DMAE_SHAPE_Z * out_esize) \
 })
 
+#define check_trap_mmu_pmp_ok(addr, len, type, mode) ({ \
+  reg_t ret = MMU.check_pmp_ok(addr, len, type, mode); \
+  if (!ret) \
+    throw trap_ncp_cust_access(addr, 0, 0); \
+})
+
 //
 // vector: loop header and end helper
 //

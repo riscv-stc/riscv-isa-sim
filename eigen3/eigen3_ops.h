@@ -3765,7 +3765,8 @@ extern int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss);
 extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss);
-
+extern uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
+extern uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 
 /**
  * @brief custom扩展指令类

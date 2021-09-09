@@ -94,6 +94,12 @@ public:
 #endif
   }
 
+reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
+{
+  reg_t ret = pmp_ok(addr, len, type, mode);
+  return ret;
+}
+
 #ifndef RISCV_ENABLE_COMMITLOG
 # define READ_MEM(addr, size) ({})
 #else

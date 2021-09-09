@@ -19,6 +19,9 @@ uint16_t row = MTE_SHAPE_ROW;
 uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
 uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
+uint64_t len = row * copy_stride_rd;
+check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
+
 if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {
     memcpy(dst, src, col * row * e_size);
 }
