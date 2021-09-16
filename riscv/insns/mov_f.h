@@ -14,6 +14,7 @@ switch (VME_DTYPE)
         sst_fill(sst, 1, 1);
         Eigen::half vs1(f32(FRS1));
         mov_f(vs1, (Eigen::half*)rd, &sst);
+        WRITE_MEM_STC(RD, (half*)rd, CMT_LOG_VME_COM);
         break;
     }
     case 0x10101:
@@ -23,6 +24,7 @@ switch (VME_DTYPE)
         sst_fill(sst, 1, 1);
         Eigen::Bfloat16 vs1(f32(FRS1));
         mov_f(vs1, (Eigen::Bfloat16*)rd, &sst);
+        WRITE_MEM_STC(RD, (Bfloat16*)rd, CMT_LOG_VME_COM);
         break;
     }
     case 0x20202:
@@ -32,6 +34,7 @@ switch (VME_DTYPE)
         sst_fill(sst, 1, 1);
         Eigen::Float32 vs1(f32(FRS1));
         mov_f(vs1, (Eigen::Float32*)rd, &sst);
+        WRITE_MEM_STC(RD, (Float32*)rd, CMT_LOG_VME_COM);
         break;
     }
     default: 

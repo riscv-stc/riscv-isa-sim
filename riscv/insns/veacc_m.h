@@ -9,11 +9,12 @@ VME_DTYPE_DECODING_TO_TYPE({
         veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, &result, &sst, relu);
         Float32 f32res = Float32(result);
         float32_t f32reg;
-        f32reg.v = f32res.x;
-        WRITE_FRD(f32reg);
+        f32reg.v = f32res.x;      
+        WRITE_FRD_STC(f32reg);  //WRITE_FRD(f32reg);    
     } else {
         check_traps_vexxx_m_reduce_vector(dtype_lut);
         unsigned long rd = MMU.get_phy_addr(RD);
         veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM, relu);
+        WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM);
     }
 })

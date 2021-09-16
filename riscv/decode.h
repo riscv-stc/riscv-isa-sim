@@ -189,17 +189,20 @@ private:
 #define RS2 READ_REG(insn.rs2())
 #define RS3 READ_REG(insn.rs3())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
+#define WRITE_RD_STC(value) WRITE_REG_STC(insn.rd(), value)
 #define WRITE_RS1(value) WRITE_REG(insn.rs1(), value)
 #define WRITE_RS2(value) WRITE_REG(insn.rs2(), value)
 
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
+# define WRITE_REG_STC(reg, value) STATE.XPR.write(reg, value)
 # define WRITE_FREG(reg, value) DO_WRITE_FREG(reg, freg(value))
+# define WRITE_FREG_STC(reg, value) DO_WRITE_FREG(reg, freg(value))
 # define WRITE_VSTATUS
 #else
-   /* 0 : int
-    * 1 : floating
-    * 2 : vector reg
+   /* 0 : int           8 : stc int
+    * 1 : floating      9 : stc floating
+    * 2 : vector reg    
     * 3 : vector hint
     * 4 : csr
     */
@@ -208,12 +211,30 @@ private:
     STATE.log_reg_write[(reg) << 4] = {wdata, 0}; \
     STATE.XPR.write(reg, wdata); \
   })
+# define WRITE_REG_STC(reg, value) ({ \
+    reg_t wdata = (value); /* value may have side effects */ \
+    STATE.log_reg_write[((reg) << 4)| 8] = {wdata, 0}; \
+    STATE.XPR.write(reg, wdata); \
+  })
 # define WRITE_FREG(reg, value) ({ \
     freg_t wdata = freg(value); /* value may have side effects */ \
     STATE.log_reg_write[((reg) << 4) | 1] = wdata; \
     DO_WRITE_FREG(reg, wdata); \
   })
+# define WRITE_FREG_STC(reg, value) ({ \
+    freg_t wdata = freg(value); /* value may have side effects */ \
+    STATE.log_reg_write[((reg) << 4) | 9] = wdata; \
+    DO_WRITE_FREG(reg, wdata); \
+  }) 
+  
 # define WRITE_VSTATUS STATE.log_reg_write[3] = {0, 0};
+#endif
+
+#ifndef RISCV_ENABLE_COMMITLOG  
+# define WRITE_MEM_STC(addr, val, type)({})
+#else
+# define WRITE_MEM_STC(addr, val, type) \
+  STATE.log_mem_stc_write.push_back(std::make_tuple(addr, val, type));  
 #endif
 
 // RVC macros
@@ -273,6 +294,7 @@ private:
 #define dirty_vs_state (STATE.mstatus |= MSTATUS_VS | (xlen == 64 ? MSTATUS64_SD : MSTATUS32_SD))
 #define DO_WRITE_FREG(reg, value) (STATE.FPR.write(reg, value), dirty_fp_state)
 #define WRITE_FRD(value) WRITE_FREG(insn.rd(), value)
+#define WRITE_FRD_STC(value) WRITE_FREG_STC(insn.rd(), value) 
 
 // VPU macros
 #define VRS1 READ_VREG(insn.rs1())
@@ -298,73 +320,90 @@ private:
 #define VLMUL_I (insn.vlmul())
 #define VSEW_I (insn.vsew())
 #define VEDIV_I (insn.vediv())
-#define SHAPE1_COLUMN ((STATE.vme_shape_s & 0xFFFF0000) >> 16)
-#define SHAPE1_ROW (STATE.vme_shape_s & 0xFFFF)
-#define STRIDE_RD (STATE.vme_stride_d & 0xFFFF)
-#define STRIDE_RS1 (STATE.vme_stride_s & 0xFFFF)
-#define STRIDE_RS2 ((STATE.vme_stride_s & 0xFFFF0000) >> 16)
-#define MME_SPARSE_BASE (STATE.mme_sparseidx_base)
-#define MME_SPARSE_STRIDE (STATE.mme_sparseidx_stride & 0xFFFF)
+#define SHAPE1_COLUMN         ((STATE.vme_shape_s & 0xFFFF0000) >> 16)
+#define SHAPE1_ROW            (STATE.vme_shape_s & 0xFFFF)
+#define STRIDE_RD             (STATE.vme_stride_d & 0xFFFF)
+#define STRIDE_RS1            (STATE.vme_stride_s & 0xFFFF)
+#define STRIDE_RS2            ((STATE.vme_stride_s & 0xFFFF0000) >> 16)
+#define MME_SPARSE_BASE       (STATE.mme_sparseidx_base)
+#define MME_SPARSE_STRIDE     (STATE.mme_sparseidx_stride & 0xFFFF)
 
-#define BC_SHAPE1_COLUMN ((STATE.mme_shape_s1 & 0xFFFF0000) >> 16)
-#define BC_SHAPE1_ROW (STATE.mme_shape_s1 & 0xFFFF)
-#define BC_SHAPE2_COLUMN ((STATE.mme_shape_s2 & 0xFFFF0000) >> 16)
-#define BC_SHAPE2_ROW (STATE.mme_shape_s2 & 0xFFFF)
-#define BC_STRIDE_RD (STATE.mme_stride_d & 0xFFFF)
-#define BC_STRIDE_RS1 (STATE.mme_stride_s & 0xFFFF)
-#define BC_STRIDE_RS2 ((STATE.mme_stride_s & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_COLUMN      ((STATE.mme_shape_s1 & 0xFFFF0000) >> 16)
+#define BC_SHAPE1_ROW         (STATE.mme_shape_s1 & 0xFFFF)
+#define BC_SHAPE2_COLUMN      ((STATE.mme_shape_s2 & 0xFFFF0000) >> 16)
+#define BC_SHAPE2_ROW         (STATE.mme_shape_s2 & 0xFFFF)
+#define BC_STRIDE_RD          (STATE.mme_stride_d & 0xFFFF)
+#define BC_STRIDE_RS1         (STATE.mme_stride_s & 0xFFFF)
+#define BC_STRIDE_RS2         ((STATE.mme_stride_s & 0xFFFF0000) >> 16)
+#define MME_DATA_TYPE         (STATE.mme_data_type)   
 
-#define MTE_SHAPE_COLUMN  ((STATE.mte_shape & 0xFFFF0000) >> 16)
-#define MTE_SHAPE_ROW     (STATE.mte_shape & 0xFFFF)
+#define MTE_SHAPE_COLUMN      ((STATE.mte_shape & 0xFFFF0000) >> 16)
+#define MTE_SHAPE_ROW         (STATE.mte_shape & 0xFFFF)
 #define MTE_STRIDE_RS1        (STATE.mte_stride_s & 0xFFFFFF)
-#define MTE_STRIDE_RD        (STATE.mte_stride_d & 0xFFFFFF)
-#define MTE_DATA_TYPE     (STATE.mte_data_type)
-#define MTE_DATA_TYPE_RD     (STATE.mte_data_type & 0xFF)
+#define MTE_STRIDE_RD         (STATE.mte_stride_d & 0xFFFFFF)
+#define MTE_DATA_TYPE         (STATE.mte_data_type)
+#define MTE_DATA_TYPE_RD      (STATE.mte_data_type & 0xFF)
 #define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
 
-#define DMAE_DATA_TYPE   (STATE.dmae_data_type & 0xFFFF)
-#define DMAE_SHAPE_X    (STATE.dmae_shape_1 & 0xFFFF)
-#define DMAE_SHAPE_Y    ((STATE.dmae_shape_1 & 0xFFFF0000) >> 16)
-#define DMAE_SHAPE_Z    (STATE.dmae_shape_2 & 0xFFFF)
+#define DMAE_DATA_TYPE        (STATE.dmae_data_type & 0xFFFF)
+#define DMAE_SHAPE_X          (STATE.dmae_shape_1 & 0xFFFF)
+#define DMAE_SHAPE_Y          ((STATE.dmae_shape_1 & 0xFFFF0000) >> 16)
+#define DMAE_SHAPE_Z          (STATE.dmae_shape_2 & 0xFFFF)
 
-#define DMAE_STRIDE_S_X   (STATE.dmae_stride_s1)
-#define DMAE_STRIDE_S_Y   (STATE.dmae_stride_s2)
-#define DMAE_STRIDE_D_X   (STATE.dmae_stride_d1)
-#define DMAE_STRIDE_D_Y   (STATE.dmae_stride_d2)
+#define DMAE_STRIDE_S_X       (STATE.dmae_stride_s1)
+#define DMAE_STRIDE_S_Y       (STATE.dmae_stride_s2)
+#define DMAE_STRIDE_D_X       (STATE.dmae_stride_d1)
+#define DMAE_STRIDE_D_Y       (STATE.dmae_stride_d2)
 
-#define SRC_CORE_ID     ((STATE.mte_icdest >> 16) & 0xFF)
-#define DST_CORE_ID     (STATE.mte_icdest & 0xFF)
+#define SRC_CORE_ID           ((STATE.mte_icdest >> 16) & 0xFF)
+#define DST_CORE_ID           (STATE.mte_icdest & 0xFF)
 
-#define DMA_SHAPE_COLUMN  (STATE.dma_shape_col)
-#define DMA_SHAPE_ROW     (STATE.dma_shape_row)
-#define STRIDE_DDR        (STATE.dma_stride_ddr)
+#define DMA_SHAPE_COLUMN      (STATE.dma_shape_col)
+#define DMA_SHAPE_ROW         (STATE.dma_shape_row)
+#define STRIDE_DDR            (STATE.dma_stride_ddr)
 
-#define CONV_INFM_WH    (STATE.conv_FM_in)
-#define CONV_CIN_REG   (STATE.conv_Cin)
-#define CONV_OUTFM_WH   (STATE.conv_FM_out)
-#define CONV_COUT_REG  (STATE.conv_Cout)
+#define CONV_INFM_WH          (STATE.conv_FM_in)
+#define CONV_CIN_REG          (STATE.conv_Cin)
+#define CONV_OUTFM_WH         (STATE.conv_FM_out)
+#define CONV_COUT_REG         (STATE.conv_Cout)
 #define CONV_KERNEL_PARAMS1   (STATE.conv_kernel_params1)
-#define CONV_KERNEL_PARAMS2     (STATE.conv_kernel_params2)
-#define CONV_PADDING    (STATE.conv_padding)
-#define MME_QUANT_COEFF (STATE.mme_quant_coeff)
-#define MME_DEQUANT_COEFF (STATE.mme_dequant_coeff)
+#define CONV_KERNEL_PARAMS2   (STATE.conv_kernel_params2)
+#define CONV_PADDING          (STATE.conv_padding)
+#define MME_QUANT_COEFF       (STATE.mme_quant_coeff)
+#define MME_DEQUANT_COEFF     (STATE.mme_dequant_coeff)
 
-#define CONV_IN_COLUMN	((STATE.conv_FM_in & 0xFFFF0000) >> 16)
-#define CONV_IN_ROW	(STATE.conv_FM_in & 0xFFFF)
-#define CONV_OUT_COLUMN	((STATE.conv_FM_out & 0xFFFF0000) >> 16)
-#define CONV_OUT_ROW	(STATE.conv_FM_out & 0xFFFF)
-#define CONV_CIN	(STATE.conv_Cin & 0xFFFF)
-#define CONV_COUT	(STATE.conv_Cout & 0xFFFF)
-#define CONV_IN_STRIDE	((STATE.conv_Cin & 0xFFFF0000) >> 16)
-#define CONV_W_STRIDE	(STATE.conv_kernel_params1 & 0xFF)
-#define CONV_OUT_STRIDE	((STATE.conv_Cout & 0xFFFF0000) >> 16)
-#define CONV_KW 	((STATE.conv_kernel_params1 & 0xFF000000) >> 24)
-#define CONV_KH 	((STATE.conv_kernel_params1 & 0xFF0000) >> 16)
-#define CONV_DL 	((STATE.conv_kernel_params1 & 0xFF00) >> 8)
-#define CONV_SK 	(STATE.conv_kernel_params1 & 0xFF)
-#define CONV_SH 	(STATE.conv_kernel_params1 & 0xFF)
-#define CONV_SW 	((STATE.conv_kernel_params2 & 0xFF0000) >> 16)
+#define CONV_IN_COLUMN	      ((STATE.conv_FM_in & 0xFFFF0000) >> 16)
+#define CONV_IN_ROW	          (STATE.conv_FM_in & 0xFFFF)
+#define CONV_OUT_COLUMN	      ((STATE.conv_FM_out & 0xFFFF0000) >> 16)
+#define CONV_OUT_ROW	        (STATE.conv_FM_out & 0xFFFF)
+#define CONV_CIN	            (STATE.conv_Cin & 0xFFFF)
+#define CONV_COUT	            (STATE.conv_Cout & 0xFFFF)
+#define CONV_IN_STRIDE	      ((STATE.conv_Cin & 0xFFFF0000) >> 16)
+#define CONV_W_STRIDE	        (STATE.conv_kernel_params1 & 0xFF)
+#define CONV_OUT_STRIDE	      ((STATE.conv_Cout & 0xFFFF0000) >> 16)
+#define CONV_KW 	            ((STATE.conv_kernel_params1 & 0xFF000000) >> 24)
+#define CONV_KH 	            ((STATE.conv_kernel_params1 & 0x00FF0000) >> 16)
+#define CONV_DL 	            ((STATE.conv_kernel_params1 & 0x0000FF00) >>  8)
+#define CONV_SH 	            ((STATE.conv_kernel_params1 & 0x000000FF) >>  0)
+#define CONV_SK 	            (STATE.conv_kernel_params1 & 0xFF)  //note
 
+#define CONV_DW 	            ((STATE.conv_kernel_params2 & 0xFF000000) >> 24)  
+#define CONV_SW 	            ((STATE.conv_kernel_params2 & 0x00FF0000) >> 16)
+#define CONV_S_KERNEL 	      ((STATE.conv_kernel_params2 & 0x0000FFFF) >>  0)  
+
+
+// commitlog
+#define CMT_LOG_VME           (0x0100)  
+#define CMT_LOG_VME_COM       (0x0101)
+#define CMT_LOG_VME_CONV      (0x0102)  //vedwconv, pool
+#define CMT_LOG_MTE           (0x0201)
+#define CMT_LOG_DMAE          (0x0401)
+#define CMT_LOG_MME           (0x0800)
+#define CMT_LOG_MME_METR      (0x0801)
+#define CMT_LOG_MME_MEMUL_MM  (0x0802)  //.mm, .sp.mm 
+#define CMT_LOG_MME_MEMUL_TS  (0x0804)  //.ts1.mm
+#define CMT_LOG_MME_REDUCE    (0x0808)
+#define CMT_LOG_MME_CONV      (0x0810)
 
 //#define TMODE	(STATE.tmode)
 //

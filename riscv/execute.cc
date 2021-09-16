@@ -11,6 +11,7 @@ static void commit_log_reset(processor_t* p)
   p->get_state()->log_reg_write.clear();
   p->get_state()->log_mem_read.clear();
   p->get_state()->log_mem_write.clear();
+  p->get_state()->log_mem_stc_write.clear();  
 }
 
 static void commit_log_stash_privilege(processor_t* p)
@@ -54,6 +55,336 @@ static void commit_log_print_value(FILE *log_file, int width, const void *data)
   }
 }
 
+static void commit_log_print_value_stc(processor_t *p, int type, const void *data)
+{
+  FILE *log_file = p->get_log_file(); 
+  
+  fprintf(log_file, " 0x%08" PRIx32, *( uint32_t *)data);
+
+  fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+  fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+  fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+  fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+  fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);     
+  fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
+
+}
+
+static void commit_log_print_stc_mem_info(processor_t *p)
+{
+  auto custom = p->get_state()->log_mem_stc_write;
+  if (custom.empty())
+    return;
+
+  FILE *log_file = p->get_log_file();  
+  auto item = custom.front();
+  for (auto item : custom) {  
+    auto addr  = std::get<0>(item);   
+    auto paddr = std::get<1>(item);   
+    auto type  = std::get<2>(item);   
+    int  size  = 0;   
+
+    if(CMT_LOG_VME & type) {   //switch jump to case label  
+      if(CMT_LOG_VME_COM == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);    
+        fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
+        int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ; 
+        int xx  = SHAPE1_COLUMN;
+        int yy  = SHAPE1_ROW;        
+        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+          size = 2;   //float16(0x0) or bfloat16
+          for(int row=0; row < yy; row++) {
+            for(int col=0; col < xx; col++) {
+              int idx = row*pad+col;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+            }         
+          } 
+        } else if (0x20202 == VME_DTYPE) {          
+          size = 4;   //float32
+          for(int row=0; row < yy; row++) {
+            for(int col=0; col < xx; col++) {
+              int idx = row*pad+col;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+            }         
+          }           
+        } else {
+          std::cout << " error! vme_data_type = " << VME_DTYPE << std::endl;
+        } 
+      }
+
+      if(CMT_LOG_VME_CONV == type) { 
+        fprintf(log_file, " vme_FM_in_col: %d", VME_WIN); 
+        fprintf(log_file, " vme_FM_in_row: %d", VME_HIN); 
+        fprintf(log_file, " vme_Cin: %d", VME_CIN); 
+        fprintf(log_file, " vme_Stride_Cin: %d", VME_IFM_C_STRIDE); 
+
+        fprintf(log_file, " vme_kernel_param1_Kw: %d", VME_KW); 
+        fprintf(log_file, " vme_kernel_param1_Kh: %d", VME_KH); 
+        fprintf(log_file, " vme_kernel_param1_Dh: %d", VME_DILATION_H); 
+        fprintf(log_file, " vme_kernel_param1_Sh: %d", VME_SH); 
+        fprintf(log_file, " vme_kernel_param2_Dw: %d", VME_DILATION_W); 
+        fprintf(log_file, " vme_kernel_param2_Sw: %d", VME_SW); 
+        fprintf(log_file, " vme_kernel_param2_S_kernel: %d", VME_K_C_STRIDE);  
+        fprintf(log_file, " vme_FM_padding_u: %d", VME_N_PAD_U);
+        fprintf(log_file, " vme_FM_padding_d: %d", VME_N_PAD_D);
+        fprintf(log_file, " vme_FM_padding_l: %d", VME_N_PAD_L);
+        fprintf(log_file, " vme_FM_padding_r: %d", VME_N_PAD_R);
+        
+        fprintf(log_file, " vme_FM_out_col: %d", VME_WOUT); 
+        fprintf(log_file, " vme_FM_out_row: %d", VME_HOUT); 
+        fprintf(log_file, " vme_Cout: %d", VME_CIN); 
+        fprintf(log_file, " vme_Stride_Cout: %d", VME_OFM_C_STRIDE); 
+
+        int xx  = VME_WOUT;
+        int yy  = VME_HOUT;
+        int zz  = VME_CIN;
+        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) {  
+          size = 2;   //float16, float16
+          for(int out=0; out < zz; out++) { 
+            for(int row=0; row < yy; row++) { 
+              for(int col=0; col < xx; col++) {  
+                int idx = out*yy*xx + row*xx + col;
+                fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+                fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+              }         
+            } 
+          }
+        } else if (0x20202 == VME_DTYPE) {
+          size = 4;   //float32
+          for(int out=0; out < zz; out++) { 
+            for(int row=0; row < yy; row++) { 
+              for(int col=0; col < xx; col++) {  
+                int idx = out*yy*xx + row*xx + col;
+                fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+                fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+              }         
+            } 
+          }
+        } else {
+          std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
+        } 
+      }
+    }
+
+    else if(CMT_LOG_MTE == type) {    
+      fprintf(log_file, " mte_shape_col: %d", MTE_SHAPE_COLUMN); 
+      fprintf(log_file, " mte_shape_row: %d", MTE_SHAPE_ROW); 
+      fprintf(log_file, " mte_stride_d: %d" , MTE_STRIDE_RD); 
+      fprintf(log_file, " mte_stride_s: %d" , MTE_STRIDE_RS1); 
+      fprintf(log_file, " mte_data_type: 0x%08" PRIx32, MTE_DATA_TYPE);
+
+      int pad = MTE_SHAPE_COLUMN >= MTE_STRIDE_RD ? MTE_SHAPE_COLUMN : MTE_STRIDE_RD ;     
+      if (0x0 == MTE_DATA_TYPE || 0x101 == MTE_DATA_TYPE) { 
+        size = 2;   //float16(0x0) or bfloat16
+        for(int row=0; row < MTE_SHAPE_ROW; row++) {
+          for(int col=0; col < MTE_SHAPE_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+          }         
+        } 
+      } else if (0x202 == MTE_DATA_TYPE) {          
+        size = 4;   //float32
+        for(int row=0; row < MTE_SHAPE_ROW; row++) {
+          for(int col=0; col < MTE_SHAPE_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+          }           
+        } 
+      } else if (0x303 == MTE_DATA_TYPE) {          
+        size = 1;   //int8
+        for(int row=0; row < MTE_SHAPE_ROW; row++) {
+          for(int col=0; col < MTE_SHAPE_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%01" PRIx8, *((uint8_t *)paddr+idx));
+          }           
+        } 
+      } else {
+        std::cout << " error! mte_data_type = " << MTE_DATA_TYPE << std::endl;
+      }     
+    }
+
+    else if(CMT_LOG_DMAE == type) {   
+      fprintf(log_file, " dmae_shape_x: %d", DMAE_SHAPE_X); 
+      fprintf(log_file, " dmae_shape_y: %d", DMAE_SHAPE_Y); 
+      fprintf(log_file, " dmae_shape_z: %d", DMAE_SHAPE_Z); 
+      fprintf(log_file, " dmae_stride_s1: %d", DMAE_STRIDE_S_X); 
+      fprintf(log_file, " dmae_stride_s2: %d", DMAE_STRIDE_S_Y); 
+      fprintf(log_file, " dmae_stride_d1: %d", DMAE_STRIDE_D_X); 
+      fprintf(log_file, " dmae_stride_d2: %d", DMAE_STRIDE_D_Y); 
+      fprintf(log_file, " dmae_data_type: 0x%08" PRIx32, DMAE_DATA_TYPE);
+
+      int pad_x = DMAE_SHAPE_X >= DMAE_STRIDE_D_X ? DMAE_SHAPE_X : DMAE_STRIDE_D_X ;  
+      int pad_y = DMAE_SHAPE_Y >= DMAE_STRIDE_D_Y ? DMAE_SHAPE_Y : DMAE_STRIDE_D_Y ;          
+      if (0x0 == DMAE_DATA_TYPE || 0x101 == DMAE_DATA_TYPE || 0x201 == DMAE_DATA_TYPE || 0x200 == DMAE_DATA_TYPE) { 
+        size = 2;   //float16(0x0, 0x200) or bfloat16
+        for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
+          for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
+            for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
+              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+            }
+          }           
+        } 
+      } else if (0x202 == DMAE_DATA_TYPE || 0x2 == DMAE_DATA_TYPE || 0x102 == DMAE_DATA_TYPE) { 
+        size = 4;   //float32
+        for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
+          for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
+            for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
+              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+            }
+          }           
+        } 
+      } else if (0x303 == DMAE_DATA_TYPE) {          
+        size = 1;   //int8
+        for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
+          for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
+            for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
+              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%01" PRIx8, *((uint8_t *)paddr+idx));
+            }
+          }           
+        } 
+      } else {
+        std::cout << " error! dmae_data_type = " << DMAE_DATA_TYPE << std::endl;
+      }     
+    }
+
+    else if(CMT_LOG_MME & type) {   
+      int pad = 0;
+      int xx  = 0;
+      int yy  = 0;
+      int zz  = 1; 
+      if(CMT_LOG_MME_METR == type) { 
+        pad = BC_SHAPE1_ROW >= BC_STRIDE_RD ? BC_SHAPE1_ROW : BC_STRIDE_RD ;
+        xx  = BC_SHAPE1_ROW;
+        yy  = BC_SHAPE1_COLUMN;
+      } else if(CMT_LOG_MME_REDUCE == type) { 
+        pad = 1 >= BC_STRIDE_RD ? 1 : BC_STRIDE_RD ;
+        xx  = 1;
+        yy  = BC_SHAPE1_ROW;
+      } else if(CMT_LOG_MME_MEMUL_MM == type) { 
+        pad = BC_SHAPE2_COLUMN >= BC_STRIDE_RD ? BC_SHAPE2_COLUMN : BC_STRIDE_RD ;
+        xx  = BC_SHAPE2_COLUMN;
+        yy  = BC_SHAPE1_ROW;
+      } else if(CMT_LOG_MME_MEMUL_TS == type) { 
+        pad = BC_SHAPE2_COLUMN >= BC_STRIDE_RD ? BC_SHAPE2_COLUMN : BC_STRIDE_RD ;
+        xx  = BC_SHAPE2_COLUMN;
+        yy  = BC_SHAPE1_COLUMN;
+      } else if(CMT_LOG_MME_CONV == type) {
+        //pad = CONV_COUT >= CONV_OUT_STRIDE ? CONV_COUT : CONV_OUT_STRIDE ; 
+        xx  = CONV_OUT_COLUMN;
+        yy  = CONV_OUT_ROW;
+        zz  = CONV_COUT;
+      }
+      
+      if(CMT_LOG_MME_METR == type || CMT_LOG_MME_REDUCE == type || CMT_LOG_MME_MEMUL_MM == type || CMT_LOG_MME_MEMUL_TS == type ) {
+        fprintf(log_file, " mme_shape_s1_col: %d", BC_SHAPE1_COLUMN); 
+        fprintf(log_file, " mme_shape_s1_row: %d", BC_SHAPE1_ROW); 
+        fprintf(log_file, " mme_shape_s2_col: %d", BC_SHAPE2_COLUMN); 
+        fprintf(log_file, " mme_shape_s2_row: %d", BC_SHAPE2_ROW); 
+        fprintf(log_file, " mme_stride_d: %d"  , BC_STRIDE_RD); 
+        fprintf(log_file, " mme_stride_s1: %d" , BC_STRIDE_RS1); 
+        fprintf(log_file, " mme_stride_s2: %d" , BC_STRIDE_RS2); 
+        fprintf(log_file, " mme_data_type: 0x%08" PRIx32, MME_DATA_TYPE);
+
+        if (0x3030b == MME_DATA_TYPE || 0x3030c == MME_DATA_TYPE || 0x3040b == MME_DATA_TYPE || 0x3040c == MME_DATA_TYPE ||\
+            0x3030f == MME_DATA_TYPE || 0x30310 == MME_DATA_TYPE || 0x3040f == MME_DATA_TYPE || 0x30410 == MME_DATA_TYPE ||\
+            0x3090b == MME_DATA_TYPE || 0x30a0b == MME_DATA_TYPE || 0x3090c == MME_DATA_TYPE || 0x30a0c == MME_DATA_TYPE ||\
+            0x30d0f == MME_DATA_TYPE || 0x30e0f == MME_DATA_TYPE || 0x30d10 == MME_DATA_TYPE || 0x30e10 == MME_DATA_TYPE ||\
+            0x00000 == MME_DATA_TYPE || 0x10101 == MME_DATA_TYPE ) { 
+          size = 2;   //float16, float16
+          for(int row=0; row < yy; row++) { 
+            for(int col=0; col < xx; col++) {  
+              int idx = row*pad+col;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+            }         
+          } 
+        } else if(0x2 == MME_DATA_TYPE || 0x10102 == MME_DATA_TYPE || 0x20202 == MME_DATA_TYPE ) { 
+          size = 4;   //float32
+          for(int row=0; row < yy; row++) {
+            for(int col=0; col < xx; col++) {
+              int idx = row*pad+col;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+            }         
+          } 
+        } else {
+          std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
+        } 
+      }
+
+      if(CMT_LOG_MME_CONV == type) {
+        fprintf(log_file, " conv_FM_in_col: %d", CONV_IN_COLUMN); 
+        fprintf(log_file, " conv_FM_in_row: %d", CONV_IN_ROW); 
+        fprintf(log_file, " conv_Cin: %d", CONV_CIN); 
+        fprintf(log_file, " conv_Stride_Cin: %d", CONV_IN_STRIDE); 
+
+        fprintf(log_file, " conv_kernel_param1_Kw: %d", CONV_KW); 
+        fprintf(log_file, " conv_kernel_param1_Kh: %d", CONV_KH); 
+        fprintf(log_file, " conv_kernel_param1_Dh: %d", CONV_DL); 
+        fprintf(log_file, " conv_kernel_param1_Sh: %d", CONV_SH); 
+        fprintf(log_file, " conv_kernel_param2_Dw: %d", CONV_DW); 
+        fprintf(log_file, " conv_kernel_param2_Sw: %d", CONV_SW); 
+        fprintf(log_file, " conv_kernel_param2_S_kernel: %d", CONV_S_KERNEL);  
+        fprintf(log_file, " conv_padding: 0x%08" PRIx32, CONV_PADDING);
+        fprintf(log_file, " conv_dequant_coeff: 0x%08" PRIx32, MME_DEQUANT_COEFF);
+        fprintf(log_file, " conv_quant_coeff: 0x%08" PRIx32, MME_QUANT_COEFF);
+        fprintf(log_file, " mme_data_type: 0x%08" PRIx32, MME_DATA_TYPE);
+        
+        fprintf(log_file, " conv_FM_out_col: %d", CONV_OUT_COLUMN); 
+        fprintf(log_file, " conv_FM_out_row: %d", CONV_OUT_ROW); 
+        fprintf(log_file, " conv_Cout: %d", CONV_COUT); 
+        fprintf(log_file, " conv_Stride_Cout: %d", CONV_OUT_STRIDE); 
+    
+        if (0x3030b == MME_DATA_TYPE || 0x3030c == MME_DATA_TYPE || 0x3040b == MME_DATA_TYPE || 0x3040c == MME_DATA_TYPE ||\
+            0x3030f == MME_DATA_TYPE || 0x30310 == MME_DATA_TYPE || 0x3040f == MME_DATA_TYPE || 0x30410 == MME_DATA_TYPE ||\
+            0x3090b == MME_DATA_TYPE || 0x30a0b == MME_DATA_TYPE || 0x3090c == MME_DATA_TYPE || 0x30a0c == MME_DATA_TYPE ||\
+            0x30d0f == MME_DATA_TYPE || 0x30e0f == MME_DATA_TYPE || 0x30d10 == MME_DATA_TYPE || 0x30e10 == MME_DATA_TYPE ||\
+            0x00000 == MME_DATA_TYPE || 0x10101 == MME_DATA_TYPE ) { 
+          size = 2;   //float16, float16
+          for(int out=0; out < zz; out++) { 
+            for(int row=0; row < yy; row++) { 
+              for(int col=0; col < xx; col++) {  
+                int idx = out*yy*xx + row*xx + col;
+                fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+                fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+              }         
+            } 
+          }
+        } else if(0x2 == MME_DATA_TYPE || 0x10102 == MME_DATA_TYPE || 0x20202 == MME_DATA_TYPE ) { 
+          size = 4;   //float32
+          for(int out=0; out < zz; out++) { 
+            for(int row=0; row < yy; row++) { 
+              for(int col=0; col < xx; col++) {  
+                int idx = out*yy*xx + row*xx + col;
+                fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+                fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
+              }         
+            } 
+          }
+        } else {
+          std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
+        } 
+      }    
+    }
+
+  }
+}
+
 static void commit_log_print_value(FILE *log_file, int width, uint64_t val)
 {
   commit_log_print_value(log_file, width, &val);
@@ -84,11 +415,15 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
   commit_log_print_value(log_file, insn.length() * 8, insn.bits());
   fprintf(log_file, ")");
   bool show_vec = false;
+  bool log_stc  = false; 
 
   for (auto item : reg) {
     if (item.first == 0)
+    {
+      fprintf(log_file, " continue ");
       continue;
-
+    }
+      
     char prefix;
     int size;
     int rd = item.first >> 4;
@@ -101,7 +436,7 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
       break;
     case 1:
       size = flen;
-      prefix = 'f';
+      prefix = 'f';        
       break;
     case 2:
       size = p->VU.VLEN;
@@ -114,6 +449,14 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
     case 4:
       size = xlen;
       prefix = 'c';
+      break;
+    case 8: 
+      prefix = 'x'; 
+      log_stc = true;  
+      break;
+    case 9: 
+      prefix = 'f'; 
+      log_stc = true;  
       break;
     default:
       assert("can't been here" && 0);
@@ -136,8 +479,12 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
         fprintf(log_file, " %c%2d ", prefix, rd);
       if (is_vreg)
         commit_log_print_value(log_file, size, &p->VU.elt<uint8_t>(rd, 0));
-      else
-        commit_log_print_value(log_file, size, item.second.v);
+      else {
+        if (!log_stc)
+          commit_log_print_value(log_file, size, item.second.v);
+        else
+          commit_log_print_value_stc(p, (item.first&0xf), item.second.v);  
+      }
     }
   }
 
@@ -152,6 +499,9 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
     fprintf(log_file, " ");
     commit_log_print_value(log_file, std::get<2>(item) << 3, std::get<1>(item));
   }
+
+  commit_log_print_stc_mem_info(p);
+ 
   fprintf(log_file, "\n");
 }
 #else

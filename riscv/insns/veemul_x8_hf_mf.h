@@ -11,3 +11,4 @@ half vr2;
 vr2.x = f32_to_f16(f32(FRS2)).v;
 
 veemul_x8_hf_mf<signed char, half>((half *)rs1, (signed char *)rd, vr2, &sst, STATE.frm);
+WRITE_MEM_STC(RD, (signed char*)rd, CMT_LOG_VME_COM);

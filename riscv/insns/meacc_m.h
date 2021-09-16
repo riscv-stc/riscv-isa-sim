@@ -16,16 +16,19 @@ reg_t t_rd = RD;
     check_traps_mexxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
     CusIns.meacc_m((half*)rs1, (half*)rd, &sst);
+    WRITE_MEM_STC(RD, (half*)rd, CMT_LOG_MME_REDUCE);
     break;
   case 0x010101: // bf16 * bf16 = bf16
     check_traps_mexxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
     CusIns.meacc_m((Bfloat16*)rs1, (Bfloat16*)rd, &sst);
+    WRITE_MEM_STC(RD, (Bfloat16*)rd, CMT_LOG_MME_REDUCE);
     break; 
   case 0x020202: // f32 * f32 = f32
     check_traps_mexxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 4, 4);
     CusIns.meacc_m((float32_t*)rs1, (float32_t*)rd, &sst);
+    WRITE_MEM_STC(RD, (float32_t*)rd, CMT_LOG_MME_REDUCE);
     break;
   }
 //});

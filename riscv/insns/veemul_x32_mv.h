@@ -8,3 +8,4 @@ unsigned long rs2 = MMU.get_phy_addr(RS2);
 unsigned long rd = MMU.get_phy_addr(RD);
 
 CusIns.veemul_x32_mv((int32_t *)rs1, (half*)rd, (half*)rs2, &sst);
+WRITE_MEM_STC(RD, (half*)rd, CMT_LOG_VME_COM);

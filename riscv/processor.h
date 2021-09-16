@@ -39,7 +39,9 @@ struct insn_desc_t
 typedef std::unordered_map<reg_t, freg_t> commit_log_reg_t;
 
 // addr, value, size
-typedef std::vector<std::tuple<reg_t, uint64_t, uint8_t>> commit_log_mem_t;
+typedef std::vector<std::tuple<reg_t, uint64_t, uint32_t>> commit_log_mem_t;
+// addr, value, inst_type
+typedef std::vector<std::tuple< reg_t, void *, uint32_t>> commit_log_mem_stc_t; 
 
 typedef struct
 {
@@ -300,6 +302,7 @@ struct state_t
   commit_log_reg_t log_reg_write;
   commit_log_mem_t log_mem_read;
   commit_log_mem_t log_mem_write;
+  commit_log_mem_stc_t log_mem_stc_write; 
   reg_t last_inst_priv;
   int last_inst_xlen;
   int last_inst_flen;

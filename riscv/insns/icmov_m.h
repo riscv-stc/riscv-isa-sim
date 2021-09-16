@@ -28,4 +28,5 @@ else {
     for (int i = 0; i < row; i++) {
     memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * e_size);
     }
+    WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_MTE);   
 }

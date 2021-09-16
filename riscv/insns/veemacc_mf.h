@@ -7,4 +7,5 @@ VME_DTYPE_DECODING_TO_TYPE({
     check_traps_vexxx_mf_reduce_vector(dtype_lut);
     dtype_vd vr2(f32(FRS2));
     veemacc_mf<dtype_vd, dtype_in>((dtype_vd*)rs1, (dtype_vd*)rd, vr2, &sst, DIM_DM, relu);
+    WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM);
 })

@@ -9,10 +9,11 @@ VME_DTYPE_DECODING_TO_TYPE({
         vemin_m<dtype_vd>((dtype_vd*)rs1, &res, &sst, relu);
         float32_t f32res;
         f32res.v = Float32(res).x;
-        WRITE_FRD(f32res);
+        WRITE_FRD_STC(f32res);  //WRITE_FRD(f32res);
     } else{
         check_traps_vexxx_m_reduce_vector(dtype_lut);
         unsigned long rd = MMU.get_phy_addr(RD);
         vemin_m<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM, relu);
+        WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM);
     }
 })

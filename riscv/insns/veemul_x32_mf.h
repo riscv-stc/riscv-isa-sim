@@ -9,3 +9,4 @@ half vr2;
 vr2.x = f32_to_f16(f32(FRS2)).v;
 
 CusIns.veemul_x32_mf((int32_t*)rs1, (half*)rd, vr2, &sst);
+WRITE_MEM_STC(RD, (half*)rd, CMT_LOG_VME_COM);
