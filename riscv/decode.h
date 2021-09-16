@@ -1432,10 +1432,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if tcp source start address in LLB for mov*
 #define check_tcp_access_start_llb_mov(x) \
-        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+        if ((zext_xlen(x) < LLB_AXI0_BUFFER_START) ||((zext_xlen(x) > LLB_AXI0_BUFFER_START + \
+                                  LLB_BUFFER_SIZE) && (zext_xlen(x) < LLB_AXI1_BUFFER_START))) { \
             throw trap_tcp_access_start(x); \
         } \
-        if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
+        if ((zext_xlen(x) >= LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START)  || \
+            zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
             throw trap_tcp_access_start(x); \
         }
 
@@ -1450,10 +1452,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_llb(x) \
-        if (zext_xlen(x) < LLB_AXI0_BUFFER_START) { \
+        if ((zext_xlen(x) < LLB_AXI0_BUFFER_START) || ((zext_xlen(x) > LLB_AXI0_BUFFER_START + \
+                                  LLB_BUFFER_SIZE) && (zext_xlen(x) < LLB_AXI1_BUFFER_START))) { \
             throw trap_tcp_access_end_llb(x); \
         } \
-        if (zext_xlen(x) >= LLB_AXI1_BUFFER_START+LLB_BUFFER_SIZE) { \
+        if ((zext_xlen(x) >= LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE && zext_xlen(x) < LLB_AXI1_BUFFER_START) || \
+              zext_xlen(x) >= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE) { \
             throw trap_tcp_access_end_llb(x); \
         }
 

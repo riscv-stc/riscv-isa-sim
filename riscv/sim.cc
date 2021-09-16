@@ -33,8 +33,8 @@
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
 
-//LLB0：0xf8000000~0xfa800000，LLB1:0xfa800000~0xf9400000
-//llb size 0x2800000 =40MB
+//LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
+//llb size 0x2000000 =32MB
 char *shm_l1_name = "L1";
 char *shm_llb_name = "LLB";
 
@@ -180,12 +180,15 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   if (hwsync_masks[0] != 0) {
-    llb = new share_mem_t(LLB_TOTAL_BUFFER_SIZE, shm_llb_name, 0);
-    bus.add_device(LLB_AXI_BUFFER_START, llb);
+    llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
+
   }
   else {
-    mem_t *llb = new mem_t(LLB_TOTAL_BUFFER_SIZE);
-    bus.add_device(LLB_AXI_BUFFER_START, llb);
+    mem_t *llb = new mem_t(LLB_BUFFER_SIZE);
+    bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    bus.add_device(LLB_AXI1_BUFFER_START, llb);
   }
 
   make_dtb();
@@ -823,8 +826,9 @@ char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = bus.find_device(addr);
 
   if ((in_local_mem(addr, L1_BUFFER) ||
-   (addr >= LLB_AXI_BUFFER_START) && (addr < LLB_AXI_BUFFER_START + LLB_TOTAL_BUFFER_SIZE)) &&
-    has_hwsync_masks()) {
+   (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+   (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+        has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size())
           return mem->contents() + (addr - desc.first);
@@ -846,8 +850,9 @@ char* sim_t::local_addr_to_mem(reg_t addr, uint32_t idx) {
   // addr on local bus (l1 | im cache)
   auto desc = local_bus[idx]->find_device(addr);
   if ((in_local_mem(addr, L1_BUFFER) ||
-    (addr >= LLB_AXI_BUFFER_START) && (addr < LLB_AXI_BUFFER_START + LLB_TOTAL_BUFFER_SIZE)) &&
-    has_hwsync_masks()) {
+    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
+    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
+        has_hwsync_masks()) {
     if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
       if (addr - desc.first < mem->size()) {
           return mem->contents() + (addr - desc.first);
