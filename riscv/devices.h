@@ -83,7 +83,7 @@ class uart_device_t : public abstract_device_t {
 
 class mbox_device_t : public abstract_device_t {
  public:
-  mbox_device_t(pcie_driver_t * pcie, processor_t* p);
+  mbox_device_t(pcie_driver_t * pcie, processor_t* p,bool support_pcie);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   void reset();
@@ -97,6 +97,7 @@ class mbox_device_t : public abstract_device_t {
   queue<uint32_t> cmdext_value;
   processor_t* p;
   uint8_t data[4096];
+  bool support_pcie;
   pcie_driver_t *pcie_driver;
 };
 

@@ -29,6 +29,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  -l                    Generate a log of execution\n");
   fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
+  fprintf(stderr, "  -o                    Start PCIE driver\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
   fprintf(stderr, "  --pc=<address>        Override ELF entry point\n");
   fprintf(stderr, "  --hartids=<a,b,...>   Explicitly specify hartids, default is 0,1,...\n");
@@ -143,6 +144,7 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
+  bool pcie_driv_state = false;
   uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
   size_t bank_id = 0;
@@ -191,6 +193,7 @@ int main(int argc, char** argv)
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
+  parser.option('o', 0, 0, [&](const char* s){pcie_driv_state = true;});
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
   parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks = s;});
   parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
@@ -248,7 +251,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
       progsize, max_bus_master_bits, require_authentication,
-      abstract_rti, support_hasel, support_abstract_csr_access);
+      abstract_rti, support_hasel, support_abstract_csr_access,pcie_driv_state);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

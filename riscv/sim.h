@@ -29,7 +29,7 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
         bool require_authentication, suseconds_t abstract_delay_usec,
-        bool support_hasel, bool support_abstract_csr_access);
+        bool support_hasel, bool support_abstract_csr_access,bool support_pcie);
   ~sim_t();
 
   // run the simulation to completion
@@ -100,6 +100,7 @@ private:
   bool log;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
+  bool support_pcie;
   remote_bitbang_t* remote_bitbang;
 
   std::vector<std::string> exit_dump;

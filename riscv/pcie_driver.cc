@@ -102,10 +102,13 @@ static const uint32_t noc_npc_base[] = {
 };
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
-                                 uint32_t bank_id) : procs(procs), mPSim(sim), mBankId(bank_id)
+                                 uint32_t bank_id,bool support_pcie) : procs(procs), mPSim(sim), mBankId(bank_id),support_pcie(support_pcie)
 {
   mStatus = PCIE_UNINIT;
   mDev = -1;
+
+  if(!support_pcie)
+  	return;
 
   if (initialize() != PCIE_OK) {
     std::cout << "PCIe driver init fail." << std::endl;

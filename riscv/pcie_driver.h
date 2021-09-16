@@ -38,7 +38,7 @@ struct command_head_t {
 
 class pcie_driver_t {
  public:
-  pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id);
+  pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id,bool support_pcie);
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);
@@ -57,7 +57,8 @@ class pcie_driver_t {
   int mStatus;
   uint32_t mBankId;
   int mDev;
-
+  bool support_pcie;
+  
   reg_t mTxCfgAddr;
   reg_t mTxCmd;
   reg_t mTxExtCmd;
