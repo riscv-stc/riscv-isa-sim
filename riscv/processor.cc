@@ -445,8 +445,7 @@ reg_t processor_t::vectorUnit_t::set_vl(int rd, int rs1, reg_t reqVL, reg_t newT
     vediv = 1 << extract64(newType, 8, 2);
 
     vill = !(vflmul >= 0.125 && vflmul <= 8)
-           || vsew > ELEN
-           || vflmul < ((float)vsew / ELEN)
+           || vsew > std::min(vflmul, 1.0f) * ELEN
            || vediv != 1
            || (newType >> 8) != 0;
 
@@ -536,16 +535,6 @@ void processor_t::reset()
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
 }
 
-// Count number of contiguous 0 bits starting from the LSB.
-static int ctz(reg_t val)
-{
-  int res = 0;
-  if (val)
-    while ((val & 1) == 0)
-      val >>= 1, res++;
-  return res;
-}
-
 void processor_t::set_pmp_num(reg_t n)
 {
   // check the number of pmp is in a reasonable range
@@ -607,7 +596,7 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
   enabled_interrupts = pending_interrupts & ~state.mideleg & -m_enabled;
   if (enabled_interrupts == 0) {
     // HS-ints have higher priority over VS-ints
-    deleg = state.mideleg & ~MIP_VS_MASK;
+    deleg = state.mideleg & ~state.hideleg;
     status = (state.v) ? state.vsstatus : state.mstatus;
     hsie = get_field(status, MSTATUS_SIE);
     hs_enabled = state.prv < PRV_S || (state.prv == PRV_S && hsie);
@@ -698,21 +687,22 @@ void processor_t::set_virt(bool virt)
        * we should sync Guest/VM FS, VS, and XS state with Host FS,
        * VS, and XS state.
        */
-       if ((state.mstatus & SSTATUS_FS) == SSTATUS_FS) {
-         state.vsstatus |= SSTATUS_FS;
+      state.vsstatus &= ~SSTATUS_FS;
+      state.vsstatus |= (state.mstatus & SSTATUS_FS);
+      if (supports_extension('V')) {
+        state.vsstatus &= ~SSTATUS_VS;
+        state.vsstatus |= (state.mstatus & SSTATUS_VS);
+      }
+      state.vsstatus &= ~SSTATUS_XS;
+      state.vsstatus |= (state.mstatus & SSTATUS_XS);
+      state.vsstatus &= (xlen == 64 ? ~SSTATUS64_SD : ~SSTATUS32_SD);
+      if (((state.mstatus & SSTATUS_FS) == SSTATUS_FS) ||
+          ((state.vsstatus & SSTATUS_VS) == SSTATUS_VS) ||
+          ((state.vsstatus & SSTATUS_XS) == SSTATUS_XS)) {
          state.vsstatus |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-       }
-       if ((state.mstatus & SSTATUS_VS) == SSTATUS_VS) {
-         state.vsstatus |= SSTATUS_VS;
-         state.vsstatus |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-       }
-       if ((state.mstatus & SSTATUS_XS) == SSTATUS_XS) {
-         state.vsstatus |= SSTATUS_XS;
-         state.vsstatus |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-       }
+      }
     }
     mask = SSTATUS_VS_MASK;
-    mask |= (supports_extension('F') ? SSTATUS_FS : 0);
     mask |= (supports_extension('V') ? SSTATUS_VS : 0);
     mask |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
     tmp = state.mstatus & mask;
@@ -1337,7 +1327,7 @@ void processor_t::set_csr(int which, reg_t val)
       /* Ignore */
       break;
     case CSR_HTVAL:
-      state.htinst = val;
+      state.htval = val;
       break;
     case CSR_HIP: {
       reg_t mask = MIP_VSSIP;
@@ -1367,10 +1357,14 @@ void processor_t::set_csr(int which, reg_t val)
     }
     case CSR_VSSTATUS: {
       reg_t mask = SSTATUS_VS_MASK;
-      mask |= (supports_extension('F') ? SSTATUS_FS : 0);
       mask |= (supports_extension('V') ? SSTATUS_VS : 0);
-      mask |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
       state.vsstatus = (state.vsstatus & ~mask) | (val & mask);
+      state.vsstatus &= (xlen == 64 ? ~SSTATUS64_SD : ~SSTATUS32_SD);
+      if (((state.mstatus & SSTATUS_FS) == SSTATUS_FS) ||
+          ((state.vsstatus & SSTATUS_VS) == SSTATUS_VS) ||
+          ((state.vsstatus & SSTATUS_XS) == SSTATUS_XS)) {
+         state.vsstatus |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
+      }
       break;
     }
     case CSR_VSIE: {
@@ -2014,7 +2008,6 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_HGEIP: ret(0);
     case CSR_VSSTATUS: {
       reg_t mask = SSTATUS_VS_MASK;
-      mask |= (supports_extension('F') ? SSTATUS_FS : 0);
       mask |= (supports_extension('V') ? SSTATUS_VS : 0);
       mask |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
       ret(state.vsstatus & mask);

@@ -100,6 +100,7 @@ public:
   uint64_t csr() { return x(20, 12); }
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
   uint64_t ts() { return (x(25, 1) << 1) + x(14, 1); }
+  uint64_t iorw() { return x(20, 8); }
 
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
@@ -938,46 +939,46 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
               p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
             !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
               p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
+            throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of l1 buffer
 #define check_cust_access_l1(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
               p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
+            throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of im buffer
 #define check_cust_access_im(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
               p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
+            throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of sp_idx buffer
 #define check_cust_access_sp(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER) && \
               p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, SP_BUFFER))) { \
-            throw trap_ncp_cust_access(x, 0, 0); \
+            throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access misaligned base address
 #define check_cust_misaligned_base(x, type) \
         if (unlikely(x & (sizeof(type) - 1))) { \
-            throw trap_ncp_cust_misaligned_base(x, 0, 0); \
+            throw trap_ncp_cust_misaligned_base(false, x, 0, 0); \
         }
 
 // throw trap if cust inst source address access with misaligned stride
 #define check_cust_misaligned_stride_src(x, type, stride) \
         if (unlikely(stride && (stride & (sizeof(type)-1)))) { \
-            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+            throw trap_ncp_cust_misaligned_stride(false, x, 0, 0); \
         }
 
 // throw trap if cust inst dest access with misaligned stride, or stride < width
 #define check_cust_misaligned_stride_dst(x, type, stride, col) \
         if (unlikely(stride && (stride & (sizeof(type)-1) || stride < col*sizeof(type)))) { \
-            throw trap_ncp_cust_misaligned_stride(x, 0, 0); \
+            throw trap_ncp_cust_misaligned_stride(false, x, 0, 0); \
         }
 
 // throw trap if cust inst use invalid shape, col=0 or row=0
@@ -1267,7 +1268,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, rs2_type); \
         check_cust_misaligned_base(RD, out_type); \
         if (unlikely(MME_SPARSE_BASE & 1)) { \
-            throw trap_ncp_cust_misaligned_base(MME_SPARSE_BASE, 0, 0); \
+            throw trap_ncp_cust_misaligned_base(false, MME_SPARSE_BASE, 0, 0); \
         } \
         check_sp_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
         check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
@@ -1387,7 +1388,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, rs2_type); \
         check_cust_misaligned_base(RD, out_type); \
         if (unlikely(MME_SPARSE_BASE & 1)) { \
-            throw trap_ncp_cust_misaligned_base(MME_SPARSE_BASE, 0, 0); \
+            throw trap_ncp_cust_misaligned_base(false, MME_SPARSE_BASE, 0, 0); \
         } \
         check_cust_invalid_shape(CONV_IN_ROW, CONV_IN_COLUMN); \
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
@@ -1416,7 +1417,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, rs2_type); \
         check_cust_misaligned_base(RD, out_type); \
         if (unlikely(MME_SPARSE_BASE & 1)) { \
-            throw trap_ncp_cust_misaligned_base(MME_SPARSE_BASE, 0, 0); \
+            throw trap_ncp_cust_misaligned_base(false, MME_SPARSE_BASE, 0, 0); \
         } \
         check_cust_invalid_shape(CONV_IN_ROW, CONV_IN_COLUMN); \
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
@@ -1593,7 +1594,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_trap_mmu_pmp_ok(addr, len, type, mode) ({ \
   reg_t ret = MMU.check_pmp_ok(addr, len, type, mode); \
   if (!ret) \
-    throw trap_ncp_cust_access(addr, 0, 0); \
+    throw trap_ncp_cust_access(false, addr, 0, 0); \
 })
 
 //
@@ -2845,6 +2846,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   require_vm; \
   reg_t from = P.VU.vsew / div; \
   require(from >= e8 && from <= e64); \
+  require(((float)P.VU.vflmul / div) >= 0.125 && ((float)P.VU.vflmul / div) <= 8 ); \
   require_align(insn.rd(), P.VU.vflmul); \
   require_align(insn.rs2(), P.VU.vflmul / div); \
   if ((P.VU.vflmul / div) < 1) { \

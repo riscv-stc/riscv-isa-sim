@@ -77,7 +77,7 @@ public:
 #ifdef RISCV_ENABLE_MISALIGNED
     reg_t res = 0;
     for (size_t i = 0; i < size; i++)
-      res += (reg_t)load_uint8(addr + i) << (i * 8);
+      res += (reg_t)load_uint8(addr + (target_big_endian? size-1-i : i)) << (i * 8);
     return res;
 #else
     throw trap_load_address_misaligned(addr, 0, 0);
@@ -88,7 +88,7 @@ public:
   {
 #ifdef RISCV_ENABLE_MISALIGNED
     for (size_t i = 0; i < size; i++)
-      store_uint8(addr + i, data >> (i * 8));
+      store_uint8(addr + (target_big_endian? size-1-i : i), data >> (i * 8));
 #else
     throw trap_store_address_misaligned(addr, 0, 0);
 #endif
@@ -116,7 +116,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
       if (xlate_flags) \
         flush_tlb(); \
       if (unlikely(addr & (sizeof(type##_t)-1))) { \
-        if (require_alignment) throw trap_load_address_misaligned(addr, 0, 0); \
+        if (require_alignment) load_reserved_address_misaligned(addr); \
         else return misaligned_load(addr, sizeof(type##_t)); \
       } \
       reg_t vpn = addr >> PGSHIFT; \
@@ -220,10 +220,10 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
         throw trap_store_address_misaligned(t.get_tval(), t.get_tval2(), t.get_tinst()); \
       } catch (trap_load_page_fault& t) { \
         /* AMO faults should be reported as store faults */ \
-        throw trap_store_page_fault(t.get_tval(), t.get_tval2(), t.get_tinst()); \
+        throw trap_store_page_fault(t.has_gva(), t.get_tval(), t.get_tval2(), t.get_tinst()); \
       } catch (trap_load_access_fault& t) { \
         /* AMO faults should be reported as store faults */ \
-        throw trap_store_access_fault(t.get_tval(), t.get_tval2(), t.get_tinst()); \
+        throw trap_store_access_fault(t.has_gva(), t.get_tval(), t.get_tval2(), t.get_tinst()); \
       } \
     }
 
@@ -275,13 +275,31 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
       load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
     else
-      throw trap_load_access_fault(vaddr, 0, 0); // disallow LR to I/O space
+      throw trap_load_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow LR to I/O space
+  }
+
+  inline void load_reserved_address_misaligned(reg_t vaddr)
+  {
+#ifdef RISCV_ENABLE_MISALIGNED
+    throw trap_load_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0);
+#else
+    throw trap_load_address_misaligned(vaddr, 0, 0);
+#endif
+  }
+
+  inline void store_conditional_address_misaligned(reg_t vaddr)
+  {
+#ifdef RISCV_ENABLE_MISALIGNED
+    throw trap_store_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0);
+#else
+    throw trap_store_address_misaligned(vaddr, 0, 0);
+#endif
   }
 
   inline bool check_load_reservation(reg_t vaddr, size_t size)
   {
     if (vaddr & (size-1))
-      throw trap_store_address_misaligned(vaddr, 0, 0);
+      store_conditional_address_misaligned(vaddr);
 
     reg_t paddr = translate(vaddr, 1, STORE, 0);
     if (auto host_addr = sim->addr_to_mem(paddr))
@@ -289,7 +307,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
       return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
     else
-      throw trap_store_access_fault(vaddr, 0, 0); // disallow SC to I/O space
+      throw trap_store_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow SC to I/O space
   }
 
   static const reg_t ICACHE_ENTRIES = 1024;

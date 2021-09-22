@@ -393,7 +393,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
       	  << addr
       	  << " access fault."
       	  << std::endl;
-      throw trap_load_access_fault(addr, 0, 0);
+      throw trap_load_access_fault(false, addr, 0, 0);
     }
   }
   else
@@ -403,7 +403,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
       	  << addr
       	  << " access fault."
       	  << std::endl;
-      throw trap_load_access_fault(addr, 0, 0);
+      throw trap_load_access_fault(false, addr, 0, 0);
     }
 
   return true;
@@ -429,7 +429,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
       	  << addr
       	  << " access fault."
       	  << std::endl;
-      throw trap_store_access_fault(addr, 0, 0);
+      throw trap_store_access_fault(false, addr, 0, 0);
     }
   } else if (!mPSim->mmio_store(addr, len, bytes)) {
     std::cout << "PCIe driver load addr: 0x"
@@ -437,7 +437,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     	<< addr
     	<< " access fault."
     	<< std::endl;
-    throw trap_store_access_fault(addr, 0, 0);
+    throw trap_store_access_fault(false, addr, 0, 0);
   }
 
   return true;

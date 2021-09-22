@@ -359,6 +359,29 @@ struct : public arg_t {
   }
 } dmx;
 
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    std::stringstream s;
+    auto iorw = insn.iorw();
+    bool has_pre = false;
+    static const char type[] = "wroi";
+    for (int i = 7; i >= 4; --i) {
+      if (iorw & (1ul << i)) {
+        s << type[i - 4];
+        has_pre = true;
+      }
+    }
+
+    s << (has_pre ? "," : "");
+    for (int i = 3; i >= 0; --i) {
+      if (iorw & (1ul << i)) {
+        s << type[i];
+      }
+    }
+
+    return s.str();
+  }
+} iorw;
 
 typedef struct {
   reg_t match;
@@ -403,9 +426,9 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_NOARG(code) \
     add_insn(new disasm_insn_t(#code, match_##code, mask_##code, {}));
   #define DEFINE_RTYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2})
-  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
-  #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
-  #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+  #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
+  #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
+  #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -432,7 +455,6 @@ disassembler_t::disassembler_t(int xlen)
 
   #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
   #define DEFINE_CV3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2, &dmx})
-
 
   DEFINE_XLOAD(lb)
   DEFINE_XLOAD(lbu)
@@ -500,9 +522,9 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(memul_mm)
   DEFINE_RTYPE(memul_sp_mm)
   DEFINE_RTYPE(memul_ts1_mm)
-  DEFINE_R3TYPE(memin_m)
-  DEFINE_R3TYPE(memax_m)
-  DEFINE_R3TYPE(meacc_m)
+  DEFINE_R1TYPE(memin_m)
+  DEFINE_R1TYPE(memax_m)
+  DEFINE_R1TYPE(meacc_m)
   DEFINE_RTYPE(meconv_mm)
   DEFINE_RTYPE(meconv_sp_mm)
   DEFINE_RTYPE(medeconv_mm)
@@ -570,6 +592,8 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(remw);
   DEFINE_RTYPE(remuw);
 
+  DEFINE_ITYPE_SHIFT(slliu_w);
+  DEFINE_RTYPE(addu_w);
   DEFINE_RTYPE(sh1add);
   DEFINE_RTYPE(sh2add);
   DEFINE_RTYPE(sh3add);
@@ -580,6 +604,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(subwu);
   DEFINE_ITYPE(addiwu);
   DEFINE_RTYPE(ror);
+  DEFINE_RTYPE(rorw);
   DEFINE_RTYPE(rol);
   DEFINE_RTYPE(sync);
   DEFINE_RTYPE(sync_dmae);
@@ -589,20 +614,43 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_RTYPE(sync_mte_r);
   DEFINE_RTYPE(sync_mte_w);
   DEFINE_RTYPE(pld);
-  DEFINE_R3TYPE(icmov_m)
-  DEFINE_R3TYPE(mov_m);
-  DEFINE_R1TYPE(mov_v);
+  DEFINE_R1TYPE(icmov_m)
+  DEFINE_R1TYPE(mov_m);
+  DEFINE_R2TYPE(mov_v);
   DEFINE_FXTYPE(mov_f);
-  DEFINE_R3TYPE(mov_llb_l1);
-  DEFINE_R3TYPE(mov_l1_llb);
-  DEFINE_R3TYPE(mov_l1_glb);
-  DEFINE_R3TYPE(mov_llb_glb);
-  DEFINE_R3TYPE(mov_glb_l1);
-  DEFINE_R3TYPE(mov_glb_llb);
-  DEFINE_R3TYPE(mov_glb_glb);
-  DEFINE_R3TYPE(mov_llb_llb)
+  DEFINE_R1TYPE(mov_llb_l1);
+  DEFINE_R1TYPE(mov_l1_llb);
+  DEFINE_R1TYPE(mov_l1_glb);
+  DEFINE_R1TYPE(mov_llb_glb);
+  DEFINE_R1TYPE(mov_glb_l1);
+  DEFINE_R1TYPE(mov_glb_llb);
+  DEFINE_R1TYPE(mov_glb_glb);
+  DEFINE_R1TYPE(mov_llb_llb)
 
+  DEFINE_RTYPE(rolw);
   DEFINE_ITYPE_SHIFT(rori);
+  DEFINE_ITYPE_SHIFT(roriw);
+  DEFINE_R1TYPE(ctz);
+  DEFINE_R1TYPE(ctzw);
+  DEFINE_R1TYPE(clz);
+  DEFINE_R1TYPE(clzw);
+  DEFINE_R1TYPE(pcnt);
+  DEFINE_R1TYPE(pcntw);
+  DEFINE_RTYPE(min);
+  DEFINE_RTYPE(minu);
+  DEFINE_RTYPE(max);
+  DEFINE_RTYPE(maxu);
+  DEFINE_RTYPE(andn);
+  DEFINE_RTYPE(orn);
+  DEFINE_RTYPE(xnor);
+  DEFINE_R1TYPE(sext_b);
+  DEFINE_R1TYPE(sext_h);
+  DEFINE_RTYPE(pack);
+  DEFINE_RTYPE(packw);
+  DEFINE_RTYPE(grev);
+  DEFINE_ITYPE_SHIFT(grevi);
+  DEFINE_RTYPE(gorc);
+  DEFINE_ITYPE_SHIFT(gorci);
 
   DEFINE_NOARG(ecall);
   DEFINE_NOARG(ebreak);
@@ -611,7 +659,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_NOARG(mret);
   DEFINE_NOARG(dret);
   DEFINE_NOARG(wfi);
-  DEFINE_NOARG(fence);
+  add_insn(new disasm_insn_t("fence", match_fence, mask_fence, {&iorw}));
   DEFINE_NOARG(fence_i);
   DEFINE_SFENCE_TYPE(sfence_vma);
 
@@ -766,75 +814,75 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_CV2TYPE(veadd_relu_mf);
   DEFINE_RTYPE(veadd_mm);
   DEFINE_RTYPE(veadd_relu_mm);
-  DEFINE_R2TYPE(veadd_mv);
-  DEFINE_R2TYPE(veadd_relu_mv);
+  DEFINE_R3TYPE(veadd_mv);
+  DEFINE_R3TYPE(veadd_relu_mv);
   DEFINE_CV2TYPE(vediv_mf);
   DEFINE_RTYPE(vediv_mm);
-  DEFINE_R2TYPE(vediv_mv);
-  DEFINE_R3TYPE(vecvt_hf_x8_m);
-  DEFINE_R3TYPE(vecvt_hf_xu8_m);
-  DEFINE_R3TYPE(vecvt_x8_hf_m);
-  DEFINE_R3TYPE(vecvt_xu8_hf_m);
-  DEFINE_R3TYPE(vecvt_hf_x16_m);
-  DEFINE_R3TYPE(vecvt_x16_hf_m);
-  DEFINE_R3TYPE(vecvt_f32_hf_m);
-  DEFINE_R3TYPE(vecvt_hf_f32_m);
-  DEFINE_R3TYPE(vecvt_bf_x8_m);
-  DEFINE_R3TYPE(vecvt_bf_xu8_m);
-  DEFINE_R3TYPE(vecvt_x8_bf_m);
-  DEFINE_R3TYPE(vecvt_xu8_bf_m);
-  DEFINE_R3TYPE(vecvt_bf_x16_m);
-  DEFINE_R3TYPE(vecvt_x16_bf_m);
-  DEFINE_R3TYPE(vecvt_f32_bf_m);
-  DEFINE_R3TYPE(vecvt_bf_f32_m);
-  DEFINE_R3TYPE(vecvt_bf_hf_m);
-  DEFINE_R3TYPE(vecvt_hf_bf_m);
-  DEFINE_R3TYPE(vecvt_f32_x32_m);
-  DEFINE_R3TYPE(vecvt_x32_f32_m);
+  DEFINE_R3TYPE(vediv_mv);
+  DEFINE_R1TYPE(vecvt_hf_x8_m);
+  DEFINE_R1TYPE(vecvt_hf_xu8_m);
+  DEFINE_R1TYPE(vecvt_x8_hf_m);
+  DEFINE_R1TYPE(vecvt_xu8_hf_m);
+  DEFINE_R1TYPE(vecvt_hf_x16_m);
+  DEFINE_R1TYPE(vecvt_x16_hf_m);
+  DEFINE_R1TYPE(vecvt_f32_hf_m);
+  DEFINE_R1TYPE(vecvt_hf_f32_m);
+  DEFINE_R1TYPE(vecvt_bf_x8_m);
+  DEFINE_R1TYPE(vecvt_bf_xu8_m);
+  DEFINE_R1TYPE(vecvt_x8_bf_m);
+  DEFINE_R1TYPE(vecvt_xu8_bf_m);
+  DEFINE_R1TYPE(vecvt_bf_x16_m);
+  DEFINE_R1TYPE(vecvt_x16_bf_m);
+  DEFINE_R1TYPE(vecvt_f32_bf_m);
+  DEFINE_R1TYPE(vecvt_bf_f32_m);
+  DEFINE_R1TYPE(vecvt_bf_hf_m);
+  DEFINE_R1TYPE(vecvt_hf_bf_m);
+  DEFINE_R1TYPE(vecvt_f32_x32_m);
+  DEFINE_R1TYPE(vecvt_x32_f32_m);
 
   DEFINE_CV3TYPE(veemacc_mf);
-  DEFINE_R2TYPE(veemacc_mm);
-  DEFINE_R2TYPE(veemacc_mv);
+  DEFINE_R3TYPE(veemacc_mm);
+  DEFINE_R3TYPE(veemacc_mv);
   DEFINE_CV2TYPE(veemul_mf);
   DEFINE_CV2TYPE(veemul_relu_mf);
   DEFINE_RTYPE(veemul_mm);
   DEFINE_RTYPE(veemul_relu_mm);
-  DEFINE_R2TYPE(veemul_mv);
-  DEFINE_R2TYPE(veemul_relu_mv);
-  DEFINE_R2TYPE(velkrelu_mv);
+  DEFINE_R3TYPE(veemul_mv);
+  DEFINE_R3TYPE(veemul_relu_mv);
+  DEFINE_R3TYPE(velkrelu_mv);
   DEFINE_CV2TYPE(velkrelu_mf);
   DEFINE_RTYPE(velut_m);
-  DEFINE_R1TYPE(vemax_m);
-  DEFINE_R1TYPE(veargmax_m);
+  DEFINE_R2TYPE(vemax_m);
+  DEFINE_R2TYPE(veargmax_m);
   DEFINE_RTYPE(vemax_mm);
   DEFINE_CV2TYPE(vemax_mf);
-  DEFINE_R2TYPE(vemax_mv);
-  DEFINE_R1TYPE(vemin_m);
-  DEFINE_R1TYPE(veargmin_m);
+  DEFINE_R3TYPE(vemax_mv);
+  DEFINE_R2TYPE(vemin_m);
+  DEFINE_R2TYPE(veargmin_m);
   DEFINE_RTYPE(vemin_mm);
   DEFINE_CV2TYPE(vemin_mf);
-  DEFINE_R2TYPE(vemin_mv);
+  DEFINE_R3TYPE(vemin_mv);
   DEFINE_RTYPE(vesub_mm);
   DEFINE_CV2TYPE(vesub_mf);
-  DEFINE_R2TYPE(vesub_mv);
-  DEFINE_R3TYPE(verecip_m);
-  DEFINE_R3TYPE(vesqrt_m);
-  DEFINE_R3TYPE(versqrt_m);
-  DEFINE_R3TYPE(veexp_m);
-  DEFINE_R3TYPE(vesigmoid_m);
-  DEFINE_R3TYPE(vesinh_m);
-  DEFINE_R3TYPE(vecosh_m);
-  DEFINE_R3TYPE(vetanh_m);
-  DEFINE_R3TYPE(veln_m);
-  DEFINE_R3TYPE(vesin_m);
-  DEFINE_R3TYPE(vecos_m);  
-  DEFINE_R3TYPE(veavgpool_m);
-  DEFINE_R3TYPE(vemaxpool_m);
+  DEFINE_R3TYPE(vesub_mv);
+  DEFINE_R1TYPE(verecip_m);
+  DEFINE_R1TYPE(vesqrt_m);
+  DEFINE_R1TYPE(versqrt_m);
+  DEFINE_R1TYPE(veexp_m);
+  DEFINE_R1TYPE(vesigmoid_m);
+  DEFINE_R1TYPE(vesinh_m);
+  DEFINE_R1TYPE(vecosh_m);
+  DEFINE_R1TYPE(vetanh_m);
+  DEFINE_R1TYPE(veln_m);
+  DEFINE_R1TYPE(vesin_m);
+  DEFINE_R1TYPE(vecos_m);  
+  DEFINE_R1TYPE(veavgpool_m);
+  DEFINE_R1TYPE(vemaxpool_m);
   DEFINE_RTYPE(vedwconv_mm);
   
-  DEFINE_R2TYPE(versub_mv);
+  DEFINE_R3TYPE(versub_mv);
   DEFINE_CV2TYPE(versub_mf);
-  DEFINE_R3TYPE(verot180_m);
+  DEFINE_R1TYPE(verot180_m);
   DEFINE_FR2TYPE(verev_m);
 
   DEFINE_CV2TYPE(veemul_x8_hf_mf);
@@ -897,12 +945,13 @@ disassembler_t::disassembler_t(int xlen)
   std::vector<const arg_t *> v_st_index = {&vs3, &v_address, &vs2, &opt, &vm};
 
   DISASM_VMEM_INSN(vle,    v_ld_unit,   );
+  DISASM_VMEM_INSN(vluxei, v_ld_index,  );
   DISASM_VMEM_INSN(vlse,   v_ld_stride, );
-  DISASM_VMEM_INSN(vlxei,  v_ld_index,  );
+  DISASM_VMEM_INSN(vloxei, v_ld_index,  );
   DISASM_VMEM_INSN(vle,    v_ld_unit, ff);
   DISASM_VMEM_INSN(vse,    v_st_unit,   );
+  DISASM_VMEM_INSN(vsoxei, v_st_index,  );
   DISASM_VMEM_INSN(vsse,   v_st_stride, );
-  DISASM_VMEM_INSN(vsxei,  v_st_index,  );
   DISASM_VMEM_INSN(vsuxei, v_st_index,  );
 
   #undef DISASM_VMEM_INSN
@@ -913,11 +962,14 @@ disassembler_t::disassembler_t(int xlen)
       {match_vle8_v,   mask_vle8_v,   "vlseg%de%d.v",   v_ld_unit},
       {match_vse8_v,   mask_vse8_v,   "vsseg%de%d.v",   v_st_unit},
 
+      {match_vluxei8_v, mask_vluxei8_v, "vluxseg%dei%d.v", v_ld_index},
+      {match_vsuxei8_v, mask_vsuxei8_v, "vsuxseg%dei%d.v", v_st_index},
+
       {match_vlse8_v,  mask_vlse8_v,  "vlsseg%de%d.v",  v_ld_stride},
       {match_vsse8_v,  mask_vsse8_v,  "vssseg%de%d.v",  v_st_stride},
 
-      {match_vlxei8_v, mask_vlxei8_v, "vlxseg%dei%d.v", v_ld_index},
-      {match_vsxei8_v, mask_vsxei8_v, "vsxseg%dei%d.v", v_st_index},
+      {match_vloxei8_v, mask_vloxei8_v, "vloxseg%dei%d.v", v_ld_index},
+      {match_vsoxei8_v, mask_vsoxei8_v, "vsoxseg%dei%d.v", v_st_index},
 
       {match_vle8ff_v, mask_vle8ff_v, "vlseg%de%dff.v", v_ld_unit}
     };
