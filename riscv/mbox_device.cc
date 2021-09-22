@@ -4,8 +4,8 @@
 #include "processor.h"
 #include "pcie_driver.h"
 
-mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p,bool support_pcie)
-  : pcie_driver(pcie), p(p),support_pcie(support_pcie)
+mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p, bool pcie_enabled)
+  : pcie_driver(pcie), p(p), pcie_enabled(pcie_enabled)
 {
   cmd_count = 0;
   cmdext_count = 0;
@@ -85,7 +85,7 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     cmd.addr = addr;
     cmd.len = 4;
     *(uint32_t *)cmd.data = *(uint32_t *)bytes;
-    if(support_pcie)
+    if(pcie_enabled)
     	pcie_driver->send((const uint8_t *)&cmd, sizeof(cmd));
   }
 

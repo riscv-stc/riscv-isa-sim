@@ -66,12 +66,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
              std::vector<int> const hartids, unsigned progsize,
              unsigned max_bus_master_bits, bool require_authentication,
              suseconds_t abstract_delay_usec, bool support_hasel,
-             bool support_abstract_csr_access,bool support_pcie)
+             bool support_abstract_csr_access, bool pcie_enabled)
   : htif_t(args), mems(mems), procs(std::max(nprocs, size_t(1))), bank_id(bank_id),
     hwsync_masks(hwsync_masks),
     local_bus(std::max(nprocs, size_t(1))), sub_bus(4),
     start_pc(start_pc), current_step(0), current_proc(0), debug(false),
-    histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL),support_pcie(support_pcie),
+    histogram_enabled(false), dtb_enabled(true), remote_bitbang(NULL), pcie_enabled(pcie_enabled),
     debug_module(this, progsize, max_bus_master_bits, require_authentication,
         abstract_delay_usec, support_hasel,
         support_abstract_csr_access)
@@ -92,8 +92,8 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
   bus.add_device(0xd0080000, hwsync);
 
   core_reset_n = 0;
-  if(support_pcie)
-    pcie_driver = new pcie_driver_t(this, procs, bank_id,support_pcie);
+  if(pcie_enabled)
+    pcie_driver = new pcie_driver_t(this, procs, bank_id, pcie_enabled);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
   // bus.add_device(MBOX_START, new mbox_device_t(pcie_driver, procs));
 
@@ -136,7 +136,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
-    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i],support_pcie);
+    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i], pcie_enabled);
 
     if (hwsync_masks[0] != 0) {
       l1 = new share_mem_t(l1_buffer_size * 32, shm_l1_name, (i +  bank_id * procs.size()) * l1_buffer_size);
@@ -224,7 +224,7 @@ sim_t::~sim_t()
     delete local_bus[i];
   }
   delete debug_mmu;
-  if(support_pcie)
+  if(pcie_enabled)
 	  delete pcie_driver;
 
   if (has_hwsync_masks()) {
