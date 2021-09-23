@@ -47,15 +47,15 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
-      "<bits> wide accesses [default 0]\n");
+                  "<bits> wide accesses [default 0]\n");
   fprintf(stderr, "  --debug-auth          Debug module requires debugger to authenticate\n");
   fprintf(stderr, "  --dmi-rti=<n>         Number of Run-Test/Idle cycles "
-      "required for a DMI access [default 0]\n");
+                  "required for a DMI access [default 0]\n");
   fprintf(stderr, "  --abstract-rti=<n>    Number of Run-Test/Idle cycles "
-      "required for an abstract command to execute [default 0]\n");
+                  "required for an abstract command to execute [default 0]\n");
   fprintf(stderr, "  --without-hasel       Debug module supports hasel\n");
   fprintf(stderr, "  --debug-no-abstract-csr  Debug module won't support abstract to authenticate\n");
-  
+
   fprintf(stderr, "BackDoor Options:\n");
   fprintf(stderr, "  --load=<file1,...>    load files into memory\n");
   fprintf(stderr, "                          file name: *@[core_id|ddr|llb.][<start>_<len>].<ext>\n");
@@ -75,21 +75,23 @@ static void suggest_help()
   exit(1);
 }
 
-static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
+static std::vector<std::pair<reg_t, mem_t *>> make_mems(const char *arg)
 {
   // handle legacy mem argument
-  char* p;
+  char *p;
   auto mb = strtoull(arg, &p, 0);
-  if (*p == 0) {
+  if (*p == 0)
+  {
     reg_t size = reg_t(mb) << 20;
     if (size != (size_t)size)
       throw std::runtime_error("Size would overflow size_t");
-    return std::vector<std::pair<reg_t, mem_t*>>(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
+    return std::vector<std::pair<reg_t, mem_t *>>(1, std::make_pair(reg_t(DRAM_BASE), new mem_t(size)));
   }
 
   // handle base/size tuples
-  std::vector<std::pair<reg_t, mem_t*>> res;
-  while (true) {
+  std::vector<std::pair<reg_t, mem_t *>> res;
+  while (true)
+  {
     auto base = strtoull(arg, &p, 0);
     if (!*p || *p != ':')
       help();
@@ -109,34 +111,35 @@ static std::vector<std::pair<reg_t, mem_t*>> make_mems(const char* arg)
 #define DEFAULT_LAYOUT (true)
 #define DEFAULT_MEMORY_LAYOUT "0x0:0xc0000000"
 
-static std::pair<reg_t, size_t> make_mem2(const char* arg)
+static std::pair<reg_t, size_t> make_mem2(const char *arg)
 {
   // handle legacy mem argument
-  char* p;
+  char *p;
   auto first = strtoull(arg, &p, 0);
   if (*p == 0)
     return std::make_pair((reg_t)0x10000, (size_t)first);
 
   if (!*p || *p != ':')
-      help(); // help will exit
+    help(); // help will exit
   auto size = strtoull(p + 1, &p, 0);
   //if ((size | first) % PGSIZE != 0)
   //    help();
   return std::make_pair((reg_t)first, (size_t)size);
 }
 
-static std::vector<std::string> make_strings(const char* arg)
+static std::vector<std::string> make_strings(const char *arg)
 {
   std::stringstream ss(arg);
   std::string item;
   std::vector<std::string> result;
-  while (std::getline(ss, item, ',')) {
+  while (std::getline(ss, item, ','))
+  {
     result.push_back(std::move(item));
   }
   return result;
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
   bool debug = false;
   bool halted = false;
@@ -144,20 +147,20 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
-  bool pcie_driv_state = false;
+  bool pcie_enabled = false;
   uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
   size_t bank_id = 0;
-  char masks_buf[178]={'\0'};
+  char masks_buf[178] = {'\0'};
   const char *hwsync_masks = masks_buf;
   reg_t start_pc = reg_t(-1);
-  std::vector<std::pair<reg_t, mem_t*>> mems;
+  std::vector<std::pair<reg_t, mem_t *>> mems;
   std::unique_ptr<icache_sim_t> ic;
   std::unique_ptr<dcache_sim_t> dc;
   std::unique_ptr<cache_sim_t> l2;
   bool log_cache = false;
-  std::function<extension_t*()> extension;
-  const char* isa = DEFAULT_ISA;
+  std::function<extension_t *()> extension;
+  const char *isa = DEFAULT_ISA;
   std::vector<std::string> load_files;
   std::vector<std::string> init_dump;
   std::vector<std::string> exit_dump;
@@ -181,68 +184,71 @@ int main(int argc, char** argv)
     while (stream >> n)
     {
       hartids.push_back(n);
-      if (stream.peek() == ',') stream.ignore();
+      if (stream.peek() == ',')
+        stream.ignore();
     }
   };
 
   option_parser_t parser;
   parser.help(&suggest_help);
-  parser.option('h', "help", 0, [&](const char* s){help(0);});
-  parser.option('d', 0, 0, [&](const char* s){debug = true;});
-  parser.option('g', 0, 0, [&](const char* s){histogram = true;});
-  parser.option('l', 0, 0, [&](const char* s){log = true;});
-  parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
-  parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
-  parser.option('o', 0, 0, [&](const char* s){pcie_driv_state = true;});
-  parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
-  parser.option(0, "hwsync-masks", 1, [&](const char* s){ hwsync_masks = s;});
-  parser.option(0, "ddr-size", 1, [&](const char* s){ ddr_size = strtoull(s, NULL, 0); });
+  parser.option('h', "help", 0, [&](const char *s) { help(0); });
+  parser.option('d', 0, 0, [&](const char *s) { debug = true; });
+  parser.option('g', 0, 0, [&](const char *s) { histogram = true; });
+  parser.option('l', 0, 0, [&](const char *s) { log = true; });
+  parser.option('p', 0, 1, [&](const char *s) { nprocs = atoi(s); });
+  parser.option('m', 0, 1, [&](const char *s) { mems = make_mems(s); });
+  parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
+  parser.option(0, "bank-id", 1, [&](const char *s) { bank_id = atoi(s); });
+  parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = s; });
+  parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
-  parser.option('H', 0, 0, [&](const char* s){halted = true;});
-  parser.option(0, "rbb-port", 1, [&](const char* s){use_rbb = true; rbb_port = atoi(s);});
-  parser.option(0, "pc", 1, [&](const char* s){start_pc = strtoull(s, 0, 0);});
+  parser.option('H', 0, 0, [&](const char *s) { halted = true; });
+  parser.option(0, "rbb-port", 1, [&](const char *s) {use_rbb = true; rbb_port = atoi(s); });
+  parser.option(0, "pc", 1, [&](const char *s) { start_pc = strtoull(s, 0, 0); });
   parser.option(0, "hartids", 1, hartids_parser);
-  parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
-  parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
-  parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
-  parser.option(0, "log-cache-miss", 0, [&](const char* s){log_cache = true;});
-  parser.option(0, "isa", 1, [&](const char* s){isa = s;});
-  parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
-  parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
-  parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
-  parser.option(0, "extlib", 1, [&](const char *s){
+  parser.option(0, "ic", 1, [&](const char *s) { ic.reset(new icache_sim_t(s)); });
+  parser.option(0, "dc", 1, [&](const char *s) { dc.reset(new dcache_sim_t(s)); });
+  parser.option(0, "l2", 1, [&](const char *s) { l2.reset(cache_sim_t::construct(s, "L2$")); });
+  parser.option(0, "log-cache-miss", 0, [&](const char *s) { log_cache = true; });
+  parser.option(0, "isa", 1, [&](const char *s) { isa = s; });
+  parser.option(0, "extension", 1, [&](const char *s) { extension = find_extension(s); });
+  parser.option(0, "dump-dts", 0, [&](const char *s) { dump_dts = true; });
+  parser.option(0, "disable-dtb", 0, [&](const char *s) { dtb_enabled = false; });
+  parser.option(0, "extlib", 1, [&](const char *s) {
     void *lib = dlopen(s, RTLD_NOW | RTLD_GLOBAL);
-    if (lib == NULL) {
+    if (lib == NULL)
+    {
       fprintf(stderr, "Unable to load extlib '%s': %s\n", s, dlerror());
       exit(-1);
     }
   });
-  parser.option(0, "progsize", 1, [&](const char* s){progsize = atoi(s);});
+  parser.option(0, "progsize", 1, [&](const char *s) { progsize = atoi(s); });
   parser.option(0, "debug-sba", 1,
-      [&](const char* s){max_bus_master_bits = atoi(s);});
+                [&](const char *s) { max_bus_master_bits = atoi(s); });
   parser.option(0, "debug-auth", 0,
-      [&](const char* s){require_authentication = true;});
+                [&](const char *s) { require_authentication = true; });
   parser.option(0, "dmi-rti", 1,
-      [&](const char* s){dmi_rti = atoi(s);});
+                [&](const char *s) { dmi_rti = atoi(s); });
   parser.option(0, "abstract-rti", 1,
-      [&](const char* s){abstract_rti = atoi(s);});
+                [&](const char *s) { abstract_rti = atoi(s); });
   parser.option(0, "without-hasel", 0,
-      [&](const char* s){support_hasel = false;});
+                [&](const char *s) { support_hasel = false; });
   parser.option(0, "debug-no-abstract-csr", 0,
-      [&](const char* s){support_abstract_csr_access = false;});
-  
+                [&](const char *s) { support_abstract_csr_access = false; });
+
   /* a backdoor for ncbet
    * load-path is case input path
    * dump-path is memory dump path, for ncbet get result
    */
-  parser.option(0, "load", 1, [&](const char* s){load_files = make_strings(s);});
-  parser.option(0, "init-dump", 1, [&](const char* s){init_dump = make_strings(s);});
-  parser.option(0, "exit-dump", 1, [&](const char* s){exit_dump = make_strings(s);});
-  parser.option(0, "dump-path", 1, [&](const char* s){dump_path = s;});
+  parser.option(0, "load", 1, [&](const char *s) { load_files = make_strings(s); });
+  parser.option(0, "init-dump", 1, [&](const char *s) { init_dump = make_strings(s); });
+  parser.option(0, "exit-dump", 1, [&](const char *s) { exit_dump = make_strings(s); });
+  parser.option(0, "dump-path", 1, [&](const char *s) { dump_path = s; });
 
   auto argv1 = parser.parse(argv);
-  std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
-  if (ddr_size == 0 && mems.empty()) {
+  std::vector<std::string> htif_args(argv1, (const char *const *)argv + argc);
+  if (ddr_size == 0 && mems.empty())
+  {
     mems = make_mems(DEFAULT_MEMORY_LAYOUT);
   }
 
@@ -250,36 +256,45 @@ int main(int argc, char** argv)
     help();
 
   sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication,
-      abstract_rti, support_hasel, support_abstract_csr_access,pcie_driv_state);
-  std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
+          progsize, max_bus_master_bits, require_authentication,
+          abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled);
+  std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *)NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
-  if (use_rbb) {
+  if (use_rbb)
+  {
     remote_bitbang.reset(new remote_bitbang_t(rbb_port, &(*jtag_dtm)));
     s.set_remote_bitbang(&(*remote_bitbang));
   }
   s.set_dtb_enabled(dtb_enabled);
 
-  if (dump_dts) {
+  if (dump_dts)
+  {
     printf("%s", s.get_dts());
     return 0;
   }
 
-  if (ic && l2) ic->set_miss_handler(&*l2);
-  if (dc && l2) dc->set_miss_handler(&*l2);
-  if (ic) ic->set_log(log_cache);
-  if (dc) dc->set_log(log_cache);
+  if (ic && l2)
+    ic->set_miss_handler(&*l2);
+  if (dc && l2)
+    dc->set_miss_handler(&*l2);
+  if (ic)
+    ic->set_log(log_cache);
+  if (dc)
+    dc->set_log(log_cache);
   for (size_t i = 0; i < nprocs; i++)
   {
-    if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
-    if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
-    if (extension) s.get_core(i)->register_extension(extension());
+    if (ic)
+      s.get_core(i)->get_mmu()->register_memtracer(&*ic);
+    if (dc)
+      s.get_core(i)->get_mmu()->register_memtracer(&*dc);
+    if (extension)
+      s.get_core(i)->register_extension(extension());
   }
 
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
-  
+
   return s.run(load_files, init_dump, exit_dump, dump_path);
 }
