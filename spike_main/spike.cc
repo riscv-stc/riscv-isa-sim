@@ -44,6 +44,8 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --progsize=<words>    Progsize for the debug module [default 2]\n");
   fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
+  fprintf(stderr, "  --board-id=<n>        Indicates the number of boards in a rack [default 0]\n");
+  fprintf(stderr, "  --chip-id=<n>         Several chips per board [default 0]\n");
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
@@ -150,6 +152,8 @@ int main(int argc, char **argv)
   bool pcie_enabled = false;
   uint32_t ddr_size = 0xC0000000;
   size_t nprocs = 1;
+  size_t board_id = 0;
+  size_t chip_id = 0;
   size_t bank_id = 0;
   char masks_buf[178] = {'\0'};
   const char *hwsync_masks = masks_buf;
@@ -199,6 +203,8 @@ int main(int argc, char **argv)
   parser.option('m', 0, 1, [&](const char *s) { mems = make_mems(s); });
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
   parser.option(0, "bank-id", 1, [&](const char *s) { bank_id = atoi(s); });
+  parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
+  parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
   parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = s; });
   parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
@@ -257,7 +263,7 @@ int main(int argc, char **argv)
 
   sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
           progsize, max_bus_master_bits, require_authentication,
-          abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled);
+          abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled, board_id, chip_id);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *)NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

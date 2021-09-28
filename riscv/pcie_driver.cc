@@ -27,6 +27,16 @@
 /* socket port */
 #define NL_PID           (100)
 #define NL_START_PORT    (NL_PID)
+
+/* netlink port, boarid bit15-bit12,chipid bit11-bit8 ,
+ * NL_START_PORT + bankid bit7-bit0 
+ */
+#define NL_BOARD_BIT     (12)
+#define NL_CHIP_BIT      (8)
+#define NL_BOARD_ADDR(board_id) (board_id << NL_BOARD_BIT)
+#define NL_CHIP_ADDR(chip_id)   (chip_id << NL_CHIP_BIT)
+
+#define NL_NETLINK_START_PORT(board_id,chip_id) (NL_BOARD_ADDR(board_id)|NL_CHIP_ADDR(chip_id) + NL_START_PORT)
 /* netlink groups */
 #define NL_GROUPS        (0)
 
@@ -102,7 +112,8 @@ static const uint32_t noc_npc_base[] = {
 };
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
-                                 uint32_t bank_id,bool pcie_enabled) : procs(procs), mPSim(sim), mBankId(bank_id), pcie_enabled(pcie_enabled)
+                                 uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id) : procs(procs), mPSim(sim), mBankId(bank_id), pcie_enabled(pcie_enabled),
+                                 board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
   mDev = -1;
@@ -124,7 +135,8 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
 
   memset(mSendBuffer, 0, NLMSG_SPACE(MAX_PAYLOAD));
   mSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-  mSendBuffer->nlmsg_pid = NL_START_PORT + mBankId;
+  //mSendBuffer->nlmsg_pid = NL_START_PORT + mBankId;
+  mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id) + mBankId;
   mSendBuffer->nlmsg_flags = NL_GROUPS;
 
   mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
@@ -158,7 +170,8 @@ int pcie_driver_t::initialize()
   // To prepare binding
   memset(&mSrcAddr, 0, sizeof(mSrcAddr));
   mSrcAddr.nl_family = AF_NETLINK;
-  mSrcAddr.nl_pid = NL_START_PORT + mBankId;
+  //mSrcAddr.nl_pid = NL_START_PORT + mBankId;
+  mSrcAddr.nl_pid = NL_NETLINK_START_PORT(board_id, chip_id) + mBankId;
   mSrcAddr.nl_groups = NL_GROUPS;
 
   // Bind src addr

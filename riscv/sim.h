@@ -29,7 +29,8 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,
         bool require_authentication, suseconds_t abstract_delay_usec,
-        bool support_hasel, bool support_abstract_csr_access, bool pcie_enabled);
+        bool support_hasel, bool support_abstract_csr_access, bool pcie_enabled, 
+        size_t board_id, size_t chip_id);
   ~sim_t();
 
   // run the simulation to completion
