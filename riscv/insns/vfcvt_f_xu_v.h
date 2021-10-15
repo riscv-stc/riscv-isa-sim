@@ -1,6 +1,9 @@
 // vfcvt.f.xu.v vd, vd2, vm
 VI_VFP_VF_LOOP
 ({
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   auto vs2_u = P.VU.elt<uint16_t>(rs2_num, i);
   vd = ui32_to_f16(vs2_u);
 },

@@ -5,6 +5,9 @@ VI_VFP_CVT_SCALE
   P.VU.elt<int8_t>(rd_num, i, true) = f16_to_i8(vs2, softfloat_round_minMag, true);
 },
 {
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   auto vs2 = P.VU.elt<float32_t>(rs2_num, i);
   P.VU.elt<int16_t>(rd_num, i, true) = f32_to_i16(vs2, softfloat_round_minMag, true);
 },

@@ -1,6 +1,9 @@
 // vfclass.v vd, vs2, vm
 VI_VFP_V_LOOP
 ({
+  vd.v = bf16_classify(vs2);
+},
+{
   vd.v = f16_classify(vs2);
 },
 {

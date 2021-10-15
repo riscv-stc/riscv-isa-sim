@@ -103,6 +103,7 @@ void softfloat_raiseFlags( uint_fast8_t );
 float16_t ui8_to_f16( uint8_t );
 bfloat16_t ui8_to_bf16( uint8_t );
 float16_t ui32_to_f16( uint32_t );
+bfloat16_t ui32_to_bf16( uint32_t );
 float32_t ui32_to_f32( uint32_t );
 float64_t ui32_to_f64( uint32_t );
 #ifdef SOFTFLOAT_FAST_INT64
@@ -125,6 +126,7 @@ float16_t i8_to_f16( int8_t );
 bfloat16_t i8_to_bf16( int8_t );
 float16_t i16_to_f16( int16_t );
 bfloat16_t i16_to_bf16( int16_t );
+bfloat16_t i32_to_bf16( int32_t );
 float16_t i32_to_f16( int32_t );
 float32_t i32_to_f32( int32_t );
 float64_t i32_to_f64( int32_t );
@@ -150,7 +152,9 @@ void i64_to_f128M( int64_t, float128_t * );
 uint_fast8_t f16_to_ui8( float16_t, uint_fast8_t, bool );
 uint_fast8_t bf16_to_ui8( bfloat16_t, uint_fast8_t, bool );
 uint_fast16_t f16_to_ui16( float16_t, uint_fast8_t, bool );
+uint_fast16_t bf16_to_ui16( bfloat16_t, uint_fast8_t, bool );
 uint_fast32_t f16_to_ui32( float16_t, uint_fast8_t, bool );
+uint_fast32_t bf16_to_ui32( bfloat16_t, uint_fast8_t, bool );
 uint_fast64_t f16_to_ui64( float16_t, uint_fast8_t, bool );
 int_fast8_t f16_to_i8( float16_t, uint_fast8_t, bool );
 int_fast8_t bf16_to_i8( bfloat16_t, uint_fast8_t, bool );
@@ -158,6 +162,7 @@ int_fast16_t f16_to_i16( float16_t, uint_fast8_t, bool );
 int_fast16_t bf16_to_i16( bfloat16_t, uint_fast8_t, bool );
 bfloat16_t bf16_roundToInt( bfloat16_t, uint_fast8_t, bool );
 int_fast32_t f16_to_i32( float16_t, uint_fast8_t, bool );
+int_fast32_t bf16_to_i32( bfloat16_t, uint_fast8_t, bool );
 int_fast64_t f16_to_i64( float16_t, uint_fast8_t, bool );
 uint_fast32_t f16_to_ui32_r_minMag( float16_t, bool );
 uint_fast64_t f16_to_ui64_r_minMag( float16_t, bool );
@@ -183,6 +188,7 @@ float16_t f16_mul( float16_t, float16_t );
 float32_t f16_mul32( float16_t, float16_t );
 bfloat16_t bf16_mul( bfloat16_t, bfloat16_t );
 float32_t bf16_mul32( bfloat16_t, bfloat16_t );
+bfloat16_t bf16_mulAdd( bfloat16_t, bfloat16_t, bfloat16_t );
 float16_t f16_mulAdd( float16_t, float16_t, float16_t );
 float16_t f16_div( float16_t, float16_t );
 float16_t f16_div_( float16_t, float16_t );
@@ -211,11 +217,15 @@ float16_t f16_sin( float16_t );
 bfloat16_t bf16_sin( bfloat16_t );
 float16_t f16_cos( float16_t );
 bfloat16_t bf16_cos( bfloat16_t );
+bool bf16_eq( bfloat16_t, bfloat16_t );
 bool f16_eq( float16_t, float16_t );
+bool bf16_le( bfloat16_t, bfloat16_t );
 bool f16_le( float16_t, float16_t );
+bool bf16_lt( bfloat16_t, bfloat16_t );
 bool f16_lt( float16_t, float16_t );
 bool f16_eq_signaling( float16_t, float16_t );
 bool f16_le_quiet( float16_t, float16_t );
+bool bf16_lt_quiet( bfloat16_t, bfloat16_t );
 bool f16_lt_quiet( float16_t, float16_t );
 bool f16_isSignalingNaN( float16_t );
 
@@ -434,25 +444,30 @@ bool f128M_le_quiet( const float128_t *, const float128_t * );
 bool f128M_lt_quiet( const float128_t *, const float128_t * );
 bool f128M_isSignalingNaN( const float128_t * );
 
+uint_fast16_t bf16_classify( bfloat16_t a );
 uint_fast16_t f16_classify( float16_t a );
 uint_fast16_t f32_classify( float32_t a );
 uint_fast16_t f64_classify( float64_t a );
 uint_fast16_t f128_classify( float128_t a );
 
+bfloat16_t bf16_max( bfloat16_t, bfloat16_t );  
 float16_t f16_max( float16_t, float16_t );
 float32_t f32_max( float32_t, float32_t );
 float64_t f64_max( float64_t, float64_t );
 
+bfloat16_t bf16_min( bfloat16_t, bfloat16_t );  
 float16_t f16_min( float16_t, float16_t );
 float32_t f32_min( float32_t, float32_t );
 float64_t f64_min( float64_t, float64_t );
 
+uint_fast16_t bf16_to_ui16( bfloat16_t a, uint_fast8_t roundingMode, bool exact );
 uint_fast16_t f16_to_ui16( float16_t a, uint_fast8_t roundingMode, bool exact );
 
 int_fast16_t f32_to_i16( float32_t a, uint_fast8_t roundingMode, bool exact );
 uint_fast16_t f32_to_ui16( float32_t, uint_fast8_t, bool );
 
 float16_t f16_rsqrte7( float16_t );
+bfloat16_t bf16_recip7( bfloat16_t );
 float16_t f16_recip7( float16_t );
 float32_t f32_rsqrte7( float32_t );
 float32_t f32_recip7( float32_t );

@@ -948,11 +948,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_FRM:
       dirty_fp_state;
       state.frm = val & (FSR_RD >> FSR_RD_SHIFT);
-      break;
-    case CSR_FCSR:
+      break;     
+    case CSR_FCSR:  
       dirty_fp_state;
       state.fflags = (val & FSR_AEXC) >> FSR_AEXC_SHIFT;
-      state.frm = (val & FSR_RD) >> FSR_RD_SHIFT;
+      state.frm    = (val & FSR_RD) >> FSR_RD_SHIFT;
+      state.bf16   = (val & FSR_BF16) >> FSR_BF16_SHIFT;
       break;
     case CSR_VCSR:
       dirty_vs_state;
@@ -1511,7 +1512,7 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_FRM:
       LOG_CSR(CSR_MSTATUS);
       LOG_CSR(CSR_FRM);
-      break;
+      break;     
     case CSR_FCSR:
       LOG_CSR(CSR_MSTATUS);
       LOG_CSR(CSR_FFLAGS);
@@ -1656,8 +1657,8 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_FCSR:
       require_fp;
       if (!supports_extension('F'))
-        break;
-      ret((state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT));
+        break;  
+      ret((state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT) | (state.bf16 << FSR_BF16_SHIFT));
     case CSR_VCSR:
       require_vector_vs;
       if (!supports_extension('V'))

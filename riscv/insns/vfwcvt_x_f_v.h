@@ -4,6 +4,9 @@ VI_VFP_CVT_SCALE
   ;
 },
 {
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   auto vs2 = P.VU.elt<float16_t>(rs2_num, i);
   P.VU.elt<int32_t>(rd_num, i, true) = f16_to_i32(vs2, STATE.frm, true);
 },

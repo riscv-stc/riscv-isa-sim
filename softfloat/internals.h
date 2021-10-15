@@ -112,10 +112,12 @@ float16_t softfloat_subMagsF16( uint_fast16_t, uint_fast16_t );
 bfloat16_t softfloat_addMagsBF16( uint_fast16_t, uint_fast16_t );
 bfloat16_t softfloat_subMagsBF16( uint_fast16_t, uint_fast16_t );
 
+bfloat16_t
+ softfloat_mulAddBF16(
+     uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast8_t );
 float16_t
  softfloat_mulAddF16(
      uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast8_t );
-
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 #define signBF16UI( a ) ((bool) ((uint16_t) (a)>>15))

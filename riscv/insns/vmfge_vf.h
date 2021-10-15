@@ -1,6 +1,9 @@
 // vmfge.vf vd, vs2, rs1
 VI_VFP_LOOP_CMP
 ({
+  res = bf16_le(rs1, vs2);
+},
+{
   res = f16_le(rs1, vs2);
 },
 {

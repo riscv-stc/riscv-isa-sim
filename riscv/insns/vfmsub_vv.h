@@ -1,6 +1,9 @@
 // vfmsub: vd[i] = +(vd[i] * vs1[i]) - vs2[i]
 VI_VFP_VV_LOOP
 ({
+  vd = bf16_mulAdd(vd, vs1, bf16(vs2.v ^ BF16_SIGN));
+},
+{
   vd = f16_mulAdd(vd, vs1, f16(vs2.v ^ F16_SIGN));
 },
 {

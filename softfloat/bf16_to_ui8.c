@@ -66,11 +66,8 @@ uint_fast8_t bf16_to_ui8( bfloat16_t a, uint_fast8_t roundingMode, bool exact )
     {
       sig32 <<= shiftDist;
     }
-
-
   }
 
-  
   return softfloat_roundToUI8( 
     sign, (uint_fast32_t) sig32, roundingMode, exact );
 

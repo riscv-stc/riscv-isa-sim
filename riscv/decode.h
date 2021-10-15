@@ -52,6 +52,9 @@ const int NCSR = 4096;
 #define FSR_RD_SHIFT 5
 #define FSR_RD   (0x7 << FSR_RD_SHIFT)
 
+#define FSR_BF16_SHIFT  (8)    
+#define FSR_BF16   (0x1 << FSR_BF16_SHIFT)
+
 #define FPEXC_NX 0x01
 #define FPEXC_UF 0x02
 #define FPEXC_OF 0x04
@@ -610,6 +613,8 @@ class wait_for_interrupt_t {};
 #define invalid_pc(pc) ((pc) & 1)
 
 /* Convenience wrappers to simplify softfloat code sequences */
+#define isBoxedBF16(r) (isBoxedF32(r) && ((uint64_t)((r.v[0] >> 16) + 1) == ((uint64_t)1 << 48))) 
+#define unboxBF16(r) (isBoxedBF16(r) ? (uint16_t)r.v[0] : defaultNaNBF16UI)
 #define isBoxedF16(r) (isBoxedF32(r) && ((uint64_t)((r.v[0] >> 16) + 1) == ((uint64_t)1 << 48)))
 #define unboxF16(r) (isBoxedF16(r) ? (uint16_t)r.v[0] : defaultNaNF16UI)
 #define isBoxedF32(r) (isBoxedF64(r) && ((uint32_t)((r.v[0] >> 32) + 1) == 0))
@@ -617,9 +622,11 @@ class wait_for_interrupt_t {};
 #define isBoxedF64(r) ((r.v[1] + 1) == 0)
 #define unboxF64(r) (isBoxedF64(r) ? r.v[0] : defaultNaNF64UI)
 typedef float128_t freg_t;
+inline bfloat16_t bf16(uint16_t v) { return { v }; } 
 inline float16_t f16(uint16_t v) { return { v }; }
 inline float32_t f32(uint32_t v) { return { v }; }
 inline float64_t f64(uint64_t v) { return { v }; }
+inline bfloat16_t bf16(freg_t r) { return bf16(unboxBF16(r)); } 
 inline float16_t f16(freg_t r) { return f16(unboxF16(r)); }
 inline float32_t f32(freg_t r) { return f32(unboxF32(r)); }
 inline float64_t f64(freg_t r) { return f64(unboxF64(r)); }
@@ -628,9 +635,12 @@ inline freg_t freg(float16_t f) { return { ((uint64_t)-1 << 16) | f.v, (uint64_t
 inline freg_t freg(float32_t f) { return { ((uint64_t)-1 << 32) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float64_t f) { return { f.v, (uint64_t)-1 }; }
 inline freg_t freg(float128_t f) { return f; }
+#define BF16_SIGN ((uint16_t)1 << 15)  
 #define F16_SIGN ((uint16_t)1 << 15)
 #define F32_SIGN ((uint32_t)1 << 31)
 #define F64_SIGN ((uint64_t)1 << 63)
+#define fsgnj16bf(a, b, n, x) \
+  bf16((bf16(a).v & ~BF16_SIGN) | ((((x) ? bf16(a).v : (n) ? BF16_SIGN : 0) ^ bf16(b).v) & BF16_SIGN))
 #define fsgnj16(a, b, n, x) \
   f16((f16(a).v & ~F16_SIGN) | ((((x) ? f16(a).v : (n) ? F16_SIGN : 0) ^ f16(b).v) & F16_SIGN))
 #define fsgnj32(a, b, n, x) \
@@ -1436,12 +1446,17 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   if (MTE_DATA_TYPE_RS1 != MTE_DATA_TYPE_RD) \
     trap_tcp_invalid_param();
 
+// throw trap if tcp csr_bf16 valid but not support
+#define check_tcp_csr_bf16(csr_bf16) \
+        if (csr_bf16) { \
+            throw trap_ncp_illegal_encoding(); \
+        }
+
 // throw trap if tcp icmov's target core id not exist
 #define check_tcp_icmov_invalid_core_id(core_id, max_id) \
         if (core_id > max_id) { \
             throw trap_tcp_icmov_invalid_core(); \
         }
-
 
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_l1(x) \
@@ -2916,6 +2931,16 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     float##width##_t vs2 = P.VU.elt<float##width##_t>(rs2_num, i); \
     is_active = true; \
 
+#define VI_VFP_LOOP_REDUCTION_BASE_BF(width) \
+  bfloat##width##_t vd_0 = P.VU.elt<bfloat##width##_t>(rd_num, 0); \
+  bfloat##width##_t vs1_0 = P.VU.elt<bfloat##width##_t>(rs1_num, 0); \
+  vd_0 = vs1_0; \
+  bool is_active = false; \
+  for (reg_t i=P.VU.vstart; i<vl; ++i){ \
+    VI_LOOP_ELEMENT_SKIP(); \
+    bfloat##width##_t vs2 = P.VU.elt<bfloat##width##_t>(rs2_num, i); \
+    is_active = true; \
+
 #define VI_VFP_LOOP_WIDE_REDUCTION_BASE \
   VI_VFP_COMMON \
   float64_t vd_0 = f64(P.VU.elt<float64_t>(rs1_num, 0).v); \
@@ -2933,16 +2958,29 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     if (is_propagate && !is_active) { \
       switch (x) { \
         case e16: {\
-            auto ret = f16_classify(f16(vd_0.v)); \
-            if (ret & 0x300) { \
-              if (ret & 0x100) { \
-                softfloat_exceptionFlags |= softfloat_flag_invalid; \
-                set_fp_exceptions; \
+            if (STATE.bf16) {\
+              auto ret = bf16_classify(bf16(vd_0.v)); \
+              if (ret & 0x300) { \
+                if (ret & 0x100) { \
+                  softfloat_exceptionFlags |= softfloat_flag_invalid; \
+                  set_fp_exceptions; \
+                } \
+                P.VU.elt<uint16_t>(rd_num, 0, true) = defaultNaNBF16UI; \
+              } else { \
+                P.VU.elt<uint16_t>(rd_num, 0, true) = vd_0.v; \
               } \
-              P.VU.elt<uint16_t>(rd_num, 0, true) = defaultNaNF16UI; \
-            } else { \
-              P.VU.elt<uint16_t>(rd_num, 0, true) = vd_0.v; \
-            } \
+            } else {\
+              auto ret = f16_classify(f16(vd_0.v)); \
+              if (ret & 0x300) { \
+                if (ret & 0x100) { \
+                  softfloat_exceptionFlags |= softfloat_flag_invalid; \
+                  set_fp_exceptions; \
+                } \
+                P.VU.elt<uint16_t>(rd_num, 0, true) = defaultNaNF16UI; \
+              } else { \
+                P.VU.elt<uint16_t>(rd_num, 0, true) = vd_0.v; \
+              } \
+            }\
           } \
           break; \
         case e32: { \
@@ -2992,15 +3030,22 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
-#define VI_VFP_VV_LOOP(BODY16, BODY32, BODY64) \
+#define VI_VFP_VV_LOOP(BODY16B, BODY16, BODY32, BODY64) \
   VI_CHECK_SSS(true); \
   VI_VFP_LOOP_BASE \
   switch(P.VU.vsew) { \
     case e16: {\
-      float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
-      float16_t vs1 = P.VU.elt<float16_t>(rs1_num, i); \
-      float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
-      BODY16; \
+      if (STATE.bf16) {\
+        bfloat16_t &vd = P.VU.elt<bfloat16_t>(rd_num, i, true); \
+        bfloat16_t vs1 = P.VU.elt<bfloat16_t>(rs1_num, i); \
+        bfloat16_t vs2 = P.VU.elt<bfloat16_t>(rs2_num, i); \
+        BODY16B; \
+      } else {\
+        float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
+        float16_t vs1 = P.VU.elt<float16_t>(rs1_num, i); \
+        float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3027,14 +3072,20 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   DEBUG_RVV_FP_VV; \
   VI_VFP_LOOP_END
 
-#define VI_VFP_V_LOOP(BODY16, BODY32, BODY64) \
+#define VI_VFP_V_LOOP(BODY16B, BODY16, BODY32, BODY64) \
   VI_CHECK_SSS(false); \
   VI_VFP_LOOP_BASE \
   switch(P.VU.vsew) { \
     case e16: {\
-      float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
-      float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
-      BODY16; \
+      if (STATE.bf16) {\
+        bfloat16_t &vd = P.VU.elt<bfloat16_t>(rd_num, i, true); \
+        bfloat16_t vs2 = P.VU.elt<bfloat16_t>(rs2_num, i); \
+        BODY16B; \
+      } else {\
+        float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
+        float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
+        BODY16; \
+      }\
       break; \
     }\
     case e32: {\
@@ -3056,15 +3107,22 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   set_fp_exceptions; \
   VI_VFP_LOOP_END
 
-#define VI_VFP_VV_LOOP_REDUCTION(BODY16, BODY32, BODY64) \
+#define VI_VFP_VV_LOOP_REDUCTION(BODY16B, BODY16, BODY32, BODY64) \
   VI_CHECK_REDUCTION(false) \
   VI_VFP_COMMON \
   switch(P.VU.vsew) { \
     case e16: {\
-      VI_VFP_LOOP_REDUCTION_BASE(16) \
-        BODY16; \
-        set_fp_exceptions; \
-      VI_VFP_LOOP_REDUCTION_END(e16) \
+      if (STATE.bf16) {\
+        VI_VFP_LOOP_REDUCTION_BASE_BF(16) \
+          BODY16B; \
+          set_fp_exceptions; \
+        VI_VFP_LOOP_REDUCTION_END(e16) \
+      } else {\
+        VI_VFP_LOOP_REDUCTION_BASE(16) \
+          BODY16; \
+          set_fp_exceptions; \
+        VI_VFP_LOOP_REDUCTION_END(e16) \
+      }\
       break; \
     }\
     case e32: {\
@@ -3098,8 +3156,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       for (reg_t i=P.VU.vstart; i<vl; ++i) { \
         VI_LOOP_ELEMENT_SKIP(); \
         is_active = true; \
-        float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
-        BODY16; \
+        if (STATE.bf16) {\
+          float32_t vs2 = bf16_to_f32(P.VU.elt<bfloat16_t>(rs2_num, i)); \
+          BODY16; \
+        } else {\
+          float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
+          BODY16; \
+        }\
         set_fp_exceptions; \
       VI_VFP_LOOP_REDUCTION_END(e32) \
       break; \
@@ -3120,15 +3183,22 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   }; \
 
-#define VI_VFP_VF_LOOP(BODY16, BODY32, BODY64) \
+#define VI_VFP_VF_LOOP(BODY16B, BODY16, BODY32, BODY64) \
   VI_CHECK_SSS(false); \
   VI_VFP_LOOP_BASE \
   switch(P.VU.vsew) { \
     case e16: {\
-      float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
-      float16_t rs1 = f16(READ_FREG(rs1_num)); \
-      float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
-      BODY16; \
+      if (STATE.bf16) {\
+        bfloat16_t &vd = P.VU.elt<bfloat16_t>(rd_num, i, true); \
+        bfloat16_t rs1 = bf16(READ_FREG(rs1_num)); \
+        bfloat16_t vs2 = P.VU.elt<bfloat16_t>(rs2_num, i); \
+        BODY16B; \
+      } else {\
+        float16_t &vd = P.VU.elt<float16_t>(rd_num, i, true); \
+        float16_t rs1 = f16(READ_FREG(rs1_num)); \
+        float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3155,15 +3225,22 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   DEBUG_RVV_FP_VF; \
   VI_VFP_LOOP_END
 
-#define VI_VFP_LOOP_CMP(BODY16, BODY32, BODY64, is_vs1) \
+#define VI_VFP_LOOP_CMP(BODY16B, BODY16, BODY32, BODY64, is_vs1) \
   VI_CHECK_MSS(is_vs1); \
   VI_VFP_LOOP_CMP_BASE \
   switch(P.VU.vsew) { \
     case e16: {\
-      float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
-      float16_t vs1 = P.VU.elt<float16_t>(rs1_num, i); \
-      float16_t rs1 = f16(READ_FREG(rs1_num)); \
-      BODY16; \
+      if (STATE.bf16) {\
+        bfloat16_t vs2 = P.VU.elt<bfloat16_t>(rs2_num, i); \
+        bfloat16_t vs1 = P.VU.elt<bfloat16_t>(rs1_num, i); \
+        bfloat16_t rs1 = bf16(READ_FREG(rs1_num)); \
+        BODY16B; \
+      } else {\
+        float16_t vs2 = P.VU.elt<float16_t>(rs2_num, i); \
+        float16_t vs1 = P.VU.elt<float16_t>(rs1_num, i); \
+        float16_t rs1 = f16(READ_FREG(rs1_num)); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3195,9 +3272,15 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   switch(P.VU.vsew) { \
     case e16: { \
       float32_t &vd = P.VU.elt<float32_t>(rd_num, i, true); \
-      float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
-      float32_t rs1 = f16_to_f32(f16(READ_FREG(rs1_num))); \
-      BODY16; \
+      if (STATE.bf16) {\
+        float32_t vs2 = bf16_to_f32(P.VU.elt<bfloat16_t>(rs2_num, i)); \
+        float32_t rs1 = bf16_to_f32(bf16(READ_FREG(rs1_num))); \
+        BODY16; \
+      } else {\
+        float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
+        float32_t rs1 = f16_to_f32(f16(READ_FREG(rs1_num))); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     } \
@@ -3223,9 +3306,15 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   switch(P.VU.vsew) { \
     case e16: {\
       float32_t &vd = P.VU.elt<float32_t>(rd_num, i, true); \
-      float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
-      float32_t vs1 = f16_to_f32(P.VU.elt<float16_t>(rs1_num, i)); \
-      BODY16; \
+      if (STATE.bf16) {\
+        float32_t vs2 = bf16_to_f32(P.VU.elt<bfloat16_t>(rs2_num, i)); \
+        float32_t vs1 = bf16_to_f32(P.VU.elt<bfloat16_t>(rs1_num, i)); \
+        BODY16; \
+      } else {\
+        float32_t vs2 = f16_to_f32(P.VU.elt<float16_t>(rs2_num, i)); \
+        float32_t vs1 = f16_to_f32(P.VU.elt<float16_t>(rs1_num, i)); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3251,8 +3340,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case e16: {\
       float32_t &vd = P.VU.elt<float32_t>(rd_num, i, true); \
       float32_t vs2 = P.VU.elt<float32_t>(rs2_num, i); \
-      float32_t rs1 = f16_to_f32(f16(READ_FREG(rs1_num))); \
-      BODY16; \
+      if (STATE.bf16) {\
+        float32_t rs1 = bf16_to_f32(bf16(READ_FREG(rs1_num))); \
+        BODY16; \
+      } else {\
+        float32_t rs1 = f16_to_f32(f16(READ_FREG(rs1_num))); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3277,8 +3371,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case e16: {\
       float32_t &vd = P.VU.elt<float32_t>(rd_num, i, true); \
       float32_t vs2 = P.VU.elt<float32_t>(rs2_num, i); \
-      float32_t vs1 = f16_to_f32(P.VU.elt<float16_t>(rs1_num, i)); \
-      BODY16; \
+      if (STATE.bf16) {\
+        float32_t vs1 = bf16_to_f32(P.VU.elt<bfloat16_t>(rs1_num, i)); \
+        BODY16; \
+      } else {\
+        float32_t vs1 = f16_to_f32(P.VU.elt<float16_t>(rs1_num, i)); \
+        BODY16; \
+      }\
       set_fp_exceptions; \
       break; \
     }\
@@ -3311,7 +3410,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   for (reg_t i=P.VU.vstart; i<vl; ++i){ \
     VI_LOOP_ELEMENT_SKIP();
 
-#define VI_VFP_CVT_SCALE(BODY8, BODY16, BODY32, \
+#define VI_VFP_CVT_SCALE(BODY8, BODY16B, BODY16, BODY32, \
                          CHECK8, CHECK16, CHECK32, \
                          is_widen, eew_check) \
   if (is_widen) { \
@@ -3332,7 +3431,11 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case e16: {\
       CHECK16 \
       VI_VFP_LOOP_SCALE_BASE \
-        BODY16 \
+        if (STATE.bf16) {\
+          BODY16B; \
+        } else {\
+          BODY16 \
+        }\
         set_fp_exceptions; \
       VI_VFP_LOOP_END \
       } \

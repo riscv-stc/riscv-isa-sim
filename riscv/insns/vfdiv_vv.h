@@ -1,6 +1,9 @@
 // vfdiv.vv  vd, vs2, vs1
 VI_VFP_VV_LOOP
 ({
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   vd = f16_div(vs2, vs1);
 },
 {

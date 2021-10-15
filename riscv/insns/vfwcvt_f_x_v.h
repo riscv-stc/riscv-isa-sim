@@ -5,6 +5,9 @@ VI_VFP_CVT_SCALE
   P.VU.elt<float16_t>(rd_num, i, true) = i32_to_f16(vs2);
 },
 {
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   auto vs2 = P.VU.elt<int16_t>(rs2_num, i);
   P.VU.elt<float32_t>(rd_num, i, true) = i32_to_f32(vs2);
 },

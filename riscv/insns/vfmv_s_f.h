@@ -13,7 +13,11 @@ if (vl > 0 && P.VU.vstart < vl) {
 
   switch(P.VU.vsew) {
     case e16:
-      P.VU.elt<uint16_t>(rd_num, 0, true) = f16(FRS1).v;
+      if (STATE.bf16) {
+        P.VU.elt<uint16_t>(rd_num, 0, true) = bf16(FRS1).v;
+      } else {
+        P.VU.elt<uint16_t>(rd_num, 0, true) = f16(FRS1).v;
+      }         
       break;
     case e32:
       P.VU.elt<uint32_t>(rd_num, 0, true) = f32(FRS1).v;

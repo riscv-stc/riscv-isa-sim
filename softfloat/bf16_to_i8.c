@@ -72,11 +72,8 @@ int_fast8_t bf16_to_i8( bfloat16_t a, uint_fast8_t roundingMode, bool exact )
     {
       sig32 <<= shiftDist;
     }
-
-
   }
 
-  
   return softfloat_roundToI8( 
     sign, (uint_fast32_t) sig32, roundingMode, exact );
 

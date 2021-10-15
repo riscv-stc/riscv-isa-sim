@@ -1,6 +1,9 @@
 // vfmul.vf vd, vs2, rs1, vm
 VI_VFP_VF_LOOP
 ({
+  vd = bf16_mul(vs2, rs1);
+},
+{
   vd = f16_mul(vs2, rs1);
 },
 {

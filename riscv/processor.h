@@ -225,6 +225,7 @@ struct state_t
 
   uint32_t fflags;
   uint32_t frm;
+  uint32_t bf16; 
   uint32_t vme_shape_s;
   uint32_t vme_stride_d;
   uint32_t vme_stride_s;
@@ -659,7 +660,7 @@ public:
   vectorUnit_t VU;
 };
 
-reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);
+reg_t illegal_instruction (processor_t* p, insn_t insn, reg_t pc);
 
 #define REGISTER_INSN(proc, name, match, mask) \
   extern reg_t rv32_##name(processor_t*, insn_t, reg_t); \

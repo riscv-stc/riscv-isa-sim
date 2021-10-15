@@ -1,6 +1,9 @@
 // vfcvt.x.f.v vd, vd2, vm
 VI_VFP_VF_LOOP
 ({
+  check_tcp_csr_bf16(STATE.bf16);
+},
+{
   P.VU.elt<int16_t>(rd_num, i) = f16_to_i16(vs2, STATE.frm, true);
 },
 {
