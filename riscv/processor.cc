@@ -2250,10 +2250,6 @@ void processor_t::register_base_instructions()
   build_opcode_map();
 }
 
-uint32_t processor_t::get_sync_group()
-{
-  return ~(hwsync->get_masks());
-}
 void processor_t::sync() {
   hwsync->enter(id);
 }

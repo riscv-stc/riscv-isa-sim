@@ -396,6 +396,10 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
       throw trap_load_access_fault(false, addr, 0, 0);
     }
   }
+  else if (auto host_addr = mPSim->sub_bus_addr_to_mem(addr)) {
+    memcpy(bytes, host_addr, len);
+  }
+
   else
     if (!mPSim->mmio_load(addr, len, bytes)) {
       std::cout << "PCIe driver load addr: 0x"
@@ -431,7 +435,11 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
       	  << std::endl;
       throw trap_store_access_fault(false, addr, 0, 0);
     }
-  } else if (!mPSim->mmio_store(addr, len, bytes)) {
+  }
+  else if (auto host_addr = mPSim->sub_bus_addr_to_mem(addr)) {
+    memcpy(host_addr, bytes, len);
+  }
+  else if (!mPSim->mmio_store(addr, len, bytes)) {
     std::cout << "PCIe driver load addr: 0x"
     	<< hex
     	<< addr

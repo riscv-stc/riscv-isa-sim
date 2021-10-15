@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #include "devices.h"
+
 class hwsync_t: public abstract_device_t {
   private:
     uint32_t *masks;
@@ -36,11 +37,10 @@ class hwsync_t: public abstract_device_t {
 
     bool enter(unsigned core_id);
     bool enter(unsigned core_id, uint32_t coremap);
+
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
-    uint32_t get_masks();
-    uint32_t get_hwsync() {return *req_sync;}
-
+    uint32_t get_hwsync() { return *req_sync;}
     void reset(uint32_t id) {
       *req_pld |= (0x1 << id);
       if (shm_start)

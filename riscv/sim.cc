@@ -33,6 +33,15 @@
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
 
+//ddr high 1G address, just accessed by pcie and sysdma
+//range is 0xc0800000 ~ 0xf8000000
+#define GLB_HIGHMEM_SIZE     (0x40000000 - 0x800000 - 0x8000000)
+#define GLB_HIGHMEM_BASE       (0xc0000000 + 0x800000)
+#define GLB_HIGHMEM_BANK0_START_ADDR (0x8c0800000)
+#define GLB_HIGHMEM_BANK1_START_ADDR (0x9c0800000)
+#define GLB_HIGHMEM_BANK2_START_ADDR (0xac0800000)
+#define GLB_HIGHMEM_BANK3_START_ADDR (0xbc0800000)
+
 //LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
 //llb size 0x2000000 =32MB
 char *shm_l1_name = "L1";
@@ -43,6 +52,10 @@ volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed) {
+    chmod("/dev/shm/HWSYNC", 0666);
+    chmod("/dev/shm/L1", 0666);
+    chmod("/dev/shm/LLB", 0666);
+
     shm_unlink("HWSYNC");
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
@@ -70,7 +83,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     procs(std::max(nprocs, size_t(1))),
     bank_id(bank_id),
     hwsync_masks(hwsync_masks),
-    local_bus(std::max(nprocs, size_t(1))),
+    local_bus(std::max(nprocs, size_t(1))), sub_bus(1),
     initrd_start(initrd_start),
     initrd_end(initrd_end),
     bootargs(bootargs),
@@ -89,6 +102,8 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   signal(SIGINT, &handle_signal);
 
   if ((bank_id == 0) && has_hwsync_masks()) {
+    chmod("/dev/shm/L1", 0666);
+    chmod("/dev/shm/LLB", 0666);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
   }
@@ -178,6 +193,10 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   if (ddr_size > 0) {
     bus.add_device(ddr_mem_start, new mem_t(ddr_size));
   }
+
+  //add high 1G ddr address, just accessed by pcie and sysdma
+    sub_bus[0] = new bus_t();
+    sub_bus[0]->add_device(GLB_HIGHMEM_BASE, new mem_t(GLB_HIGHMEM_SIZE));
 
   if (hwsync_masks[0] != 0) {
     llb = new share_mem_t(LLB_BUFFER_SIZE, shm_llb_name, 0);
@@ -901,6 +920,59 @@ char* sim_t::local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id) {
 const char* sim_t::get_symbol(uint64_t addr)
 {
   return htif_t::get_symbol(addr);
+}
+
+bool sim_t::is_high_mem_addr(reg_t addr)
+{
+  bool ret = false;
+  if (bank_id == 0 && addr >= GLB_HIGHMEM_BANK0_START_ADDR && addr < GLB_HIGHMEM_BANK0_START_ADDR + GLB_HIGHMEM_SIZE) 
+    ret = true;
+  else if (bank_id == 1 && addr >= GLB_HIGHMEM_BANK1_START_ADDR && addr < GLB_HIGHMEM_BANK1_START_ADDR + GLB_HIGHMEM_SIZE)
+    ret = true;
+  else if (bank_id == 2 && addr >= GLB_HIGHMEM_BANK2_START_ADDR && addr < GLB_HIGHMEM_BANK2_START_ADDR + GLB_HIGHMEM_SIZE)
+    ret = true;
+  else if (bank_id == 3 && addr >= GLB_HIGHMEM_BANK3_START_ADDR && addr < GLB_HIGHMEM_BANK3_START_ADDR + GLB_HIGHMEM_SIZE)
+    ret = true;
+  else
+    ret = false;
+  
+  return ret;
+}
+
+bool sim_t::in_high_mem(reg_t addr) { 
+
+  if (!is_high_mem_addr(addr))
+    return false;
+
+  addr = addr & 0xffffffff;
+  auto desc = sub_bus[0]->find_device(addr);
+
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+    reg_t start_addr = GLB_HIGHMEM_BASE;
+    if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+char* sim_t::sub_bus_addr_to_mem(reg_t addr) {
+  std::ostringstream err;
+
+  if (!is_high_mem_addr(addr))
+    return NULL;
+
+  addr = addr & 0xffffffff;
+  auto desc = sub_bus[0]->find_device(addr);
+  
+  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+    if (addr - desc.first < mem->size())
+        return mem->contents() + (addr - desc.first);
+    return NULL;
+  }
+
+  return NULL;
 }
 
 // htif

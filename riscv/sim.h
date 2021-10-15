@@ -100,6 +100,7 @@ private:
   log_file_t log_file;
 
   std::vector<bus_t*> local_bus;
+  std::vector<bus_t*> sub_bus;
   pcie_driver_t *pcie_driver;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
@@ -135,6 +136,10 @@ private:
   bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx);
   void make_dtb();
   void set_rom();
+
+  bool is_high_mem_addr(reg_t addr);
+  bool in_high_mem(reg_t addr);
+  char* sub_bus_addr_to_mem(reg_t addr);
 
   const char* get_symbol(uint64_t addr);
 

@@ -28,8 +28,11 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 
         shm_name = "HWSYNC";
         shm_size = 256;
+        char file_name[64];
+        sprintf(file_name, "/dev/shm/%s", shm_name);
 
         if (bank_id == 0) {
+            chmod(file_name, 0666);
             munmap(shm_start, shm_size);
             shm_unlink(shm_name);
         }
@@ -38,6 +41,7 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
         if (shm_id == -1)
             throw std::runtime_error("hwsync shmget failed");
 
+        chmod(file_name, 0666);
         ftruncate(shm_id, shm_size);
         shm_ptr = (char *)mmap(0, shm_size, PROT_WRITE, MAP_SHARED, shm_id, 0);
         if (shm_ptr == (void *)-1)
@@ -91,13 +95,13 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
         }
 
         // add all processors to group
-        p = strtok(hwsync_masks, delim);
+        p = std::strtok(hwsync_masks, delim);
         if (!p) {
             masks[0] &= ~(mask << (bank_id * nprocs));
         } else {
             while (p) {
                 masks[index++] = std::stoul(p, nullptr, 16);
-                p = strtok(NULL, delim);
+                p = std::strtok(NULL, delim);
                 if (index >= group_count)
                     break;
             }
@@ -122,9 +126,12 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 
 hwsync_t::~hwsync_t() {
     if (shm_start) {
+        char file_name[64];
+        sprintf(file_name, "/dev/shm/%s", shm_name);
+
         *req_sync = ~0;
         pthread_cond_broadcast(pcond_sync);
-
+        chmod(file_name, 0666);
         munmap(shm_start, shm_size);
         shm_unlink(shm_name);
     } else {
@@ -133,21 +140,14 @@ hwsync_t::~hwsync_t() {
     }
 }
 
-uint32_t hwsync_t::get_masks()
-{
-    return masks[0];
-}
-
 bool
 hwsync_t::enter(unsigned core_id) {
 #ifdef DEBUG
     std::cout << "core" << core_id << ": start sync" << std::endl;
 #endif
-
     if (shm_start) {
         pthread_mutex_lock(pmutex_sync);
         *req_sync &= ~(1 << core_id);
-
         for (int i = 0; i < group_count; i++) {
             if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
                 // all enter, clear enter requests
@@ -156,7 +156,6 @@ hwsync_t::enter(unsigned core_id) {
                 break;
             }
         }
-
         pthread_mutex_unlock(pmutex_sync);
 
         pthread_mutex_lock(pmutex_sync);
@@ -168,7 +167,6 @@ hwsync_t::enter(unsigned core_id) {
     {
         std::unique_lock<std::mutex> lock(mutex_sync);
         *req_sync &= ~(1 << core_id);
-
         for (int i=0; i< group_count; i++) {
             if ((*req_sync | masks[i]) == masks[i] && ~masks[i] != 0) {
                 // all enter, clear enter requests
@@ -193,10 +191,6 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
 #ifdef DEBUG
     std::cout << "core" << core_id << ": start pld, coremap=" << coremap << std::endl;
 #endif
-    if (coremap > (~masks[0])) {
-        trap_tcp_invalid_param();
-    }
-
     if (shm_start) {
         pthread_mutex_lock(pmutex_pld);
         *req_pld &= ~(1 << core_id);
@@ -206,7 +200,6 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
             *req_pld |= coremap;
             pthread_cond_broadcast(pcond_pld);
         }
-
         pthread_mutex_unlock(pmutex_pld);
 
         pthread_mutex_lock(pmutex_pld);
@@ -218,33 +211,37 @@ hwsync_t::enter(unsigned core_id, uint32_t coremap) {
     {
         std::unique_lock<std::mutex> lock(mutex_pld);
         *req_pld &= ~(1 << core_id);
-
         if ((*req_pld | ~coremap) == ~coremap) {
             // all enter, clear enter requests
             *req_pld |= coremap;
             cond_pld.notify_all();
         }
-
         cond_pld.wait(lock, [&]{ return (*req_pld & 1 << core_id) != 0; });
     }
-
+    
 #ifdef DEBUG
     std::cout << "core" << core_id << ": end pld" << std::endl;
 #endif
 
     return true;
 }
+
 bool hwsync_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
   if (unlikely(!bytes || addr >= 4 * 16))
     return false;
+
   *((uint32_t*)bytes) = masks[addr / 4];
+
   return true;
 }
+
 bool hwsync_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   if (unlikely(!bytes || addr >= 4 * 16))
     return false;
+
   masks[addr / 4] = *((uint32_t*)bytes);
+
   return true;
 }

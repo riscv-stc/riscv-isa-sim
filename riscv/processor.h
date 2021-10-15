@@ -411,7 +411,6 @@ public:
 
   void sync();
   void pld(uint32_t coremap);
-  uint32_t get_sync_group();
 
   void run_async(std::function<void()> func);
   void run_async(std::function<void()> func, bool flag);
