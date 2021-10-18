@@ -44,19 +44,23 @@
 
 //LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
 //llb size 0x2000000 =32MB
-char *shm_l1_name = "L1";
-char *shm_llb_name = "LLB";
+char shm_l1_name[32] ;
+char shm_llb_name[32] ;
+char shm_hwsync_name[32];
 
+char dev_shm_l1_name[64];
+char dev_shm_llb_name[64];
+char dev_shm_hwsync_name[64]; 
 volatile bool ctrlc_pressed = false;
 
 static void handle_signal(int sig)
 {
   if (ctrlc_pressed) {
-    chmod("/dev/shm/HWSYNC", 0666);
-    chmod("/dev/shm/L1", 0666);
-    chmod("/dev/shm/LLB", 0666);
+    chmod(dev_shm_hwsync_name, 0666);
+    chmod(dev_shm_l1_name, 0666);
+    chmod(dev_shm_llb_name, 0666);
 
-    shm_unlink("HWSYNC");
+    shm_unlink(shm_hwsync_name);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
     exit(-1);
@@ -76,7 +80,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file)
+             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id)
   : htif_t(args),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -97,22 +101,43 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     histogram_enabled(false),
     log(false),
     remote_bitbang(NULL),
+    pcie_enabled(pcie_enabled),
     debug_module(this, dm_config)
 {
+  //char add_debug_dev = 1;
+  //char add_clint_dev = 1;
+  memset(shm_l1_name, 0, sizeof(shm_l1_name));
+  memset(shm_llb_name, 0, sizeof(shm_llb_name)); 
+  memset(shm_hwsync_name, 0, sizeof(shm_hwsync_name));
+
+  memset(dev_shm_l1_name, 0, sizeof(dev_shm_l1_name));
+  memset(dev_shm_llb_name, 0, sizeof(dev_shm_llb_name));
+  memset(dev_shm_hwsync_name, 0, sizeof(dev_shm_hwsync_name));
+ 
+  snprintf(shm_l1_name, sizeof(shm_l1_name), "L1_%lu_%lu", board_id, chip_id);
+  snprintf(shm_llb_name, sizeof(shm_llb_name), "LLB_%lu_%lu", board_id, chip_id);
+  snprintf(shm_hwsync_name, sizeof(shm_hwsync_name), "HWSYNC_%lu_%lu", board_id, chip_id);
+
+  snprintf(dev_shm_l1_name, sizeof(dev_shm_l1_name), "/dev/dhm/%s", shm_l1_name);
+  snprintf(dev_shm_llb_name, sizeof(dev_shm_llb_name), "/dev/dhm/%s", shm_llb_name);
+  snprintf(dev_shm_hwsync_name, sizeof(dev_shm_hwsync_name), "/dev/dhm/%s", shm_hwsync_name);
+
   signal(SIGINT, &handle_signal);
 
   if ((bank_id == 0) && has_hwsync_masks()) {
-    chmod("/dev/shm/L1", 0666);
-    chmod("/dev/shm/LLB", 0666);
+    
+    chmod(dev_shm_l1_name, 0666);
+    chmod(dev_shm_llb_name, 0666);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
   }
 
-  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks);
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id);
   bus.add_device(0xd0080000, hwsync);
   
   core_reset_n = 0;
-  pcie_driver = new pcie_driver_t(this, procs, bank_id);
+  if(pcie_enabled)
+    pcie_driver = new pcie_driver_t(this, procs, bank_id, pcie_enabled, board_id, chip_id);
   bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
 
   for (auto& x : mems)
@@ -141,7 +166,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
   for (size_t i = 0; i < procs.size(); i++) {
     local_bus[i] = new bus_t();
-    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i]);
+    mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i], pcie_enabled);
 
     if (hwsync_masks[0] != 0) {
       l1 = new share_mem_t(l1_buffer_size * 32, shm_l1_name, (i +  bank_id * procs.size()) * l1_buffer_size);
@@ -289,7 +314,8 @@ sim_t::~sim_t()
   }
 
   delete debug_mmu;
-  delete pcie_driver;
+  if(pcie_enabled)
+	  delete pcie_driver;
 
   if (has_hwsync_masks()) {
     delete llb;

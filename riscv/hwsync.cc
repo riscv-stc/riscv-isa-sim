@@ -15,7 +15,7 @@
 uint32_t hw_sync = 0, hw_pld = 0;
 uint32_t mask_buf[16]= {'\0'};
 
-hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_count(16) {
+hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id) : group_count(16), board_id(board_id), chip_id(chip_id) {
     if (hwsync_masks[0] != 0) {
         uint8_t index = 0;
         char *p = NULL;
@@ -29,7 +29,7 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
         shm_name = "HWSYNC";
         shm_size = 256;
         char file_name[64];
-        sprintf(file_name, "/dev/shm/%s", shm_name);
+        sprintf(file_name, "/dev/shm/%s_%lu_%lu", shm_name, board_id, chip_id);
 
         if (bank_id == 0) {
             chmod(file_name, 0666);
@@ -127,7 +127,7 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks) : group_co
 hwsync_t::~hwsync_t() {
     if (shm_start) {
         char file_name[64];
-        sprintf(file_name, "/dev/shm/%s", shm_name);
+        sprintf(file_name, "/dev/shm/%s_%lu_%lu", shm_name, board_id, chip_id);
 
         *req_sync = ~0;
         pthread_cond_broadcast(pcond_sync);
