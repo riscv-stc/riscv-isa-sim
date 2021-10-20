@@ -118,6 +118,62 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         } 
       }
 
+      if(CMT_LOG_VME_COM_H == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);    
+        fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
+        
+        int xx  = SHAPE1_COLUMN;        
+        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+          size = 2;   //float16(0x0) or bfloat16
+          for(int col=0; col < xx; col++)  {
+            int idx = col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));       
+          } 
+        } else if (0x20202 == VME_DTYPE) {          
+          size = 4;   //float32
+          for(int col=0; col < xx; col++) {
+            int idx = col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));       
+          }           
+        } else {
+          std::cout << " error! vme_data_type = " << VME_DTYPE << std::endl;
+        } 
+      }
+
+      if(CMT_LOG_VME_COM_W == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);    
+        fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
+
+        int yy  = SHAPE1_ROW;        
+        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+          size = 2;   //float16(0x0) or bfloat16
+          for(int row=0; row < yy; row++) {
+            int idx = row;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));        
+          } 
+        } else if (0x20202 == VME_DTYPE) {          
+          size = 4;   //float32
+          for(int row=0; row < yy; row++) {
+            int idx = row;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));        
+          }           
+        } else {
+          std::cout << " error! vme_data_type = " << VME_DTYPE << std::endl;
+        } 
+      }
+
       if(CMT_LOG_VME_CONV == type) { 
         fprintf(log_file, " vme_FM_in_col: %d", VME_WIN); 
         fprintf(log_file, " vme_FM_in_row: %d", VME_HIN); 

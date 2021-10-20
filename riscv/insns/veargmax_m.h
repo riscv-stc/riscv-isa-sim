@@ -12,6 +12,10 @@ VME_DTYPE_DECODING_TO_TYPE({
         check_traps_vexxx_m_reduce_vector(dtype_lut);
         unsigned long rd = MMU.get_phy_addr(RD);
         veargmax_m<dtype_vd>((dtype_vd*)rs1, (uint16_t*)rd, &sst, DIM_DM);
-        WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_VME_COM);
+        if(DIM_DM){
+            WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_VME_COM_W);
+        } else {
+            WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_VME_COM_H);
+        } 
     }
 })

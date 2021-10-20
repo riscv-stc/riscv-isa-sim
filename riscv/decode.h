@@ -399,6 +399,8 @@ private:
 // commitlog
 #define CMT_LOG_VME           (0x0100)  
 #define CMT_LOG_VME_COM       (0x0101)
+#define CMT_LOG_VME_COM_H     (0x0104)
+#define CMT_LOG_VME_COM_W     (0x0108)
 #define CMT_LOG_VME_CONV      (0x0102)  //vedwconv, pool
 #define CMT_LOG_MTE           (0x0201)
 #define CMT_LOG_DMAE          (0x0401)
