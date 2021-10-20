@@ -805,8 +805,11 @@ riscv_insn_ext_v_amo = \
 
 riscv_insn_ext_v_ldst = \
 	vle8_v \
+	vle8pi_v \
 	vle16_v \
+	vle16pi_v \
 	vle32_v \
+	vle32pi_v \
 	vle64_v \
 	vloxei8_v \
 	vloxei16_v \
@@ -841,8 +844,11 @@ riscv_insn_ext_v_ldst = \
 	vl4re64_v \
 	vl8re64_v \
 	vse8_v \
+	vse8pi_v \
 	vse16_v \
+	vse16pi_v \
 	vse32_v \
+	vse32pi_v \
 	vse64_v \
 	vsse8_v \
 	vsoxei8_v \

@@ -944,6 +944,13 @@ disassembler_t::disassembler_t(int xlen)
   std::vector<const arg_t *> v_ld_index = {&vd, &v_address, &vs2, &opt, &vm};
   std::vector<const arg_t *> v_st_index = {&vs3, &v_address, &vs2, &opt, &vm};
 
+  add_insn(new disasm_insn_t("vle8pi.v",  match_vle8pi_v,  mask_vle8pi_v,  v_ld_unit));
+  add_insn(new disasm_insn_t("vle16pi.v", match_vle16pi_v, mask_vle16pi_v, v_ld_unit));
+  add_insn(new disasm_insn_t("vle32pi.v", match_vle32pi_v, mask_vle32pi_v, v_ld_unit));
+  add_insn(new disasm_insn_t("vse8pi.v",  match_vse8pi_v,  mask_vse8pi_v,  v_st_unit));
+  add_insn(new disasm_insn_t("vse16pi.v", match_vse16pi_v, mask_vse16pi_v, v_st_unit));
+  add_insn(new disasm_insn_t("vse32pi.v", match_vse32pi_v, mask_vse32pi_v, v_st_unit));
+
   DISASM_VMEM_INSN(vle,    v_ld_unit,   );
   DISASM_VMEM_INSN(vluxei, v_ld_index,  );
   DISASM_VMEM_INSN(vlse,   v_ld_stride, );

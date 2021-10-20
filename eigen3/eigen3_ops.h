@@ -223,7 +223,7 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } \
         } \
-        acc2 += acc0; \ 
+        acc2 += acc0; \
         acc3 += acc1; \
         dest(0, _col) = acc2 + acc3; \
     } \
