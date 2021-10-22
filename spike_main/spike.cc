@@ -46,6 +46,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
   fprintf(stderr, "  --board-id=<n>        Indicates the number of boards in a rack [default 0]\n");
   fprintf(stderr, "  --chip-id=<n>         Several chips per board [default 0]\n");
+  fprintf(stderr, "  --coremap=<n>         set core valid status, bit0-bit31 for core0-core31 [default 0xffffffff all valid]\n");
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
@@ -155,6 +156,7 @@ int main(int argc, char **argv)
   size_t board_id = 0;
   size_t chip_id = 0;
   size_t bank_id = 0;
+  uint32_t coremap = 0xffffffff;
   char masks_buf[178] = {'\0'};
   const char *hwsync_masks = masks_buf;
   reg_t start_pc = reg_t(-1);
@@ -205,6 +207,7 @@ int main(int argc, char **argv)
   parser.option(0, "bank-id", 1, [&](const char *s) { bank_id = atoi(s); });
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
   parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
+  parser.option(0, "coremap", 1, [&](const char *s) { coremap = strtoull(s, NULL, 0); });
   parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = s; });
   parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
@@ -263,7 +266,7 @@ int main(int argc, char **argv)
 
   sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
           progsize, max_bus_master_bits, require_authentication,
-          abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled, board_id, chip_id);
+          abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled, board_id, chip_id, coremap);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *)NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
