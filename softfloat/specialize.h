@@ -52,9 +52,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 | invalid exception.
 *----------------------------------------------------------------------------*/
 #define ui8_fromPosOverflow 0xFF
-#define ui8_fromNegOverflow 0xFF
+#define ui8_fromNegOverflow 0x0
 #define ui8_fromNaN         0xFF
-#define i8_fromPosOverflow  (-0x7F - 1)
+#define i8_fromPosOverflow  (0x7F)
 #define i8_fromNegOverflow  (-0x7F - 1)
 #define i8_fromNaN          (-0x7F - 1)
 
@@ -63,9 +63,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 | invalid exception.
 *----------------------------------------------------------------------------*/
 #define ui16_fromPosOverflow 0xFFFF
-#define ui16_fromNegOverflow 0xFFFF
+#define ui16_fromNegOverflow 0x0
 #define ui16_fromNaN         0xFFFF
-#define i16_fromPosOverflow  (-0x7FFF - 1)
+#define i16_fromPosOverflow  (0x7FFF)
 #define i16_fromNegOverflow  (-0x7FFF - 1)
 #define i16_fromNaN          (-0x7FFF - 1)
 
@@ -74,9 +74,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 | invalid exception.
 *----------------------------------------------------------------------------*/
 #define ui32_fromPosOverflow 0xFFFFFFFF
-#define ui32_fromNegOverflow 0xFFFFFFFF
+#define ui32_fromNegOverflow 0x0
 #define ui32_fromNaN         0xFFFFFFFF
-#define i32_fromPosOverflow  (-0x7FFFFFFF - 1)
+#define i32_fromPosOverflow  (0x7FFFFFFF)
 #define i32_fromNegOverflow  (-0x7FFFFFFF - 1)
 #define i32_fromNaN          (-0x7FFFFFFF - 1)
 
