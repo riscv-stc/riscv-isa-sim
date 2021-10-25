@@ -42,6 +42,9 @@
 #define GLB_HIGHMEM_BANK2_START_ADDR (0xac0800000)
 #define GLB_HIGHMEM_BANK3_START_ADDR (0xbc0800000)
 
+//coremask configure base address
+#define STC_VALID_NPCS_BASE 0xC1004400
+
 //LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
 //llb size 0x2000000 =32MB
 char shm_l1_name[32] ;
@@ -80,7 +83,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id)
+             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, uint32_t coremask)
   : htif_t(args),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -234,6 +237,10 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     bus.add_device(LLB_AXI0_BUFFER_START, llb);
     bus.add_device(LLB_AXI1_BUFFER_START, llb);
   }
+
+  //write 4 bytes coremask to 0xC1004400
+  char *mem = addr_to_mem(STC_VALID_NPCS_BASE);
+  *(uint32_t *)mem = coremask;
 
   make_dtb();
 
