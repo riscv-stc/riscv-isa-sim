@@ -18,7 +18,7 @@ build:
   stage : build
   script:
     - mkdir -p build_v2
-    - cd build_v2 && ../configure --with-isa=rv64gcv --prefix=$PWD/../install && make -j`nproc` && cd -
+    - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
