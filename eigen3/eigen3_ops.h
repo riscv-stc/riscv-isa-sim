@@ -29,7 +29,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      1
+#define GLOBAL_DBG      0
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -341,17 +341,19 @@ typedef Stride<Dynamic, Dynamic> DynStride;
     } \
 } while(0)
 
-#define LINE_WINDOWS_COMMON_LENGTH(pos, line, pre, window, common) do { \
-    if ((pos + line) <= pre) \
-        common = 0; \
-    else if (pos < pre) \
-        common = pos + line - pre; \
-    else if ((pos + line) < (pre + window)) \
-        common = line; \
-    else if (pos < (pre + window)) \
-        common = window + pre - pos; \
+#define LINE_WINDOWS_COMMON_LENGTH(start, kh, pt, pb, hin, cnt) do { \
+    if (pt - start > kh) \
+        cnt = 0; \
+    else if (start < pt && pt - start + kh < pt + hin) \
+        cnt = kh - (pt - start); \
+    else if (start < pt && pt - start + kh >= pt + hin) \
+        cnt = hin; \
+    else if (start >= pt && start < pt + hin && start + kh < pt + hin) \
+        cnt = kh; \
+    else if (start >= pt && start < pt + hin && start + kh >= pt + hin) \
+        cnt = pt + hin - start ; \
     else \
-        common = 0; \
+        cnt = 0; \    
 } while(0);
 
 // threshhold typed float32_t
@@ -2380,6 +2382,8 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
         vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
 
+    cout << "rs1_2d_padded: " <<rs1_2d_padded <<endl;
+
     // to save fetched block
     int row_2d_fetch, column_2d_fetch, stride_fetch;
     row_2d_fetch = vss->kh;
@@ -2430,14 +2434,16 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     OutDType *fetch_base = padded_buf;
     while (1) {
         // calculate n and creat a 1/n vector
-        LINE_WINDOWS_COMMON_LENGTH(start_row, vss->kh, vss->n_pad_u, vss->row, row_valid);
-        LINE_WINDOWS_COMMON_LENGTH(start_col, vss->kw, vss->n_pad_l, vss->column, col_valid);
+        LINE_WINDOWS_COMMON_LENGTH(start_row, vss->kh, vss->n_pad_u, vss->n_pad_d, vss->row, row_valid);
+        LINE_WINDOWS_COMMON_LENGTH(start_col, vss->kw, vss->n_pad_l, vss->n_pad_r, vss->column, col_valid);
         n = row_valid * col_valid;
         vec_rescip = vec_rescip.Constant(row_block_reshaped, 1, recip_tab[n]);
 
         // fetch next block and reshape
         Map_OutDType fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
         fetch_block = fetch;
+
+        cout <<"fetch :" << fetch << endl;
 
         // mul 1/n    DEFINE_MAP_DTYPE(InDType)
         MATRIX_MUL_VEC_V_CONVERT(block_reshaped, vec_rescip, block_avged, row_block_reshaped, col_block_reshaped, InDType);
