@@ -29,7 +29,7 @@ using namespace std;
 
 
 
-#define GLOBAL_DBG      0
+#define GLOBAL_DBG      1
 #define DBG_VECTOR_VVM    do {                   \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
@@ -2366,8 +2366,8 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 
     // rs1 with padding
     int row_2d_padded, column_2d_padded, row_3d_padded, column_3d_padded;
-    row_3d_padded = vss->row + vss->n_pad_l + vss->n_pad_r;
-    column_3d_padded = vss->column + vss->n_pad_u + vss->n_pad_d;
+    row_3d_padded = vss->row + vss->n_pad_u + vss->n_pad_d;
+    column_3d_padded = vss->column + vss->n_pad_l + vss->n_pad_r;
     row_2d_padded = row_3d_padded * column_3d_padded;
     column_2d_padded = vss->cin;
     OutDType *padded_buf = (OutDType *)malloc(row_2d_padded * column_2d_padded * sizeof(OutDType));
@@ -2384,7 +2384,7 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     int row_2d_fetch, column_2d_fetch, stride_fetch;
     row_2d_fetch = vss->kh;
     column_2d_fetch = vss->cin * vss->kw;
-    stride_fetch = vss->cin * row_3d_padded;
+    stride_fetch = vss->cin * column_3d_padded;
     OutDType *fb_buf = (OutDType *)malloc(row_2d_fetch * column_2d_fetch * sizeof(OutDType));
     Map_OutDType fetch_block(fb_buf, row_2d_fetch, column_2d_fetch, DynStride(column_2d_fetch, 1));
 
@@ -2458,13 +2458,13 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         // move point
         rd_row_idx++;
         start_col += vss->sw;
-        if (start_col + vss->kw > row_3d_padded) {
+        if (start_col + vss->kw > column_3d_padded) {
             start_col = 0;
             start_row += vss->sh;
-            if (start_row + vss->kh > column_3d_padded)
+            if (start_row + vss->kh > row_3d_padded)
                 break;
         }
-        fetch_base = padded_buf + start_col * vss->cin + start_row * row_3d_padded * vss->cin;
+        fetch_base = padded_buf + start_col * vss->cin + start_row * column_3d_padded * vss->cin;
     }
 
     if (GLOBAL_DBG){
