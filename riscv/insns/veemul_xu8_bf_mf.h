@@ -10,4 +10,4 @@ unsigned long rd = MMU.get_phy_addr(RD);
 
 Bfloat16 vr2(f32(FRS2));
 veemul_xu8_bf_mf<unsigned char, Bfloat16>((Bfloat16 *)rs1, (unsigned char *)rd, vr2, &sst, STATE.frm);
-WRITE_MEM_STC(RD, (unsigned char*)rd, CMT_LOG_VME_COM);
+WRITE_MEM_STC(RD, (unsigned char*)rd, CMT_LOG_VME_DATA8);

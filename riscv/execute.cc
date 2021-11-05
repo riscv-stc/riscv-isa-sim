@@ -226,6 +226,61 @@ static void commit_log_print_stc_mem_info(processor_t *p)
           std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
         } 
       }
+
+      if(CMT_LOG_VME_DATA8 == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);
+            
+        int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ;   
+        size = 1;   //int8/uint8
+        for(int row=0; row < SHAPE1_ROW; row++) {
+          for(int col=0; col < SHAPE1_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%01" PRIx8, *((uint8_t *)paddr+idx));
+          }         
+        }         
+      }   
+
+      if(CMT_LOG_VME_DATA16 == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);    
+        
+        int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ;    
+        size = 2;   //int16/fp16/bf16
+        for(int row=0; row < SHAPE1_ROW; row++) {
+          for(int col=0; col < SHAPE1_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+          }         
+        }         
+      }
+
+      if(CMT_LOG_VME_DATA32 == type) { 
+        fprintf(log_file, " vme_shape_col: %d", SHAPE1_COLUMN);   
+        fprintf(log_file, " vme_shape_row: %d", SHAPE1_ROW);      
+        fprintf(log_file, " vme_stride_d: %d" , STRIDE_RD);       
+        fprintf(log_file, " vme_stride_s1: %d", STRIDE_RS1);      
+        fprintf(log_file, " vme_stride_s2: %d", STRIDE_RS2);  
+
+        int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ;     
+        size = 4;   //int32/fp32
+        for(int row=0; row < SHAPE1_ROW; row++) {
+          for(int col=0; col < SHAPE1_COLUMN; col++) {
+            int idx = row*pad+col;
+            fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+            fprintf(log_file, " 0x%04" PRIx32, *((uint32_t *)paddr+idx));
+          }         
+        }         
+      }   
+
     }
 
     else if(CMT_LOG_MTE == type) {    
@@ -279,13 +334,14 @@ static void commit_log_print_stc_mem_info(processor_t *p)
       fprintf(log_file, " dmae_data_type: 0x%08" PRIx32, DMAE_DATA_TYPE);
 
       int pad_x = DMAE_SHAPE_X >= DMAE_STRIDE_D_X ? DMAE_SHAPE_X : DMAE_STRIDE_D_X ;  
-      int pad_y = DMAE_SHAPE_Y >= DMAE_STRIDE_D_Y ? DMAE_SHAPE_Y : DMAE_STRIDE_D_Y ;          
+      // int pad_y = DMAE_SHAPE_Y >= DMAE_STRIDE_D_Y ? DMAE_SHAPE_Y : DMAE_STRIDE_D_Y ; 
+      int pad_y = (DMAE_SHAPE_Y*pad_x) >= DMAE_STRIDE_D_Y ? (DMAE_SHAPE_Y*pad_x) : DMAE_STRIDE_D_Y ;           
       if (0x0 == DMAE_DATA_TYPE || 0x101 == DMAE_DATA_TYPE || 0x201 == DMAE_DATA_TYPE || 0x200 == DMAE_DATA_TYPE) { 
         size = 2;   //float16(0x0, 0x200) or bfloat16
         for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
           for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
             for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
-              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              int idx = zz*pad_y + yy*pad_x + xx;
               fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
               fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
             }
@@ -296,7 +352,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
           for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
             for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
-              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              int idx = zz*pad_y + yy*pad_x + xx;
               fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
               fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
             }
@@ -307,7 +363,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         for(int zz=0; zz < DMAE_SHAPE_Z; zz++) {
           for(int yy=0; yy < DMAE_SHAPE_Y; yy++) {
             for(int xx=0; xx < DMAE_SHAPE_X; xx++) {
-              int idx = zz*pad_y*pad_x + yy*pad_x + xx;
+              int idx = zz*pad_y + yy*pad_x + xx;
               fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
               fprintf(log_file, " 0x%01" PRIx8, *((uint8_t *)paddr+idx));
             }
