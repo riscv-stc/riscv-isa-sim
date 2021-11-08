@@ -7,4 +7,4 @@ unsigned long rd = MMU.get_phy_addr(RD);
 
 require(STATE.frm < 0x5);
 vecvt_x16_hf_m((half*)rs1, (int16_t*)rd, &sst, STATE.frm);
-WRITE_MEM_STC(RD, (int16_t*)rd, CMT_LOG_VME_COM);
+WRITE_MEM_STC(RD, (int16_t*)rd, CMT_LOG_VME_DATA16);

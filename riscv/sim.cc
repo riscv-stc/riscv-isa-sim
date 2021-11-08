@@ -238,9 +238,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     bus.add_device(LLB_AXI1_BUFFER_START, llb);
   }
 
-  //write 4 bytes coremask to 0xC1004400
-  char *mem = addr_to_mem(STC_VALID_NPCS_BASE);
-  *(uint32_t *)mem = coremask;
+  //write cluster-ID'cormask to 0xC1004400 + ID*4
+   char *mem = addr_to_mem(STC_VALID_NPCS_BASE + bank_id * 4);
+  *(uint32_t *)mem = (coremask & (0xff << bank_id * 8)) >> bank_id * 8;
 
   make_dtb();
 

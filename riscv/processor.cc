@@ -342,6 +342,7 @@ void state_t::reset(reg_t max_isa)
   if (async_started && (!pld))
     async_status = async_started;
 
+  wfi_flag = 0;
   async_started = async_status;
 
   pc = DEFAULT_RSTVEC;
