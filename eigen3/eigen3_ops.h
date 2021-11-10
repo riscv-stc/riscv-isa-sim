@@ -2331,9 +2331,16 @@ int velut_m(AddrDType *rs1, unsigned long rs2, DType *rd, struct ShapeStride *ss
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            rd_matrix(i, j) = *((DType *)rs2 + rs1_matrix(i, j));
+            rd_result(i, j) = *((DType *)rs2 + rs1_matrix(i, j));
+
+    rd_matrix = rd_result;
+    free(rd_buf);
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
