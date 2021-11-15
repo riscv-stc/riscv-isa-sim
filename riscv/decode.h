@@ -1321,6 +1321,18 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   })
 
 
+// check traps for memin.m/memax.m/meacc.m instructions, reduce all
+#define check_traps_meargxxx_m(in_type, out_type)({ \
+        check_cust_misaligned_base(RS1, in_type); \
+        check_cust_misaligned_base(RD, out_type); \
+        check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN * sizeof(in_type)); \
+        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : BC_SHAPE1_COLUMN) * sizeof(in_type) \
+                                * BC_SHAPE1_ROW; \
+        int rd_size = BC_SHAPE1_ROW * sizeof(out_type); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access_im(RD, rd_size); \
+  })
+
 // check traps for meconv.mm instructions
 #define check_traps_meconv_mm(rs1_type, rs2_type, out_type) ({ \
         check_cust_misaligned_base(RS1, rs1_type); \
