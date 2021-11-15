@@ -1495,6 +1495,18 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_illegal_encoding(); \
         }
 
+// throw trap if cust inst access misaligned base address
+#define check_tcp_misaligned_base(x, type) \
+        if (unlikely(x & (sizeof(type) - 1))) { \
+            throw trap_tcp_access_start(insn.bits()); \
+        }
+
+// throw trap if tcp inst use invalid shape, col=0 or row=0
+#define check_tcp_invalid_shape(col, row) \
+        if (unlikely(col == 0 || row == 0)) { \
+            throw trap_tcp_invalid_param(); \
+        }
+
 // throw trap if tcp icmov's target core id not exist
 #define check_tcp_icmov_invalid_core_id(core_id, max_id) \
         if (core_id > max_id) { \
@@ -1581,8 +1593,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 })
 
 // check traps for mov.l1.llb instruction
-#define check_traps_mov_l1_llb(esize) ({ \
-        check_tcp_data_type \
+#define check_traps_mov_l1_llb(etype) ({ \
+        check_tcp_misaligned_base(RS1, etype); \
+        check_tcp_misaligned_base(RD, etype); \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_access_start_llb_mov(RS1) \
         check_tcp_access_start_l1(RD) \
         check_tcp_access_end_llb(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
@@ -1590,8 +1604,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 })
 
 // check traps for mov.llb.l instruction
-#define check_traps_mov_llb_l1(esize) ({ \
-        check_tcp_data_type \
+#define check_traps_mov_llb_l1(etype) ({ \
+        check_tcp_misaligned_base(RS1, etype); \
+        check_tcp_misaligned_base(RD, etype); \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_llb_mov(RD) \
         check_tcp_access_end_l1(RS1 + (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 * MTE_SHAPE_ROW : (MTE_SHAPE_COLUMN * MTE_SHAPE_ROW * esize))) \
@@ -3546,7 +3562,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     } \
       break; \
     default: \
-        throw trap_illegal_instruction(insn.bits()); \
+        throw trap_tcp_illegal_encoding(); \
   }
 
 #define DMAE_DTYPE_DECODING_TO_ESIZE() \
