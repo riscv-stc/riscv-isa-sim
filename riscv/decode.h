@@ -481,14 +481,14 @@ private:
     ss.k_c_stride = VME_K_C_STRIDE ? VME_K_C_STRIDE : VME_CIN; \
     ss.kw = VME_KW; \
     ss.kh = VME_KH; \
-    ss.sw = VME_SW ? VME_SW : VME_SH; \
     ss.sh = VME_SH; \
+    ss.sw = VME_SW == 0? ss.sh : VME_SW; \
     ss.n_pad_u = VME_N_PAD_U; \
     ss.n_pad_d = VME_N_PAD_D; \
     ss.n_pad_l = VME_N_PAD_L; \
     ss.n_pad_r = VME_N_PAD_R; \
-    ss.k_dilation_w = VME_DILATION_W; \
     ss.k_dilation_h = VME_DILATION_H; \
+    ss.k_dilation_w = VME_DILATION_W == 0? ss.k_dilation_h: VME_DILATION_W; \
     ss.relu_threshhold = VME_RELU_THRESHHOLD; \
     softfloat_roundingMode = STATE.frm; \
 } while (0);
@@ -1023,6 +1023,29 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_cust_invalid_param(); \
         } \
   })
+
+#define check_cust_invalid_pool_kernel_param(kh, kw, sh) ({ \
+        if (unlikely(kh == 0 || kw ==0 || sh == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+})
+
+#define check_cust_invalid_pool_shape(hin, win, cin, hout, wout) ({ \
+    if (unlikely(hin == 0 || win ==0 || cin == 0 || hout ==0 || wout == 0)) { \
+        throw trap_ncp_cust_invalid_param(); \
+    } \
+})
+
+#define check_traps_vepool_m(dtype) ({ \
+        check_cust_misaligned_base(RS1, dtype); \
+        check_cust_misaligned_base(RD, dtype); \
+        check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH); \
+        check_cust_invalid_pool_shape(VME_HIN, VME_WIN, VME_CIN, VME_HOUT, VME_WOUT); \
+        int rs1_size = VME_IFM_C_STRIDE ? (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
+        int rd_size = VME_OFM_C_STRIDE ? (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+})
 
 // check traps for ve***.mm instructions
 #define check_traps_vexxx_mm(etype) ({ \
