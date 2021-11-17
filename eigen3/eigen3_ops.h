@@ -2492,7 +2492,6 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     free(recip_buf);
     free(block_indtype_buf);
     free(fb_buf);
-    free(out_buf);
     free(padding_buf);
     free(padded_buf);
 
@@ -2506,6 +2505,8 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         }
     }
 
+    free(out_buf);
+    
     return 0;
 }
 
