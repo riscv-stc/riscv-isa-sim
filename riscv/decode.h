@@ -1024,8 +1024,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         } \
   })
 
-#define check_cust_invalid_pool_kernel_param(kh, kw, sh) ({ \
-        if (unlikely(kh == 0 || kw ==0 || sh == 0)) { \
+#define check_cust_invalid_pool_kernel_param(kh, kw, sh, sw) ({ \
+        if (unlikely(kh == 0 || kw ==0 || sh == 0 || sw == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
 })
@@ -1039,11 +1039,28 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_traps_vepool_m(dtype) ({ \
         check_cust_misaligned_base(RS1, dtype); \
         check_cust_misaligned_base(RD, dtype); \
-        check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH); \
+        check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH, VME_SW); \
         check_cust_invalid_pool_shape(VME_HIN, VME_WIN, VME_CIN, VME_HOUT, VME_WOUT); \
         int rs1_size = VME_IFM_C_STRIDE ? (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
         int rd_size = VME_OFM_C_STRIDE ? (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
         check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+})
+
+#define check_traps_veconv_m(dtype) ({ \
+        check_cust_misaligned_base(RS1, dtype); \
+        check_cust_misaligned_base(RS2, dtype); \
+        check_cust_misaligned_base(RD, dtype); \
+        check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH, VME_SW); \
+        check_cust_invalid_pool_shape(VME_HIN, VME_WIN, VME_CIN, VME_HOUT, VME_WOUT); \
+        if (unlikely(VME_DILATION_H == 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
+        int rs1_size = VME_IFM_C_STRIDE ? (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
+        int rs2_size = VME_K_C_STRIDE ? (VME_K_C_STRIDE * (VME_KH * VME_KW - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_KH * VME_KW * VME_CIN * sizeof(dtype)); \
+        int rd_size = VME_OFM_C_STRIDE ? (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RS2, rs2_size); \
         check_cust_access(RD, rd_size); \
 })
 
