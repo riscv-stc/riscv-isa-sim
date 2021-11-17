@@ -177,6 +177,8 @@ void state_t::reset(reg_t max_isa)
 
   pmpcfg[0] = PMP_R | PMP_W | PMP_X | PMP_NAPOT;
   pmpaddr[0] = ~reg_t(0);
+
+  vlenb = VREG_LENGTH;
 }
 
 void processor_t::set_debug(bool value)
