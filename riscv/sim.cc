@@ -29,9 +29,12 @@
 #define im_buffer_size       (0x00040000)
 #define sp_buffer_start      (0xc0500000)
 #define sp_buffer_size       (0x00014000)
-#define SRAM_START           (0xc1000000)
+#define SRAM_START           (0xD3D80000)
 #define SRAM_SIZE            (0x80000)
 #define MBOX_START           (0xc07f4000)
+
+#define MISC_START           (0xc07f3000)
+#define HWSYNC_START          (0xd0080000)
 
 //ddr high 1G address, just accessed by pcie and sysdma
 //range is 0xc0800000 ~ 0xf8000000
@@ -43,7 +46,7 @@
 #define GLB_HIGHMEM_BANK3_START_ADDR (0xbc0800000)
 
 //coremask configure base address
-#define STC_VALID_NPCS_BASE 0xC1004400
+#define STC_VALID_NPCS_BASE  (SRAM_START + 0x4400)
 
 //LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
 //llb size 0x2000000 =32MB
@@ -136,7 +139,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id);
-  bus.add_device(0xd0080000, hwsync);
+  bus.add_device(HWSYNC_START, hwsync);
   
   core_reset_n = 0;
   if(pcie_enabled)
@@ -181,7 +184,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
     local_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
     local_bus[i]->add_device(sp_buffer_start, new mem_t(sp_buffer_size));
-    local_bus[i]->add_device(0xc07f3000, new misc_device_t(procs[i]));
+    local_bus[i]->add_device(MISC_START, new misc_device_t(procs[i]));
     local_bus[i]->add_device(MBOX_START, box);
     procs[i]->add_mbox(box);
   }

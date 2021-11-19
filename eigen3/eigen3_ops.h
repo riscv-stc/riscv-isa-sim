@@ -342,18 +342,18 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 } while(0)
 
 #define LINE_WINDOWS_COMMON_LENGTH(start, kh, pt, pb, hin, cnt) do { \
-    if (pt - start > kh) \
+    if (start + kh < pt) \
         cnt = 0; \
-    else if (start < pt && pt - start + kh < pt + hin) \
+    else if (start < pt && start + kh < pt + hin) \
         cnt = kh - (pt - start); \
-    else if (start < pt && pt - start + kh >= pt + hin) \
+    else if (start < pt && start + kh >= pt + hin) \
         cnt = hin; \
     else if (start >= pt && start < pt + hin && start + kh < pt + hin) \
         cnt = kh; \
     else if (start >= pt && start < pt + hin && start + kh >= pt + hin) \
         cnt = pt + hin - start ; \
     else \
-        cnt = 0; \    
+        cnt = 0; \
 } while(0);
 
 // threshhold typed float32_t
@@ -2331,9 +2331,16 @@ int velut_m(AddrDType *rs1, unsigned long rs2, DType *rd, struct ShapeStride *ss
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            rd_matrix(i, j) = *((DType *)rs2 + rs1_matrix(i, j));
+            rd_result(i, j) = *((DType *)rs2 + rs1_matrix(i, j));
+
+    rd_matrix = rd_result;
+    free(rd_buf);
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
@@ -2350,7 +2357,7 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
-    
+  
     //param check
     assert((vss->kw * vss->kh <= 64));
     assert((vss->kw > 0) && (vss->kh) > 0);
@@ -2382,7 +2389,6 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     PADDING_3D_HW_C(rs1_2d, rs1_2d_padded, padding, row_2d_padded, row_3d_padded, column_3d_padded,
         vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r);
 
-    cout << "rs1_2d_padded: " <<rs1_2d_padded <<endl;
 
     // to save fetched block
     int row_2d_fetch, column_2d_fetch, stride_fetch;
@@ -2408,9 +2414,14 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 
     // output, flatten to 2d
     int row_2d_out, column_2d_out;
-    row_2d_out = vss->hout * vss->wout;
+    int row_3d_out = (vss->row + vss->n_pad_u + vss->n_pad_d - vss->kh) / vss->sh + 1;
+    int col_3d_out = (vss->column + vss->n_pad_l + vss->n_pad_r - vss->kw) / vss->sw + 1;
+    row_2d_out = row_3d_out * col_3d_out;
     column_2d_out = vss->cin;
-    Map_OutDType rd_2d(rd, row_2d_out, column_2d_out, DynStride(vss->ofm_c_stride, 1));
+    OutDType *out_buf = (OutDType *)malloc(row_2d_out * column_2d_out * sizeof(OutDType));
+    Map_OutDType out_2d(out_buf, row_2d_out, column_2d_out, DynStride(column_2d_out, 1));
+    Map_OutDType rd_2d(rd, vss->hout * vss->wout, vss->cin, DynStride(vss->ofm_c_stride,1));
+    rd_2d = rd_2d.Constant(vss->hout * vss->wout, vss->cin, OutDType(0));
 
     // internal result, one row, get rd_row_intype then convert to rd_row
     OutDType *rd_row_buf = (OutDType *)malloc(column_2d_out * sizeof(OutDType));
@@ -2443,8 +2454,6 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         Map_OutDType fetch(fetch_base, row_2d_fetch, column_2d_fetch, DynStride(stride_fetch, 1));
         fetch_block = fetch;
 
-        cout <<"fetch :" << fetch << endl;
-
         // mul 1/n    DEFINE_MAP_DTYPE(InDType)
         MATRIX_MUL_VEC_V_CONVERT(block_reshaped, vec_rescip, block_avged, row_block_reshaped, col_block_reshaped, InDType);
 
@@ -2453,7 +2462,7 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         MATRIX_CAST(rd_row_intype, rd_row, OutDType, 1, column_2d_out);
 
         // get a row in output
-        rd_2d.row(rd_row_idx) = rd_row;
+        out_2d.row(rd_row_idx) = rd_row;
 
         if (GLOBAL_DBG) {
             std::cout << "n = " << n << std::endl;
@@ -2475,7 +2484,7 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
 
     if (GLOBAL_DBG){
         cout << "rs1: \n" << rs1_2d << endl;
-        cout << "rd: \n" << rd_2d << endl;
+        cout << "rd: \n" << out_2d << endl;
     }
 
     free(rd_row_intype_buf);
@@ -2487,9 +2496,17 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     free(padded_buf);
 
     if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_2d, rd_2d, row_2d_out, column_2d_out, OutDType, vss->relu_threshhold);
+        MATRIX_RELU_THRESHHOLD(out_2d, out_2d, row_2d_out, column_2d_out, OutDType, vss->relu_threshhold);
     }
 
+    for(int i = 0; i < min(row_3d_out, vss->hout); i++) {
+        for (int j = 0; j < min(col_3d_out, vss->wout); j++) {
+            rd_2d.row(i * vss->wout + j) = out_2d.row(i * col_3d_out + j);
+        }
+    }
+
+    free(out_buf);
+    
     return 0;
 }
 
