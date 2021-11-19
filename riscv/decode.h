@@ -2680,6 +2680,26 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
+#define VI_LD_PI(stride, offset, elt_width) \
+  const reg_t nf = insn.v_nf() + 1; \
+  const reg_t vl = P.VU.vl; \
+  const reg_t baseAddr = RS1; \
+  const reg_t vd = insn.rd(); \
+  WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
+  VI_CHECK_LOAD(elt_width); \
+  WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
+  for (reg_t i = 0; i < vl; ++i) { \
+    VI_ELEMENT_SKIP(i); \
+    VI_STRIP(i); \
+    P.VU.vstart = i; \
+    for (reg_t fn = 0; fn < nf; ++fn) { \
+      elt_width##_t val = MMU.load_##elt_width( \
+        baseAddr + (stride) + (offset) * sizeof(elt_width##_t)); \
+      P.VU.elt<elt_width##_t>(vd + fn * emul, vreg_inx, true) = val; \
+    } \
+  } \
+  P.VU.vstart = 0;
+
 #define VI_LD_INDEX(elt_width, is_seg) \
   const reg_t nf = insn.v_nf() + 1; \
   const reg_t vl = P.VU.vl; \
@@ -2722,6 +2742,26 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   const reg_t baseAddr = RS1; \
   const reg_t vs3 = insn.rd(); \
   VI_CHECK_STORE(elt_width); \
+  for (reg_t i = 0; i < vl; ++i) { \
+    VI_STRIP(i) \
+    VI_ELEMENT_SKIP(i); \
+    P.VU.vstart = i; \
+    for (reg_t fn = 0; fn < nf; ++fn) { \
+      elt_width##_t val = P.VU.elt<elt_width##_t>(vs3 + fn * emul, vreg_inx); \
+      MMU.store_##elt_width( \
+        baseAddr + (stride) + (offset) * sizeof(elt_width##_t), val); \
+    } \
+  } \
+  P.VU.vstart = 0;
+
+#define VI_ST_PI(stride, offset, elt_width) \
+  const reg_t nf = insn.v_nf() + 1; \
+  const reg_t vl = P.VU.vl; \
+  const reg_t baseAddr = RS1; \
+  const reg_t vs3 = insn.rd(); \
+  WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
+  VI_CHECK_STORE(elt_width); \
+  WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
   for (reg_t i = 0; i < vl; ++i) { \
     VI_STRIP(i) \
     VI_ELEMENT_SKIP(i); \

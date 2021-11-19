@@ -8,8 +8,16 @@
 //   vd_0 = f64_add(vd_0, vs2);
 // })
 
+/*######################
+  g0 = (vs1+vs2[8k])，
+  g1 = (vs2[8k+1])，
+  …，
+  g8 = (vs2[8k+8])，
+    (vs2[8k+1])= vs2[1] + vs2[9] + … + vs2[8k+1], k=0-vl/8
+  vd = ((g0+g1) + (g2+g3)) + ((g4+g5) + (g6+g7))
+######################*/
 
-#define SET  (16)
+#define SET  (8)
 #define GET_W16_UNORDER_VS2_VALUE(vs2, idx)\
   if (idx >= vl) {\
     vs2 = f32(0);\
@@ -30,70 +38,55 @@
 #define VI_VFP_REDUCTION_W16_SUM_UNORDER()\
   float32_t vd_0  = P.VU.elt<float32_t>(rd_num, 0); \
   float32_t vs1_0 = P.VU.elt<float32_t>(rs1_num, 0);\
-  float32_t vs2;   \
-  float32_t sum_g0;\
-  float32_t sum_g1;\
-  float32_t sum_g2;\
-  float32_t sum_g3;\
-  float32_t sum_t0;\
-  float32_t sum_t1;\
-  float32_t sum_l0;\
-  float32_t sum_l1;\
-  float32_t sum16; \
+  float32_t vs2;\
+  float32_t sum_g0 = f32(0);\
+  float32_t sum_g1 = f32(0);\
+  float32_t sum_g2 = f32(0);\
+  float32_t sum_g3 = f32(0);\
+  float32_t sum_g4 = f32(0);\
+  float32_t sum_g5 = f32(0);\
+  float32_t sum_g6 = f32(0);\
+  float32_t sum_g7 = f32(0);\
   bool is_active = false;\
   bool is_first  = true; \
   int cnt = vl/SET;\
   int rem = vl%SET;\
   if(rem) { cnt += 1;}\
-  if(cnt) { vd_0 = f32(0);}\
-  for(reg_t i=0; i<cnt; i++) {\
-    int idx = SET*i;\
-    if (is_first) {\
-      GET_W16_UNORDER_VS2_VALUE(vs2, idx)   \
-      sum_g0 = f32_add(vs1_0,vs2);          \
-      is_first = false;\
-    } else {\
-      GET_W16_UNORDER_VS2_VALUE(vs2, idx)   \
-      sum_g0 = vs2;\
+  if(cnt) {\
+    for(int i=0; i<cnt; i++) {\
+      int idx = SET*i;\
+      if (is_first) {\
+        GET_W16_UNORDER_VS2_VALUE(vs2, idx)   \
+        sum_g0 = f32_add(vs1_0,vs2);          \
+        is_first = false;\
+      } else {\
+        GET_W16_UNORDER_VS2_VALUE(vs2, idx)   \
+        sum_g0 = f32_add(sum_g0,vs2);         \
+      }\
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+1)) \
+      sum_g1 = f32_add(sum_g1, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+2)) \
+      sum_g2 = f32_add(sum_g2, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+3)) \
+      sum_g3 = f32_add(sum_g3, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+4)) \
+      sum_g4 = f32_add(sum_g4, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+5)) \
+      sum_g5 = f32_add(sum_g5, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+6)) \
+      sum_g6 = f32_add(sum_g6, vs2);          \
+      GET_W16_UNORDER_VS2_VALUE(vs2, (idx+7)) \
+      sum_g7 = f32_add(sum_g7, vs2);          \
+      set_fp_exceptions;                      \
     }\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+8)) \
-    sum_g0 = f32_add(sum_g0, vs2);      \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+1)) \
-    sum_g1 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+9)) \
-    sum_g1 = f32_add(sum_g1, vs2);      \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+2)) \
-    sum_g2 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+10))\
-    sum_g2 = f32_add(sum_g2, vs2);      \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+3)) \
-    sum_g3 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+11))\
-    sum_g3 = f32_add(sum_g3, vs2);          \
-    sum_t0 = f32_add(sum_g0, sum_g1);       \
-    sum_t1 = f32_add(sum_g2, sum_g3);       \
-    sum_l0 = f32_add(sum_t0, sum_t1);       \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+4)) \
-    sum_g0 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+12))\
-    sum_g0 = f32_add(sum_g0, vs2);          \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+5)) \
-    sum_g1 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+13))\
-    sum_g1 = f32_add(sum_g1, vs2);      \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+6)) \
-    sum_g2 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+14))\
-    sum_g2 = f32_add(sum_g2, vs2);          \
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+7)) \
-    sum_g3 = vs2;\
-    GET_W16_UNORDER_VS2_VALUE(vs2, (idx+15))\
-    sum_g3 = f32_add(sum_g3, vs2);          \
-    sum_t0 = f32_add(sum_g0, sum_g1);       \
-    sum_t1 = f32_add(sum_g2, sum_g3);       \
-    sum_l1 = f32_add(sum_t0, sum_t1);       \
-    sum16  = f32_add(sum_l0, sum_l1);       \
-    vd_0   = f32_add(vd_0, sum16);          \
+    sum_g0 = f32_add(sum_g0 , sum_g1);        \
+    sum_g2 = f32_add(sum_g2 , sum_g3);        \
+    sum_g4 = f32_add(sum_g4 , sum_g5);        \
+    sum_g6 = f32_add(sum_g6 , sum_g7);        \
+    sum_g0 = f32_add(sum_g0 , sum_g2);        \
+    sum_g4 = f32_add(sum_g4 , sum_g6);        \
+    vd_0   = f32_add(sum_g0 , sum_g4);        \
+    set_fp_exceptions;                        \
 
 
 #define GET_W32_UNORDER_VS2_VALUE(vs2, idx) \
@@ -117,69 +110,54 @@
   float64_t vd_0  = P.VU.elt<float64_t>(rd_num, 0); \
   float64_t vs1_0 = P.VU.elt<float64_t>(rs1_num, 0);\
   float64_t vs2;   \
-  float64_t sum_g0;\
-  float64_t sum_g1;\
-  float64_t sum_g2;\
-  float64_t sum_g3;\
-  float64_t sum_t0;\
-  float64_t sum_t1;\
-  float64_t sum_l0;\
-  float64_t sum_l1;\
-  float64_t sum16; \
+  float64_t sum_g0 = f64(0);\
+  float64_t sum_g1 = f64(0);\
+  float64_t sum_g2 = f64(0);\
+  float64_t sum_g3 = f64(0);\
+  float64_t sum_g4 = f64(0);\
+  float64_t sum_g5 = f64(0);\
+  float64_t sum_g6 = f64(0);\
+  float64_t sum_g7 = f64(0);\
   bool is_active = false;\
   bool is_first  = true; \
   int cnt = vl/SET;\
   int rem = vl%SET;\
   if(rem) { cnt += 1;}\
-  if(cnt) { vd_0 = f64(0);}\
-  for(reg_t i=0; i<cnt; i++) {\
-    int idx = SET*i;\
-    if (is_first) {\
-      GET_W32_UNORDER_VS2_VALUE(vs2, idx)   \
-      sum_g0 = f64_add(vs1_0,vs2);          \
-      is_first = false;\
-    } else {\
-      GET_W32_UNORDER_VS2_VALUE(vs2, idx)   \
-      sum_g0 = vs2;\
-    }\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+8)) \
-    sum_g0 = f64_add(sum_g0, vs2);          \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+1)) \
-    sum_g1 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+9)) \
-    sum_g1 = f64_add(sum_g1, vs2);          \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+2)) \
-    sum_g2 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+10))\
-    sum_g2 = f64_add(sum_g2, vs2);          \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+3)) \
-    sum_g3 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+11))\
-    sum_g3 = f64_add(sum_g3, vs2);          \
-    sum_t0 = f64_add(sum_g0, sum_g1);       \
-    sum_t1 = f64_add(sum_g2, sum_g3);       \
-    sum_l0 = f64_add(sum_t0, sum_t1);       \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+4)) \
-    sum_g0 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+12))\
-    sum_g0 = f64_add(sum_g0, vs2);      \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+5)) \
-    sum_g1 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+13))\
-    sum_g1 = f64_add(sum_g1, vs2);      \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+6)) \
-    sum_g2 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+14))\
-    sum_g2 = f64_add(sum_g2, vs2);      \
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+7)) \
-    sum_g3 = vs2;\
-    GET_W32_UNORDER_VS2_VALUE(vs2, (idx+15))\
-    sum_g3 = f64_add(sum_g3, vs2);          \
-    sum_t0 = f64_add(sum_g0, sum_g1);       \
-    sum_t1 = f64_add(sum_g2, sum_g3);       \
-    sum_l1 = f64_add(sum_t0, sum_t1);       \
-    sum16  = f64_add(sum_l0, sum_l1);       \
-    vd_0   = f64_add(vd_0, sum16);          \
+  if(cnt) {\
+    for(int i=0; i<cnt; i++) {\
+      int idx = SET*i;\
+      if (is_first) {\
+        GET_W32_UNORDER_VS2_VALUE(vs2, idx)   \
+        sum_g0 = f64_add(vs1_0,vs2);          \
+        is_first = false;\
+      } else {\
+        GET_W32_UNORDER_VS2_VALUE(vs2, idx)   \
+        sum_g0 = f64_add(sum_g0, vs2);        \
+      }\
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+1)) \
+      sum_g1 = f64_add(sum_g1, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+2)) \
+      sum_g2 = f64_add(sum_g2, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+3)) \
+      sum_g3 = f64_add(sum_g3, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+4)) \
+      sum_g4 = f64_add(sum_g4, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+5)) \
+      sum_g5 = f64_add(sum_g5, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+6)) \
+      sum_g6 = f64_add(sum_g6, vs2);          \
+      GET_W32_UNORDER_VS2_VALUE(vs2, (idx+7)) \
+      sum_g7 = f64_add(sum_g7, vs2);          \
+      set_fp_exceptions;                      \
+      }\
+    sum_g0 = f64_add(sum_g0 , sum_g1);        \
+    sum_g2 = f64_add(sum_g2 , sum_g3);        \
+    sum_g4 = f64_add(sum_g4 , sum_g5);        \
+    sum_g6 = f64_add(sum_g6 , sum_g7);        \
+    sum_g0 = f64_add(sum_g0 , sum_g2);        \
+    sum_g4 = f64_add(sum_g4 , sum_g6);        \
+    vd_0   = f64_add(sum_g0 , sum_g4);        \
+    set_fp_exceptions;                        \
 
 
 /*########### Begin ###########*/    
@@ -193,13 +171,11 @@ bool is_active = false;
 switch(P.VU.vsew) {
   case e16: {
     VI_VFP_REDUCTION_W16_SUM_UNORDER() 
-      set_fp_exceptions; 
     VI_VFP_LOOP_REDUCTION_END(e32)       
     break; 
   }
   case e32: {
     VI_VFP_REDUCTION_W32_SUM_UNORDER()
-      set_fp_exceptions; 
     VI_VFP_LOOP_REDUCTION_END(e64) 
     break; 
   }
