@@ -666,6 +666,19 @@ void sim_t::step(size_t n)
       host->switch_to();
     }
   }
+
+  // if all procs in wfi, sleep to avoid 100% cpu usage.
+  if (n > 1) {
+    int wfi_count = 0;
+    for (size_t p = 0; p < procs.size(); p++) {
+      auto state = procs[p]->get_state();
+      if (state->wfi_flag && !state->async_started)
+        wfi_count++;
+    }
+
+    if (wfi_count == procs.size())
+      usleep(100000);
+  }
 }
 
 void sim_t::set_debug(bool value)
