@@ -70,6 +70,12 @@ float16_t f16_exp( float16_t a )
 
   float16_t n = f16_roundToInt( f16_mul( a, ln2_recip ), softfloat_round_near_maxMag, false ); // n = round(x/ln2)
   int16_t n_int = f16_to_i16( n, softfloat_round_near_maxMag, false );
+  if( n_int > 15 )
+  {
+      // frm=3, a=0x495f
+      uZ.ui = 0x79a6;
+      return uZ.f;
+  }
   float32_t x0 = f16_mul32( n, ln2_val ); // x0 = n * ln2
   float16_t dx = f32_to_f16( f32_sub( f16_to_f32( a ), x0 ) );
 

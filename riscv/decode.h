@@ -329,6 +329,7 @@ private:
 #define STRIDE_RD             (STATE.vme_stride_d & 0xFFFF)
 #define STRIDE_RS1            (STATE.vme_stride_s & 0xFFFF)
 #define STRIDE_RS2            ((STATE.vme_stride_s & 0xFFFF0000) >> 16)
+#define VME_DATA_TYPE         (STATE.vme_data_type)
 #define MME_SPARSE_BASE       (STATE.mme_sparseidx_base)
 #define MME_SPARSE_STRIDE     (STATE.mme_sparseidx_stride & 0xFFFF)
 
@@ -1203,13 +1204,17 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access(RD, rd_size); \
   })
 
+#define check_vme_data_type \
+  if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
+    throw trap_ncp_cust_invalid_param();    
 
 // check traps for ve***.m instructions, element-wise
-#define check_traps_vexxx_m_element_wise(esize) ({ \
-        check_cust_misaligned_base(RS1, int16_t); \
-        check_cust_misaligned_base(RD, int16_t); \
+#define check_traps_vexxx_m_element_wise(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        check_tcp_data_type \
+        check_vme_data_type \
+        int esize = sizeof(etype); \
         int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
@@ -3589,7 +3594,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     } \
         break; \
     default: \
-        throw trap_illegal_instruction(insn.bits()); \
+        throw trap_ncp_cust_invalid_param(); \
     }
 
 #define MTE_DTYPE_DECODING_TO_TYPE(...) \

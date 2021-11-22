@@ -69,6 +69,12 @@ float16_t f16_cosh( float16_t a )
 
   float16_t n = f16_roundToInt( f16_mul( a, ln2_recip ), softfloat_round_near_maxMag, false ); // n = round(x/ln2)
   int16_t n_int = f16_to_i16( n, softfloat_round_near_maxMag, false );
+  if(n_int < -16)
+  {
+      // frm = 2, a = 0xc9b7
+      uZ.ui = 0x799e;
+      return uZ.f;
+  }
   float32_t x0 = f16_mul32( n, ln2_val ); // x0 = n * ln2
   float16_t dx = f32_to_f16( f32_sub( f16_to_f32( a ), x0 ) );
 
