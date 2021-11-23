@@ -469,9 +469,9 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 
 /* PCIe mbox address, send to txcmd or exttxcmd
  * data will write to cfg address. */
-#define PCIE_MBOX_CFG_ADDR      (0xc60a1000)
-#define PCIE_MBOX_TXCMD_ADDR    (0xc60a1004)
-#define PCIE_MBOX_EXTTXCMD_ADDR (0xc60a1008)
+#define PCIE_MBOX_CFG_ADDR      (0xE30A1000)
+#define PCIE_MBOX_TXCMD_ADDR    (0xE30A1004)
+#define PCIE_MBOX_EXTTXCMD_ADDR (0xE30A1008)
 
 /* core reset addr, just only write,
  * not realy phy_addr, just valid for PCIe dummy driver. */
