@@ -878,6 +878,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R1TYPE(veln_m);
   DEFINE_R1TYPE(vesin_m);
   DEFINE_R1TYPE(vecos_m);  
+  DEFINE_RTYPE(vemgt_mm);
+  DEFINE_RTYPE(vemeq_mm);
+  DEFINE_RTYPE(vemlt_mm);
+  DEFINE_CV2TYPE(vemgt_mf);
+  DEFINE_CV2TYPE(vemeq_mf);
+  DEFINE_CV2TYPE(vemlt_mf);
   DEFINE_R1TYPE(veavgpool_m);
   DEFINE_R1TYPE(vemaxpool_m);
   DEFINE_RTYPE(vedwconv_mm);

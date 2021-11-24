@@ -988,6 +988,12 @@ riscv_insn_stc = \
 	veln_m \
 	vesin_m \
 	vecos_m \
+	vemgt_mm \
+	vemeq_mm \
+	vemlt_mm \
+	vemgt_mf \
+	vemeq_mf \
+	vemlt_mf \
 	mov_f \
 	mov_m \
 	mov_v \
