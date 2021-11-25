@@ -2374,10 +2374,10 @@ int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            if (rs1_matrix(i, j) > rs2_matrix(i, j))
-                rd_result(i, j) = (DType)1;
+            if (rs1_matrix.coeff(i, j) > rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
             else
-                rd_result(i, j) = (DType)0;
+                rd_result.coeffRef(i, j) = (DType)0;
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2409,10 +2409,10 @@ int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            if (rs1_matrix(i, j) == rs2_matrix(i, j))
-                rd_result(i, j) = (DType)1;
+            if (rs1_matrix.coeff(i, j) == rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
             else
-                rd_result(i, j) = (DType)0;
+                rd_result.coeffRef(i, j) = (DType)0;
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2444,10 +2444,10 @@ int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            if (rs1_matrix(i, j) < rs2_matrix(i, j))
-                rd_result(i, j) = (DType)1;
+            if (rs1_matrix.coeff(i, j) < rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
             else
-                rd_result(i, j) = (DType)0;
+                rd_result.coeffRef(i, j) = (DType)0;
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2462,6 +2462,30 @@ int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 {
     DEFINE_MAP_DTYPE(DType)
 
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) > rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
     return 0;
 }
 
@@ -2470,6 +2494,30 @@ int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 {
     DEFINE_MAP_DTYPE(DType)
 
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) == rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
     return 0;
 }
 
@@ -2477,6 +2525,30 @@ template <typename DType>
 int vemlt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) < rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
 
     return 0;
 }
