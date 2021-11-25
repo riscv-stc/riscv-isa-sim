@@ -390,11 +390,82 @@ typedef struct {
   std::vector<const arg_t*>& arg;
 } custom_fmt_t;
 
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_imm());
+  }
+} ade_imm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    std::stringstream s;
+    int32_t target = insn.ade_bbc_imm();
+    char sign = target >= 0 ? '+' : '-';
+    s << "pc " << sign << ' ' << abs(target);
+    return s.str();
+  }
+} andes_branch_target;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_bf_msb());
+  }
+} ade_bf_msb;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_bf_lsb());
+  }
+} ade_bf_lsb;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_lhimm() << 1);
+  }
+} ade_lhimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_lwimm() << 2);
+  }
+} ade_lwimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_ldimm() << 3);
+  }
+} ade_ldimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_sbimm() );
+  }
+} ade_sbimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_shimm() << 1);
+  }
+} ade_shimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_swimm() << 2);
+  }
+} ade_swimm;
+
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.ade_sdimm() << 3);
+  }
+} ade_sdimm;
+
 std::string disassembler_t::disassemble(insn_t insn) const
 {
   const disasm_insn_t* disasm_insn = lookup(insn);
   return disasm_insn ? disasm_insn->to_string(insn) : "unknown";
 }
+
 
 disassembler_t::disassembler_t(int xlen)
 {
@@ -413,7 +484,7 @@ disassembler_t::disassembler_t(int xlen)
   const uint32_t mask_vldst = 0x7Ul << 12 | 0x1UL << 28;
   const uint32_t mask_amoop = 0x1fUl << 27;
   const uint32_t mask_width = 0x7Ul << 12;
-
+  
   #define DECLARE_INSN(code, match, mask) \
    const uint32_t match_##code = match; \
    const uint32_t mask_##code = mask;
@@ -455,6 +526,18 @@ disassembler_t::disassembler_t(int xlen)
 
   #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
   #define DEFINE_CV3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2, &dmx})
+  #define DEFINE_ANDES_ITYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_imm})
+  #define DEFINE_ANDES_BTYPE(code)  DISASM_INSN(#code, code, 0, {&xrs1, &andes_branch_target})
+  #define DEFINE_ANDES_I1TYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &ade_bf_msb, &ade_bf_lsb})
+  #define DEFINE_ANDES_XLHLOAD(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_lhimm})
+  #define DEFINE_ANDES_XLWLOAD(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_lwimm})
+  #define DEFINE_ANDES_XLDLOAD(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_ldimm})
+  #define DEFINE_ANDES_RTYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2})
+  #define DEFINE_ANDES_XSBSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_sbimm})
+  #define DEFINE_ANDES_XSHSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_shimm})
+  #define DEFINE_ANDES_XSWSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_swimm})
+  #define DEFINE_ANDES_XSDSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_sdimm})
+  
 
   DEFINE_XLOAD(lb)
   DEFINE_XLOAD(lbu)
@@ -497,13 +580,13 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_FLOAD(fld)
   DEFINE_FLOAD(flh)
   DEFINE_FLOAD(flq)
-  DEFINE_FLOAD(flhw)
+  // DEFINE_FLOAD(flhw)
 
   DEFINE_FSTORE(fsw)
   DEFINE_FSTORE(fsd)
   DEFINE_FSTORE(fsh)
   DEFINE_FSTORE(fsq)
-  DEFINE_FSTORE(fshw)
+  // DEFINE_FSTORE(fshw)
 
   add_insn(new disasm_insn_t("j", match_jal, mask_jal | mask_rd, {&jump_target}));
   add_insn(new disasm_insn_t("jal", match_jal | match_rd_ra, mask_jal | mask_rd, {&jump_target}));
@@ -519,6 +602,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_BTYPE(bge)
   DEFINE_BTYPE(bltu)
   DEFINE_BTYPE(bgeu)
+  DEFINE_RTYPE(vemaskmov_mm)
   DEFINE_RTYPE(memul_mm)
   DEFINE_RTYPE(memul_sp_mm)
   DEFINE_RTYPE(memul_ts1_mm)
@@ -897,6 +981,33 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_CV2TYPE(veemul_xu8_hf_mf);
   DEFINE_CV2TYPE(veemul_x8_bf_mf);
   DEFINE_CV2TYPE(veemul_xu8_bf_mf);
+
+  DEFINE_ANDES_ITYPE(addigp)
+  DEFINE_ANDES_BTYPE(bbc)
+  DEFINE_ANDES_BTYPE(bbs)
+  DEFINE_ANDES_BTYPE(beqc)
+  DEFINE_ANDES_BTYPE(bnec)
+  DEFINE_ANDES_I1TYPE(bfos)
+  DEFINE_ANDES_I1TYPE(bfoz)
+  DEFINE_ANDES_RTYPE(lea_h)
+  DEFINE_ANDES_RTYPE(lea_w)
+  DEFINE_ANDES_RTYPE(lea_d)
+  DEFINE_ANDES_RTYPE(lea_b_ze)
+  DEFINE_ANDES_RTYPE(lea_h_ze)
+  DEFINE_ANDES_RTYPE(lea_w_ze)
+  DEFINE_ANDES_RTYPE(lea_d_ze)
+  DEFINE_ANDES_ITYPE(lbgp)
+  DEFINE_ANDES_ITYPE(lbugp)
+  DEFINE_ANDES_XLHLOAD(lhgp)
+  DEFINE_ANDES_XLHLOAD(lhugp)
+  DEFINE_ANDES_XLWLOAD(lwgp)
+  DEFINE_ANDES_XLWLOAD(lwugp)
+  DEFINE_ANDES_XLDLOAD(ldgp)
+  DEFINE_ANDES_XLDLOAD(ldgp)
+  DEFINE_ANDES_XSBSTORE(sbgp)
+  DEFINE_ANDES_XSHSTORE(shgp)
+  DEFINE_ANDES_XSWSTORE(swgp)
+  DEFINE_ANDES_XSDSTORE(sdgp)
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));

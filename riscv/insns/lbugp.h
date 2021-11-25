@@ -1,0 +1,1 @@
+WRITE_RD(MMU.load_uint8(RDGP + insn.ade_imm()));

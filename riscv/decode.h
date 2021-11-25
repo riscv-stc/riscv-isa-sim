@@ -36,6 +36,7 @@ const int NCSR = 4096;
 
 #define X_RA 1
 #define X_SP 2
+#define X_GP 3
 
 #define VCSR_VXRM_SHIFT 1
 #define VCSR_VXRM  (0x3 << VCSR_VXRM_SHIFT)
@@ -88,9 +89,22 @@ public:
   insn_bits_t bits() { return b & ~((UINT64_MAX) << (length() * 8)); }
   int length() { return insn_length(b); }
   int64_t i_imm() { return int64_t(b) >> 20; }
+  int64_t ade_imm() { return ((x(14, 1)) + (x(15, 2) <<15) + (x(17, 3) << 12) + (x(20, 1) << 11) + (x(21, 10) << 1) + (imm_sign() << 17)); }
+  int64_t ade_lhimm() { return ((x(15, 2) <<15) + (x(17, 3) << 12) + (x(20, 1) << 11) + (x(21, 10) << 1) + (imm_sign() << 17)); }
+  int64_t ade_lwimm() { return ((x(15, 2) <<15) + (x(17, 3) << 12) + (x(20, 1) << 11) + (x(21, 1) << 17) + (x(22, 9) << 2) + (imm_sign() << 18)); }
+  int64_t ade_ldimm() { return ((x(15, 2) <<15) + (x(17, 3) << 12) + (x(20, 1) << 11) + (x(21, 2) << 17) + (x(23, 8) << 3) + (imm_sign() << 19)); }
+  int64_t ade_sbimm() { return ((x(7, 1) << 11) + (x(8, 4) << 1) + (x(14, 1)) + (x(15, 2) << 15) + (x(17, 3) << 12) + (x(25, 6) << 5) + (imm_sign() << 17)); }
+  int64_t ade_shimm() { return ((x(7, 1) << 11) + (x(8, 4) << 1) + (x(15, 2) << 15) + (x(17, 3) << 12) + (x(25, 6) << 5) + (imm_sign() << 17)); }
+  int64_t ade_swimm() { return ((x(7, 1) << 11) + (x(8, 1) << 17) + (x(9, 3) << 2) + (x(15, 2) << 15) + (x(17, 3) << 12) + (x(25, 6) << 5) + (imm_sign() << 18)); }
+  int64_t ade_sdimm() { return ((x(7, 1) << 11) + (x(8, 2) << 17) + (x(10, 2) << 3) + (x(15, 2) << 15) + (x(17, 3) << 12) + (x(25, 6) << 5) + (imm_sign() << 19)); }
   int64_t shamt() { return x(20, 6); }
   int64_t s_imm() { return x(7, 5) + (xs(25, 7) << 5); }
   int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
+  int64_t ade_bbc_imm() {return ((x(8, 4) << 1) + (x(25, 5) << 5) + (imm_sign() << 10)); }
+  int64_t ade_bbc_cimm() {return ((x(7, 1) << 5) + (x(20, 5))); }
+  int64_t ade_bec_cimm() {return ((x(7, 1) << 5) + (x(20, 5))) + (x(30, 1) << 6); }
+  int64_t ade_bf_msb() {return (x(26, 6)); }
+  int64_t ade_bf_lsb() {return (x(20, 25));}
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
   uint64_t v_uimm() { return x(15, 5); }
@@ -189,6 +203,8 @@ private:
 
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
+#define RDGP READ_REG(X_GP)
+
 #define RS1 READ_REG(insn.rs1())
 #define RS2 READ_REG(insn.rs2())
 #define RS3 READ_REG(insn.rs3())
@@ -196,6 +212,24 @@ private:
 #define WRITE_RD_STC(value) WRITE_REG_STC(insn.rd(), value)
 #define WRITE_RS1(value) WRITE_REG(insn.rs1(), value)
 #define WRITE_RS2(value) WRITE_REG(insn.rs2(), value)
+
+#define GET_BIT(x, bit) ((x & (1 << bit)) >> bit)
+// #define	SET_BIT(x, bit, val)	(x |= (val << bit))
+
+#define __BITS_PER_LONG 64
+
+static inline void set_bit(int nr, unsigned long *addr)
+{
+	addr[nr / __BITS_PER_LONG] |= 1UL << (nr % __BITS_PER_LONG);
+}
+
+static inline void clear_bit(int nr, unsigned long *addr)
+{
+	addr[nr / __BITS_PER_LONG] &= ~(1UL << (nr % __BITS_PER_LONG));
+}
+
+#define GET_RS1_POSI_BIT  GET_BIT(RS1, insn.ade_bbc_cimm())
+
 
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_REG(reg, value) STATE.XPR.write(reg, value)
@@ -533,6 +567,7 @@ private:
 
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
+#define BBCBRANCH_TARGET (pc + insn.ade_bbc_imm())
 #define JUMP_TARGET (pc + insn.uj_imm())
 #define RM ({ int rm = insn.rm(); \
               if(rm == 7) rm = STATE.frm; \

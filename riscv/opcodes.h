@@ -247,3 +247,12 @@ static uint32_t srli(unsigned int dest, unsigned int src, uint8_t shamt)
 		(dest << 7) |
 		MATCH_SRLI;
 }
+
+static uint32_t addigp(unsigned int dest, uint16_t ade_imm) __attribute__ ((unused));
+static uint32_t addigp(unsigned int dest, uint16_t ade_imm)
+{
+  return (bits(ade_imm, 17, 17) << 31) | (bits(ade_imm, 10, 1) << 21) |(bits(ade_imm, 11, 11) << 20) | (bits(ade_imm, 14, 12) << 17) |
+    (bits(ade_imm, 16, 15) << 15) | (bits(ade_imm, 0, 0) << 14) |
+    (dest << 7) |
+    MATCH_ADDIGP;
+}

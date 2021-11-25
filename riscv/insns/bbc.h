@@ -1,0 +1,2 @@
+if (GET_RS1_POSI_BIT == 0)
+    set_pc(BBCBRANCH_TARGET);

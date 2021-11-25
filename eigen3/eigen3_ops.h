@@ -7239,6 +7239,71 @@ class Vfexp
     }
 };
 
+/**
+ * vemaskmov_mm() vemaskmov.mm
+ * 
+ * 将矩阵M1根据M2矩阵中的值是否为0,从一个地方搬移到另一个地方
+ * @param rs2 M2,源操作矩阵基地址
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    //  float16_t zero_val = 0.0, nzero_val = -0.0;
+    if( is_same< DType, half >::value ){
+        float16_t rs2_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_f16.v = rs2_matrix(row, col).x;
+            if (rs2_f16.v  != 0x8000 && rs2_f16.v  != 0)  // 0 and -0
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }else if(is_same< DType, Bfloat16 >::value ){
+        bfloat16_t rs2_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_bf16.v = rs2_matrix(row, col).x;
+            if ( rs2_bf16.v != 0 && rs2_bf16.v != 0x8000)
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }else if(is_same< DType, Float32 >::value){
+        float32_t rs2_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_f32.v = rs2_matrix(row, col).x;
+            if (rs2_f32.v != 0 && rs2_f32.v != 0x8000000)
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }
+    
+
+    // if (relu) {
+    //     MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    // }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
 #endif
 
 

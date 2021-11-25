@@ -1,0 +1,1 @@
+MMU.store_uint8(RDGP + (insn.ade_shimm() << 1), RS2);
