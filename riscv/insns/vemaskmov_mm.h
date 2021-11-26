@@ -9,7 +9,7 @@ unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
 
 VME_DTYPE_DECODING_TO_TYPE({
-    check_traps_vexxx_mm(sizeof(dtype_lut));
+    check_traps_vexxx_mm(dtype_lut);
     vemaskmov_mm<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, (dtype_vd*)rs2, &sst);
     WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM); 
 })
