@@ -2409,7 +2409,7 @@ int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            if (rs1_matrix.coeff(i, j) == rs2_matrix.coeff(i, j))
+            if (rs1_matrix.coeff(i, j).x == rs2_matrix.coeff(i, j).x)
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
@@ -2508,7 +2508,7 @@ int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 
     for (int i = 0; i < ss->shape1_row; i++)
         for (int j = 0; j < ss->shape1_column; j++)
-            if (rs1_matrix.coeff(i, j) == rs2)
+            if (rs1_matrix.coeff(i, j).x == rs2.x)
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
