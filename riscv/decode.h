@@ -1077,8 +1077,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, dtype); \
         check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH, VME_SW); \
         check_cust_invalid_pool_shape(VME_HIN, VME_WIN, VME_CIN, VME_HOUT, VME_WOUT); \
-        int rs1_size = VME_IFM_C_STRIDE ? (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
-        int rd_size = VME_OFM_C_STRIDE ? (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
+        int rs1_size = VME_IFM_C_STRIDE ? \ 
+                      (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
+                      (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
+        int rd_size = VME_OFM_C_STRIDE ? \
+                      (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
+                      (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
 })
@@ -1092,9 +1096,15 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(VME_DILATION_H == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = VME_IFM_C_STRIDE ? (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
-        int rs2_size = VME_K_C_STRIDE ? (VME_K_C_STRIDE * (VME_KH * VME_KW - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_KH * VME_KW * VME_CIN * sizeof(dtype)); \
-        int rd_size = VME_OFM_C_STRIDE ? (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
+        int rs1_size = VME_IFM_C_STRIDE ? \
+                       (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
+                       (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
+        int rs2_size = VME_K_C_STRIDE ? \
+                       (VME_K_C_STRIDE * (VME_KH * VME_KW - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
+                       (VME_KH * VME_KW * VME_CIN * sizeof(dtype)); \
+        int rd_size = VME_OFM_C_STRIDE ? \
+                      (VME_OFM_C_STRIDE * (VME_HOUT * VME_WOUT - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
+                      (VME_HOUT * VME_WOUT * VME_CIN * sizeof(dtype)); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access(RD, rd_size); \
@@ -1106,9 +1116,15 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? \
+                       (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                      (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access(RD, rd_size); \
@@ -1119,8 +1135,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RS2, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? \
+                       (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
     })
@@ -1131,8 +1151,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rs2_size = STRIDE_RS2 ? (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rs2_size = STRIDE_RS2 ? \
+                       (STRIDE_RS2 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         if (DIM_DM == 0) { \
@@ -1148,7 +1172,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)): (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
             check_cust_access(RS2, SHAPE1_ROW * sizeof(etype)); \
@@ -1164,7 +1190,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
             check_cust_access(RD, SHAPE1_COLUMN * sizeof(etype)); \
@@ -1179,8 +1207,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                      (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RS2, SHAPE1_COLUMN * sizeof(etype)); \
@@ -1196,8 +1228,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, int16_t); \
         check_cust_misaligned_base(RD, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW - 1) + SHAPE1_COLUMN * sizeof(int32_t)) : (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW - 1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW - 1) + SHAPE1_COLUMN) * sizeof(int32_t) : \
+                       (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW - 1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                      (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RS2, SHAPE1_COLUMN * sizeof(int16_t)); \
@@ -1212,8 +1248,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                      (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -1223,8 +1263,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, int32_t); \
         check_cust_misaligned_base(RD, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int32_t)) : (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int32_t) : \
+                       (SHAPE1_COLUMN * sizeof(int32_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                      (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -1233,8 +1277,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_traps_vexxx_mf_x8out ({ \
         check_cust_misaligned_base(RS1, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int8_t)) : (SHAPE1_COLUMN * sizeof(int8_t)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                       (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int8_t) : \
+                      (SHAPE1_COLUMN * sizeof(int8_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -1250,8 +1298,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         check_vme_data_type \
         int esize = sizeof(etype); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * esize : \
+                       (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * esize : \
+                      (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -1260,7 +1312,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_traps_vexxx_m_reduce_all(etype) ({ \
         check_cust_misaligned_base(RS1, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(etype)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(etype) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
   })
 
@@ -1269,7 +1323,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(etype)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                       (SHAPE1_COLUMN) * sizeof(etype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         if (DIM_DM == 0) { \
           check_cust_access(RD, SHAPE1_COLUMN * sizeof(etype)); \
@@ -1284,8 +1340,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, stype); \
         check_cust_misaligned_base(RD, dtype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(stype)) : SHAPE1_COLUMN * sizeof(stype) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(dtype)) : SHAPE1_COLUMN * sizeof(dtype) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(stype) : \
+                       SHAPE1_COLUMN * sizeof(stype) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(dtype) : \
+                      SHAPE1_COLUMN * sizeof(dtype) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
@@ -1296,8 +1356,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS2, int16_t); \
         check_cust_misaligned_base(RD, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        int rs1_size = STRIDE_RS1 ? (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * sizeof(int16_t)) : (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rs1_size = STRIDE_RS1 ? \
+                       (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                       (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * sizeof(int16_t) : \
+                      (SHAPE1_COLUMN * sizeof(int16_t)) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, 0x10000); \
         check_cust_access(RD, rd_size); \
@@ -1308,7 +1372,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         check_tcp_data_type \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize): (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * esize : \
+                      (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RD, rd_size); \
   })
 
@@ -1318,7 +1384,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, int16_t); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
         check_tcp_data_type \
-        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        int rd_size = STRIDE_RD ? \
+                      (STRIDE_RD * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * esize : \
+                      (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         if (DIM_DM == 0) { \
           check_cust_access(RS1, SHAPE1_COLUMN * esize); \
         } else { \
@@ -1334,9 +1402,14 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, out_type); \
         check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
         check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
-        int rs1_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(rs1_type)) : (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
-        int rs2_size = BC_STRIDE_RS2 ? (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(rs2_type)) : (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
-        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * (BC_SHAPE1_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(out_type)) : \
+        int rs1_size = BC_STRIDE_RS1 ? \
+                       (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(rs1_type) : \
+                       (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
+        int rs2_size = BC_STRIDE_RS2 ? \
+                       (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN) * sizeof(rs2_type) : \
+                       (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
+        int rd_size = BC_STRIDE_RD ? \
+                      (BC_STRIDE_RD * (BC_SHAPE1_ROW - 1) + BC_SHAPE2_COLUMN) * sizeof(out_type) : \
                       BC_SHAPE2_COLUMN * sizeof(out_type) * BC_SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
@@ -1349,9 +1422,14 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, out_type); \
         check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN * sizeof(rs1_type)); \
         check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN * sizeof(rs2_type)); \
-        int rs1_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(rs1_type)) : (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
-        int rs2_size = BC_STRIDE_RS2 ? (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(rs2_type)) : (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
-        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * (BC_SHAPE1_COLUMN - 1) + BC_SHAPE2_COLUMN * sizeof(out_type)) : \
+        int rs1_size = BC_STRIDE_RS1 ? \
+                       (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(rs1_type) : \
+                       (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
+        int rs2_size = BC_STRIDE_RS2 ? \
+                       (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN) * sizeof(rs2_type) : \
+                       (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
+        int rd_size = BC_STRIDE_RD ? \
+                      (BC_STRIDE_RD * (BC_SHAPE1_COLUMN - 1) + BC_SHAPE2_COLUMN) * sizeof(out_type) : \
                       (BC_SHAPE2_COLUMN * sizeof(out_type)) * BC_SHAPE1_COLUMN; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
@@ -1367,11 +1445,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         } \
         check_sp_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
         check_cust_invalid_shape(BC_SHAPE2_ROW, BC_SHAPE2_COLUMN); \
-        int rs1_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(rs1_type)) : (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
-        int rs2_size = BC_STRIDE_RS2 ? (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(rs2_type)) : (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : BC_SHAPE2_COLUMN) * BC_SHAPE2_ROW; \
+        int rs1_size = BC_STRIDE_RS1 ? \
+                       (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(rs1_type) : \
+                       (BC_SHAPE1_COLUMN * sizeof(rs1_type)) * BC_SHAPE1_ROW; \
+        int rs2_size = BC_STRIDE_RS2 ? \
+                       (BC_STRIDE_RS2 * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_COLUMN) * sizeof(rs2_type) : \
+                       (BC_SHAPE2_COLUMN * sizeof(rs2_type)) * BC_SHAPE2_ROW; \
+        int idx_size = MME_SPARSE_STRIDE ? \
+                       (MME_SPARSE_STRIDE * (BC_SHAPE2_ROW - 1) + BC_SHAPE2_ROW): \
+                       BC_SHAPE2_COLUMN * BC_SHAPE2_ROW; \
         idx_size = (idx_size + 3) / 4; \
-        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * (BC_SHAPE1_ROW - 1) + BC_SHAPE2_COLUMN * sizeof(out_type)) : (BC_SHAPE2_COLUMN * sizeof(out_type)) * BC_SHAPE1_ROW;\
+        int rd_size = BC_STRIDE_RD ? \
+                      (BC_STRIDE_RD * (BC_SHAPE1_ROW - 1) + BC_SHAPE2_COLUMN) * sizeof(out_type) : \
+                      (BC_SHAPE2_COLUMN * sizeof(out_type)) * BC_SHAPE1_ROW;\
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1383,8 +1469,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, in_type); \
         check_cust_misaligned_base(RD, out_type); \
         check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN); \
-        int rs_size = BC_STRIDE_RS1 ? (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN * sizeof(in_type)) : (BC_SHAPE1_COLUMN * sizeof(in_type)) * BC_SHAPE1_ROW; \
-        int rd_size = BC_STRIDE_RD ? (BC_STRIDE_RD * (BC_SHAPE1_COLUMN - 1) + BC_SHAPE1_ROW * sizeof(out_type)) : (BC_SHAPE1_ROW * sizeof(out_type)) * BC_SHAPE1_COLUMN; \
+        int rs_size = BC_STRIDE_RS1 ? \
+                      (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(in_type) : \
+                      (BC_SHAPE1_COLUMN * sizeof(in_type)) * BC_SHAPE1_ROW; \
+        int rd_size = BC_STRIDE_RD ? \
+                      (BC_STRIDE_RD * (BC_SHAPE1_COLUMN - 1) + BC_SHAPE1_ROW) * sizeof(out_type) : \
+                      (BC_SHAPE1_ROW * sizeof(out_type)) * BC_SHAPE1_COLUMN; \
         check_cust_access(RS1, rs_size); \
         check_cust_access_im(RD, rd_size); \
   })
@@ -1394,8 +1484,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, in_type); \
         check_cust_misaligned_base(RD, out_type); \
         check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN * sizeof(in_type)); \
-        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : BC_SHAPE1_COLUMN) * sizeof(in_type) \
-                                * BC_SHAPE1_ROW; \
+        int rs1_size = BC_STRIDE_RS1 ? \
+                       (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(in_type): \
+                       BC_SHAPE1_COLUMN * sizeof(in_type) * BC_SHAPE1_ROW; \
         int rd_size = BC_SHAPE1_ROW * sizeof(out_type); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1407,8 +1498,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, in_type); \
         check_cust_misaligned_base(RD, out_type); \
         check_cust_invalid_shape(BC_SHAPE1_ROW, BC_SHAPE1_COLUMN * sizeof(in_type)); \
-        int rs1_size = (BC_STRIDE_RS1 ? BC_STRIDE_RS1 : BC_SHAPE1_COLUMN) * sizeof(in_type) \
-                                * BC_SHAPE1_ROW; \
+        int rs1_size = BC_STRIDE_RS1 ? \
+                       (BC_STRIDE_RS1 * (BC_SHAPE1_ROW - 1) + BC_SHAPE1_COLUMN) * sizeof(in_type): \
+                       BC_SHAPE1_COLUMN * sizeof(in_type) * BC_SHAPE1_ROW; \
         int rd_size = BC_SHAPE1_ROW * sizeof(out_type); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1426,12 +1518,15 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : CONV_CIN) * sizeof(rs1_type) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(rs2_type) * \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                       (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
+                       CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
+        int rs2_size = CONV_W_STRIDE ? \
+                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int rd_size =  CONV_OUT_STRIDE ? \
+                       (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
+                       CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1449,12 +1544,15 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : CONV_CIN) * sizeof(rs1_type) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_CIN) * sizeof(rs2_type) * \
-                       (CONV_KH * CONV_KW); \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_CIN) * sizeof(out_type) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                       (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
+                       CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
+        int rs2_size = CONV_W_STRIDE ? \
+                       (CONV_W_STRIDE * (CONV_KH * CONV_KW - 1) + CONV_CIN) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * CONV_CIN * sizeof(rs2_type);\
+        int rd_size =  CONV_OUT_STRIDE ? \
+                       (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_CIN) * sizeof(out_type): \
+                       CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_CIN * sizeof(out_type);\
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1472,12 +1570,15 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : CONV_CIN) * sizeof(rs1_type) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(rs2_type) * \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                       (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
+                       CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
+        int rs2_size = CONV_W_STRIDE ? \
+                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int rd_size =  CONV_OUT_STRIDE ? \
+                       (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
+                       CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1498,15 +1599,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : CONV_CIN) * sizeof(rs1_type) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(rs2_type) * \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : CONV_COUT) *  \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                       (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
+                       CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
+        int rs2_size = CONV_W_STRIDE ? \
+                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int rd_size =  CONV_OUT_STRIDE ? \
+                       (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
+                       CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
+        int idx_size = MME_SPARSE_STRIDE ? \
+                       MME_SPARSE_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT : \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT; \
         idx_size = (idx_size + 3) / 4; \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
@@ -1528,15 +1633,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
-        int rs1_size = (CONV_IN_STRIDE ? CONV_IN_STRIDE : CONV_CIN) * sizeof(rs1_type) * \
-                       (CONV_IN_COLUMN * CONV_IN_ROW); \
-        int rs2_size = (CONV_W_STRIDE ? CONV_W_STRIDE : CONV_COUT) * sizeof(rs2_type) * \
-                       (CONV_KH * CONV_KW * CONV_CIN / 2); \
-        int idx_size = (MME_SPARSE_STRIDE ? MME_SPARSE_STRIDE : CONV_COUT) *  \
-                       (CONV_KH * CONV_KW * CONV_CIN); \
+        int rs1_size = CONV_IN_STRIDE ? \
+                       (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
+                       CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
+        int rs2_size = CONV_W_STRIDE ? \
+                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int rd_size =  CONV_OUT_STRIDE ? \
+                       (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
+                       CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
+        int idx_size = MME_SPARSE_STRIDE ? \
+                       MME_SPARSE_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT : \
+                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT; \
         idx_size = (idx_size + 3) / 4; \
-        int rd_size = (CONV_OUT_STRIDE ? CONV_OUT_STRIDE : CONV_COUT) * sizeof(out_type) * \
-                      (CONV_OUT_COLUMN * CONV_OUT_ROW); \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RS2, rs2_size); \
         check_cust_access_im(RD, rd_size); \
