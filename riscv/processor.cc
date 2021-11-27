@@ -423,7 +423,9 @@ void state_t::reset(reg_t max_isa)
 }
 
 void processor_t::vectorUnit_t::reset(){
-  free(reg_file);
+  if (reg_file != nullptr)
+    free(reg_file);
+    
   VLEN = get_vlen();
   ELEN = get_elen();
   reg_file = malloc(NVPR * vlenb);
