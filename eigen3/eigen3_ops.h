@@ -2929,7 +2929,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     OutDType *rs1_start;
-    OutDType *left_val, *row_val, *col_val;
+    OutDType *left_val;//, *row_val, *col_val;
     OutDType *start;
     OutDType val;
 
@@ -2963,7 +2963,6 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     DEFINE_MAP_DTYPE(OutDType)
 
     VME_SHAPE_STRIDE_INFO(vss);
-
 
     h = kh;
     w = kw;
@@ -3053,8 +3052,8 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         cout << "rd: " << rd_matrix << endl;
     }
 
-    free(row_val);
-    free(col_val);
+    //free(row_val);
+    //free(col_val);
     free(left_val);
     free(out_data);
     return 0;
@@ -3072,7 +3071,7 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     OutDType *rs1_start;
-    OutDType *left_val, *row_val, *col_val;
+    OutDType *left_val;//, *row_val, *col_val;  #FIXME:‘row_val’ may be used uninitialized
     OutDType *start;
     OutDType val;
 
@@ -3202,8 +3201,8 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
         cout << "rd: " << rd_matrix << endl;
     }
 
-    free(row_val);
-    free(col_val);
+    //free(row_val);
+    //free(col_val);
     free(left_val);
     return 0;
 }
@@ -4220,6 +4219,7 @@ private:
     int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
     float16_t half_to_float16_t(half x);
     float32_t half_mul_f32(half a, half b);
+    // float32_t bf16_mul_f32(half a, half b);
     float32_t half_to_f32(half x);
     half float16_t_to_half(float16_t f16);
     half f32_to_half(float32_t f32);
@@ -4230,26 +4230,42 @@ public:
 
     CustomInsns();
 
-    int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStride *ss);
-    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss);
-    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct ShapeStride *ss);
+    int memul_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int memul_mm(half      *rs1, half      *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ShapeStride *ss);
     int memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
-    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
-    int memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
-    int memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
-    int memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
-    int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isSign, half *deq_addr=nullptr);
-    int memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
     
-    int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
-    int memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
-    int memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, struct ShapeStride *ss); 
+    int memul_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, struct ShapeStride *ss);
     int memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, struct ShapeStride *ss);
-    int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
-    int memul_ts_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(int8_t   *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_sp_mm(uint8_t  *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_sp_mm(int8_t   *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_sp_mm(uint8_t  *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_sp_mm(half     *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
+    int memul_ts_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int memul_ts_mm(half      *rs1, half      *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_ts_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_ts_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ShapeStride *ss);
     int memul_ts_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_ts_mm(int8_t  *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_ts_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_ts_mm(int8_t  *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_ts_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_ts_mm(half     *rs1, int8_t *rs2, half     *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_ts_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
     int meacc_m(half *rs1, half *rd, struct ShapeStride *ss);
@@ -4264,26 +4280,59 @@ public:
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int metr_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
     int metr_m(int8_t *rs1, int8_t *rd, struct ShapeStride *ss);
     int metr_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
 
-
-    int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
-    int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_mm(half      *rs1, half      *rs2, half      *rd, struct ConvShapeStride *ss);
+    int meconv_mm(half      *rs1, half      *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int meconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ConvShapeStride *ss);
+    int meconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ConvShapeStride *ss);
+    int meconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int meconv_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int meconv_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    
+    int meconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, ConvShapeStride *ss);
     int meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
-    int medeconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(half *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(int8_t *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
-    int medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
-    int medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_sp_mm(half      *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int meconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);   
+    
+    int medeconv_mm(half      *rs1, half      *rs2, half      *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(half      *rs1, half      *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int medeconv_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
+    int medeconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, ConvShapeStride *ss);
     int medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_sp_mm(half      *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    
+
     int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
     int medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);

@@ -449,6 +449,9 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CMT_LOG_MME_REDUCE    (0x0808)
 #define CMT_LOG_MME_CONV      (0x0810)
 
+#define TRAP_MATRIX           (0x0)
+#define TRAP_CONV             (0x1)
+
 //#define TMODE	(STATE.tmode)
 //
 //#define TCSR_RX_ACTIVE_MASK (0x2)
@@ -1037,6 +1040,46 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(col == 0 || row == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         }
+
+// throw trap if cust inst use invalid mme data_type(matrix and conv)
+#define check_cust_invalid_mme_matrix_conv_data_type(type) \
+        if (unlikely(type==0x30303 || type==0x101 || type==0x202 || type==0x303 || type==0x102 || type==0x201 || type==0x200)) {\
+            throw trap_ncp_cust_invalid_param(); \
+        }    
+
+// throw trap if cust inst use invalid mme data_type(transpose)
+#define check_cust_invalid_mme_tran_data_type(type) \
+        if (unlikely(      type==0x3030b || type==0x3030c ||\
+          type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
+          type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
+          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
+          type==0x102   || type==0x201   || type==0x200)) {\
+            throw trap_ncp_cust_invalid_param(); \
+        } 
+
+// throw trap if cust inst use invalid npu_v2 data_type
+#define check_cust_invalid_npu_data_type(type) \
+        if (!(unlikely( type==0x0 ||  type==0x10101 ||  type==0x20202 || type==0x30303 || type==0x3030b || type==0x3030c ||\
+          type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
+          type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
+          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
+          type==0x102   || type==0x201   || type==0x200))) {\
+            throw trap_ncp_vill_invalid_inst(); \
+        } 
+
+// throw trap if cust inst use invalid params-misaligned-4 (matrix and conv)
+#define check_cust_invalid_params_misaligned_4(conv) \
+        int paras = conv ? CONV_CIN : BC_SHAPE1_COLUMN;\
+        if (unlikely(paras%4 != 0)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        }
+
+// throw trap if cust inst use misaligned base(int8 mv)
+#define check_traps_misaligned_int8_mv() \
+        if (unlikely(MME_DEQUANT_COEFF & 0x3)) { \
+            throw trap_ncp_cust_misaligned_base(false, MME_DEQUANT_COEFF, 0, 0); \
+        } \
+
 // throw trap if cust inst use invalid shape, col=0 or row=0
 #define check_sp_invalid_shape(col, row) \
         if (unlikely(col == 0 || row == 0 || !!(row%4))) { \
@@ -1463,7 +1506,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access_im(RD, rd_size); \
         check_cust_access_sp(MME_SPARSE_BASE, idx_size); \
   })
-
+//        check_cust_invalid_params_misaligned_4(TRAP_MATRIX);
 // check traps for metr.m instruction
 #define check_traps_metr_m(in_type, out_type)({ \
         check_cust_misaligned_base(RS1, in_type); \
@@ -1532,6 +1575,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access_im(RD, rd_size); \
   })
 
+// check traps for mme int8 mv instructions(conv=1,conv; 0, matrix)
+#define check_traps_int8_mv(conv) ({ \
+        check_traps_misaligned_int8_mv(); \
+        int mv_size = conv ? CONV_COUT : BC_SHAPE2_COLUMN;\
+        check_cust_access_l1(MME_DEQUANT_COEFF, mv_size);\
+  })
+
 // check traps for medwconv.mm instructions
 #define check_traps_medwconv_mm(rs1_type, rs2_type, out_type) ({ \
         check_cust_misaligned_base(RS1, rs1_type); \
@@ -1596,6 +1646,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        check_cust_invalid_params_misaligned_4(TRAP_CONV);\
         if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
@@ -1630,6 +1681,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        check_cust_invalid_params_misaligned_4(TRAP_CONV);\
         if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
