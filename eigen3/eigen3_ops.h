@@ -2943,14 +2943,12 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     in_w = vss->column;
     in_h = vss->row;
     in_c = vss->cin;
-    assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = vss->ifm_c_stride;
     in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = vss->wout;
     out_h = vss->hout;
-    assert(out_w > 0 && out_h > 0);
     out_stride = vss->ofm_c_stride;
     out_stride = out_stride > 0 ? out_stride : in_c;
 
@@ -2959,8 +2957,6 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     kh = vss->kh;
     sk_h = vss->sh;
     sk_w = vss->sw == 0? vss->sh: vss->sw;
-    assert((kw > 0) && (kh > 0) && (vss->kw * vss->kh <= 64));
-    assert(sk_h >0 && sk_w > 0);
     k_stride = vss->k_c_stride;
     k_stride = k_stride > 0 ? k_stride : in_c;
 
@@ -3013,16 +3009,20 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         }//j
     }//i
 
-    if (GLOBAL_DBG)
+    if (GLOBAL_DBG) {
         printf("h = %d w = %d out_c = %d\n", h, w, in_c);
-    assert(h == out_h && w == out_w);
+        printf("hout = %d wout = %d out_c = %d\n", out_h, out_w, in_c);
+    }
 
     /*calculate convolution*/
     Map_OutDType left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    OutDType *out_data = (OutDType *)malloc(h * w * in_c * sizeof(OutDType));
+    Map_OutDType out_matrix(out_data, h * w, in_c, DynStride(in_c, 1));
     Map_OutDType rd_matrix(rd, out_h * out_w, in_c, DynStride(out_stride, 1));
+    rd_matrix = rd_matrix.Constant(out_h * out_w, in_c, OutDType(0));
     OutDType res;
 
-    //rd_matrix = left_matrix * rs2_matrix;
+    //out_matrix = left_matrix * rs2_matrix;
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < in_c; j++) {
             counter=0;
@@ -3039,10 +3039,16 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
                     counter++;
                 }
             }
-            rd_matrix(i, j) = res;
+            out_matrix(i, j) = res;
         }
         
     }
+    for(int i = 0; i < min(h, out_h); i++) {
+        for (int j = 0; j < min(w, out_w); j++) {
+            rd_matrix.row(i * out_w + j) = out_matrix.row(i * w + j);
+        }
+    }
+
     if (GLOBAL_DBG) {
         cout << "rd: " << rd_matrix << endl;
     }
@@ -3050,6 +3056,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     free(row_val);
     free(col_val);
     free(left_val);
+    free(out_data);
     return 0;
 }
 
