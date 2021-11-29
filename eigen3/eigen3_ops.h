@@ -2944,13 +2944,13 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     in_h = vss->row;
     in_c = vss->cin;
     in_stride = vss->ifm_c_stride;
-    in_stride = in_stride > 0 ? in_stride : in_c;
+    in_stride = in_stride;
 
     //get the output shape
     out_w = vss->wout;
     out_h = vss->hout;
     out_stride = vss->ofm_c_stride;
-    out_stride = out_stride > 0 ? out_stride : in_c;
+    out_stride = out_stride;
 
     //get the kernel shape
     kw = vss->kw;
@@ -2958,7 +2958,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     sk_h = vss->sh;
     sk_w = vss->sw == 0? vss->sh: vss->sw;
     k_stride = vss->k_c_stride;
-    k_stride = k_stride > 0 ? k_stride : in_c;
+    k_stride = k_stride;
 
     DEFINE_MAP_DTYPE(OutDType)
 
@@ -3022,15 +3022,15 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     OutDType res;
 
     //out_matrix = left_matrix * rs2_matrix;
-    for (i = 0; i < out_h * out_w; i++) {
+    for (i = 0; i < h * w; i++) {
         for (j = 0; j < in_c; j++) {
             counter=0;
             for (k = 0; k < okh; k++) {
-                if (((i / out_w) * sk_h + k) < pad_top) continue;
-                if (((i / out_w) * sk_h + k) >= (in_h + pad_top)) continue;
+                if (((i / w) * sk_h + k) < pad_top) continue;
+                if (((i / w) * sk_h + k) >= (in_h + pad_top)) continue;
                 for (ii = 0; ii < okw; ii++) {
-                    if ((((i % out_w) * sk_w) + ii) < pad_left) continue;
-                    if ((((i % out_w) * sk_w) + ii) >= (in_w + pad_left)) continue;
+                    if ((((i % w) * sk_w) + ii) < pad_left) continue;
+                    if ((((i % w) * sk_w) + ii) >= (in_w + pad_left)) continue;
                     if (counter == 0) 
                         res = left_matrix(i, (okw*k+ii)*in_c+j);
                     if (res < left_matrix(i, (okw*k+ii)*in_c+j))
