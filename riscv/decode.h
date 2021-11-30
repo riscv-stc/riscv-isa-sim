@@ -1351,6 +1351,29 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access(RD, rd_size); \
   })
 
+// check traps for verand.v instructions
+#define check_traps_verand_v(etype) ({ \
+        check_cust_misaligned_base(RS1, etype); \
+        check_cust_misaligned_base(RD, etype); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_vme_data_type; \
+        int esize = sizeof(etype); \
+        int rs1_size = 256; \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) * esize + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        check_cust_access(RS1, rs1_size); \
+        check_cust_access(RD, rd_size); \
+  })
+
+// check traps for verand.m instructions
+#define check_traps_verand_m(etype) ({ \
+        check_cust_misaligned_base(RD, etype); \
+        check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
+        check_vme_data_type; \
+        int esize = sizeof(etype); \
+        int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) * esize + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
+        check_cust_access(RD, rd_size); \
+  })
+
 // check traps for ve***.m instructions, reduce all
 #define check_traps_vexxx_m_reduce_all(etype) ({ \
         check_cust_misaligned_base(RS1, etype); \

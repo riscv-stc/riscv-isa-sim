@@ -933,6 +933,122 @@ int verot180_m(DType *rs1, DType *rd, struct ShapeStride *ss)
     return 0;
 }
 
+/**
+ * verand_v() verand.v
+ * 
+ * 更新伪随机数的seed，在此处只从地址中读出seed值到prng_state中。
+ * @param rs1 V1,seed向量基地址
+ * @return 执行结果
+ */
+template <typename DType>
+uint32_t ** verand_v(DType *rs1)
+{
+
+    uint32_t **prng_state = (uint32_t**) malloc(sizeof(uint32_t*) * 16 );
+    for(int i = 0; i < 16; i++)
+    {
+        prng_state[i] = (uint32_t*)malloc(sizeof(uint32_t) * 4);
+    }
+
+
+    if( is_same< DType, half >::value || is_same< DType, Bfloat16 >::value )
+    {
+        DEFINE_MAP_DTYPE(DType)
+
+        Map_DType rs1_matrix(rs1, 1, 128, DynStride(0, 1));
+
+
+        if (GLOBAL_DBG) {
+            
+            cout << "verand_v-rs1:" << endl << rs1_matrix << endl;
+        }        
+
+        for (int no = 0; no < 16; no ++)
+        {
+            prng_state[no][0] = ((uint32_t)rs1_matrix( 0, 8*no ).x) + (((uint32_t)rs1_matrix( 0, 8*no+1 ).x) << 16 );
+            prng_state[no][1] = ((uint32_t)rs1_matrix( 0, 8*no+2 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+3 ).x) << 16 );
+            prng_state[no][2] = ((uint32_t)rs1_matrix( 0, 8*no+4 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+5 ).x) << 16 );
+            prng_state[no][3] = ((uint32_t)rs1_matrix( 0, 8*no+6 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+7 ).x) << 16 );                                    
+        }
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        DEFINE_MAP_DTYPE(DType)
+
+        Map_DType rs1_matrix(rs1, 1, 64, DynStride(0, 1)); 
+
+        if (GLOBAL_DBG) {
+            
+            cout << "verand_v-rs1:" << endl << rs1_matrix << endl;
+        }        
+
+        for (int no = 0; no < 16; no ++)
+        {
+            prng_state[no][0] = rs1_matrix( 0, 4*no ).x;
+            prng_state[no][1] = rs1_matrix( 0, 4*no+1 ).x;
+            prng_state[no][2] = rs1_matrix( 0, 4*no+2 ).x;
+            prng_state[no][3] = rs1_matrix( 0, 4*no+3 ).x;                                   
+        }       
+    }
+
+    if (GLOBAL_DBG)
+    {
+        printf("verand_v: prng_state\n");
+        for (int no = 0; no < 16; no ++)
+        { 
+            printf("0x%x,0x%x,0x%x,0x%x\n", prng_state[no][0], prng_state[no][1], prng_state[no][2], prng_state[no][3]);
+        }
+        printf("verand_v: prng_state-end\n");
+    }
+
+    return prng_state;
+}
+
+/**
+ * verand_m() verand.m
+ * 
+ * 生成伪随机数矩阵
+ * @param rd，目的矩阵一基地址
+ * @param ss 矩阵形状描述
+ * @param rand_value 处理器产生的随机数
+ * @param verand_v 是否是verand_v调用
+ * @return 执行结果
+ */
+template <typename DType>
+int verand_m(DType *rd, struct ShapeStride *ss, DType **rand_value, bool verand_v)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    for(int row=0; row < rd_matrix.rows(); row++)
+    {
+        for(int col=0; col < rd_matrix.cols(); col++)
+        {
+            rd_matrix(row, col) = rand_value[row][col];
+        }
+        free(rand_value[row]);
+    }
+    free(rand_value); 
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG)
+    {
+        if(verand_v)
+        {
+            cout << "verand_v-rd:" << endl << rd_matrix << endl;
+        }
+        else
+        {
+            cout << "verand_m-rd:" << endl << rd_matrix << endl;
+        }        
+    }
+
+    return 0;
+}
+
+
 template <typename DType>
 int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
 {

@@ -500,6 +500,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_R1TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1})
   #define DEFINE_R2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &dmx})
   #define DEFINE_R3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &xrs2, &dmx})
+  #define DEFINE_R4TYPE(code) DISASM_INSN(#code, code, 0, {&xrd})
   #define DEFINE_ITYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &imm})
   #define DEFINE_ITYPE_SHIFT(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &shamt})
   #define DEFINE_I0TYPE(name, code) DISASM_INSN(name, code, mask_rs1, {&xrd, &imm})
@@ -971,11 +972,12 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R1TYPE(veavgpool_m);
   DEFINE_R1TYPE(vemaxpool_m);
   DEFINE_RTYPE(vedwconv_mm);
-  
   DEFINE_R3TYPE(versub_mv);
   DEFINE_CV2TYPE(versub_mf);
   DEFINE_R1TYPE(verot180_m);
   DEFINE_FR2TYPE(verev_m);
+  DEFINE_R1TYPE(verand_v)
+  DEFINE_R4TYPE(verand_m)
 
   DEFINE_CV2TYPE(veemul_x8_hf_mf);
   DEFINE_CV2TYPE(veemul_xu8_hf_mf);

@@ -2348,3 +2348,92 @@ mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
   mbox = box;
   return mbox;
 }
+
+uint16_t uint16_rtol(const uint16_t x, int k)
+{
+  return (x << k) | (x >> (16 - k));
+}
+
+half processor_t::rand_half( uint8_t no )
+{
+  uint16_t *state_ptr = reinterpret_cast<uint16_t *>( &(state.rand_state[no/2][ (no%2)*2 ]) );
+
+	const uint16_t mid = uint16_rtol(state_ptr[0] + state_ptr[3], 7) + state_ptr[0];
+
+	const uint16_t t = state_ptr[1] << 9;
+
+	state_ptr[2] ^= state_ptr[0];
+  state_ptr[3] ^= state_ptr[1];
+  state_ptr[1] ^= state_ptr[2];
+  state_ptr[0] ^= state_ptr[3];           
+
+	state_ptr[2] ^= t ;
+
+	state_ptr[3] = uint16_rtol(state_ptr[3], 11);
+
+  //get the float16 value from uint16
+  float16_t x;
+  x = i16_to_f16( mid >> 5 );
+  float16_t normP = {0x1000};  //2^-11
+  x = f16_mul( x, normP );
+
+  half result;
+  result.x = x.v;
+  return result;    
+
+}
+Bfloat16 processor_t::rand_Bfloat16( uint8_t no )
+{
+  uint16_t *state_ptr = reinterpret_cast<uint16_t *>( &(state.rand_state[no/2][ (no%2)*2 ]) );
+
+	const uint16_t mid = uint16_rtol(state_ptr[0] + state_ptr[3], 7) + state_ptr[0];
+
+	const uint16_t t = state_ptr[1] << 9;
+
+	state_ptr[2] ^= state_ptr[0];
+  state_ptr[3] ^= state_ptr[1];
+  state_ptr[1] ^= state_ptr[2];
+  state_ptr[0] ^= state_ptr[3];           
+
+	state_ptr[2] ^= t ;
+
+	state_ptr[3] = uint16_rtol(state_ptr[3], 11);
+
+  //get the Bfloat16 value from uint16
+  bfloat16_t x;
+  x = ui8_to_bf16( mid >> 8 );
+  bfloat16_t normP = {0x3b80};  //2^-8
+  x = bf16_mul( x, normP );
+
+  Bfloat16 result;
+  result.x = x.v;
+  return result;
+}
+uint32_t Float32_rotl(const uint32_t x, int k) {
+	return (x << k) | (x >> (32 - k));
+}
+Float32 processor_t::rand_Float32( uint8_t no ) 
+{
+	const uint32_t mid = Float32_rotl(state.rand_state[no][0] + state.rand_state[no][3], 7) + state.rand_state[no][0];
+
+	const uint32_t t = state.rand_state[no][1] << 9;
+
+	state.rand_state[no][2] ^= state.rand_state[no][0];
+	state.rand_state[no][3] ^= state.rand_state[no][1];
+	state.rand_state[no][1] ^= state.rand_state[no][2];
+	state.rand_state[no][0] ^= state.rand_state[no][3];
+
+	state.rand_state[no][2] ^= t;
+
+	state.rand_state[no][3] = Float32_rotl(state.rand_state[no][3], 11);
+
+  //get the Float32 value from uint32
+  float32_t x;
+  x = ui32_to_f32( mid >> 8 );
+  float32_t normP = {0x33800000};  //2^-24
+  x = f32_mul( x, normP );
+
+  Float32 result;
+  result.x = x.v;
+  return result;
+}

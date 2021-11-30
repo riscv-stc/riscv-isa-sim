@@ -1014,6 +1014,10 @@ riscv_insn_stc = \
 	verot180_m \
 	verev_m \
 	vemaskmov_mm \
+	\
+	verand_v \
+	verand_m \
+	\
     metr_m \
     memul_mm \
 	memin_m \
