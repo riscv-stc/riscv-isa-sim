@@ -2485,50 +2485,15 @@ int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    half f_f16;
-    Bfloat16 f_bf16;
-    int gtflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /*
-            //WRITE_RD(f32_lt(f32(FRS1), f32(FRS2)));
+        for (int j = 0; j < ss->shape1_column; j++)
             if (rs1_matrix.coeff(i, j) > rs2_matrix.coeff(i, j))
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            gtflag = 1;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f16_le(half_rs1, half_rs2)) {
-                    gtflag = 0;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (bf16_le(bf16_rs1, bf16_rs2)) {
-                    gtflag = 0;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f32_le(f32_rs1, f32_rs2)) {
-                    gtflag = 0;
-                }
-            }
-            if (gtflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2555,49 +2520,15 @@ int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    half f_f16;
-    Bfloat16 f_bf16;
-    int eqflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /*
-            if (rs1_matrix.coeff(i, j).x == rs2_matrix.coeff(i, j).x)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) == rs2_matrix.coeff(i, j))
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            eqflag = 0;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f16_eq(half_rs2, half_rs1)) {
-                    eqflag = 1;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (bf16_eq(bf16_rs2, bf16_rs1)) {
-                    eqflag = 1;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f32_eq(f32_rs2, f32_rs1)) {
-                    eqflag = 1;
-                }
-            }
-            if (eqflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2624,49 +2555,15 @@ int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
         cout << "rs2:" << endl << rs2_matrix << endl;
     }
 
-    half f_f16;
-    Bfloat16 f_bf16;
-    int ltflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /* 
+        for (int j = 0; j < ss->shape1_column; j++)
             if (rs1_matrix.coeff(i, j) < rs2_matrix.coeff(i, j))
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            ltflag = 0;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f16_lt(half_rs1, half_rs2)) {
-                    ltflag = 1;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (bf16_lt(bf16_rs1, bf16_rs2)) {
-                    ltflag = 1;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2_matrix.coeff(i, j).x;
-                if (f32_lt(f32_rs1, f32_rs2)) {
-                    ltflag = 1;
-                }
-            }
-            if (ltflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2690,49 +2587,15 @@ int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
-    half f_f16;
-    Bfloat16 f_bf16;
-    int gtflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /*
+        for (int j = 0; j < ss->shape1_column; j++)
             if (rs1_matrix.coeff(i, j) > rs2)
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            gtflag = 1;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2.x;
-                if (f16_le(half_rs1, half_rs2)) {
-                    gtflag = 0;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2.x;
-                if (bf16_le(bf16_rs1, bf16_rs2)) {
-                    gtflag = 0;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2.x;
-                if (f32_le(f32_rs1, f32_rs2)) {
-                    gtflag = 0;
-                }
-            }
-            if (gtflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2756,49 +2619,15 @@ int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
-    half f_f16;
-    Bfloat16 f_bf16;
-    int eqflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /*
-            if (rs1_matrix.coeff(i, j).x == rs2.x)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) == rs2)
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            eqflag = 0;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2.x;
-                if (f16_eq(half_rs2, half_rs1)) {
-                    eqflag = 1;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2.x;
-                if (bf16_eq(bf16_rs2, bf16_rs1)) {
-                    eqflag = 1;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2.x;
-                if (f32_eq(f32_rs2, f32_rs1)) {
-                    eqflag = 1;
-                }
-            }
-            if (eqflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
@@ -2822,50 +2651,15 @@ int vemlt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
-
-    half f_f16;
-    Bfloat16 f_bf16;
-    int ltflag = 0;
     DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
     Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
 
     for (int i = 0; i < ss->shape1_row; i++)
-        for (int j = 0; j < ss->shape1_column; j++) {
-            /*
+        for (int j = 0; j < ss->shape1_column; j++)
             if (rs1_matrix.coeff(i, j) < rs2)
                 rd_result.coeffRef(i, j) = (DType)1;
             else
                 rd_result.coeffRef(i, j) = (DType)0;
-            */
-            ltflag = 0;
-            if (typeid(f_f16) == typeid(*rs1)) {
-                float16_t half_rs1, half_rs2;
-                half_rs1.v = rs1_matrix.coeff(i, j).x;
-                half_rs2.v = rs2.x;
-                if (f16_lt(half_rs1, half_rs2)) {
-                    ltflag = 1;
-                }
-            } else if (typeid(f_bf16) == typeid(*rs1)) {
-                bfloat16_t bf16_rs1, bf16_rs2;
-                bf16_rs1.v = rs1_matrix.coeff(i, j).x;
-                bf16_rs2.v = rs2.x;
-                if (bf16_lt(bf16_rs1, bf16_rs2)) {
-                    ltflag = 1;
-                }
-            } else {
-                float32_t f32_rs1, f32_rs2;
-                f32_rs1.v = rs1_matrix.coeff(i, j).x;
-                f32_rs2.v = rs2.x;
-                if (f32_lt(f32_rs1, f32_rs2)) {
-                    ltflag = 1;
-                }
-            }
-            if (ltflag) {
-                rd_result.coeffRef(i, j).x = DType(1.0).x;
-            } else {
-                rd_result.coeffRef(i, j).x = DType(0.0).x;
-            }
-        }
     rd_matrix = rd_result;
     free(rd_buf);
 
