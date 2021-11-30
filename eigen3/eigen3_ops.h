@@ -109,7 +109,7 @@ using namespace std;
         printf("\nVME ShapeStride:\n"); \
         printf("input : (%d:%d:%d) stride(%d)\n", vss->row, vss->column, vss->cin, vss->ifm_c_stride); \
         printf("output: (%d:%d) stride(%d)\n", vss->hout, vss->wout, vss->ofm_c_stride); \
-        printf("kernel: (%d:%d) step(%d:%d)\n", vss->kw, vss->kh, vss->sw, vss->sh); \
+        printf("kernel: (%d:%d) step(%d:%d)\n", vss->kh, vss->kw, vss->sh, vss->sw); \
         printf("padding: (u%d:d%d:l%d:r%d)\n", vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r); \
         printf("k_c_stride: %d\n", vss->k_c_stride); \
     } \
@@ -3072,7 +3072,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     kw = vss->kw;
     kh = vss->kh;
     sk_h = vss->sh;
-    sk_w = vss->sw == 0? vss->sh: vss->sw;
+    sk_w = vss->sw;
     k_stride = vss->k_c_stride;
     k_stride = k_stride;
 
@@ -3141,6 +3141,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     for (i = 0; i < h * w; i++) {
         for (j = 0; j < in_c; j++) {
             counter=0;
+            res = OutDType(0);
             for (k = 0; k < okh; k++) {
                 if (((i / w) * sk_h + k) < pad_top) continue;
                 if (((i / w) * sk_h + k) >= (in_h + pad_top)) continue;
