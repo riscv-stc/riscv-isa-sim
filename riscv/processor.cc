@@ -1502,7 +1502,31 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_MCACHE_CTL:
       break;
-
+    /* STC NPUV2 MCU user csr */
+    case CSR_USER0:
+      state.user0 = val;
+      break;
+    case CSR_USER1:
+      state.user1 = val;
+      break;
+    case CSR_USER2:
+      state.user2 = val;
+      break;
+    case CSR_USER3:
+      state.user3 = val;
+      break;
+    case CSR_USER4:
+      state.user4 = val;
+      break;
+    case CSR_USER5:
+      state.user5 = val;
+      break;
+    case CSR_USER6:
+      state.user6 = val;
+      break;
+    case CSR_USER7:
+      state.user7 = val;
+      break;
   }
 
 #if defined(RISCV_ENABLE_COMMITLOG)
@@ -2130,7 +2154,14 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       ret(VU.vlenb);
     case CSR_MCACHE_CTL:
       return 0;
-
+    case CSR_USER0: ret(state.user0);
+    case CSR_USER1: ret(state.user1);
+    case CSR_USER2: ret(state.user2);
+    case CSR_USER3: ret(state.user3);
+    case CSR_USER4: ret(state.user4);
+    case CSR_USER5: ret(state.user5);
+    case CSR_USER6: ret(state.user6);
+    case CSR_USER7: ret(state.user7);
   }
 
 #undef ret

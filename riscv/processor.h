@@ -285,6 +285,17 @@ struct state_t
   uint32_t dma_shape_row;
   uint32_t dma_shape_col;
   uint32_t dma_stride_ddr;
+
+  /* STC NPUV2 MCU user csr */
+  reg_t user0;
+  reg_t user1;
+  reg_t user2;
+  reg_t user3;
+  reg_t user4;
+  reg_t user5;
+  reg_t user6;
+  reg_t user7;
+
   reg_t wfi_flag;
   /* mextip is ext interrupt pending status for mbox,
    * just effect mip ext interrupt bit. */
