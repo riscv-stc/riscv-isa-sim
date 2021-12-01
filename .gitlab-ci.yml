@@ -37,11 +37,15 @@ test:
     - curl http://releases.streamcomputing.com/toolchain/llvm-toolchain/latest | bash
     - git clone --recurse-submodules http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/riscv-tests.git
     - cd riscv-tests/isa && make test -j`nproc` && cd -
+  artifacts:
+    paths:
+      - build
+    name: test_output
 
 package:
   stage : package
   script:
-    - cd build && ../configure --with-isa=rv32imafcv --prefix=$PWD/../install && make -j`nproc` && make install && cd -
+    - cd build && make install && cd -
     - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
     - export LINK=latest
     - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
