@@ -26,6 +26,7 @@ build:
   artifacts:
     paths:
       - build
+      - VERSION
     name: build_output
 
 test:
@@ -40,6 +41,7 @@ test:
   artifacts:
     paths:
       - build
+      - VERSION
     name: test_output
 
 package:
