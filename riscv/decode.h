@@ -716,7 +716,8 @@ inline freg_t f128_negate(freg_t a)
   STATE.serialized = false; \
   unsigned csr_priv = get_field((which), 0x300); \
   unsigned csr_read_only = get_field((which), 0xC00) == 3; \
-  if (((write) && csr_read_only) || STATE.prv < csr_priv) \
+  if ((((write) && csr_read_only) || STATE.prv < csr_priv) && \
+    (which > CSR_USER7 || which < CSR_USER0)) \
     throw trap_illegal_instruction(0); \
   (which); })
   
