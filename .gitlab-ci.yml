@@ -17,12 +17,14 @@ cache:
 build:
   stage : build
   script:
+    - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
     - mkdir -p build_v2
     - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
       - build_v2
+      - VERSION
     name: build_output
 
 package:

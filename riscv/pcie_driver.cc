@@ -41,39 +41,39 @@
 #define NL_GROUPS        (0)
 
 #define DDR_SIZE       (0xc0000000)
-#define NOC_NPC0_BASE  (0xc2000000)
-#define NOC_NPC1_BASE  (0xc2800000)
-#define NOC_NPC2_BASE  (0xca000000)
-#define NOC_NPC3_BASE  (0xca800000)
-#define NOC_NPC4_BASE  (0xcb000000)
-#define NOC_NPC5_BASE  (0xd2000000)
-#define NOC_NPC6_BASE  (0xd2800000)
-#define NOC_NPC7_BASE  (0xd3000000)
-#define NOC_NPC8_BASE  (0xc4000000)
-#define NOC_NPC9_BASE  (0xc4800000)
-#define NOC_NPC10_BASE (0xcc000000)
-#define NOC_NPC11_BASE (0xcc800000)
-#define NOC_NPC12_BASE (0xcd000000)
-#define NOC_NPC13_BASE (0xd4000000)
-#define NOC_NPC14_BASE (0xd4800000)
-#define NOC_NPC15_BASE (0xd5000000)
+#define NOC_NPC0_BASE  (0xDC000000)
+#define NOC_NPC1_BASE  (0xD8000000)
+#define NOC_NPC2_BASE  (0xD4000000)
+#define NOC_NPC3_BASE  (0xD4800000)
+#define NOC_NPC4_BASE  (0xD5000000)
+#define NOC_NPC5_BASE  (0xD5800000)
+#define NOC_NPC6_BASE  (0xD8800000)
+#define NOC_NPC7_BASE  (0xDC800000)
+#define NOC_NPC8_BASE  (0xEC000000)
+#define NOC_NPC9_BASE  (0xE8000000)
+#define NOC_NPC10_BASE (0xE4000000)
+#define NOC_NPC11_BASE (0xE4800000)
+#define NOC_NPC12_BASE (0xE5000000)
+#define NOC_NPC13_BASE (0xE5800000)
+#define NOC_NPC14_BASE (0xE8800000)
+#define NOC_NPC15_BASE (0xEC800000)
 
-#define NOC_NPC16_BASE (0xda000000)
-#define NOC_NPC17_BASE (0xda800000)
-#define NOC_NPC18_BASE (0xdb000000)
-#define NOC_NPC19_BASE (0xe2000000)
-#define NOC_NPC20_BASE (0xe2800000)
-#define NOC_NPC21_BASE (0xe3000000)
-#define NOC_NPC22_BASE (0xea000000)
-#define NOC_NPC23_BASE (0xea800000)
-#define NOC_NPC24_BASE (0xdc000000)
-#define NOC_NPC25_BASE (0xdc800000)
-#define NOC_NPC26_BASE (0xdd000000)
-#define NOC_NPC27_BASE (0xe4000000)
-#define NOC_NPC28_BASE (0xe4800000)
-#define NOC_NPC29_BASE (0xe5000000)
-#define NOC_NPC30_BASE (0xec000000)
-#define NOC_NPC31_BASE (0xec800000)
+#define NOC_NPC16_BASE (0xC8000000)
+#define NOC_NPC17_BASE (0xC8800000)
+#define NOC_NPC18_BASE (0xCA000000)
+#define NOC_NPC19_BASE (0xCA800000)
+#define NOC_NPC20_BASE (0xCC000000)
+#define NOC_NPC21_BASE (0xCC800000)
+#define NOC_NPC22_BASE (0xCE000000)
+#define NOC_NPC23_BASE (0xCE800000)
+#define NOC_NPC24_BASE (0xF0000000)
+#define NOC_NPC25_BASE (0xF0800000)
+#define NOC_NPC26_BASE (0xF2000000)
+#define NOC_NPC27_BASE (0xF2800000)
+#define NOC_NPC28_BASE (0xF4000000)
+#define NOC_NPC29_BASE (0xF4800000)
+#define NOC_NPC30_BASE (0xF6000000)
+#define NOC_NPC31_BASE (0xF6800000)
 
 /* NPC local space in soc view. */
 static const uint32_t noc_npc_base[] = {
@@ -93,22 +93,22 @@ static const uint32_t noc_npc_base[] = {
         NOC_NPC13_BASE,
         NOC_NPC14_BASE,
         NOC_NPC15_BASE,
-	NOC_NPC16_BASE,
-	NOC_NPC17_BASE,
-	NOC_NPC18_BASE,
-	NOC_NPC19_BASE,
-	NOC_NPC20_BASE,
-	NOC_NPC21_BASE,
-	NOC_NPC22_BASE,
-	NOC_NPC23_BASE,
-	NOC_NPC24_BASE,
-	NOC_NPC25_BASE,
-	NOC_NPC26_BASE,
-	NOC_NPC27_BASE,
-	NOC_NPC28_BASE,
-	NOC_NPC29_BASE,
-	NOC_NPC30_BASE,
-	NOC_NPC31_BASE,
+	      NOC_NPC16_BASE,
+	      NOC_NPC17_BASE,
+	      NOC_NPC18_BASE,
+	      NOC_NPC19_BASE,
+	      NOC_NPC20_BASE,
+	      NOC_NPC21_BASE,
+	      NOC_NPC22_BASE,
+	      NOC_NPC23_BASE,
+	      NOC_NPC24_BASE,
+	      NOC_NPC25_BASE,
+	      NOC_NPC26_BASE,
+	      NOC_NPC27_BASE,
+	      NOC_NPC28_BASE,
+	      NOC_NPC29_BASE,
+	      NOC_NPC30_BASE,
+	      NOC_NPC31_BASE
 };
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
@@ -469,9 +469,9 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 
 /* PCIe mbox address, send to txcmd or exttxcmd
  * data will write to cfg address. */
-#define PCIE_MBOX_CFG_ADDR      (0xc60a1000)
-#define PCIE_MBOX_TXCMD_ADDR    (0xc60a1004)
-#define PCIE_MBOX_EXTTXCMD_ADDR (0xc60a1008)
+#define PCIE_MBOX_CFG_ADDR      (0xE30A1000)
+#define PCIE_MBOX_TXCMD_ADDR    (0xE30A1004)
+#define PCIE_MBOX_EXTTXCMD_ADDR (0xE30A1008)
 
 /* core reset addr, just only write,
  * not realy phy_addr, just valid for PCIe dummy driver. */

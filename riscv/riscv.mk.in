@@ -290,8 +290,6 @@ riscv_insn_ext_zfh = \
 	feq_h \
 	fle_h \
 	flh \
-    flhw \
-    fshw \
 	flt_h \
 	fmadd_h \
 	fmax_h \
@@ -988,6 +986,12 @@ riscv_insn_stc = \
 	veln_m \
 	vesin_m \
 	vecos_m \
+	vemgt_mm \
+	vemeq_mm \
+	vemlt_mm \
+	vemgt_mf \
+	vemeq_mf \
+	vemlt_mf \
 	mov_f \
 	mov_m \
 	mov_v \
@@ -1009,6 +1013,10 @@ riscv_insn_stc = \
 	versub_mf \
 	verot180_m \
 	verev_m \
+	vemaskmov_mm \
+	\
+	verand_v \
+	verand_m \
 	\
     metr_m \
     memul_mm \
@@ -1025,6 +1033,33 @@ riscv_insn_stc = \
 	medeconv_sp_mm \
 	medwconv_mm
 
+riscv_insn_ext_andes_s = 	\
+	addigp					\
+	bbc						\
+	bbs						\
+	beqc					\
+	bnec					\
+	bfos					\
+	bfoz					\
+	lea_h					\
+	lea_w					\
+	lea_d					\
+	lea_b_ze				\
+	lea_h_ze				\
+	lea_w_ze				\
+	lea_d_ze				\
+	lbgp					\
+	lbugp					\
+	lhgp					\
+	lhugp					\
+	lwgp					\
+	lwugp					\
+	ldgp					\
+	sbgp					\
+	shgp					\
+	swgp					\
+	sdgp					\
+
 
 riscv_insn_list = \
 	$(riscv_insn_ext_a) \
@@ -1039,7 +1074,8 @@ riscv_insn_list = \
 	$(if $(HAVE_INT128),$(riscv_insn_ext_v),) \
 	$(riscv_insn_ext_h) \
 	$(riscv_insn_priv) \
-	$(riscv_insn_stc)
+	$(riscv_insn_stc)	\
+	$(riscv_insn_ext_andes_s)	
 
 riscv_gen_srcs = \
 	$(addsuffix .cc,$(riscv_insn_list))

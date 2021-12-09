@@ -423,7 +423,9 @@ void state_t::reset(reg_t max_isa)
 }
 
 void processor_t::vectorUnit_t::reset(){
-  free(reg_file);
+  if (reg_file != nullptr)
+    free(reg_file);
+    
   VLEN = get_vlen();
   ELEN = get_elen();
   reg_file = malloc(NVPR * vlenb);
@@ -1500,7 +1502,31 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_MCACHE_CTL:
       break;
-
+    /* STC NPUV2 MCU user csr */
+    case CSR_USER0:
+      state.user0 = val;
+      break;
+    case CSR_USER1:
+      state.user1 = val;
+      break;
+    case CSR_USER2:
+      state.user2 = val;
+      break;
+    case CSR_USER3:
+      state.user3 = val;
+      break;
+    case CSR_USER4:
+      state.user4 = val;
+      break;
+    case CSR_USER5:
+      state.user5 = val;
+      break;
+    case CSR_USER6:
+      state.user6 = val;
+      break;
+    case CSR_USER7:
+      state.user7 = val;
+      break;
   }
 
 #if defined(RISCV_ENABLE_COMMITLOG)
@@ -2128,7 +2154,14 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       ret(VU.vlenb);
     case CSR_MCACHE_CTL:
       return 0;
-
+    case CSR_USER0: ret(state.user0);
+    case CSR_USER1: ret(state.user1);
+    case CSR_USER2: ret(state.user2);
+    case CSR_USER3: ret(state.user3);
+    case CSR_USER4: ret(state.user4);
+    case CSR_USER5: ret(state.user5);
+    case CSR_USER6: ret(state.user6);
+    case CSR_USER7: ret(state.user7);
   }
 
 #undef ret
@@ -2153,11 +2186,13 @@ out:
   bool csr_read_only = get_field(which, 0xC00) == 3;
   unsigned priv = state.prv == PRV_S && !state.v ? PRV_HS : state.prv;
 
-  if ((csr_priv == PRV_S && !supports_extension('S')) ||
-      (csr_priv == PRV_HS && !supports_extension('H')))
+  if (((csr_priv == PRV_S && !supports_extension('S')) ||
+      (csr_priv == PRV_HS && !supports_extension('H'))) &&
+      (which > CSR_USER7 || which < CSR_USER0))
     goto throw_illegal;
 
-  if ((write && csr_read_only) || priv < csr_priv) {
+  if (((write && csr_read_only) || priv < csr_priv) &&
+     (which > CSR_USER7 || which < CSR_USER0)) {
     if (state.v && csr_priv <= PRV_HS)
       goto throw_virtual;
     goto throw_illegal;
@@ -2345,4 +2380,93 @@ mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
 {
   mbox = box;
   return mbox;
+}
+
+uint16_t uint16_rtol(const uint16_t x, int k)
+{
+  return (x << k) | (x >> (16 - k));
+}
+
+half processor_t::rand_half( uint8_t no )
+{
+  uint16_t *state_ptr = reinterpret_cast<uint16_t *>( &(state.rand_state[no/2][ (no%2)*2 ]) );
+
+	const uint16_t mid = uint16_rtol(state_ptr[0] + state_ptr[3], 7) + state_ptr[0];
+
+	const uint16_t t = state_ptr[1] << 9;
+
+	state_ptr[2] ^= state_ptr[0];
+  state_ptr[3] ^= state_ptr[1];
+  state_ptr[1] ^= state_ptr[2];
+  state_ptr[0] ^= state_ptr[3];           
+
+	state_ptr[2] ^= t ;
+
+	state_ptr[3] = uint16_rtol(state_ptr[3], 11);
+
+  //get the float16 value from uint16
+  float16_t x;
+  x = i16_to_f16( mid >> 5 );
+  float16_t normP = {0x1000};  //2^-11
+  x = f16_mul( x, normP );
+
+  half result;
+  result.x = x.v;
+  return result;    
+
+}
+Bfloat16 processor_t::rand_Bfloat16( uint8_t no )
+{
+  uint16_t *state_ptr = reinterpret_cast<uint16_t *>( &(state.rand_state[no/2][ (no%2)*2 ]) );
+
+	const uint16_t mid = uint16_rtol(state_ptr[0] + state_ptr[3], 7) + state_ptr[0];
+
+	const uint16_t t = state_ptr[1] << 9;
+
+	state_ptr[2] ^= state_ptr[0];
+  state_ptr[3] ^= state_ptr[1];
+  state_ptr[1] ^= state_ptr[2];
+  state_ptr[0] ^= state_ptr[3];           
+
+	state_ptr[2] ^= t ;
+
+	state_ptr[3] = uint16_rtol(state_ptr[3], 11);
+
+  //get the Bfloat16 value from uint16
+  bfloat16_t x;
+  x = ui8_to_bf16( mid >> 8 );
+  bfloat16_t normP = {0x3b80};  //2^-8
+  x = bf16_mul( x, normP );
+
+  Bfloat16 result;
+  result.x = x.v;
+  return result;
+}
+uint32_t Float32_rotl(const uint32_t x, int k) {
+	return (x << k) | (x >> (32 - k));
+}
+Float32 processor_t::rand_Float32( uint8_t no ) 
+{
+	const uint32_t mid = Float32_rotl(state.rand_state[no][0] + state.rand_state[no][3], 7) + state.rand_state[no][0];
+
+	const uint32_t t = state.rand_state[no][1] << 9;
+
+	state.rand_state[no][2] ^= state.rand_state[no][0];
+	state.rand_state[no][3] ^= state.rand_state[no][1];
+	state.rand_state[no][1] ^= state.rand_state[no][2];
+	state.rand_state[no][0] ^= state.rand_state[no][3];
+
+	state.rand_state[no][2] ^= t;
+
+	state.rand_state[no][3] = Float32_rotl(state.rand_state[no][3], 11);
+
+  //get the Float32 value from uint32
+  float32_t x;
+  x = ui32_to_f32( mid >> 8 );
+  float32_t normP = {0x33800000};  //2^-24
+  x = f32_mul( x, normP );
+
+  Float32 result;
+  result.x = x.v;
+  return result;
 }

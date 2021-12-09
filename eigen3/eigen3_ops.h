@@ -109,7 +109,7 @@ using namespace std;
         printf("\nVME ShapeStride:\n"); \
         printf("input : (%d:%d:%d) stride(%d)\n", vss->row, vss->column, vss->cin, vss->ifm_c_stride); \
         printf("output: (%d:%d) stride(%d)\n", vss->hout, vss->wout, vss->ofm_c_stride); \
-        printf("kernel: (%d:%d) step(%d:%d)\n", vss->kw, vss->kh, vss->sw, vss->sh); \
+        printf("kernel: (%d:%d) step(%d:%d)\n", vss->kh, vss->kw, vss->sh, vss->sw); \
         printf("padding: (u%d:d%d:l%d:r%d)\n", vss->n_pad_u, vss->n_pad_d, vss->n_pad_l, vss->n_pad_r); \
         printf("k_c_stride: %d\n", vss->k_c_stride); \
     } \
@@ -932,6 +932,122 @@ int verot180_m(DType *rs1, DType *rd, struct ShapeStride *ss)
     free(rd_tmp_buf);
     return 0;
 }
+
+/**
+ * verand_v() verand.v
+ * 
+ * 更新伪随机数的seed，在此处只从地址中读出seed值到prng_state中。
+ * @param rs1 V1,seed向量基地址
+ * @return 执行结果
+ */
+template <typename DType>
+uint32_t ** verand_v(DType *rs1)
+{
+
+    uint32_t **prng_state = (uint32_t**) malloc(sizeof(uint32_t*) * 16 );
+    for(int i = 0; i < 16; i++)
+    {
+        prng_state[i] = (uint32_t*)malloc(sizeof(uint32_t) * 4);
+    }
+
+
+    if( is_same< DType, half >::value || is_same< DType, Bfloat16 >::value )
+    {
+        DEFINE_MAP_DTYPE(DType)
+
+        Map_DType rs1_matrix(rs1, 1, 128, DynStride(0, 1));
+
+
+        if (GLOBAL_DBG) {
+            
+            cout << "verand_v-rs1:" << endl << rs1_matrix << endl;
+        }        
+
+        for (int no = 0; no < 16; no ++)
+        {
+            prng_state[no][0] = ((uint32_t)rs1_matrix( 0, 8*no ).x) + (((uint32_t)rs1_matrix( 0, 8*no+1 ).x) << 16 );
+            prng_state[no][1] = ((uint32_t)rs1_matrix( 0, 8*no+2 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+3 ).x) << 16 );
+            prng_state[no][2] = ((uint32_t)rs1_matrix( 0, 8*no+4 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+5 ).x) << 16 );
+            prng_state[no][3] = ((uint32_t)rs1_matrix( 0, 8*no+6 ).x) + (((uint32_t)rs1_matrix( 0, 8*no+7 ).x) << 16 );                                    
+        }
+    }
+    else if( is_same< DType, Float32 >::value )
+    {
+        DEFINE_MAP_DTYPE(DType)
+
+        Map_DType rs1_matrix(rs1, 1, 64, DynStride(0, 1)); 
+
+        if (GLOBAL_DBG) {
+            
+            cout << "verand_v-rs1:" << endl << rs1_matrix << endl;
+        }        
+
+        for (int no = 0; no < 16; no ++)
+        {
+            prng_state[no][0] = rs1_matrix( 0, 4*no ).x;
+            prng_state[no][1] = rs1_matrix( 0, 4*no+1 ).x;
+            prng_state[no][2] = rs1_matrix( 0, 4*no+2 ).x;
+            prng_state[no][3] = rs1_matrix( 0, 4*no+3 ).x;                                   
+        }       
+    }
+
+    if (GLOBAL_DBG)
+    {
+        printf("verand_v: prng_state\n");
+        for (int no = 0; no < 16; no ++)
+        { 
+            printf("0x%x,0x%x,0x%x,0x%x\n", prng_state[no][0], prng_state[no][1], prng_state[no][2], prng_state[no][3]);
+        }
+        printf("verand_v: prng_state-end\n");
+    }
+
+    return prng_state;
+}
+
+/**
+ * verand_m() verand.m
+ * 
+ * 生成伪随机数矩阵
+ * @param rd，目的矩阵一基地址
+ * @param ss 矩阵形状描述
+ * @param rand_value 处理器产生的随机数
+ * @param verand_v 是否是verand_v调用
+ * @return 执行结果
+ */
+template <typename DType>
+int verand_m(DType *rd, struct ShapeStride *ss, DType **rand_value, bool verand_v)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    for(int row=0; row < rd_matrix.rows(); row++)
+    {
+        for(int col=0; col < rd_matrix.cols(); col++)
+        {
+            rd_matrix(row, col) = rand_value[row][col];
+        }
+        free(rand_value[row]);
+    }
+    free(rand_value); 
+
+    SHAPE_STRIDE_INFO(ss);
+    if (GLOBAL_DBG)
+    {
+        if(verand_v)
+        {
+            cout << "verand_v-rd:" << endl << rd_matrix << endl;
+        }
+        else
+        {
+            cout << "verand_m-rd:" << endl << rd_matrix << endl;
+        }        
+    }
+
+    return 0;
+}
+
 
 template <typename DType>
 int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
@@ -2352,6 +2468,207 @@ int velut_m(AddrDType *rs1, unsigned long rs2, DType *rd, struct ShapeStride *ss
     return 0;
 }
 
+template <typename DType>
+int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) > rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) == rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) < rs2_matrix.coeff(i, j))
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) > rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) == rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+template <typename DType>
+int vemlt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    DType *rd_buf = (DType *)malloc(ss->shape1_row * ss->shape1_column * sizeof(DType));
+    Map_DType rd_result(rd_buf, ss->shape1_row, ss->shape1_column, DynStride(ss->shape1_column, 1));
+
+    for (int i = 0; i < ss->shape1_row; i++)
+        for (int j = 0; j < ss->shape1_column; j++)
+            if (rs1_matrix.coeff(i, j) < rs2)
+                rd_result.coeffRef(i, j) = (DType)1;
+            else
+                rd_result.coeffRef(i, j) = (DType)0;
+    rd_matrix = rd_result;
+    free(rd_buf);
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
 template <typename OutDType, typename InDType>
 int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool relu)
 {
@@ -2522,7 +2839,7 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     OutDType *rs1_start;
-    OutDType *left_val, *row_val, *col_val;
+    OutDType *left_val;//, *row_val, *col_val;
     OutDType *start;
     OutDType val;
 
@@ -2536,31 +2853,26 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     in_w = vss->column;
     in_h = vss->row;
     in_c = vss->cin;
-    assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = vss->ifm_c_stride;
-    in_stride = in_stride > 0 ? in_stride : in_c;
+    in_stride = in_stride;
 
     //get the output shape
     out_w = vss->wout;
     out_h = vss->hout;
-    assert(out_w > 0 && out_h > 0);
     out_stride = vss->ofm_c_stride;
-    out_stride = out_stride > 0 ? out_stride : in_c;
+    out_stride = out_stride;
 
     //get the kernel shape
     kw = vss->kw;
     kh = vss->kh;
     sk_h = vss->sh;
-    sk_w = vss->sw == 0? vss->sh: vss->sw;
-    assert((kw > 0) && (kh > 0) && (vss->kw * vss->kh <= 64));
-    assert(sk_h >0 && sk_w > 0);
+    sk_w = vss->sw;
     k_stride = vss->k_c_stride;
-    k_stride = k_stride > 0 ? k_stride : in_c;
+    k_stride = k_stride;
 
     DEFINE_MAP_DTYPE(OutDType)
 
     VME_SHAPE_STRIDE_INFO(vss);
-
 
     h = kh;
     w = kw;
@@ -2606,25 +2918,30 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
         }//j
     }//i
 
-    if (GLOBAL_DBG)
+    if (GLOBAL_DBG) {
         printf("h = %d w = %d out_c = %d\n", h, w, in_c);
-    assert(h == out_h && w == out_w);
+        printf("hout = %d wout = %d out_c = %d\n", out_h, out_w, in_c);
+    }
 
     /*calculate convolution*/
     Map_OutDType left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    OutDType *out_data = (OutDType *)malloc(h * w * in_c * sizeof(OutDType));
+    Map_OutDType out_matrix(out_data, h * w, in_c, DynStride(in_c, 1));
     Map_OutDType rd_matrix(rd, out_h * out_w, in_c, DynStride(out_stride, 1));
+    rd_matrix = rd_matrix.Constant(out_h * out_w, in_c, OutDType(0));
     OutDType res;
 
-    //rd_matrix = left_matrix * rs2_matrix;
-    for (i = 0; i < out_h * out_w; i++) {
+    //out_matrix = left_matrix * rs2_matrix;
+    for (i = 0; i < h * w; i++) {
         for (j = 0; j < in_c; j++) {
             counter=0;
+            res = OutDType(0);
             for (k = 0; k < okh; k++) {
-                if (((i / out_w) * sk_h + k) < pad_top) continue;
-                if (((i / out_w) * sk_h + k) >= (in_h + pad_top)) continue;
+                if (((i / w) * sk_h + k) < pad_top) continue;
+                if (((i / w) * sk_h + k) >= (in_h + pad_top)) continue;
                 for (ii = 0; ii < okw; ii++) {
-                    if ((((i % out_w) * sk_w) + ii) < pad_left) continue;
-                    if ((((i % out_w) * sk_w) + ii) >= (in_w + pad_left)) continue;
+                    if ((((i % w) * sk_w) + ii) < pad_left) continue;
+                    if ((((i % w) * sk_w) + ii) >= (in_w + pad_left)) continue;
                     if (counter == 0) 
                         res = left_matrix(i, (okw*k+ii)*in_c+j);
                     if (res < left_matrix(i, (okw*k+ii)*in_c+j))
@@ -2632,17 +2949,24 @@ int vemaxpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
                     counter++;
                 }
             }
-            rd_matrix(i, j) = res;
+            out_matrix(i, j) = res;
         }
         
     }
+    for(int i = 0; i < min(h, out_h); i++) {
+        for (int j = 0; j < min(w, out_w); j++) {
+            rd_matrix.row(i * out_w + j) = out_matrix.row(i * w + j);
+        }
+    }
+
     if (GLOBAL_DBG) {
         cout << "rd: " << rd_matrix << endl;
     }
 
-    free(row_val);
-    free(col_val);
+    //free(row_val);
+    //free(col_val);
     free(left_val);
+    free(out_data);
     return 0;
 }
 
@@ -2658,7 +2982,7 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     OutDType *rs1_start;
-    OutDType *left_val, *row_val, *col_val;
+    OutDType *left_val;//, *row_val, *col_val;  #FIXME:‘row_val’ may be used uninitialized
     OutDType *start;
     OutDType val;
 
@@ -2672,16 +2996,12 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     in_w = vss->column;
     in_h = vss->row;
     in_c = vss->cin;
-    assert(in_w > 0 && in_h > 0 && in_c > 0);
     in_stride = vss->ifm_c_stride;
-    in_stride = in_stride > 0 ? in_stride : in_c;
 
     //get the output shape
     out_w = vss->wout;
     out_h = vss->hout;
-    assert(out_w > 0 && out_h > 0);
     out_stride = vss->ofm_c_stride;
-    out_stride = out_stride > 0 ? out_stride : in_c;
 
     //get the kernel shape
     kw = vss->kw;
@@ -2689,11 +3009,8 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
     dilation_h = vss->k_dilation_h;
     dilation_w = vss->k_dilation_w;
     sk_h = vss->sh;
-    sk_w = vss->sw == 0? vss->sh: vss->sw;
-    assert((kw > 0) && (kh > 0) && (vss->kw * vss->kh <= 64));
-    assert(dilation_h > 0 && dilation_w > 0 && sk_h >0 && sk_w > 0);
+    sk_w = vss->sw;
     k_stride = vss->k_c_stride;
-    k_stride = k_stride > 0 ? k_stride : in_c;
 
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2758,18 +3075,22 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
         }//j
     }//i
 
-    if (GLOBAL_DBG)
+    if (GLOBAL_DBG) {
         printf("h = %d w = %d out_c = %d\n", h, w, in_c);
-    assert(h == out_h && w == out_w);
+        printf("hout = %d wout = %d out_c = %d\n", out_h, out_w, in_c);
+    }
 
     /*calculate convolution*/
     Map_OutDType left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_OutDType rd_matrix(rd, out_h * out_w, in_c, DynStride(out_stride, 1));
+    rd_matrix = rd_matrix.Constant(out_h * out_w, in_c, OutDType(0));
+    OutDType *out_tmp = (OutDType *)malloc(h * w * in_c * sizeof(OutDType));
+    Map_OutDType out_matrix(out_tmp, h * w, in_c, DynStride(in_c, 1));
     InDType odd, even;
     InDType res_tmp;
 
     //rd_matrix = left_matrix * rs2_matrix;
-    for (i = 0; i < out_h * out_w; i++) {
+    for (i = 0; i < h * w; i++) {
         for (j = 0; j < in_c; j++) {
             odd.x = 0x80000000;
             even.x = 0x80000000;
@@ -2779,15 +3100,20 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
                 else
                     even = InDType::mulConvert(left_matrix(i, k*in_c+j), rs2_matrix(k, j)) + even;
             }
-            rd_matrix(i, j) = OutDType(odd+even);
+            out_matrix(i, j) = OutDType(odd+even);
+        }
+    }
+    for(int i = 0; i < min(h, out_h); i++) {
+        for (int j = 0; j < min(w, out_w); j++) {
+            rd_matrix.row(i * out_w + j) = out_matrix.row(i * w + j);
         }
     }
     if (GLOBAL_DBG) {
         cout << "rd: " << rd_matrix << endl;
     }
 
-    free(row_val);
-    free(col_val);
+    //free(row_val);
+    //free(col_val);
     free(left_val);
     return 0;
 }
@@ -3804,6 +4130,7 @@ private:
     int meconv_x8_mm_base(int8_t *rs1, void *rd, int8_t *rs2, struct ConvShapeStride *ss, int outfp16);
     float16_t half_to_float16_t(half x);
     float32_t half_mul_f32(half a, half b);
+    // float32_t bf16_mul_f32(half a, half b);
     float32_t half_to_f32(half x);
     half float16_t_to_half(float16_t f16);
     half f32_to_half(float32_t f32);
@@ -3814,26 +4141,42 @@ public:
 
     CustomInsns();
 
-    int memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStride *ss);
-    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss);
-    int memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct ShapeStride *ss);
+    int memul_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int memul_mm(half      *rs1, half      *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ShapeStride *ss);
     int memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
-    int memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
-    int memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
-    int memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
-    int memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
-    int memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, bool isSign, half *deq_addr=nullptr);
-    int memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
     
-    int memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
-    int memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
-    int memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, struct ShapeStride *ss);
+    int memul_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, struct ShapeStride *ss); 
+    int memul_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, struct ShapeStride *ss);
     int memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, struct ShapeStride *ss);
-    int memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss);
-    int memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
-    int memul_ts_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss);
+    int memul_sp_mm(int8_t   *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_sp_mm(uint8_t  *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, half     *deq_addr=nullptr);
+    int memul_sp_mm(int8_t   *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_sp_mm(uint8_t  *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_sp_mm(half     *rs1, int8_t *rs2, uint8_t *sparseidx, half     *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
+    int memul_ts_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int memul_ts_mm(half      *rs1, half      *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_ts_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int memul_ts_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ShapeStride *ss);
     int memul_ts_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
+    int memul_ts_mm(int8_t  *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_ts_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride *ss, half *deq_addr=nullptr);
+    int memul_ts_mm(int8_t  *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_ts_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int memul_ts_mm(half     *rs1, int8_t *rs2, half     *rd, struct ShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int memul_ts_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
     int memin_m(half *rs1, half *rd, struct ShapeStride *ss);
     int memax_m(half *rs1, half *rd, struct ShapeStride *ss);
     int meacc_m(half *rs1, half *rd, struct ShapeStride *ss);
@@ -3848,26 +4191,59 @@ public:
     int veemul_x32_mv(int32_t *rs1, half *rd, half *rs2, struct ShapeStride *ss);
 
     int metr_m(half *rs1, half *rd, struct ShapeStride *ss);
+    int metr_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss);
     int metr_m(int8_t *rs1, int8_t *rd, struct ShapeStride *ss);
     int metr_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
 
-
-    int meconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int meconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
-    int meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_mm(half      *rs1, half      *rs2, half      *rd, struct ConvShapeStride *ss);
+    int meconv_mm(half      *rs1, half      *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int meconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ConvShapeStride *ss);
+    int meconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ConvShapeStride *ss);
+    int meconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int meconv_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int meconv_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    
+    int meconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, ConvShapeStride *ss);
     int meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
-    int medeconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(half *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(int8_t *rs1, int8_t *rd, half *rs2, struct ConvShapeStride *ss);
-    int medeconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
-    int medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd, struct ConvShapeStride *ss);
-    int medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
-    int medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half *rd, ConvShapeStride *ss);
+    int meconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int meconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int meconv_sp_mm(half      *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int meconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);   
+    
+    int medeconv_mm(half      *rs1, half      *rs2, half      *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(half      *rs1, half      *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(Bfloat16  *rs1, Bfloat16  *rs2, Float32   *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
+    int medeconv_mm(int8_t    *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_mm(uint8_t   *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_mm(int8_t    *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_mm(uint8_t   *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_mm(half      *rs1, int8_t    *rs2, half      *rd, struct ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int medeconv_mm(Bfloat16  *rs1, int8_t    *rs2, Bfloat16  *rd, struct ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+
+    int medeconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(half      *rs1, half      *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(Bfloat16  *rs1, Bfloat16  *rs2, uint8_t *sparseidx, Float32   *rd, ConvShapeStride *ss);
     int medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx, float32_t *rd, ConvShapeStride *ss);
+    int medeconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(int8_t    *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_sp_mm(uint8_t   *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, Bfloat16 *deq_addr=nullptr);
+    int medeconv_sp_mm(half      *rs1, int8_t    *rs2, uint8_t *sparseidx, half      *rd, ConvShapeStride *ss, bool isSign, half     *deq_addr=nullptr);
+    int medeconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
+    
+
     int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
     int medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
     int medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
@@ -7037,6 +7413,71 @@ class Vfexp
         return 0;
     }
 };
+
+/**
+ * vemaskmov_mm() vemaskmov.mm
+ * 
+ * 将矩阵M1根据M2矩阵中的值是否为0,从一个地方搬移到另一个地方
+ * @param rs2 M2,源操作矩阵基地址
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的矩阵基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+template <typename DType>
+int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+{
+    DEFINE_MAP_DTYPE(DType)
+
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+
+    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2_matrix << endl;
+    }
+
+    //  float16_t zero_val = 0.0, nzero_val = -0.0;
+    if( is_same< DType, half >::value ){
+        float16_t rs2_f16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_f16.v = rs2_matrix(row, col).x;
+            if (rs2_f16.v  != 0x8000 && rs2_f16.v  != 0)  // 0 and -0
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }else if(is_same< DType, Bfloat16 >::value ){
+        bfloat16_t rs2_bf16;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_bf16.v = rs2_matrix(row, col).x;
+            if ( rs2_bf16.v != 0 && rs2_bf16.v != 0x8000)
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }else if(is_same< DType, Float32 >::value){
+        float32_t rs2_f32;
+        for (int row = 0; row < rs1_matrix.rows(); row ++)
+        for (int col = 0; col < rs1_matrix.cols(); col ++) {
+            rs2_f32.v = rs2_matrix(row, col).x;
+            if (rs2_f32.v != 0 && rs2_f32.v != 0x80000000)                           
+                rd_matrix(row, col).x = rs1_matrix(row, col).x;
+        }
+    }
+    
+
+    // if (relu) {
+    //     MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
+    // }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
 
 #endif
 

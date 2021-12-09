@@ -22,24 +22,35 @@
 //L1 buffer size adjust to 1.288M, 0xc0000000-0xc0148000
 //im buffer size adjust to 256K, 0xc0400000-0xc0440000
 //Index RAM size 80k, 0xc0500000-0xc0514000
+
+/* NPUV2 The lower 3GB region (0x00_0000_0000 ~ 0x00_BFFF_FFFF) is the remapping target region of DDR space */
 #define ddr_mem_start        (0x00000000)
+
+/* NPUV2 L1 Buffer (1024KB+288KB) */
 #define l1_buffer_start      (0xc0000000)
 #define l1_buffer_size       (0x00148000)
+
+/* NPUV2 Intermediate Buffer(256KB) */
 #define im_buffer_start      (0xc0400000)
 #define im_buffer_size       (0x00040000)
+
+/* NPUV2 Index(.sp) RAM (80KB) */
 #define sp_buffer_start      (0xc0500000)
 #define sp_buffer_size       (0x00014000)
-#define SRAM_START           (0xD3D80000)
-#define SRAM_SIZE            (0x80000)
-#define MBOX_START           (0xc07f4000)
 
-#define MISC_START           (0xc07f3000)
+#define MISC_START           (0xc07f3000)   /* NPUV2 NP_MISC 4KB */
+#define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
+
 #define HWSYNC_START          (0xd0080000)
+
+#define SRAM_START           (0xD3D80000)   /* NPUV2 IRAM 512K */
+#define SRAM_SIZE            (0x80000)
 
 //ddr high 1G address, just accessed by pcie and sysdma
 //range is 0xc0800000 ~ 0xf8000000
-#define GLB_HIGHMEM_SIZE     (0x40000000 - 0x800000 - 0x8000000)
-#define GLB_HIGHMEM_BASE       (0xc0000000 + 0x800000)
+/* NPUV2 SoC Region(non-cacheable) 0x00_C080_0000 */
+#define GLB_HIGHMEM_BASE       (0xc0800000)
+#define GLB_HIGHMEM_SIZE      (0xffffffff+1-GLB_HIGHMEM_BASE)
 #define GLB_HIGHMEM_BANK0_START_ADDR (0x8c0800000)
 #define GLB_HIGHMEM_BANK1_START_ADDR (0x9c0800000)
 #define GLB_HIGHMEM_BANK2_START_ADDR (0xac0800000)
@@ -665,6 +676,19 @@ void sim_t::step(size_t n)
 
       host->switch_to();
     }
+  }
+
+  // if all procs in wfi, sleep to avoid 100% cpu usage.
+  if (n > 1) {
+    int wfi_count = 0;
+    for (size_t p = 0; p < procs.size(); p++) {
+      auto state = procs[p]->get_state();
+      if (state->wfi_flag && !state->async_started)
+        wfi_count++;
+    }
+
+    if (wfi_count == procs.size())
+      usleep(100000);
   }
 }
 

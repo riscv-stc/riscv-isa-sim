@@ -240,6 +240,8 @@ struct state_t
   uint32_t vl;
   uint32_t vtype;
   const uint32_t vlenb = VREG_LENGTH;
+
+  uint32_t rand_state[16][4];
   
   uint32_t conv_FM_in;
   uint32_t conv_Cin;
@@ -283,6 +285,17 @@ struct state_t
   uint32_t dma_shape_row;
   uint32_t dma_shape_col;
   uint32_t dma_stride_ddr;
+
+  /* STC NPUV2 MCU user csr */
+  reg_t user0;
+  reg_t user1;
+  reg_t user2;
+  reg_t user3;
+  reg_t user4;
+  reg_t user5;
+  reg_t user6;
+  reg_t user7;
+
   reg_t wfi_flag;
   /* mextip is ext interrupt pending status for mbox,
    * just effect mip ext interrupt bit. */
@@ -362,6 +375,62 @@ public:
   void set_csr(int which, reg_t val);
   reg_t get_csr(int which, insn_t insn, bool write, bool peek = 0);
   reg_t get_csr(int which) { return get_csr(which, insn_t(0), false, true); }
+  void update_prng_state(uint32_t **prng_state)
+  {
+    for (int i = 0; i < 16; i++)
+    {
+        state.rand_state[i][0] = prng_state[i][0];
+        state.rand_state[i][1] = prng_state[i][1];
+        state.rand_state[i][2] = prng_state[i][2];
+        state.rand_state[i][3] = prng_state[i][3];
+        free(prng_state[i]);
+    }
+    free(prng_state);
+  }
+  template<typename DType>
+  DType** rand( int row, int col )
+  {
+      DType **rand_value = (DType **)malloc( sizeof(DType*) * row );
+      for (int i = 0; i < row; i++)
+      {
+          rand_value[i] = (DType*) malloc(sizeof(DType) * col);
+      }
+      if (is_same<DType, Bfloat16>::value)
+      {
+          for(int i = 0; i < row; i++)
+          {
+              for(int j = 0; j < col; j++)
+              {
+                rand_value[i][j].x = rand_Bfloat16( (i*col+j) % 32 ).x;
+              }
+          }
+      }
+      else if (is_same<DType, half>::value)
+      {
+          for(int i = 0; i < row; i++)
+          {
+              for(int j = 0; j < col; j++)
+              {
+                rand_value[i][j].x = rand_half( (i*col+j) % 32 ).x;
+              }
+          }
+      }
+      else if (is_same<DType, Float32>::value)
+      {
+          for(int i = 0; i < row; i++)
+          {
+              for(int j = 0; j < col; j++)
+              {
+                rand_value[i][j].x = rand_Float32( (i*col+j) % 16 ).x;
+              }
+          }          
+      }
+
+      return rand_value;
+  }
+  half rand_half( uint8_t no );
+  Bfloat16 rand_Bfloat16( uint8_t no );
+  Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
   uint32_t get_syncs() {return synctimes; };
