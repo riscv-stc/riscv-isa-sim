@@ -447,7 +447,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
 
         fprintf(log_file, " conv_kernel_param1_Kw: %d", CONV_KW); 
         fprintf(log_file, " conv_kernel_param1_Kh: %d", CONV_KH); 
-        fprintf(log_file, " conv_kernel_param1_Dh: %d", CONV_DL); 
+        fprintf(log_file, " conv_kernel_param1_Dh: %d", CONV_DH); 
         fprintf(log_file, " conv_kernel_param1_Sh: %d", CONV_SH); 
         fprintf(log_file, " conv_kernel_param2_Dw: %d", CONV_DW); 
         fprintf(log_file, " conv_kernel_param2_Sw: %d", CONV_SW); 

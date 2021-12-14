@@ -266,7 +266,7 @@ struct state_t
   uint32_t vme_kernel_param2;
   uint32_t vme_max_min_idx;
   uint32_t conv_dequant_coeff;
-  uint32_t ncp_busy;
+  uint32_t conv_kernel_params3;
   uint32_t mte_icdest;
   uint32_t mte_shape;
   uint32_t mte_stride_s;

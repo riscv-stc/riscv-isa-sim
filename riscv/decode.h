@@ -407,6 +407,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CONV_COUT_REG         (STATE.conv_Cout)
 #define CONV_KERNEL_PARAMS1   (STATE.conv_kernel_params1)
 #define CONV_KERNEL_PARAMS2   (STATE.conv_kernel_params2)
+#define CONV_KERNEL_PARAMS3   (STATE.conv_kernel_params3)
 #define CONV_PADDING          (STATE.conv_padding)
 #define MME_QUANT_COEFF       (STATE.mme_quant_coeff)
 #define MME_DEQUANT_COEFF     (STATE.mme_dequant_coeff)
@@ -422,14 +423,14 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CONV_OUT_STRIDE	      ((STATE.conv_Cout & 0xFFFF0000) >> 16)
 #define CONV_KW 	            ((STATE.conv_kernel_params1 & 0xFF000000) >> 24)
 #define CONV_KH 	            ((STATE.conv_kernel_params1 & 0x00FF0000) >> 16)
-#define CONV_DL 	            ((STATE.conv_kernel_params1 & 0x0000FF00) >>  8)
+#define CONV_DH 	            ((STATE.conv_kernel_params1 & 0x0000FF00) >>  8)
 #define CONV_SH 	            ((STATE.conv_kernel_params1 & 0x000000FF) >>  0)
-#define CONV_SK 	            (STATE.conv_kernel_params1 & 0xFF)  //note
 
 #define CONV_DW 	            ((STATE.conv_kernel_params2 & 0xFF000000) >> 24)  
 #define CONV_SW 	            ((STATE.conv_kernel_params2 & 0x00FF0000) >> 16)
 #define CONV_S_KERNEL 	      ((STATE.conv_kernel_params2 & 0x0000FFFF) >>  0)  
 
+#define CONV_S2_STRIDE        (STATE.conv_kernel_params3 & 0xFFFF)
 
 // commitlog
 #define CMT_LOG_VME           (0x0100)  
@@ -562,6 +563,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
            (x).conv_cout = CONV_COUT_REG; \
            (x).conv_kernel_params1 = CONV_KERNEL_PARAMS1; \
            (x).conv_kernel_params2 = CONV_KERNEL_PARAMS2; \
+           (x).conv_kernel_params3 = CONV_KERNEL_PARAMS3; \
            (x).conv_padding = CONV_PADDING; \
            (x).mme_quant_coeff.v = MME_QUANT_COEFF; \
            (x).mme_dequant_coeff.v = MME_DEQUANT_COEFF; \
@@ -1102,6 +1104,11 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(dilation == 0 || kw == 0 || kh == 0 || sk == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
+        int conv2_s2_stride = ss->conv_kernel_params2 & 0xffff; \
+        conv2_s2_stride = conv2_s2_stride == 0? in_c : conv2_s2_stride; \
+        if (unlikely(conv2_s2_stride < in_c)) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } \
   })
 
 #define check_cust_invalid_pool_kernel_param(kh, kw, sh, sw) ({ \
@@ -1582,7 +1589,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
-        if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
+        check_cust_invalid_shape(CONV_SH, CONV_DH); \
+        if (unlikely(CONV_S2_STRIDE == 0 || CONV_S2_STRIDE < CONV_CIN)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
         int rs1_size = CONV_IN_STRIDE ? \
@@ -1615,7 +1623,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_CIN); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
-        if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
+        if (unlikely(CONV_SH == 0 || CONV_DH == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
         int rs1_size = CONV_IN_STRIDE ? \
@@ -1705,8 +1713,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
-        check_cust_invalid_params_misaligned_4(TRAP_CONV);\
-        if (unlikely(CONV_SK == 0 || CONV_DL == 0)) { \
+        check_cust_invalid_shape(CONV_SH, CONV_DH); \
+        if (unlikely(CONV_S2_STRIDE == 0 || CONV_S2_STRIDE < CONV_CIN / 2)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
         int rs1_size = CONV_IN_STRIDE ? \

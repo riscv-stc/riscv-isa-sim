@@ -509,6 +509,7 @@ struct ConvShapeStride
     /* CSR kernel */
     unsigned int conv_kernel_params1;
     unsigned int conv_kernel_params2;
+    unsigned int conv_kernel_params3;
 
     /* CSR padding */
     unsigned int conv_padding;
