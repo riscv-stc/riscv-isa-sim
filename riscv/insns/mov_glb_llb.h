@@ -25,3 +25,5 @@ len = dmae_dst_len(data_type, &dmae_ss);
 check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
 
 dmae_mov(src, dst, data_type, &dmae_ss);
+
+WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_DMAE);

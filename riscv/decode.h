@@ -449,6 +449,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CMT_LOG_MME_MEMUL_TS  (0x0804)  //.ts1.mm
 #define CMT_LOG_MME_REDUCE    (0x0808)
 #define CMT_LOG_MME_CONV      (0x0810)
+#define CMT_LOG_MME_DATA16    (0x0812)
 
 #define TRAP_MATRIX           (0x0)
 #define TRAP_CONV             (0x1)
@@ -1060,6 +1061,16 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_cust_invalid_param(); \
         } 
 
+// throw trap if cust inst use invalid data_type(vme or mme reduce)
+#define check_cust_invalid_vme_or_reduce_data_type(type) \
+        if (unlikely(      type==0x30303 || type==0x3030b || type==0x3030c ||\
+          type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
+          type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
+          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
+          type==0x102   || type==0x201   || type==0x200)) {\
+            throw trap_ncp_cust_invalid_param(); \
+        } 
+
 // throw trap if cust inst use invalid npu_v2 data_type
 #define check_cust_invalid_npu_data_type(type) \
         if (!(unlikely( type==0x0 ||  type==0x10101 ||  type==0x20202 || type==0x30303 || type==0x3030b || type==0x3030c ||\
@@ -1128,7 +1139,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RD, dtype); \
         check_cust_invalid_pool_kernel_param(VME_KH, VME_KW, VME_SH, VME_SW); \
         check_cust_invalid_pool_shape(VME_HIN, VME_WIN, VME_CIN, VME_HOUT, VME_WOUT); \
-        int rs1_size = VME_IFM_C_STRIDE ? \ 
+        int rs1_size = VME_IFM_C_STRIDE ? \
                       (VME_IFM_C_STRIDE * (VME_HIN * VME_WIN - 1) * sizeof(dtype) + VME_CIN * sizeof(dtype)) : \
                       (VME_HIN * VME_WIN * VME_CIN * sizeof(dtype)); \
         int rd_size = VME_OFM_C_STRIDE ? \

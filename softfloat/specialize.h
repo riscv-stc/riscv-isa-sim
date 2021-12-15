@@ -107,12 +107,12 @@ struct commonNaN {
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 16-bit floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF16UI 0xFE00
+#define defaultNaNF16UI (0x7E00)
 
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 16-bit bfloating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNBF16UI 0xFFC0
+#define defaultNaNBF16UI (0x7FC0)
 
 /*----------------------------------------------------------------------------
 | Returns true when 16-bit unsigned integer 'uiA' has the bit pattern of a
@@ -178,12 +178,12 @@ uint_fast16_t
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 32-bit floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF32UI 0xFFC00000
+#define defaultNaNF32UI (0x7FC00000)
 
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 19-bit tfloating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNTF32UI 0x7FE00
+#define defaultNaNTF32UI (0x7FE00)
 
 /*----------------------------------------------------------------------------
 | Returns true when 32-bit unsigned integer 'uiA' has the bit pattern of a
@@ -239,7 +239,7 @@ uint_fast32_t
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 64-bit floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF64UI UINT64_C( 0xFFF8000000000000 )
+#define defaultNaNF64UI UINT64_C  (0x7FF8000000000000)
 
 /*----------------------------------------------------------------------------
 | Returns true when 64-bit unsigned integer 'uiA' has the bit pattern of a
@@ -274,7 +274,7 @@ uint_fast64_t
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 80-bit extended floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNExtF80UI64 0xFFFF
+#define defaultNaNExtF80UI64 (0x7FFF)
 #define defaultNaNExtF80UI0  UINT64_C( 0xC000000000000000 )
 
 /*----------------------------------------------------------------------------
@@ -330,7 +330,7 @@ struct uint128
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 128-bit floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF128UI64 UINT64_C( 0xFFFF800000000000 )
+#define defaultNaNF128UI64 UINT64_C( 0x7FFF800000000000 )
 #define defaultNaNF128UI0  UINT64_C( 0 )
 
 /*----------------------------------------------------------------------------
@@ -417,7 +417,7 @@ void
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 128-bit floating-point NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF128UI96 0xFFFF8000
+#define defaultNaNF128UI96 (0x7FFF8000)
 #define defaultNaNF128UI64 0
 #define defaultNaNF128UI32 0
 #define defaultNaNF128UI0  0
