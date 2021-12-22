@@ -313,6 +313,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStrid
     k_stride = ss->conv_kernel_params2 & 0xffff;
     k_stride = k_stride > 0 ? k_stride : out_c;
     s2_stride = ss->conv_kernel_params3 & 0xffff;
+    s2_stride = s2_stride == 0? in_c : s2_stride;
 
 
     /*calculate the kernel shape*/
@@ -2187,6 +2188,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     int k_stride = ss->conv_kernel_params2 & 0xffff;
     k_stride = k_stride > 0 ? k_stride : out_c;
     int s2_stride = ss->conv_kernel_params3 & 0xffff;
+    s2_stride = s2_stride == 0 ? (in_c / 2) : s2_stride;
 
     int i, j, k, ii, jj, kk, index_cin, counter;
     uint8_t sp_index1, sp_index2;
