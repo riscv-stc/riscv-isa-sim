@@ -1601,7 +1601,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
         check_cust_invalid_shape(CONV_SH, CONV_DH); \
-        if (unlikely(CONV_S2_STRIDE < CONV_CIN)) { \
+        if (unlikely(CONV_S2_STRIDE && CONV_S2_STRIDE < CONV_CIN)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
         int rs1_size = CONV_IN_STRIDE ? \
@@ -1725,7 +1725,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
         check_cust_invalid_shape(CONV_SH, CONV_DH); \
-        if (unlikely(CONV_S2_STRIDE < CONV_CIN / 2)) { \
+        if (unlikely(CONV_S2_STRIDE && CONV_S2_STRIDE < CONV_CIN / 2)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
         int rs1_size = CONV_IN_STRIDE ? \
