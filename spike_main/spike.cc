@@ -240,10 +240,11 @@ int main(int argc, char** argv)
   bool real_time_clint = false;
   bool pcie_enabled = false;
   size_t nprocs = 1;
-  uint32_t ddr_size = 0xC0000000;
+  uint32_t ddr_size = 0x100000000; //4G ddr
   size_t board_id = 0;
   size_t chip_id = 0;
   size_t bank_id = 0;
+  size_t die_id = 0;
   uint32_t coremask = 0xffffffff;
   char masks_buf[178]={'\0'};
   const char *hwsync_masks = masks_buf;
@@ -352,6 +353,7 @@ int main(int argc, char** argv)
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
+  parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
   parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
   parser.option(0, "core-mask", 1, [&](const char *s) { coremask = strtoull(s, NULL, 0); });
@@ -451,7 +453,7 @@ int main(int argc, char** argv)
     }
   }
 
-  sim_t s(isa, priv, varch, nprocs, bank_id, (char *)hwsync_masks, halted, real_time_clint,
+  sim_t s(isa, priv, varch, nprocs, bank_id, die_id, (char *)hwsync_masks, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
       htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, board_id, chip_id, coremask);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);

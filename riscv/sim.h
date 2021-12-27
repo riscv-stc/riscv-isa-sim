@@ -25,7 +25,7 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, const char* priv, const char* varch, size_t _nprocs,
-        size_t bank_id, char *hwsync_masks, bool halted, bool real_time_clint,
+        size_t bank_id, size_t die_id, char *hwsync_masks, bool halted, bool real_time_clint,
         reg_t initrd_start, reg_t initrd_end, const char* bootargs,
         reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
@@ -85,6 +85,7 @@ private:
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
   size_t bank_id;
+  size_t die_id;
   char *hwsync_masks;
   reg_t initrd_start;
   reg_t initrd_end;
@@ -100,7 +101,7 @@ private:
   log_file_t log_file;
 
   std::vector<bus_t*> local_bus;
-  std::vector<bus_t*> sub_bus;
+  bus_t mem_bus;
   pcie_driver_t *pcie_driver;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
@@ -138,9 +139,9 @@ private:
   void make_dtb();
   void set_rom();
 
-  bool is_high_mem_addr(reg_t addr);
-  bool in_high_mem(reg_t addr);
-  char* sub_bus_addr_to_mem(reg_t addr);
+  bool is_glb_mem_addr(reg_t addr);
+  bool in_glb_mem(reg_t addr);
+  char* mem_bus_addr_to_mem(reg_t addr);
 
   const char* get_symbol(uint64_t addr);
 

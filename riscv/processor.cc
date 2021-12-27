@@ -1126,7 +1126,8 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_VME_MAX_MIN_IDX:
       break;
-    case CSR_NCP_BUSY:
+    case CSR_CONV_KERNEL_PARAMS3:
+        state.conv_kernel_params3 = val;
         break; //read only
     case CSR_MTE_ICDEST:
       state.mte_icdest = val;
@@ -1807,10 +1808,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_FM_padding;
-    case CSR_NCP_BUSY:
+    case CSR_CONV_KERNEL_PARAMS3:
       if(!supports_extension('V'))
         break;
-      return state.ncp_busy;
+      return state.conv_kernel_params3;
     case CSR_MTE_ICDEST:
       if(!supports_extension('V'))
         break;

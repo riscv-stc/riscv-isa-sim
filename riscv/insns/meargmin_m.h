@@ -9,24 +9,28 @@ reg_t t_rd = RD;
   unsigned long rd = MMU.get_phy_addr(t_rd);
 
   switch (p->get_csr(CSR_MME_DATA_TYPE)){
-  case 0x06: // f16 = uint16
+  case 0x0: // f16 = uint16
     check_traps_meargxxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
     veargmin_m<half>((half*)rs1, (uint16_t*)rd, &sst, 1);
-    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_REDUCE);
+    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
-  case 0x010106: // bf16 = uint16
+  case 0x010101: // bf16 = uint16
     check_traps_meargxxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
     veargmin_m<Bfloat16>((Bfloat16*)rs1, (uint16_t*)rd, &sst, 1);
-    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_REDUCE);
+    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
-  case 0x020206: // f32 = uint16
+  case 0x020202: // f32 = uint16
     check_traps_meargxxx_m(int32_t, int16_t);
     bc_sst_fill(sst, 4, 2);
     veargmin_m<Float32>((Float32*)rs1, (uint16_t*)rd, &sst, 1);
-    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_REDUCE);
+    WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
+  default:
+    check_cust_invalid_vme_or_reduce_data_type(p->get_csr(CSR_MME_DATA_TYPE));
+    check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
+    break; 
   };
 //});
 

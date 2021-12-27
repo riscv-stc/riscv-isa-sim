@@ -383,7 +383,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         pad = BC_SHAPE1_ROW >= BC_STRIDE_RD ? BC_SHAPE1_ROW : BC_STRIDE_RD ;
         xx  = BC_SHAPE1_ROW;
         yy  = BC_SHAPE1_COLUMN;
-      } else if(CMT_LOG_MME_REDUCE == type) { 
+      } else if(CMT_LOG_MME_REDUCE == type || CMT_LOG_MME_DATA16== type ) { 
         pad = 1 >= BC_STRIDE_RD ? 1 : BC_STRIDE_RD ;
         xx  = 1;
         yy  = BC_SHAPE1_ROW;
@@ -417,7 +417,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
             0x3090b == MME_DATA_TYPE || 0x30a0b == MME_DATA_TYPE || 0x3090c == MME_DATA_TYPE || 0x30a0c == MME_DATA_TYPE ||\
             0x30d0f == MME_DATA_TYPE || 0x30e0f == MME_DATA_TYPE || 0x30d10 == MME_DATA_TYPE || 0x30e10 == MME_DATA_TYPE ||\
             0x00000 == MME_DATA_TYPE || 0x10101 == MME_DATA_TYPE ) { 
-          size = 2;   //float16, float16
+          size = 2;   //float16, bfloat16
           for(int row=0; row < yy; row++) { 
             for(int col=0; col < xx; col++) {  
               int idx = row*pad+col;
@@ -434,6 +434,15 @@ static void commit_log_print_stc_mem_info(processor_t *p)
               fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
             }         
           } 
+        } else if (0x30303 == MME_DATA_TYPE) {          
+        size = 1;   //int8 metr
+        for(int row=0; row < yy; row++) {
+            for(int col=0; col < xx; col++) {
+              int idx = row*pad+col;
+              fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+              fprintf(log_file, " 0x%01" PRIx8, *((uint8_t *)paddr+idx));
+              }
+          }           
         } else {
           std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
         } 
@@ -447,7 +456,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
 
         fprintf(log_file, " conv_kernel_param1_Kw: %d", CONV_KW); 
         fprintf(log_file, " conv_kernel_param1_Kh: %d", CONV_KH); 
-        fprintf(log_file, " conv_kernel_param1_Dh: %d", CONV_DL); 
+        fprintf(log_file, " conv_kernel_param1_Dh: %d", CONV_DH); 
         fprintf(log_file, " conv_kernel_param1_Sh: %d", CONV_SH); 
         fprintf(log_file, " conv_kernel_param2_Dw: %d", CONV_DW); 
         fprintf(log_file, " conv_kernel_param2_Sw: %d", CONV_SW); 
@@ -491,7 +500,32 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         } else {
           std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
         } 
-      }    
+      }   
+    
+      if(CMT_LOG_MME_DATA16 == type) {
+        fprintf(log_file, " mme_shape_s1_col: %d", BC_SHAPE1_COLUMN); 
+        fprintf(log_file, " mme_shape_s1_row: %d", BC_SHAPE1_ROW); 
+        fprintf(log_file, " mme_stride_d: %d"  , BC_STRIDE_RD); 
+        fprintf(log_file, " mme_stride_s1: %d" , BC_STRIDE_RS1); 
+        fprintf(log_file, " mme_data_type: 0x%08" PRIx32, MME_DATA_TYPE);
+    
+        if (0x00000 == MME_DATA_TYPE || 0x10101 == MME_DATA_TYPE || 0x20202 == MME_DATA_TYPE) { 
+          size = 2;   //uint16
+          for(int out=0; out < zz; out++) { 
+            for(int row=0; row < yy; row++) { 
+              for(int col=0; col < xx; col++) {  
+                int idx = out*yy*xx + row*xx + col;
+                fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
+                fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
+              }         
+            } 
+          }
+        } else {
+          std::cout << " error! mme_data_type = " << MME_DATA_TYPE << std::endl;
+        } 
+      }  
+
+
     }
 
   }

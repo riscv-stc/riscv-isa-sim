@@ -114,15 +114,8 @@ void sysdma_device_t::dma_core(int ch) {
       char *src;
 
       simif_t *sim = procs_[0]->get_sim();
-      if (sim->in_high_mem(dma_channel_[ch].ddr_base[DDR_DIR_DST] + desc->ddar))
-        dst = sim->sub_bus_addr_to_mem(dma_channel_[ch].ddr_base[DDR_DIR_DST] + desc->ddar);
-      else
-        dst = sim->addr_to_mem(desc->ddar);
-
-      if (sim->in_high_mem(dma_channel_[ch].ddr_base[DDR_DIR_SRC] + desc->dsar))
-        src = sim->sub_bus_addr_to_mem(dma_channel_[ch].ddr_base[DDR_DIR_SRC] + desc->dsar);
-      else
-        src = sim->addr_to_mem(desc->dsar);
+      dst = sim->addr_to_mem(desc->ddar);
+      src = sim->addr_to_mem(desc->dsar);
 
       if (stride == 0) {
         memcpy(dst, src, col * row);
