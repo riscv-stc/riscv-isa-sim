@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 //L1 buffer size adjust to 1.25M
 //im buffer size adjust to 256K
@@ -599,6 +600,26 @@ int sim_t::run(std::vector<std::string> load_files,
   host = context_t::current();
   target.init(sim_thread_main, this);
   load_mems(load_files);
+
+  struct stat st;
+  int status = ::stat(dump_path.c_str(), &st);
+  if (status != 0) {
+    if (errno != ENOENT) {
+      std::cout << "lstat failed on " << dump_path << status<<std::endl;
+      exit(1);
+    }
+
+    status = ::mkdir(dump_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (status != 0) {
+      std::cout << "mkdir failed on " << dump_path << std::endl;
+      exit(1);
+    }
+  } else {
+    if (!S_ISDIR(st.st_mode)) {
+      std::cout << "dump path is not directory, " << dump_path << std::endl;
+      exit(1);
+    }
+  }
 
   if (init_dump.size() > 0)
     dump_mems("input_mem", init_dump, dump_path);
