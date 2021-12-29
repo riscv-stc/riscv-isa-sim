@@ -223,6 +223,11 @@ struct state_t
   uint8_t pmpcfg[max_pmp];
   reg_t pmpaddr[max_pmp];
 
+  /* NPUV2 PMA */
+  static const int max_pma = 16;
+  uint8_t pmacfg[max_pma];
+  reg_t pmaaddr[max_pma];
+
   uint32_t fflags;
   uint32_t frm;
   uint32_t bf16; 
@@ -592,6 +597,8 @@ public:
   void set_pmp_granularity(reg_t pmp_granularity);
   void set_mmu_capability(int cap);
 
+  void set_pma_num(reg_t pma_num);
+
   const char* get_symbol(uint64_t addr);
 
 private:
@@ -662,6 +669,8 @@ private:
   uint64_t last_pc, last_bits, executions;
   reg_t n_pmp;
   reg_t lg_pmp_granularity;
+
+  reg_t n_pma;
 
 public:
   class vectorUnit_t {
