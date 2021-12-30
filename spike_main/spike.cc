@@ -240,7 +240,7 @@ int main(int argc, char** argv)
   bool real_time_clint = false;
   bool pcie_enabled = false;
   size_t nprocs = 1;
-  uint32_t ddr_size = 0x100000000; //4G ddr
+  uint64_t ddr_size = 0x100000000; //4G ddr
   size_t board_id = 0;
   size_t chip_id = 0;
   size_t bank_id = 0;
