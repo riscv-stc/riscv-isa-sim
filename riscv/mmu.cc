@@ -72,6 +72,8 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
   }
 
   reg_t paddr = walk(addr, type, mode, virt, mxr) | (addr & (PGSIZE-1));
+  if (!pma_ok(paddr, len, type,!!(xlate_flags&RISCV_XLATE_AMO_FLAG)))
+    throw_access_exception(virt, addr, type);
   if (!pmp_ok(paddr, len, type, mode))
     throw_access_exception(virt, addr, type);
   return paddr;
@@ -335,6 +337,46 @@ reg_t mmu_t::pmp_homogeneous(reg_t addr, reg_t len)
   return true;
 }
 
+reg_t mmu_t::pma_ok(reg_t addr, reg_t len, access_type type, bool is_amo)
+{
+  if (!proc || proc->n_pma == 0)
+    return true;
+
+  for (size_t i = 0; i < proc->n_pma; i++) {
+    reg_t tor = proc->state.pmaaddr[i] << PMA_SHIFT;
+    uint8_t cfg = proc->state.pmacfg[i];
+
+    if (cfg & PMA_ETYP) {
+      reg_t mask = (proc->state.pmaaddr[i] << 1) | (!false);
+      mask = ~(mask & ~(mask + 1)) << PMA_SHIFT;
+
+      // Check each 4-byte sector of the access
+      bool any_match = false;
+      bool all_match = true;
+      for (reg_t offset = 0; offset < len; offset += 1 << PMA_SHIFT) {
+        reg_t cur_addr = addr + offset;
+        bool napot_match = ((cur_addr ^ tor) & mask) == 0;
+        bool match = napot_match;
+        any_match |= match;
+        all_match &= match;
+      }
+
+      if (any_match) {
+        // If the PMP matches only a strict subset of the access, fail it
+        if (!all_match)
+          return false;
+
+        if ((15 == (cfg&PMA_MTYP)>>2) || (is_amo && (cfg&PMA_NAMO)))
+          return false;
+        else
+          return true;
+      }
+    }
+  }
+
+  return true;
+}
+
 reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_type, bool virt, bool mxr)
 {
   if (!virt)
@@ -353,6 +395,10 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     // check that physical address of PTE is legal
     auto pte_paddr = base + idx * vm.ptesize;
     auto ppte = sim->addr_to_mem(pte_paddr);
+    
+    if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD)) {
+      throw_access_exception(virt, gva, trap_type);
+    }
     if (!ppte || !pmp_ok(pte_paddr, vm.ptesize, LOAD, PRV_S)) {
       throw_access_exception(virt, gva, trap_type);
     }
@@ -377,6 +423,8 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
 #ifdef RISCV_ENABLE_DIRTY
       // set accessed and possibly dirty bits.
       if ((pte & ad) != ad) {
+        if (!pma_ok(pte_paddr, vm.ptesize, STORE))
+          throw_access_exception(virt, gva, trap_type);
         if (!pmp_ok(pte_paddr, vm.ptesize, STORE, PRV_S))
           throw_access_exception(virt, gva, trap_type);
         *(target_endian<uint32_t>*)ppte |= to_target((uint32_t)ad);
@@ -434,6 +482,8 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
     // check that physical address of PTE is legal
     auto pte_paddr = s2xlate(addr, base + idx * vm.ptesize, LOAD, type, virt, false);
     auto ppte = sim->addr_to_mem(pte_paddr);
+    if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD))
+      throw_access_exception(virt, addr, type);
     if (!ppte || !pmp_ok(pte_paddr, vm.ptesize, LOAD, PRV_S))
       throw_access_exception(virt, addr, type);
 
@@ -457,6 +507,8 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
 #ifdef RISCV_ENABLE_DIRTY
       // set accessed and possibly dirty bits.
       if ((pte & ad) != ad) {
+        if (!pma_ok(pte_paddr, vm.ptesize, STORE))
+          throw_access_exception(virt, addr, type);
         if (!pmp_ok(pte_paddr, vm.ptesize, STORE, PRV_S))
           throw_access_exception(virt, addr, type);
         *(target_endian<uint32_t>*)ppte |= to_target((uint32_t)ad);

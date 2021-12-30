@@ -195,6 +195,7 @@
 #define PMA_ETYP    0x03
 #define PMA_MTYP    0x3c
 #define PMA_NAMO    0x40
+#define PMA_SHIFT 2
 
 #define IRQ_U_SOFT   0
 #define IRQ_S_SOFT   1
