@@ -110,6 +110,9 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 #define RISCV_XLATE_VIRT (1U << 0)
 #define RISCV_XLATE_VIRT_MXR (1U << 1)
 
+/* AMO操作时置位,用于PMA AMO检查 */
+#define RISCV_XLATE_AMO_FLAG  (1U << 16)
+
   // template for functions that load an aligned value from memory
   #define load_func(type, prefix, xlate_flags) \
     inline type##_t prefix##_##type(reg_t addr, bool require_alignment = false) { \
@@ -169,6 +172,48 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   load_func(int32, guest_load, RISCV_XLATE_VIRT)
   load_func(int64, guest_load, RISCV_XLATE_VIRT)
 
+  #define amo_load_func(type, prefix, xlate_flags) \
+    inline type##_t amo_##prefix##_##type(reg_t addr, bool require_alignment = false) { \
+      if (xlate_flags & ~(RISCV_XLATE_AMO_FLAG)) \
+        flush_tlb(); \
+      if (unlikely(addr & (sizeof(type##_t)-1))) { \
+        if (require_alignment) load_reserved_address_misaligned(addr); \
+        else return misaligned_load(addr, sizeof(type##_t)); \
+      } \
+      reg_t vpn = addr >> PGSHIFT; \
+      size_t size = sizeof(type##_t); \
+      if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
+        if (proc) READ_MEM(addr, size); \
+        return from_target(*(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
+      } \
+      if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+        type##_t data = from_target(*(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
+        if (!matched_trigger) { \
+          matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
+          if (matched_trigger) \
+            throw *matched_trigger; \
+        } \
+        if (proc) READ_MEM(addr, size); \
+        return data; \
+      } \
+      target_endian<type##_t> res; \
+      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, (xlate_flags)); \
+      if (proc) READ_MEM(addr, size); \
+      if (xlate_flags & ~(RISCV_XLATE_AMO_FLAG)) \
+        flush_tlb(); \
+      return from_target(res); \
+    }
+  
+  /* 增加PMA 的amo检查 */
+  amo_load_func(uint8, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(uint16, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(uint32, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(uint64, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(int8, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(int16, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(int32, load, RISCV_XLATE_AMO_FLAG)
+  amo_load_func(int64, load, RISCV_XLATE_AMO_FLAG)
+
 #ifndef RISCV_ENABLE_COMMITLOG
 # define WRITE_MEM(addr, value, size) ({})
 #else
@@ -207,13 +252,43 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
         flush_tlb(); \
   }
 
+  #define amo_store_func(type, prefix, xlate_flags) \
+    void amo_##prefix##_##type(reg_t addr, type##_t val) { \
+      if (xlate_flags & ~(RISCV_XLATE_AMO_FLAG)) \
+        flush_tlb(); \
+      if (unlikely(addr & (sizeof(type##_t)-1))) \
+        return misaligned_store(addr, val, sizeof(type##_t)); \
+      reg_t vpn = addr >> PGSHIFT; \
+      size_t size = sizeof(type##_t); \
+      if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) { \
+        if (proc) WRITE_MEM(addr, val, size); \
+        *(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
+      } \
+      else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
+        if (!matched_trigger) { \
+          matched_trigger = trigger_exception(OPERATION_STORE, addr, val); \
+          if (matched_trigger) \
+            throw *matched_trigger; \
+        } \
+        if (proc) WRITE_MEM(addr, val, size); \
+        *(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
+      } \
+      else { \
+        target_endian<type##_t> target_val = to_target(val); \
+        store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&target_val, (xlate_flags)); \
+        if (proc) WRITE_MEM(addr, val, size); \
+      } \
+      if (xlate_flags & ~(RISCV_XLATE_AMO_FLAG)) \
+        flush_tlb(); \
+  }
+
   // template for functions that perform an atomic memory operation
   #define amo_func(type) \
     template<typename op> \
     type##_t amo_##type(reg_t addr, op f) { \
       try { \
-        auto lhs = load_##type(addr, true); \
-        store_##type(addr, f(lhs)); \
+        auto lhs = amo_load_##type(addr, true); \
+        amo_store_##type(addr, f(lhs)); \
         return lhs; \
       } catch (trap_load_address_misaligned& t) { \
         /* AMO faults should be reported as store faults */ \
@@ -252,6 +327,12 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   store_func(uint32, store, 0)
   store_func(uint64, store, 0)
 
+  /* 增加PMA 的amo检查 */
+  amo_store_func(uint8, store, RISCV_XLATE_AMO_FLAG)
+  amo_store_func(uint16, store, RISCV_XLATE_AMO_FLAG)
+  amo_store_func(uint32, store, RISCV_XLATE_AMO_FLAG)
+  amo_store_func(uint64, store, RISCV_XLATE_AMO_FLAG)
+
   // store value to guest memory at aligned address
   store_func(uint8, guest_store, RISCV_XLATE_VIRT)
   store_func(uint16, guest_store, RISCV_XLATE_VIRT)
@@ -269,7 +350,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   inline void acquire_load_reservation(reg_t vaddr)
   {
-    reg_t paddr = translate(vaddr, 1, LOAD, 0);
+    reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
     if (auto host_addr = sim->addr_to_mem(paddr))
       load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
     else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
@@ -301,7 +382,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     if (vaddr & (size-1))
       store_conditional_address_misaligned(vaddr);
 
-    reg_t paddr = translate(vaddr, 1, STORE, 0);
+    reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
     if (auto host_addr = sim->addr_to_mem(paddr))
       return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
     else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
@@ -494,6 +575,8 @@ private:
 
   reg_t pmp_homogeneous(reg_t addr, reg_t len);
   reg_t pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode);
+
+  reg_t pma_ok(reg_t addr, reg_t len, access_type type, bool is_amo=false);
 
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   bool target_big_endian;

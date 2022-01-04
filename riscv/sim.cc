@@ -737,7 +737,7 @@ bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
   if (addr + len < addr || !paddr_ok(addr + len - 1))
     return false;
   if (in_glb_mem(addr))
-    return mem_bus.load(addr, len, bytes);
+    return mem_bus.load(addr & 0xffffffff, len, bytes);
   else
     return bus.load(addr, len, bytes);
 }
@@ -747,7 +747,7 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
   if (addr + len < addr || !paddr_ok(addr + len - 1))
     return false;
   if (in_glb_mem(addr))
-    return mem_bus.store(addr, len, bytes);
+    return mem_bus.store(addr & 0xffffffff, len, bytes);
   else
     return bus.store(addr, len, bytes);
 }
@@ -906,7 +906,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   if (!paddr_ok(addr))
     return NULL;
   if (in_glb_mem(addr)) {
-      return mem_bus_addr_to_mem(addr);
+      return mem_bus_addr_to_mem(addr & 0xffffffff);
   } else {
     auto desc = bus.find_device(addr);
 

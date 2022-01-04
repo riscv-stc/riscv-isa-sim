@@ -190,6 +190,13 @@
 #define PMP_NA4   0x10
 #define PMP_NAPOT 0x18
 
+#define PALEN       40
+
+#define PMA_ETYP    0x03
+#define PMA_MTYP    0x3c
+#define PMA_NAMO    0x40
+#define PMA_SHIFT 2
+
 #define IRQ_U_SOFT   0
 #define IRQ_S_SOFT   1
 #define IRQ_VS_SOFT  2
@@ -208,9 +215,9 @@
 
 #define DEFAULT_RSTVEC     0xc0601000
 #define CLINT_BASE         0xc0440000
-#define CLINT_SIZE         0x000c0000
-//#define EXT_IO_BASE        0x40000000   /* unused */
 
+#define CLINT_SIZE         0x000c0000
+#define EXT_IO_BASE        0x40000000
 #define DRAM_BASE          0x80000000
 #define SYSDMA0_BASE       0xD2F00000
 #define SYSDMA1_BASE       0xD3F00000
@@ -221,10 +228,10 @@
 #define SYSDMA6_BASE       0xFBF00000
 #define SYSDMA7_BASE       0xFDF00000
 
-#define LLB_AXI0_BUFFER_START 0xD9000000  /* LLB_P0 (32MB) */
-#define LLB_AXI1_BUFFER_START 0xE9000000  /* LLB_P1 (32MB) */
-#define LLB_BUFFER_SIZE       0x2000000   /* 32M */
-#define LLB_BANK_BUFFER_SIZE  0x800000    /* NPC在 BANK内部共享 8MB 高速缓存 LLB */
+#define LLB_AXI0_BUFFER_START 0xD9000000    /* LLB_P0 (32MB) */
+#define LLB_AXI1_BUFFER_START 0xE9000000    /* LLB_P1 (32MB) */
+#define LLB_BUFFER_SIZE 0x2000000           /* 32M */
+#define LLB_BANK_BUFFER_SIZE 0x800000       /* NPC在 BANK内部共享 8MB 高速缓存 LLB */
 
 #define GET_LLB_OFF(src, dst) do {                                                 \
     if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
@@ -2687,14 +2694,32 @@
 #define CSR_MARCHID 0xf12
 #define CSR_MIMPID 0xf13
 #define CSR_MHARTID 0xf14
-#define CSR_USER0 0xff0
-#define CSR_USER1 0xff1
-#define CSR_USER2 0xff2
-#define CSR_USER3 0xff3
-#define CSR_USER4 0xff4
-#define CSR_USER5 0xff5
-#define CSR_USER6 0xff6
-#define CSR_USER7 0xff7
+#define CSR_PMACFG0 0xbc0
+#define CSR_PMACFG2 0xbc2
+#define CSR_PMAADDR0 0xbd0
+#define CSR_PMAADDR1 0xbd1
+#define CSR_PMAADDR2 0xbd2
+#define CSR_PMAADDR3 0xbd3
+#define CSR_PMAADDR4 0xbd4
+#define CSR_PMAADDR5 0xbd5
+#define CSR_PMAADDR6 0xbd6
+#define CSR_PMAADDR7 0xbd7
+#define CSR_PMAADDR8 0xbd8
+#define CSR_PMAADDR9 0xbd9
+#define CSR_PMAADDR10 0xbda
+#define CSR_PMAADDR11 0xbdb
+#define CSR_PMAADDR12 0xbdc
+#define CSR_PMAADDR13 0xbdd
+#define CSR_PMAADDR14 0xbde
+#define CSR_PMAADDR15 0xbdf
+#define CSR_USER0 0xbf0
+#define CSR_USER1 0xbf1
+#define CSR_USER2 0xbf2
+#define CSR_USER3 0xbf3
+#define CSR_USER4 0xbf4
+#define CSR_USER5 0xbf5
+#define CSR_USER6 0xbf6
+#define CSR_USER7 0xbf7
 #define CSR_HTIMEDELTAH 0x615
 #define CSR_CYCLEH 0xc80
 #define CSR_TIMEH 0xc81
@@ -4127,6 +4152,24 @@ DECLARE_CSR(mvendorid, CSR_MVENDORID)
 DECLARE_CSR(marchid, CSR_MARCHID)
 DECLARE_CSR(mimpid, CSR_MIMPID)
 DECLARE_CSR(mhartid, CSR_MHARTID)
+DECLARE_CSR(pmacfg0, CSR_PMACFG0)
+DECLARE_CSR(pmacfg2, CSR_PMACFG2)
+DECLARE_CSR(pmaaddr0, CSR_PMAADDR0)
+DECLARE_CSR(pmaaddr1, CSR_PMAADDR1)
+DECLARE_CSR(pmaaddr2, CSR_PMAADDR2)
+DECLARE_CSR(pmaaddr3, CSR_PMAADDR3)
+DECLARE_CSR(pmaaddr4, CSR_PMAADDR4)
+DECLARE_CSR(pmaaddr5, CSR_PMAADDR5)
+DECLARE_CSR(pmaaddr6, CSR_PMAADDR6)
+DECLARE_CSR(pmaaddr7, CSR_PMAADDR7)
+DECLARE_CSR(pmaaddr8, CSR_PMAADDR8)
+DECLARE_CSR(pmaaddr9, CSR_PMAADDR9)
+DECLARE_CSR(pmaaddr10, CSR_PMAADDR10)
+DECLARE_CSR(pmaaddr11, CSR_PMAADDR11)
+DECLARE_CSR(pmaaddr12, CSR_PMAADDR12)
+DECLARE_CSR(pmaaddr13, CSR_PMAADDR13)
+DECLARE_CSR(pmaaddr14, CSR_PMAADDR14)
+DECLARE_CSR(pmaaddr15, CSR_PMAADDR15)
 DECLARE_CSR(user0, CSR_USER0)
 DECLARE_CSR(user1, CSR_USER1)
 DECLARE_CSR(user2, CSR_USER2)

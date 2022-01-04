@@ -50,6 +50,8 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   set_pmp_granularity(1 << PMP_SHIFT);
   set_pmp_num(state.max_pmp);
 
+  set_pma_num(state.max_pma);
+
   if (max_xlen == 32)
     set_mmu_capability(IMPL_MMU_SV32);
   else if (max_xlen == 64)
@@ -408,6 +410,10 @@ void state_t::reset(reg_t max_isa)
   memset(this->pmpcfg, 0, sizeof(this->pmpcfg));
   memset(this->pmpaddr, 0, sizeof(this->pmpaddr));
 
+  /* NPUV2 */
+  memset(this->pmacfg, 0, sizeof(this->pmacfg));
+  memset(this->pmaaddr, 0, sizeof(this->pmaaddr));
+
   fflags = 0;
   frm = 0;
   serialized = false;
@@ -546,6 +552,15 @@ void processor_t::set_pmp_num(reg_t n)
     abort();
   }
   n_pmp = n;
+}
+
+void processor_t::set_pma_num(reg_t n)
+{
+  if (n > state.max_pma) {
+    fprintf(stderr, "error: bad number of pma regions: '%ld' from the dtb\n", (unsigned long)n);
+    abort();
+  }
+  n_pma = n;
 }
 
 void processor_t::set_pmp_granularity(reg_t gran) {
@@ -940,6 +955,54 @@ void processor_t::set_csr(int which, reg_t val)
       }
     }
     mmu->flush_tlb();
+  }
+
+  /* NPUV2 PMA */
+  if (which >= CSR_PMAADDR0 && which < CSR_PMAADDR0 + state.max_pma) {
+    if (n_pma == 0)
+      return;
+
+    size_t i = which - CSR_PMAADDR0;
+    if (i < n_pma) {
+      state.pmaaddr[i] = val & ((reg_t(1) << (PALEN - 2)) - 1);
+      LOG_CSR(which);
+    }
+    // mmu->flush_tlb();
+  }
+
+  if (which >= CSR_PMACFG0 && which < CSR_PMACFG0 + state.max_pma / 4) {
+    if (n_pma == 0)
+      return;
+
+    for (size_t i0 = (which - CSR_PMACFG0) * 4, i = i0; i < i0 + xlen / 8; i++) {
+      if (i < n_pma) {
+        uint8_t cfg = (val >> (8 * (i - i0))) & 0xff;
+
+        if ((1==(cfg&PMA_ETYP)) || (2==(cfg&PMA_ETYP)))
+          cfg &= ~PMA_ETYP;
+
+        switch((cfg&PMA_MTYP) >> 2) {
+        case 6:
+          cfg &= ~PMA_MTYP;
+          cfg |= (4<<2);
+          break;
+        case 7:
+          cfg &= ~PMA_MTYP;
+          cfg |= (5<<2);
+          break;
+        case 12:
+        case 13:
+        case 14:
+          cfg &= ~PMA_MTYP;
+          cfg |= (15<<2);
+        default:
+          break;
+        }
+        state.pmacfg[i] = cfg;
+        LOG_CSR(which);
+      }
+    }
+    // mmu->flush_tlb();
   }
 
   switch (which)
@@ -1667,6 +1730,24 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     reg_t cfg_res = 0;
     for (size_t i0 = (which - CSR_PMPCFG0) * 4, i = i0; i < i0 + xlen / 8 && i < state.max_pmp; i++)
       cfg_res |= reg_t(state.pmpcfg[i]) << (8 * (i - i0));
+    ret(cfg_res);
+  }
+
+  /* NPUV2 PMA */
+  if (which >= CSR_PMAADDR0 && which < CSR_PMAADDR0 + state.max_pma) {
+    // If n_pma is zero, that means pma is not implemented hence raise trap if it tries to access the csr
+    if (n_pma == 0)
+      goto throw_illegal;
+    reg_t i = which - CSR_PMAADDR0;
+    ret(state.pmaaddr[i] & ((reg_t(1) << (PALEN - 2)) - 1));
+  }
+
+  if (which >= CSR_PMACFG0 && which < CSR_PMACFG0 + state.max_pma / 4) {
+    require((which & ((xlen / 32) - 1)) == 0);
+
+    reg_t cfg_res = 0;
+    for (size_t i0 = (which - CSR_PMACFG0) * 4, i = i0; i < i0 + xlen / 8 && i < state.max_pma; i++)
+      cfg_res |= reg_t(state.pmacfg[i]) << (8 * (i - i0));
     ret(cfg_res);
   }
 
