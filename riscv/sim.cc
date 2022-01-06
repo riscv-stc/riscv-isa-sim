@@ -58,8 +58,6 @@
 //coremask configure base address
 #define STC_VALID_NPCS_BASE  (SRAM_START + 0x4400)
 
-//LLB0：0xD9000000~0xDAFFFFFF，LLB1:0xE9000000~0xEAFFFFFF
-//llb size 0x2000000 =32MB
 char shm_l1_name[32] ;
 char shm_llb_name[32] ;
 char shm_hwsync_name[32];

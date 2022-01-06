@@ -228,10 +228,10 @@
 #define SYSDMA6_BASE       0xFBF00000
 #define SYSDMA7_BASE       0xFDF00000
 
-#define LLB_AXI0_BUFFER_START 0xD9000000    /* LLB_P0 (32MB) */
-#define LLB_AXI1_BUFFER_START 0xE9000000    /* LLB_P1 (32MB) */
-#define LLB_BUFFER_SIZE 0x2000000           /* 32M */
-#define LLB_BANK_BUFFER_SIZE 0x800000       /* NPC在 BANK内部共享 8MB 高速缓存 LLB */
+#define LLB_AXI0_BUFFER_START 0xD9000000    /* LLB_P0 (40MB) */
+#define LLB_AXI1_BUFFER_START 0xE9000000    /* LLB_P1 (40MB) */
+#define LLB_BUFFER_SIZE 0x2800000           /* 40M */
+#define LLB_BANK_BUFFER_SIZE 0xa00000       /* NPC在 BANK内部共享 10MB 高速缓存 LLB */
 
 #define GET_LLB_OFF(src, dst) do {                                                 \
     if(LLB_AXI0_BUFFER_START <= src < LLB_AXI0_BUFFER_START+LLB_BUFFER_SIZE)       \
