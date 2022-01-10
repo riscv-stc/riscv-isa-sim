@@ -7448,7 +7448,7 @@ int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
         for (int row = 0; row < rs1_matrix.rows(); row ++)
         for (int col = 0; col < rs1_matrix.cols(); col ++) {
             rs2_f16.v = rs2_matrix(row, col).x;
-            if (rs2_f16.v  != 0x8000 && rs2_f16.v  != 0)  // 0 and -0
+            if (rs2_f16.v  != 0 )  // float 0 
                 rd_matrix(row, col).x = rs1_matrix(row, col).x;
         }
     }else if(is_same< DType, Bfloat16 >::value ){
@@ -7456,7 +7456,7 @@ int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
         for (int row = 0; row < rs1_matrix.rows(); row ++)
         for (int col = 0; col < rs1_matrix.cols(); col ++) {
             rs2_bf16.v = rs2_matrix(row, col).x;
-            if ( rs2_bf16.v != 0 && rs2_bf16.v != 0x8000)
+            if ( rs2_bf16.v != 0 )
                 rd_matrix(row, col).x = rs1_matrix(row, col).x;
         }
     }else if(is_same< DType, Float32 >::value){
@@ -7464,7 +7464,7 @@ int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
         for (int row = 0; row < rs1_matrix.rows(); row ++)
         for (int col = 0; col < rs1_matrix.cols(); col ++) {
             rs2_f32.v = rs2_matrix(row, col).x;
-            if (rs2_f32.v != 0 && rs2_f32.v != 0x80000000)                           
+            if (rs2_f32.v != 0 )                           
                 rd_matrix(row, col).x = rs1_matrix(row, col).x;
         }
     }
