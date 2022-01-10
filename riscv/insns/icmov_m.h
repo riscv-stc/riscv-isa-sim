@@ -14,7 +14,7 @@ auto dst_coreId = DST_CORE_ID;
 //src shape
 uint16_t col = MTE_SHAPE_COLUMN;
 uint16_t row = MTE_SHAPE_ROW; 
-#define ICMOV_OUTPUT_MSG
+// #define ICMOV_OUTPUT_MSG
 #ifdef ICMOV_OUTPUT_MSG
 //output debug message
 std::cout << " " << std::endl;

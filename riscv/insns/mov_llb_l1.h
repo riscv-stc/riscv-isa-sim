@@ -23,7 +23,7 @@ MTE_DTYPE_DECODING_TO_TYPE({
 
   uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * esize;
   uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * esize;
-#define MOV_LLB_L1_OUTPUT_MSG
+// #define MOV_LLB_L1_OUTPUT_MSG
 
 #ifdef MOV_LLB_L1_OUTPUT_MSG
   //output debug message

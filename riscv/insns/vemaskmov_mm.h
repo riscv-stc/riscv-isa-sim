@@ -8,7 +8,7 @@ unsigned long rs2 = MMU.get_phy_addr(RS2);
 unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
 
-#define VEMASKMOV_OUTPUT_MSG 
+// #define VEMASKMOV_OUTPUT_MSG 
 
 #ifdef VEMASKMOV_OUTPUT_MSG
 //output debug message
