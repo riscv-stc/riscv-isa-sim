@@ -466,7 +466,7 @@ struct ShapeStride
 
 struct DmaeShapeStride
 {
-    unsigned short shape_x;
+    unsigned int shape_x;
     unsigned short shape_y;
     unsigned short shape_z;
 

@@ -10650,7 +10650,7 @@ int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t 
 uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
@@ -10688,7 +10688,7 @@ uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
@@ -10726,7 +10726,7 @@ uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
