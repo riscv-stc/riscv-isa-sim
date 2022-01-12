@@ -493,6 +493,13 @@ struct VmeShapeStride
     unsigned int relu_threshhold;
 };
 
+struct MteShapeStride
+{
+    int row, column;
+    unsigned short stride_rd;
+    unsigned short stride_rs1;
+};
+
 /**
  * @brief 矩阵形状描述结构
  *
@@ -3875,6 +3882,11 @@ extern int vecvt_hf_bf_m(Bfloat16 *rs1, half *rd, struct ShapeStride *ss);
 extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss);
+class processor_t;
+extern void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, struct DmaeShapeStride *dmae_ss, 
+        processor_t *p, bool is_rs1_local, bool is_rd_local);
+extern void mte_vm_mov(uint64_t rs1, uint64_t rd, uint32_t esize, struct MteShapeStride *mte_ss, 
+        processor_t *p, bool is_rs1_local, bool is_rd_local);
 extern uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 extern uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 

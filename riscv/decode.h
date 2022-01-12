@@ -3904,6 +3904,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       out_esize = 1; \
     } \
       break; \
+    /*  \
     case 0x2: {\
       in_esize = 2; \
       out_esize = 4; \
@@ -3924,6 +3925,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       out_esize = 2; \
     } \
       break; \
+    */ \
   }
 
 #endif
