@@ -391,6 +391,18 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
       throw trap_store_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow SC to I/O space
   }
 
+ /* local: NPC核内内存, l1, sp, index, misc, mbox */
+  inline reg_t vm_addr_to_mem(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags, bool is_local)
+  {
+    reg_t paddr = 0;
+
+    paddr = translate(vm, len, type, xlate_flags);
+
+    if (is_local)
+      return (reg_t)get_phy_addr(paddr);
+    return (reg_t)sim->addr_to_mem(paddr);
+  }
+
   static const reg_t ICACHE_ENTRIES = 1024;
 
   inline size_t icache_index(reg_t addr)
