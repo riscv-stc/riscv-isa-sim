@@ -53,7 +53,7 @@ std::cout << " " << std::endl;
   mte_ss.stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : 0);
 
   //check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
-  mte_vm_mov((reg_t)(RS1), (reg_t)(zext_xlen(RD)), esize, &mte_ss, p, true, false);
+  mte_vm_mov((reg_t)(RS1), (reg_t)(zext_xlen(RD)), esize, (const struct MteShapeStride *)&mte_ss, p, true, false);
 
   WRITE_MEM_STC(RD, (uint8_t*)rd, CMT_LOG_MTE);  
     
