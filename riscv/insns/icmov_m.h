@@ -9,11 +9,7 @@ else
 
 check_traps_icmov_m(e_size);
 
-auto dst_coreId = DST_CORE_ID;
-
 //src shape
-uint16_t col = MTE_SHAPE_COLUMN;
-uint16_t row = MTE_SHAPE_ROW; 
 // #define ICMOV_OUTPUT_MSG
 #ifdef ICMOV_OUTPUT_MSG
 //output debug message
@@ -43,19 +39,15 @@ std::cout << "dst addr: 0x" << std::hex << reg_t(RD) << std::endl;
 std::cout << " " << std::endl;
 #endif
 
-uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
-uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
+struct MteShapeStride mte_ss = {};
+mte_ss.column = MTE_SHAPE_COLUMN;
+mte_ss.row = MTE_SHAPE_ROW;
+mte_ss.stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : 0);
+mte_ss.stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : 0);
 
-auto src = (uint8_t*)MMU.get_phy_addr(RS1);
-auto dst = (uint8_t*)p->get_sim()->local_addr_to_mem_by_id_cluster(zext_xlen(RD), dst_coreId);
-assert(dst != nullptr && src != nullptr);
+// auto src = (uint8_t*)MMU.get_phy_addr(RS1);
+// auto dst = (uint8_t*)p->get_sim()->local_addr_to_mem_by_id_cluster(zext_xlen(RD), dst_coreId);
+// assert(dst != nullptr && src != nullptr);
 
-if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {
-    memcpy(dst, src, col * row * e_size);
-}
-else {
-    for (int i = 0; i < row; i++) {
-    memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * e_size);
-    }
-    WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_MTE);   
-}
+icmov_vm(RS1, zext_xlen(RD), e_size, (uint32_t)DST_CORE_ID, (const struct MteShapeStride *)&mte_ss, p);
+WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_MTE); 

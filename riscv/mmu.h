@@ -403,6 +403,14 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     return (reg_t)sim->addr_to_mem(paddr);
   }
 
+  inline reg_t vm_addr_to_mem_by_id_cluster(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags,uint32_t coreid)
+  {
+    reg_t paddr = 0;
+
+    paddr = translate(vm, len, type, xlate_flags);
+    return (reg_t)sim->local_addr_to_mem_by_id_cluster(paddr, coreid);
+  }
+
   static const reg_t ICACHE_ENTRIES = 1024;
 
   inline size_t icache_index(reg_t addr)
