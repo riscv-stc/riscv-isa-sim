@@ -4,7 +4,7 @@ reg_t t_rs1 = RS1;
 reg_t t_rd = RD;
 //p->run_async([p, t_rs1, t_rs2, t_rd, pc]() {
   struct ShapeStride sst;
-
+  class CustomInsns CusIns;
   unsigned long rs1 = MMU.get_phy_addr(t_rs1);
   unsigned long rd = MMU.get_phy_addr(t_rd);
 
@@ -12,19 +12,19 @@ reg_t t_rd = RD;
   case 0x0: // f16 = uint16
     check_traps_meargxxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
-    veargmin_m<half>((half*)rs1, (uint16_t*)rd, &sst, 1);
+    CusIns.veargmin_m((half*)rs1, (uint16_t*)rd, &sst, 1);
     WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
   case 0x010101: // bf16 = uint16
     check_traps_meargxxx_m(int16_t, int16_t);
     bc_sst_fill(sst, 2, 2);
-    veargmin_m<Bfloat16>((Bfloat16*)rs1, (uint16_t*)rd, &sst, 1);
+    CusIns.veargmin_m((Bfloat16*)rs1, (uint16_t*)rd, &sst, 1);
     WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
   case 0x020202: // f32 = uint16
     check_traps_meargxxx_m(int32_t, int16_t);
     bc_sst_fill(sst, 4, 2);
-    veargmin_m<Float32>((Float32*)rs1, (uint16_t*)rd, &sst, 1);
+    CusIns.veargmin_m((float32_t*)rs1, (uint16_t*)rd, &sst, 1);
     WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
   default:

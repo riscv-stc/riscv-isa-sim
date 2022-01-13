@@ -58,24 +58,32 @@ struct uint128
      uint_fast64_t uiB0
  )
 {
-    bool isSigNaNA;
     struct uint128 uiZ;
 
-    isSigNaNA = softfloat_isSigNaNF128UI( uiA64, uiA0 );
-    if ( isSigNaNA || softfloat_isSigNaNF128UI( uiB64, uiB0 ) ) {
+    if (softfloat_isSigNaNF128UI( uiA64, uiA0 )|| softfloat_isSigNaNF128UI( uiB64, uiB0 )) {
         softfloat_raiseFlags( softfloat_flag_invalid );
-        if ( isSigNaNA ) goto returnNonsigA;
     }
-    if ( isNaNF128UI( uiA64, uiA0 ) ) {
- returnNonsigA:
-        uiZ.v64 = uiA64;
-        uiZ.v0  = uiA0;
-    } else {
-        uiZ.v64 = uiB64;
-        uiZ.v0  = uiB0;
-    }
-    uiZ.v64 |= UINT64_C( 0x0000800000000000 );
+    uiZ.v64 = defaultNaNF128UI64;
+    uiZ.v0  = defaultNaNF128UI0;
     return uiZ;
 
+//     bool isSigNaNA;
+//     struct uint128 uiZ;
+
+//     isSigNaNA = softfloat_isSigNaNF128UI( uiA64, uiA0 );
+//     if ( isSigNaNA || softfloat_isSigNaNF128UI( uiB64, uiB0 ) ) {
+//         softfloat_raiseFlags( softfloat_flag_invalid );
+//         if ( isSigNaNA ) goto returnNonsigA;
+//     }
+//     if ( isNaNF128UI( uiA64, uiA0 ) ) {
+//  returnNonsigA:
+//         uiZ.v64 = uiA64;
+//         uiZ.v0  = uiA0;
+//     } else {
+//         uiZ.v64 = uiB64;
+//         uiZ.v0  = uiB0;
+//     }
+//     uiZ.v64 |= UINT64_C( 0x0000800000000000 );
+//     return uiZ;
 }
 

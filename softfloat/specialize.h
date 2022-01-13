@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ui8_fromNaN         0xFF
 #define i8_fromPosOverflow  (0x7F)
 #define i8_fromNegOverflow  (-0x7F - 1)
-#define i8_fromNaN          (-0x7F - 1)
+#define i8_fromNaN          (0x7F)
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 16-bit integer formats that raise an
@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ui16_fromNaN         0xFFFF
 #define i16_fromPosOverflow  (0x7FFF)
 #define i16_fromNegOverflow  (-0x7FFF - 1)
-#define i16_fromNaN          (-0x7FFF - 1)
+#define i16_fromNaN          (0x7FFF)
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 32-bit integer formats that raise an
@@ -78,19 +78,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ui32_fromNaN         0xFFFFFFFF
 #define i32_fromPosOverflow  (0x7FFFFFFF)
 #define i32_fromNegOverflow  (-0x7FFFFFFF - 1)
-#define i32_fromNaN          (-0x7FFFFFFF - 1)
+#define i32_fromNaN          (0x7FFFFFFF)
 
 /*----------------------------------------------------------------------------
 | The values to return on conversions to 64-bit integer formats that raise an
 | invalid exception.
 *----------------------------------------------------------------------------*/
 #define ui64_fromPosOverflow UINT64_C( 0xFFFFFFFFFFFFFFFF )
-#define ui64_fromNegOverflow UINT64_C( 0xFFFFFFFFFFFFFFFF )
+#define ui64_fromNegOverflow 0x0
 #define ui64_fromNaN         UINT64_C( 0xFFFFFFFFFFFFFFFF )
-#define i64_fromPosOverflow  (-INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
-#define i64_fromNegOverflow  (-INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
-#define i64_fromNaN          (-INT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
-
+#define i64_fromPosOverflow  UINT64_C( 0x7FFFFFFFFFFFFFFF )
+#define i64_fromNegOverflow  (-UINT64_C( 0x7FFFFFFFFFFFFFFF ) - 1)
+#define i64_fromNaN          UINT64_C( 0x7FFFFFFFFFFFFFFF )
 /*----------------------------------------------------------------------------
 | "Common NaN" structure, used to transfer NaN representations from one format
 | to another.

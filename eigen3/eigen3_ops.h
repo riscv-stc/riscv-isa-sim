@@ -30,11 +30,11 @@ using namespace std;
 
 
 #define GLOBAL_DBG      0
-#define DBG_VECTOR_VVM    do {                   \
+#define DBG_VECTOR_VVM    do {                  \
     if (debug) {                                \
         cout << __FUNCTION__ << endl;           \
         cout << "vs2:\n" << vector_vs2 << endl; \
-        cout << "vs1:\n" << vector_vs1 << endl;        \
+        cout << "vs1:\n" << vector_vs1 << endl; \
         cout << "vm:\n" << vm << endl;          \
         cout << "v0:\n" << vector_v0 << endl;   \
         cout << "vd:\n" << vector_vd << endl;   \
@@ -356,7 +356,6 @@ typedef Stride<Dynamic, Dynamic> DynStride;
         cnt = 0; \
 } while(0);
 
-// threshhold typed float32_t
 #define MATRIX_RELU_THRESHHOLD(dest, src, row, column, dtype, threshhold) do { \
     Float32 f32th; \
     f32th.x = threshhold; \
@@ -376,15 +375,19 @@ typedef Stride<Dynamic, Dynamic> DynStride;
             \
             if(is_same< dtype, half >::value) { \
                 if ((dest(_row, _col).x & 0x3ff) && ((dest(_row, _col).x & 0x7c00) == 0x7c00)) \
-                    dest(_row, _col).x = 0xfe00; \
+                    dest(_row, _col) = dtype(f32th); \
+                if ((dest(_row, _col).x & 0xffff) == 0x8000) \
+                    dest(_row, _col).x = 0x0000; \
             } else if(is_same< dtype, Bfloat16 >::value) { \
                 if ((dest(_row, _col).x & 0x7f) && ((dest(_row, _col).x & 0x7f80) == 0x7f80)) \
-                    dest(_row, _col).x = 0xffc0; \
+                    dest(_row, _col) = dtype(f32th); \
                 if ((dest(_row, _col).x & 0xffff) == 0x8000) \
                     dest(_row, _col).x = 0x0000; \
             } else if(is_same< dtype, Float32 >::value) {\
                 if ((dest(_row, _col).x & 0x7fffff) && ((dest(_row, _col).x & 0x7f800000) == 0x7f800000)) \
-                    dest(_row, _col).x = 0xffc00000; \
+                    dest(_row, _col) = dtype(f32th); \
+                if ((dest(_row, _col).x & 0xffffffff) == 0x80000000) \
+                    dest(_row, _col).x = 0x00000000; \
             } \
         } \
     } \
@@ -1852,386 +1855,6 @@ int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool rel
     return 0;
 }
 
-template <typename DType>
-int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_DType rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_DType rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        rd_col_max = rs1_matrix.colwise().maxCoeff();
-
-        if (relu) {
-            MATRIX_RELU_THRESHHOLD(rd_col_max, rd_col_max, 1, ss->shape1_column, DType, ss->relu_threshhold);
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_col_max << endl;
-        break;
-    case 1:
-        rd_row_max = rs1_matrix.rowwise().maxCoeff();
-
-        if (relu) {
-            MATRIX_RELU_THRESHHOLD(rd_row_max, rd_row_max, ss->shape1_row, 1, DType, ss->relu_threshhold);
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_row_max << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    return 0;
-}
-
-template <typename DType>
-int vemax_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Matrix_DType rd_matrix(1, 1);
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    rd_matrix(0, 0) = rs1_matrix.maxCoeff();
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, 1, 1, DType, ss->relu_threshhold);
-    }
-
-    *rd = rd_matrix(0, 0);
-    return 0;
-}
-
-template <typename DType>
-int veargmax_m(DType *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
-{
-    DEFINE_MAP_DTYPE(DType)
-    DEFINE_MAP_DTYPE(uint16_t)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    Index maxRow, maxCol;
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        for (uint32_t i = 0; i < ss->shape1_column; i++) {
-            rs1_matrix.col(i).maxCoeff(&maxRow, &maxCol);
-            rd_col_max(0, i) = maxRow;
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_col_max << endl;
-        break;
-    case 1:
-        for (uint32_t i = 0; i < ss->shape1_row; i++) {
-            rs1_matrix.row(i).maxCoeff(&maxRow, &maxCol);
-            rd_row_max(i, 0) = maxCol;
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_row_max << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    return 0;
-}
-
-template <typename DType>
-int veargmax_m(DType *rs1, uint32_t *rd, struct ShapeStride *ss)
-{
-    DEFINE_MAP_DTYPE(DType)
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    Index maxRow, maxCol;
-    DType max, max1;
-    //rs1_matrix.maxCoeff(&maxRow, &maxCol);
-    max = rs1_matrix(0, 0);
-    maxRow = 0;
-    maxCol = 0;
-
-    for (uint32_t i = 0; i < ss->shape1_row; i++) {
-        for (uint32_t j = 0; j < ss->shape1_column; j++) {
-            max1 = rs1_matrix(i, j);
-            if (max < max1) {
-                max = max1;
-                maxRow = i;
-                maxCol = j;
-            }
-        }
-    }
-
-    *(uint32_t *)rd = maxCol << 16 | maxRow;
-
-    if (GLOBAL_DBG) {
-        std::cout << "max:" << max << std::endl;
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
-        std::cout << "rd:" << *rd << std::endl;
-    }
-
-    return 0;
-}
-
-template <typename DType>
-int veargmin_m(DType *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
-{
-    DEFINE_MAP_DTYPE(DType)
-    DEFINE_MAP_DTYPE(uint16_t)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    Index minRow, minCol;
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        for (uint32_t i = 0; i < ss->shape1_column; i++) {
-            rs1_matrix.col(i).minCoeff(&minRow, &minCol);
-            rd_col_max(0, i) = minRow;
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_col_max << endl;
-        break;
-    case 1:
-        for (uint32_t i = 0; i < ss->shape1_row; i++) {
-            rs1_matrix.row(i).minCoeff(&minRow, &minCol);
-            rd_row_max(i, 0) = minCol;
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_row_max << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    return 0;
-}
-
-template <typename DType>
-int veargmin_m(DType *rs1, uint32_t *rd, struct ShapeStride *ss)
-{
-    DEFINE_MAP_DTYPE(DType)
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    Index minRow, minCol;
-    //rs1_matrix.minCoeff(&minRow, &minCol);
-
-    DType min, min1;
-    min = rs1_matrix(0, 0);
-    minRow = 0;
-    minCol = 0;
-
-    for (uint32_t i = 0; i < ss->shape1_row; i++) {
-        for (uint32_t j = 0; j < ss->shape1_column; j++) {
-            min1 = rs1_matrix(i, j);
-            if (min > min1) {
-                min = min1;
-                minRow = i;
-                minCol = j;
-            }
-        }
-    }
-
-    *(uint32_t *)rd = minCol << 16 | minRow;
-
-    if (GLOBAL_DBG) {
-        std::cout << "min:" << min << std::endl;
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
-        std::cout << "rd:" << *rd << std::endl;
-    }
-
-    return 0;
-}
-
-template <typename DType>
-int vemax_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_DType rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
-    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2_matrix << endl;
-    }
-
-    rd_matrix = (rs1_matrix.array() > rs2_matrix.array()).select(rs1_matrix, rs2_matrix);
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
-
-    if (GLOBAL_DBG)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;
-}
-
-template <typename DType>
-int vemax_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-        cout << "rs2:" << endl << rs2 << endl;
-    }
-
-    rd_matrix = (rs1_matrix.array() > rs2).select(rs1_matrix, rs2);
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
-
-    if (GLOBAL_DBG)
-        cout << "rd:" << endl << rd_matrix << endl;
-
-    return 0;
-}
-
-template <typename DType>
-int vemax_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_DType vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
-    Map_DType vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
-
-    switch (dim) {
-    case 0:
-        if (GLOBAL_DBG) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim0 << endl;
-        }
-
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() > vector_dim0.array()).select(
-                rs1_matrix.row(row), vector_dim0);
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_matrix << endl;
-        break;
-    case 1:
-        if (GLOBAL_DBG) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim1 << endl;
-        }
-
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() > vector_dim1.array()).select(
-                rs1_matrix.col(col), vector_dim1);
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_matrix << endl;
-
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
-
-    return 0;
-}
-
-template <typename DType>
-int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, int dim, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    Map_DType rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
-    Map_DType rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    if (GLOBAL_DBG) {
-        SHAPE_STRIDE_INFO(ss);
-        cout << "rs1:" << endl << rs1_matrix << endl;
-    }
-
-    switch (dim) {
-    case 0:
-        rd_col_max = rs1_matrix.colwise().minCoeff();
-        if (relu) {
-            MATRIX_RELU_THRESHHOLD(rd_col_max, rd_col_max, 1, ss->shape1_column, DType, ss->relu_threshhold);
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_col_max << endl;
-        break;
-    case 1:
-        rd_row_max = rs1_matrix.rowwise().minCoeff();
-        if (relu) {
-            MATRIX_RELU_THRESHHOLD(rd_row_max, rd_row_max, ss->shape1_row, 1, DType, ss->relu_threshhold);
-        }
-
-        if (GLOBAL_DBG)
-            cout << "rd:" << endl << rd_row_max << endl;
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-    return 0;
-}
 
 template <typename DType>
 int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
@@ -2306,54 +1929,6 @@ int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
-    return 0;
-}
-
-template <typename DType>
-int vemin_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
-{
-    DEFINE_MAP_DTYPE(DType)
-
-    Map_DType rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
-    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
-    Map_DType rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
-    Map_DType vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
-    Map_DType vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
-
-    switch (dim) {
-    case 0:
-        if (GLOBAL_DBG) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim0 << endl;
-        }
-
-        for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() < vector_dim0.array()).select(
-                rs1_matrix.row(row), vector_dim0);
-        break;
-    case 1:
-        if (GLOBAL_DBG) {
-            SHAPE_STRIDE_INFO(ss);
-            cout << "rs1:" << endl << rs1_matrix << endl;
-            cout << "rs2:" << endl << vector_dim1 << endl;
-        }
-
-        for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() < vector_dim1.array()).select(
-                rs1_matrix.col(col), vector_dim1);
-        break;
-    default:
-        cout << __FUNCTION__ << "error dim" << endl;
-        return -BR_EPARAM;
-    }
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
-
-    if (GLOBAL_DBG)
-        cout << "rd:" << endl << rd_matrix << endl;
     return 0;
 }
 
@@ -4322,10 +3897,60 @@ private:
     half f32_to_half(float32_t f32);
     half int32_mul_f16(int a, float16_t b);
     Bfloat16 int32_mul_bf16(int a, Bfloat16 b);
+    Bfloat16   bfloat16_t_to_Bfloat16(bfloat16_t a);
+    bfloat16_t Bfloat16_to_bfloat16_t(Bfloat16 a);
+    bool isNaNF16UI_stc(float16_t a);
+    bool isNaNBF16UI_stc(bfloat16_t a);
+    bool isNaNF32UI_stc(float32_t a);
+
 public:
     int debug;
 
     CustomInsns();
+
+    int vemax_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int vemax_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemax_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
+    int vemax_m (half      *rs1, half      *rd, struct ShapeStride *ss);
+    int vemax_m (Bfloat16  *rs1, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemax_m (float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
+    int vemax_m (half      *rs1, half      *rd, struct ShapeStride *ss, int dim);
+    int vemax_m (Bfloat16  *rs1, Bfloat16  *rd, struct ShapeStride *ss, int dim);
+    int vemax_m (float32_t *rs1, float32_t *rd, struct ShapeStride *ss, int dim);
+    int vemax_mf(half      *rs1, float32_t rs2, half      *rd, struct ShapeStride *ss);
+    int vemax_mf(Bfloat16  *rs1, float32_t rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemax_mf(float32_t *rs1, float32_t rs2, float32_t *rd, struct ShapeStride *ss);
+    int vemax_mv(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss, int dim);
+    int vemax_mv(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss, int dim);
+    int vemax_mv(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss, int dim);
+    int veargmax_m(half      *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmax_m(Bfloat16  *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmax_m(half      *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
+    int veargmax_m(Bfloat16  *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
+    int veargmax_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
+
+    int vemin_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
+    int vemin_mm(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemin_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss);
+    int vemin_m (half      *rs1, half      *rd, struct ShapeStride *ss);
+    int vemin_m (Bfloat16  *rs1, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemin_m (float32_t *rs1, float32_t *rd, struct ShapeStride *ss);
+    int vemin_m (half      *rs1, half      *rd, struct ShapeStride *ss, int dim);
+    int vemin_m (Bfloat16  *rs1, Bfloat16  *rd, struct ShapeStride *ss, int dim);
+    int vemin_m (float32_t *rs1, float32_t *rd, struct ShapeStride *ss, int dim);
+    int vemin_mf(half      *rs1, float32_t rs2, half      *rd, struct ShapeStride *ss);
+    int vemin_mf(Bfloat16  *rs1, float32_t rs2, Bfloat16  *rd, struct ShapeStride *ss);
+    int vemin_mf(float32_t *rs1, float32_t rs2, float32_t *rd, struct ShapeStride *ss);
+    int vemin_mv(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss, int dim);
+    int vemin_mv(Bfloat16  *rs1, Bfloat16  *rs2, Bfloat16  *rd, struct ShapeStride *ss, int dim);
+    int vemin_mv(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss, int dim);
+    int veargmin_m(half      *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmin_m(Bfloat16  *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss);
+    int veargmin_m(half      *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
+    int veargmin_m(Bfloat16  *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
+    int veargmin_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss, int dim);
 
     int memul_mm(half      *rs1, half      *rs2, half      *rd, struct ShapeStride *ss);
     int memul_mm(half      *rs1, half      *rs2, float32_t *rd, struct ShapeStride *ss);
@@ -7653,11 +7278,6 @@ int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
                 rd_matrix(row, col).x = rs1_matrix(row, col).x;
         }
     }
-    
-
-    // if (relu) {
-    //     MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    // }
 
     if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
