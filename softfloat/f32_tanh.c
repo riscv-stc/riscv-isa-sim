@@ -63,10 +63,12 @@ float32_t f32_tanh( float32_t a )
   ln2_val.v = 0x3f317218; // ln2=0.6931471805599453
   ln2_recip.v = 0x3fb8aa3b; // 1/ln2=1.4426950408889634
 
+
   float32_t n = f32_roundToInt( f32_mul( a, ln2_recip ), softfloat_round_near_maxMag, false ); // n = round(x/ln2) -14~14
   int32_t n_int = f32_to_i32( n, softfloat_round_near_maxMag, false );
   float32_t x0 = f32_mul( n, ln2_val ); // x0 = n * ln2
   float32_t dx = f32_sub( a, x0 );
+
 
   //taylor series
   float32_t val_n[] = { 0xbf800000, 0xbf800000, 0xbf7ffffe, 0xbf7ffff8, 0xbf7fffe0, 0xbf7fff80, 0xbf7ffe00, 0xbf7ff800, 
@@ -85,14 +87,21 @@ float32_t f32_tanh( float32_t a )
                         0x3a2a5567, 0x3b295675, 0x3c25672b, 0x3d166afc, 0x3dc9eba2, 0x3c8bcf65, 0xbeaaaaab, 0x3c8bcf65, 
                         0x3dc9eba2, 0x3d166afc, 0x3c25672b, 0x3b295675, 0x3a2a5567, 0x392a9556, 0x382aa555, 0x372aa955, 
                         0x362aaa55, 0x352aaa95, 0x342aaaa5, 0x332aaaa9, 0x322aaaaa };
+  float32_t der_4[] = { 0x31aaaaaa, 0x32aaaaa8, 0x33aaaaa0, 0x34aaaa80, 0x35aaaa00, 0x36aaa800, 0x37aaa000, 0x38aa8003, 
+                        0x39aa0036, 0x3aa8035d, 0x3ba03557, 0x3c8336e9, 0x3cb31696, 0xbdf12c28, 0x00000000, 0x3df12c28, 
+                        0xbcb31696, 0xbc8336e9, 0xbba03557, 0xbaa8035d, 0xb9aa0036, 0xb8aa8003, 0xb7aaa000, 0xb6aaa800, 
+                        0xb5aaaa00, 0xb4aaaa80, 0xb3aaaaa0, 0xb2aaaaa8, 0xb1aaaaaa };                        
 
   uZ.f = f32_add( val_n[ n_int + 14 ], f32_mul( dx,
         f32_add( der_1[ n_int + 14 ], f32_mul( dx,
         f32_add( der_2[ n_int + 14 ], f32_mul( dx, 
-        der_3[ n_int + 14 ] ) ) ) ) ) );
-  if( ( ( a.v & 0x7FFFFFFF ) >= 0x3eb17218 ) && ( ( a.v & 0x7FFFFFFF ) <= 0x3ed00000 ))
+        f32_add( der_3[ n_int + 14 ], f32_mul( dx,
+        der_4[ n_int + 14 ] ) ) ) ) ) ) ) );
+
+  // make up to make results more accurate   
+  if( ( ( a.v & 0x7FFFFFFF ) >= 0x3e8f5c29 ) && ( ( a.v & 0x7FFFFFFF ) <= 0x3eb33333 ))
   {
-    uZ.ui += 50000;
+    uZ.ui += 15000;
   }
   return uZ.f;
   
