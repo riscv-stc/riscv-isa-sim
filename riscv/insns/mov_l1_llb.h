@@ -23,7 +23,7 @@ MTE_DTYPE_DECODING_TO_TYPE({
   uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * esize;
   uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * esize;
 
-#define MOV_L1_LLB_OUTPUT_MSG
+// #define MOV_L1_LLB_OUTPUT_MSG
 #ifdef MOV_L1_LLB_OUTPUT_MSG
 if (MTE_DATA_TYPE == 0x0)
   std::cout << "data type: fp16" << std::endl;
