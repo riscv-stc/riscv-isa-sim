@@ -12,6 +12,37 @@ check_traps_pld(e_size);
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
+
+// #define PLD_OUTPUT_MSG
+
+#ifdef PLD_OUTPUT_MSG
+ //output case message
+  std::cout << " " << std::endl;
+  //std::cout << "case num:" << MMU.load_int32(0xc07f3934) << std::endl;
+  std::cout << "insn: pld" << std::endl;
+  std::cout << "core id: " << std::dec << p->get_csr(CSR_TID) <<std::endl;
+
+  if (MTE_DATA_TYPE == 0x0)
+    std::cout << "data type: fp16" << std::endl;
+  else if (MTE_DATA_TYPE == 0x101)
+    std::cout << "data type: bfp16" << std::endl;
+  else if (MTE_DATA_TYPE == 0x202)
+    std::cout << "data type: fp32" << std::endl;
+  else if (MTE_DATA_TYPE == 0x303)
+    std::cout << "data type: int8" << std::endl;
+
+  std::cout << "high: " << std::dec << MTE_SHAPE_ROW << std::endl;
+  std::cout << "width: " << std::dec << MTE_SHAPE_COLUMN << std::endl;
+
+  std::cout << "src stride: " << std::dec << MTE_STRIDE_RS1 << std::endl;
+  std::cout << "dst stride: " << std::dec << MTE_STRIDE_RD << std::endl;
+  std::cout << "coremap: 0x" << std::hex << rs2 << std::endl;
+
+  std::cout << "src addr: 0x" << std::hex << addr  << std::endl;
+  std::cout << "dst addr: 0x" << std::hex << dst_addr  << std::endl;
+  std::cout << " " << std::endl;
+#endif
+
 p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
   uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(addr);
   uint8_t* dst = (uint8_t*)MMU.get_phy_addr(dst_addr);

@@ -50,14 +50,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 uint_fast64_t
  softfloat_propagateNaNF64UI( uint_fast64_t uiA, uint_fast64_t uiB )
 {
-    bool isSigNaNA;
-
-    isSigNaNA = softfloat_isSigNaNF64UI( uiA );
-    if ( isSigNaNA || softfloat_isSigNaNF64UI( uiB ) ) {
+    if ( softfloat_isSigNaNF64UI( uiA ) || softfloat_isSigNaNF64UI( uiB ) ) {
         softfloat_raiseFlags( softfloat_flag_invalid );
-        if ( isSigNaNA ) return uiA | UINT64_C( 0x0008000000000000 );
     }
-    return (isNaNF64UI( uiA ) ? uiA : uiB) | UINT64_C( 0x0008000000000000 );
-
+    return defaultNaNF64UI;
+    
+    // bool isSigNaNA;
+    // isSigNaNA = softfloat_isSigNaNF64UI( uiA );
+    // if ( isSigNaNA || softfloat_isSigNaNF64UI( uiB ) ) {
+    //     softfloat_raiseFlags( softfloat_flag_invalid );
+    //     if ( isSigNaNA ) return uiA | UINT64_C( 0x0008000000000000 );
+    // }
+    // return (isNaNF64UI( uiA ) ? uiA : uiB) | UINT64_C( 0x0008000000000000 );
 }
 

@@ -31,7 +31,10 @@ typedef Map<Matrix_##Type, Unaligned, Stride<Dynamic, Dynamic> > Map_##Type;
 
 /* Matrix_half   Map_half */
 MY_MATRIX_DEFINE(half)
+MY_MATRIX_DEFINE(float16_t)
 MY_MATRIX_DEFINE(Bfloat16)
+MY_MATRIX_DEFINE(bfloat16_t)
+
 /* Matrix_uint8_t     Map_uint8_t */
 MY_MATRIX_DEFINE(uint8_t)
 MY_MATRIX_DEFINE(int8_t)
@@ -186,6 +189,22 @@ CustomInsns::float16_t_to_half(float16_t f16)
     return h;
 }
 
+bfloat16_t
+CustomInsns::Bfloat16_to_bfloat16_t(Bfloat16 Bf16)
+{
+    bfloat16_t bf;
+    bf.v = Bf16.x;
+    return bf;
+}
+
+Bfloat16
+CustomInsns::bfloat16_t_to_Bfloat16(bfloat16_t bf)
+{
+    Bfloat16 Bf16;
+    Bf16.x = bf.v;
+    return Bf16;
+}
+
 half
 CustomInsns::f32_to_half(float32_t f32)
 {
@@ -240,6 +259,20 @@ CustomInsns::int32_mul_bf16(int a, Bfloat16 b)
     res.x = int32xbf16(a, b.x);
     return res;
 }
+
+bool CustomInsns::isNaNF16UI_stc(float16_t a) {
+    return (((~(a.v) & 0x7C00) == 0) && ((a.v) & 0x03FF));
+}
+
+bool CustomInsns::isNaNBF16UI_stc(bfloat16_t a) {
+    return (((~(a.v) & 0x7f80) == 0) && ((a.v) & 0x07F));
+}
+
+bool CustomInsns::isNaNF32UI_stc(float32_t a) {
+    return (((~(a.v) & 0x7F800000) == 0) && ((a.v) & 0x007FFFFF));
+}
+
+
 /**
  * shapestride_dbg() 打印ShapeStride信息
  * 
@@ -9713,6 +9746,1582 @@ int CustomInsns::memul_ts_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Sh
     return 0;
 }
 
+/**
+ * memin_m() memin.m
+ * 
+ * 矩阵列元素(行向量)求最小值s=min(M1i)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemax_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_half rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = float16_t_to_half( f16_max(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(rs2_matrix(i,j))) );
+        }        
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemax_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_Bfloat16 rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_Bfloat16 rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i,j) = bfloat16_t_to_Bfloat16( bf16_max(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), Bfloat16_to_bfloat16_t(rs2_matrix(i,j))) );
+        }        
+    }
+    
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemax_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_float32_t rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_float32_t rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        //cout << "rs1:" << endl << rs1_matrix << endl;
+        //cout << "rs2:" << endl << rs2 << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = f32_max(rs1_matrix(i, j), rs2_matrix(i, j));
+        }        
+    }
+    // if (GLOBAL_DBG)
+    //     cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+
+int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    float16_t tmp = half_to_float16_t(rs1_matrix(0,0));
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = f16_max(tmp, half_to_float16_t(rs1_matrix(i,j)));
+        }    
+    }
+    *rd = float16_t_to_half(tmp);
+    return 0;
+}
+
+int CustomInsns::vemax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(0,0));
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = bf16_max(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+        }    
+    }
+    *rd = bfloat16_t_to_Bfloat16(tmp);
+    return 0;
+}
+
+int CustomInsns::vemax_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    float32_t tmp = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = f32_max(tmp, rs1_matrix(i,j));
+        }    
+    }
+    *rd = tmp;
+    return 0;
+}
+
+int CustomInsns::vemax_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_half rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            float16_t tmp = half_to_float16_t(rs1_matrix(0,j));
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = f16_max(tmp, half_to_float16_t(rs1_matrix(i,j)));
+            }
+            rd_col_max(0,j) = float16_t_to_half(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            float16_t tmp = half_to_float16_t(rs1_matrix(i,0));
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = f16_max(tmp, half_to_float16_t(rs1_matrix(i,j)));
+            }
+            rd_row_max(i,0) = float16_t_to_half(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss, int dim)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_Bfloat16 rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_Bfloat16 rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(0,j));
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = bf16_max(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+            }
+            rd_col_max(0,j) = bfloat16_t_to_Bfloat16(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(i,0));
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = bf16_max(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+            }
+            rd_row_max(i,0) = bfloat16_t_to_Bfloat16(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemax_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_float32_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_float32_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            float32_t tmp = rs1_matrix(0,j);
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = f32_max(tmp, rs1_matrix(i,j));
+            }
+            rd_col_max(0,j) = tmp;
+        }
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            float32_t tmp = rs1_matrix(i,0);
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = f32_max(tmp, rs1_matrix(i,j));
+            }
+            rd_row_max(i,0) = tmp;
+        }
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemax_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                float16_t tmp = f16_max(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(vector_dim0(0,j)));
+                rd_matrix(i,j) = float16_t_to_half(tmp);
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = float16_t_to_half( f16_max(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(vector_dim1(i,0))) );
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+   
+    return 0;
+}
+
+int CustomInsns::vemax_mv(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss, int dim)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_Bfloat16 rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+    Map_Bfloat16 vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_Bfloat16 vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                bfloat16_t tmp = bf16_max(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), Bfloat16_to_bfloat16_t(vector_dim0(0,j)));
+                rd_matrix(i,j) = bfloat16_t_to_Bfloat16(tmp);
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = bfloat16_t_to_Bfloat16( bf16_max(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), Bfloat16_to_bfloat16_t(vector_dim1(i,0))) );
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+   
+    return 0;
+}
+
+int CustomInsns::vemax_mv(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_float32_t vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_float32_t vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+      case 0:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                float32_t tmp = f32_max(rs1_matrix(i,j), vector_dim0(0,j));
+                rd_matrix(i,j) = tmp;
+            }
+        }
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = f32_max(rs1_matrix(i,j), vector_dim1(i,0));
+            }
+        }
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemax_mf(half *rs1, float32_t vs2, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    float16_t rs2 = half_to_float16_t(f32_to_half(vs2));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = float16_t_to_half( f16_max(half_to_float16_t(rs1_matrix(i,j)), rs2) );
+        }        
+    }
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+int CustomInsns::vemax_mf(Bfloat16 *rs1, float32_t vs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    bfloat16_t rs2 = Bfloat16_to_bfloat16_t(Bfloat16(vs2));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = bfloat16_t_to_Bfloat16( bf16_max(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), rs2) );
+        }        
+    }
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+
+    return 0;
+}
+
+int CustomInsns::vemax_mf(float32_t *rs1, float32_t vs2, float32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = f32_max(rs1_matrix(i,j), vs2);
+        }        
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    uint32_t maxRow=0, maxCol=0;
+    half max = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            half tmp = rs1_matrix(i,j);
+            if (isNaNF16UI_stc(half_to_float16_t(max)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
+                continue;
+            } 
+            else {
+                if (isNaNF16UI_stc(half_to_float16_t(tmp))) {
+                    continue;
+                } else if (isNaNF16UI_stc(half_to_float16_t(max))) {
+                    max = tmp;
+                    maxRow = i;
+                    maxCol = j;
+                } else {
+                    if(max < tmp) {
+                        max = tmp;
+                        maxRow = i;
+                        maxCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = maxCol << 16 | maxRow;
+    if (GLOBAL_DBG) {
+        std::cout << "max:" << max << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    uint32_t maxRow=0, maxCol=0;
+    Bfloat16 max = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            Bfloat16 tmp = rs1_matrix(i,j);
+            if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
+                continue;
+            } 
+            else {
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
+                    continue;
+                } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
+                    max = tmp;
+                    maxRow = i;
+                    maxCol = j;
+                } else {
+                    if(max < tmp) {
+                        max = tmp;
+                        maxRow = i;
+                        maxCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = maxCol << 16 | maxRow;
+    if (GLOBAL_DBG) {
+        std::cout << "max:" << max << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+
+    uint32_t maxRow=0, maxCol=0;
+    float32_t max = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            float32_t tmp = rs1_matrix(i,j);
+            if (isNaNF32UI_stc(max) && isNaNF32UI_stc(tmp)) {
+                continue;
+            } 
+            else {
+                if (isNaNF32UI_stc(tmp)) {
+                    continue;
+                } else if (isNaNF32UI_stc(max)) {
+                    max = tmp;
+                    maxRow = i;
+                    maxCol = j;
+                } else {
+                    if(Float32(max) < Float32(tmp)) {
+                        max = tmp;
+                        maxRow = i;
+                        maxCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = maxCol << 16 | maxRow;
+    if (GLOBAL_DBG) {
+        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(half *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));    
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            half max = rs1_matrix(0,j);
+            uint32_t maxRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j))) && isNaNF16UI_stc(half_to_float16_t(max))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNF16UI_stc(half_to_float16_t(max))) {
+                        max = rs1_matrix(i,j);
+                        maxRow = i;
+                    } else {
+                        if(max < rs1_matrix(i,j)) {
+                            max = rs1_matrix(i,j);
+                            maxRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_max(0,j) = maxRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            half max = rs1_matrix(i,0);
+            uint32_t maxCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j))) && isNaNF16UI_stc(half_to_float16_t(max))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNF16UI_stc(half_to_float16_t(max))) {
+                        max = rs1_matrix(i,j);
+                        maxCol = j;
+                    } else {
+                        if(max < rs1_matrix(i,j)) {
+                            max = rs1_matrix(i,j);
+                            maxCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_max(i,0) = maxCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(Bfloat16 *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            Bfloat16 max = rs1_matrix(0,j);
+            uint32_t maxRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j))) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
+                        max = rs1_matrix(i,j);
+                        maxRow = i;
+                    } else {
+                        if(max < rs1_matrix(i,j)) {
+                            max = rs1_matrix(i,j);
+                            maxRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_max(0,j) = maxRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            Bfloat16 max = rs1_matrix(i,0);
+            uint32_t maxCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j))) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
+                    continue;
+                }
+                else {
+                    if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
+                        max = rs1_matrix(i,j);
+                        maxCol = j;
+                    } else {
+                        if(max < rs1_matrix(i,j)) {
+                            max = rs1_matrix(i,j);
+                            maxCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_max(i,0) = maxCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmax_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_max(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_max(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));    
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            float32_t max = rs1_matrix(0,j);
+            uint32_t maxRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNF32UI_stc(rs1_matrix(i,j)) && isNaNF32UI_stc(max)) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF32UI_stc(rs1_matrix(i,j))) {
+                        continue;
+                    } else if (isNaNF32UI_stc(max)) {
+                        max = rs1_matrix(i,j);
+                        maxRow = i;
+                    } else {
+                        if(Float32(max) < Float32(rs1_matrix(i,j))) {
+                            max = rs1_matrix(i,j);
+                            maxRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_max(0,j) = maxRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_max << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            float32_t max = rs1_matrix(i,0);
+            uint32_t maxCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNF32UI_stc(rs1_matrix(i,j)) && isNaNF32UI_stc(max)) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF32UI_stc(rs1_matrix(i,j))) {
+                        continue;
+                    } else if (isNaNF32UI_stc(max)) {
+                        max = rs1_matrix(i,j);
+                        maxCol = j;
+                    } else {
+                        if(Float32(max) < Float32(rs1_matrix(i,j))) {
+                            max = rs1_matrix(i,j);
+                            maxCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_max(i,0) = maxCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_max << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+
+/**
+ * vemin_m() vemin.m
+ * 
+ * 矩阵列元素(行向量)求最小值s=min(M1i)
+ * @param rs1 M1,源操作矩阵基地址
+ * @param rd V,目的向量基地址
+ * @param ss 矩阵形状描述
+ * @return 执行结果
+ */
+int CustomInsns::vemin_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_half rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_half rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i,j) = float16_t_to_half( f16_min(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(rs2_matrix(i,j))) );
+        }        
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemin_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_Bfloat16 rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_Bfloat16 rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+        cout << "rs2:" << endl << rs2 << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i,j) = bfloat16_t_to_Bfloat16( bf16_min(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), 
+                                                              Bfloat16_to_bfloat16_t(rs2_matrix(i,j))) );
+        }        
+    }
+
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemin_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss)
+{
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_float32_t rs2_matrix(rs2, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs2, 1));
+    Map_float32_t rd_matrix (rd,  ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd,  1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = f32_min(rs1_matrix(i, j), rs2_matrix(i, j));
+        }        
+    }
+    return 0;
+}
+
+int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    float16_t tmp = half_to_float16_t(rs1_matrix(0,0));
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = f16_min(tmp, half_to_float16_t(rs1_matrix(i,j)));
+        }    
+    }
+    *rd = float16_t_to_half(tmp);
+    return 0;
+}
+
+int CustomInsns::vemin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(0,0));
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = bf16_min(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+        }    
+    }
+    *rd = bfloat16_t_to_Bfloat16(tmp);
+    return 0;
+}
+
+int CustomInsns::vemin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+
+    if (ss->shape1_column*ss->shape1_row == 1) {
+        *rd = rs1_matrix(0, 0);
+        return 0;
+    }
+    float32_t tmp = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            tmp = f32_min(tmp, rs1_matrix(i,j));
+        }    
+    }
+    *rd = tmp;
+    return 0;
+}
+
+int CustomInsns::vemin_m(half *rs1, half *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_half rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_half rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            // if (ss->shape1_row == 1) {
+            //     rd_col_min(0,j) = rs1_matrix(0,j);
+            //     continue;
+            // }
+            float16_t tmp = half_to_float16_t(rs1_matrix(0,j));
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = f16_min(tmp, half_to_float16_t(rs1_matrix(i,j)));
+            }
+            rd_col_min(0,j) = float16_t_to_half(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_min << endl;
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            // if (ss->shape1_column == 1) {
+            //     rd_row_min(i,0) = rs1_matrix(i,0);
+            //     continue;
+            // }
+            float16_t tmp = half_to_float16_t(rs1_matrix(i,0));
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = f16_min(tmp, half_to_float16_t(rs1_matrix(i,j)));
+            }
+            rd_row_min(i,0) = float16_t_to_half(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_min << endl;
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss, int dim)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_Bfloat16 rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_Bfloat16 rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(0,j));
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = bf16_min(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+            }
+            rd_col_min(0,j) = bfloat16_t_to_Bfloat16(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_min << endl;
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            bfloat16_t tmp = Bfloat16_to_bfloat16_t(rs1_matrix(i,0));
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = bf16_min(tmp, Bfloat16_to_bfloat16_t(rs1_matrix(i,j)));
+            }
+            rd_row_min(i,0) = bfloat16_t_to_Bfloat16(tmp);
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_min << endl;
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_float32_t rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    Map_float32_t rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    switch (dim) {
+      case 0:
+        for (int j = 0; j < ss->shape1_column; j++) {
+            float32_t tmp = rs1_matrix(0,j);
+            for(int i = 0; i < ss->shape1_row; i++) {
+                tmp = f32_min(tmp, rs1_matrix(i,j));
+            }
+            rd_col_min(0,j) = tmp;
+        }
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            float32_t tmp = rs1_matrix(i,0);
+            for(int j = 0; j < ss->shape1_column; j++) {
+                tmp = f32_min(tmp, rs1_matrix(i,j));
+            }
+            rd_row_min(i,0) = tmp;
+        }
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemin_mv(half *rs1, half *rs2, half *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_half vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_half vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                float16_t tmp = f16_min(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(vector_dim0(0,j)));
+                rd_matrix(i,j) = float16_t_to_half(tmp);
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = float16_t_to_half( f16_min(half_to_float16_t(rs1_matrix(i,j)), half_to_float16_t(vector_dim1(i,0))) );
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+   
+    return 0;
+}
+
+int CustomInsns::vemin_mv(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct ShapeStride *ss, int dim)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_Bfloat16 vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_Bfloat16 vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+    case 0:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim0 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                bfloat16_t tmp = bf16_min(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), Bfloat16_to_bfloat16_t(vector_dim0(0,j)));
+                rd_matrix(i,j) = bfloat16_t_to_Bfloat16(tmp);
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    case 1:
+        if (GLOBAL_DBG) {
+            SHAPE_STRIDE_INFO(ss);
+            cout << "rs1:" << endl << rs1_matrix << endl;
+            cout << "rs2:" << endl << vector_dim1 << endl;
+        }
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = bfloat16_t_to_Bfloat16( bf16_min(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), Bfloat16_to_bfloat16_t(vector_dim1(i,0))) );
+            }
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_matrix << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+   
+    return 0;
+}
+
+int CustomInsns::vemin_mv(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    Map_float32_t vector_dim1(rs2, ss->shape1_row, 1, DynStride(1, 1));
+    Map_float32_t vector_dim0(rs2, 1, ss->shape1_column, DynStride(1, 1));
+
+    switch (dim) {
+      case 0:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++) {
+                rd_matrix(i,j) = f32_min(rs1_matrix(i,j), vector_dim0(0,j));
+            }
+        }
+        break;
+      case 1:
+        for (int i = 0; i < ss->shape1_row; i++) {
+            for(int j = 0; j < ss->shape1_column; j++){
+                rd_matrix(i,j) = f32_min(rs1_matrix(i,j), vector_dim1(i,0));
+            }
+        }
+        break;
+      default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::vemin_mf(half *rs1, float32_t vs2, half *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_half rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    float16_t rs2 = half_to_float16_t(f32_to_half(vs2));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = float16_t_to_half( f16_min(half_to_float16_t(rs1_matrix(i,j)), rs2) );
+        }        
+    }
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemin_mf(Bfloat16 *rs1, float32_t vs2, Bfloat16 *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+    bfloat16_t rs2 = Bfloat16_to_bfloat16_t(Bfloat16(vs2));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = bfloat16_t_to_Bfloat16( bf16_min(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)), rs2) );
+        }        
+    }
+    if (GLOBAL_DBG)
+        cout << "rd:" << endl << rd_matrix << endl;
+    return 0;
+}
+
+int CustomInsns::vemin_mf(float32_t *rs1, float32_t vs2, float32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_column);
+    Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for (int j = 0; j < ss->shape1_column; j++) {
+            rd_matrix(i, j) = f32_min(rs1_matrix(i,j), vs2);
+        }        
+    }
+    return 0;
+}
+
+
+int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    uint32_t minRow=0, minCol=0;
+    half min = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            half tmp = rs1_matrix(i,j);
+            if (isNaNF16UI_stc(half_to_float16_t(min)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
+                continue;
+            } 
+            else {
+                if (isNaNF16UI_stc(half_to_float16_t(tmp))) {
+                    continue;
+                } else if (isNaNF16UI_stc(half_to_float16_t(min))) {
+                    min = tmp;
+                    minRow = i;
+                    minCol = j;
+                } else {
+                    if(min > tmp) {
+                        min = tmp;
+                        minRow = i;
+                        minCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = minCol << 16 | minRow;
+    if (GLOBAL_DBG) {
+        std::cout << "min:" << min << std::endl;
+        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+
+    uint32_t minRow=0, minCol=0;
+    Bfloat16 min = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            Bfloat16 tmp = rs1_matrix(i,j);
+            if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
+                continue;
+            } 
+            else {
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
+                    continue;
+                } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
+                    min = tmp;
+                    minRow = i;
+                    minCol = j;
+                } else {
+                    if(min > tmp) {
+                        min = tmp;
+                        minRow = i;
+                        minCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = minCol << 16 | minRow;
+    if (GLOBAL_DBG) {
+        std::cout << "min:" << min << std::endl;
+        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+
+    uint32_t minRow=0, minCol=0;
+    float32_t min = rs1_matrix(0,0);
+    for (int i = 0; i < ss->shape1_row; i++) {
+        for(int j = 0; j < ss->shape1_column; j++) {
+            float32_t tmp = rs1_matrix(i,j);
+            if (isNaNF32UI_stc(min) && isNaNF32UI_stc(tmp)) {
+                continue;
+            } 
+            else {
+                if (isNaNF32UI_stc(tmp)) {
+                    continue;
+                } else if (isNaNF32UI_stc(min)) {
+                    min = tmp;
+                    minRow = i;
+                    minCol = j;
+                } else {
+                    if(Float32(min) > Float32(tmp)) {
+                        min = tmp;
+                        minRow = i;
+                        minCol = j;
+                    }
+                }
+            }            
+        }    
+    }
+    *(uint32_t *)rd = minCol << 16 | minRow;
+    if (GLOBAL_DBG) {
+        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "rd:" << *rd << std::endl;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmin_m(half *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));    
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            half min = rs1_matrix(0,j);
+            uint32_t minRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j))) && isNaNF16UI_stc(half_to_float16_t(min))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNF16UI_stc(half_to_float16_t(min))) {
+                        min = rs1_matrix(i,j);
+                        minRow = i;
+                    } else {
+                        if(min < rs1_matrix(i,j)) {
+                            min = rs1_matrix(i,j);
+                            minRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_min(0,j) = minRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_min << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            half min = rs1_matrix(i,0);
+            uint32_t minCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j))) && isNaNF16UI_stc(half_to_float16_t(min))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF16UI_stc(half_to_float16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNF16UI_stc(half_to_float16_t(min))) {
+                        min = rs1_matrix(i,j);
+                        minCol = j;
+                    } else {
+                        if(min > rs1_matrix(i,j)) {
+                            min = rs1_matrix(i,j);
+                            minCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_min(i,0) = minCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_min << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmin_m(Bfloat16 *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:" << endl << rs1_matrix << endl;
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            Bfloat16 min = rs1_matrix(0,j);
+            uint32_t minRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j))) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
+                    continue;
+                } 
+                else {
+                    if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
+                        min = rs1_matrix(i,j);
+                        minRow = i;
+                    } else {
+                        if(min < rs1_matrix(i,j)) {
+                            min = rs1_matrix(i,j);
+                            minRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_min(0,j) = minRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_min << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            Bfloat16 min = rs1_matrix(i,0);
+            uint32_t minCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j))) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
+                    continue;
+                }
+                else {
+                    if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(rs1_matrix(i,j)))) {
+                        continue;
+                    } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
+                        min = rs1_matrix(i,j);
+                        minCol = j;
+                    } else {
+                        if(min > rs1_matrix(i,j)) {
+                            min = rs1_matrix(i,j);
+                            minCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_min(i,0) = minCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_min << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
+
+int CustomInsns::veargmin_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss, int dim)
+{
+    Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
+    Map_uint16_t rd_col_min(rd, 1, ss->shape1_column, DynStride(1, 1));
+    SET_DEFAULT_STRIDE(ss->stride_rd, 1);
+    Map_uint16_t rd_row_min(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));    
+
+    if (GLOBAL_DBG) {
+        SHAPE_STRIDE_INFO(ss);
+    }
+    switch (dim) {
+    case 0:
+        for(int j = 0; j < ss->shape1_column; j++) {
+            float32_t min = rs1_matrix(0,j);
+            uint32_t minRow=0;
+            for (int i = 0; i < ss->shape1_row; i++) {             
+                if (isNaNF32UI_stc(rs1_matrix(i,j)) && isNaNF32UI_stc(min)) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF32UI_stc(rs1_matrix(i,j))) {
+                        continue;
+                    } else if (isNaNF32UI_stc(min)) {
+                        min = rs1_matrix(i,j);
+                        minRow = i;
+                    } else {
+                        if(Float32(min) < Float32(rs1_matrix(i,j))) {
+                            min = rs1_matrix(i,j);
+                            minRow = i;
+                        }
+                    }
+                }                                
+            }
+            rd_col_min(0,j) = minRow;
+        }
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_col_min << endl;
+        break;
+    case 1:
+        for (int i = 0; i < ss->shape1_row; i++) { 
+            float32_t min = rs1_matrix(i,0);
+            uint32_t minCol=0;
+            for(int j = 0; j < ss->shape1_column; j++) {        
+                if (isNaNF32UI_stc(rs1_matrix(i,j)) && isNaNF32UI_stc(min)) {
+                    continue;
+                } 
+                else {
+                    if (isNaNF32UI_stc(rs1_matrix(i,j))) {
+                        continue;
+                    } else if (isNaNF32UI_stc(min)) {
+                        min = rs1_matrix(i,j);
+                        minCol = j;
+                    } else {
+                        if(Float32(min) > Float32(rs1_matrix(i,j))) {
+                            min = rs1_matrix(i,j);
+                            minCol = j;
+                        }
+                    }
+                }                                
+            }
+            rd_row_min(i,0) = minCol;
+        }    
+        if (GLOBAL_DBG)
+            cout << "rd:" << endl << rd_row_min << endl;
+        break;
+    default:
+        cout << __FUNCTION__ << "error dim" << endl;
+        return -BR_EPARAM;
+    }
+    return 0;
+}
 
 /**
  * memin_m() memin.m
@@ -9725,9 +11334,6 @@ int CustomInsns::memul_ts_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Sh
  */
 int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
-
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
@@ -9736,63 +11342,57 @@ int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    //rd_matrix = rs1_matrix * rs2_matrix;
-    for (i = 0; i < ss->shape1_row; i++) {
+    for (int i = 0; i < ss->shape1_row; i++) {
         float16_t res= half_to_float16_t(rs1_matrix(i, 0));
-        for(j = 1; j < ss->shape1_column; j++){
-            bool isLt = f16_lt(res, half_to_float16_t(rs1_matrix(i, j)));
-            if (!isLt)
-                res = half_to_float16_t(rs1_matrix(i, j));
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = f16_min(res, half_to_float16_t(rs1_matrix(i, j)));
         }
         rd_matrix(i, 0) = float16_t_to_half(res);
     }
+
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
-
     return 0;
 }
 
 int CustomInsns::memin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-
-    /* dot only support vector not support matrix, so we use '*' to do calculation */
-    //rd_matrix = rs1_matrix * rs2_matrix;
-    for (i = 0; i < ss->shape1_row; i++) {
-        Bfloat16 res= rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            res = res < rs1_matrix(i, j)? res : rs1_matrix(i, j);
-        }
-        rd_matrix(i, 0) = res;
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
     }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        bfloat16_t res= Bfloat16_to_bfloat16_t(rs1_matrix(i, 0));
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = bf16_min(res, Bfloat16_to_bfloat16_t(rs1_matrix(i, j)));
+        }
+        rd_matrix(i, 0) = bfloat16_t_to_Bfloat16(res);
+    }
+
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;    
     return 0;
 }
 
 int CustomInsns::memin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
     Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    for (i = 0; i < ss->shape1_row; i++) {
+    for (int i = 0; i < ss->shape1_row; i++) {
         float32_t res= rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            bool isLt = f32_lt(res, rs1_matrix(i, j));
-            if (!isLt)
-                res = rs1_matrix(i, j);
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = f32_min(res, rs1_matrix(i, j));
         }
         rd_matrix(i, 0) = res;
     }
     return 0;
 }
+
 /**
  * memax_m() memax.m
  * 
@@ -9804,9 +11404,6 @@ int CustomInsns::memin_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
  */
 int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
-
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
@@ -9815,62 +11412,58 @@ int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
-
-    for (i = 0; i < ss->shape1_row; i++) {
+    for (int i = 0; i < ss->shape1_row; i++) {
         float16_t res= half_to_float16_t(rs1_matrix(i, 0));
-        for(j = 1; j < ss->shape1_column; j++){
-            bool isLt = f16_lt(res, half_to_float16_t(rs1_matrix(i, j)));
-            if (isLt)
-                res = half_to_float16_t(rs1_matrix(i, j));
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = f16_max(res, half_to_float16_t(rs1_matrix(i, j)));
         }
         rd_matrix(i, 0) = float16_t_to_half(res);
     }
+
     if (debug)
-        cout << "rd:\n" << rd_matrix << endl;
-        
+        cout << "rd:\n" << rd_matrix << endl;       
     return 0;
 }
+
 int CustomInsns::memax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
-
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    for (i = 0; i < ss->shape1_row; i++) {
-        Bfloat16 res= rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            res = res > rs1_matrix(i, j)? res : rs1_matrix(i, j);
+    if (debug) {
+        SHAPE_STRIDE_INFO(ss);
+        cout << "rs1:\n" << rs1_matrix << endl;
+    }
+    for (int i = 0; i < ss->shape1_row; i++) {
+        bfloat16_t res= Bfloat16_to_bfloat16_t(rs1_matrix(i, 0));
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = bf16_max(res, Bfloat16_to_bfloat16_t(rs1_matrix(i, j)));
         }
-        rd_matrix(i, 0) = res;
+        rd_matrix(i, 0) = bfloat16_t_to_Bfloat16(res);
     }
 
+    if (debug)
+        cout << "rd:\n" << rd_matrix << endl;     
     return 0;
 }
 
 int CustomInsns::memax_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
 {
-    int i, j;
-    /* param check */
-
     Map_float32_t rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    for (i = 0; i < ss->shape1_row; i++) {
+    for (int i = 0; i < ss->shape1_row; i++) {
         float32_t res= rs1_matrix(i, 0);
-        for(j = 1; j < ss->shape1_column; j++){
-            bool isLt = f32_lt(res, rs1_matrix(i, j));
-            if (isLt)
-                res = rs1_matrix(i, j);
+        for(int j = 1; j < ss->shape1_column; j++){
+            res = f32_max(res, rs1_matrix(i, j));
         }
         rd_matrix(i, 0) = res;
-    }
-        
+    }     
     return 0;
 }
+
 /**
  * memacc_m() meacc.m
  * 
@@ -10650,7 +12243,7 @@ int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t 
 uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
@@ -10688,7 +12281,7 @@ uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 
@@ -10726,7 +12319,7 @@ uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 

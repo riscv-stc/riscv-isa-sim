@@ -527,6 +527,7 @@ disassembler_t::disassembler_t(int xlen)
 
   #define DEFINE_CV2TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2})
   #define DEFINE_CV3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2, &dmx})
+
   #define DEFINE_ANDES_ITYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_imm})
   #define DEFINE_ANDES_BTYPE(code)  DISASM_INSN(#code, code, 0, {&xrs1, &andes_branch_target})
   #define DEFINE_ANDES_I1TYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &ade_bf_msb, &ade_bf_lsb})
@@ -538,7 +539,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_ANDES_XSHSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_shimm})
   #define DEFINE_ANDES_XSWSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_swimm})
   #define DEFINE_ANDES_XSDSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_sdimm})
-  
+
 
   DEFINE_XLOAD(lb)
   DEFINE_XLOAD(lbu)
@@ -1010,6 +1011,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_ANDES_XSHSTORE(shgp)
   DEFINE_ANDES_XSWSTORE(swgp)
   DEFINE_ANDES_XSDSTORE(sdgp)
+  DEFINE_ANDES_RTYPE(ffb)
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));
