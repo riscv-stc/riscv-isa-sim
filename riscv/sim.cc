@@ -94,7 +94,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, uint32_t coremask)
+             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask)
   : htif_t(args),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -129,13 +129,13 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   memset(dev_shm_llb_name, 0, sizeof(dev_shm_llb_name));
   memset(dev_shm_hwsync_name, 0, sizeof(dev_shm_hwsync_name));
  
-  snprintf(shm_l1_name, sizeof(shm_l1_name), "L1_%lu_%lu", board_id, chip_id);
-  snprintf(shm_llb_name, sizeof(shm_llb_name), "LLB_%lu_%lu", board_id, chip_id);
-  snprintf(shm_hwsync_name, sizeof(shm_hwsync_name), "HWSYNC_%lu_%lu", board_id, chip_id);
+  snprintf(shm_l1_name, sizeof(shm_l1_name), "L1_%lu_%lu_%lu", session_id, board_id, chip_id);
+  snprintf(shm_llb_name, sizeof(shm_llb_name), "LLB_%lu_%lu_%lu", session_id, board_id, chip_id);
+  snprintf(shm_hwsync_name, sizeof(shm_hwsync_name), "HWSYNC_%lu_%lu_%lu", session_id, board_id, chip_id);
 
-  snprintf(dev_shm_l1_name, sizeof(dev_shm_l1_name), "/dev/dhm/%s", shm_l1_name);
-  snprintf(dev_shm_llb_name, sizeof(dev_shm_llb_name), "/dev/dhm/%s", shm_llb_name);
-  snprintf(dev_shm_hwsync_name, sizeof(dev_shm_hwsync_name), "/dev/dhm/%s", shm_hwsync_name);
+  snprintf(dev_shm_l1_name, sizeof(dev_shm_l1_name), "/dev/shm/%s", shm_l1_name);
+  snprintf(dev_shm_llb_name, sizeof(dev_shm_llb_name), "/dev/shm/%s", shm_llb_name);
+  snprintf(dev_shm_hwsync_name, sizeof(dev_shm_hwsync_name), "/dev/shm/%s", shm_hwsync_name);
 
   signal(SIGINT, &handle_signal);
 
@@ -143,11 +143,13 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     
     chmod(dev_shm_l1_name, 0666);
     chmod(dev_shm_llb_name, 0666);
+    chmod(dev_shm_hwsync_name, 0666);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
+    shm_unlink(shm_hwsync_name);
   }
 
-  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id);
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id, session_id);
   bus.add_device(HWSYNC_START, hwsync);
   
   core_reset_n = 0;
@@ -414,7 +416,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
         }
       } else {
         // dump llb or ddr range
-        if (strlen(hwsync_masks))
+        if (hwsync_masks[0] != 0)
         {
           snprintf(fname, sizeof(fname), "%s/%s_b%lu@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), bank_id, start, len);
           dump_mem(fname, start, len, -1, true);

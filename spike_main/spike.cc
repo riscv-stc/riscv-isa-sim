@@ -55,6 +55,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --board-id=<n>        Indicates the number of boards in a rack [default 0]\n");
   fprintf(stderr, "  --chip-id=<n>         Several chips per board [default 0]\n");
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
+  fprintf(stderr, "  --session-id=<n>      HWsync shared memory id [default 0]\n");
   fprintf(stderr, "  --core-mask=<n>         set core mask, bit0-bit31 for core0-core31 [default 0xffffffff all unmask]\n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --kernel=<path>       Load kernel flat image into memory\n");
@@ -245,6 +246,7 @@ int main(int argc, char** argv)
   size_t chip_id = 0;
   size_t bank_id = 0;
   size_t die_id = 0;
+  size_t session_id = 0;
   uint32_t coremask = 0xffffffff;
   char masks_buf[178]={'\0'};
   const char *hwsync_masks = masks_buf;
@@ -356,6 +358,7 @@ int main(int argc, char** argv)
   parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
   parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
+  parser.option(0, "session-id", 1, [&](const char *s) { session_id = atoi(s); });
   parser.option(0, "core-mask", 1, [&](const char *s) { coremask = strtoull(s, NULL, 0); });
   parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = s; });
   parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
@@ -455,7 +458,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, priv, varch, nprocs, bank_id, die_id, (char *)hwsync_masks, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
-      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, board_id, chip_id, coremask);
+      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, board_id, chip_id, session_id, coremask);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

@@ -23,7 +23,8 @@ class hwsync_t: public abstract_device_t {
     char * shm_name;
     size_t board_id;
     size_t chip_id;
-
+    size_t session_id;
+    
     std::mutex mutex_sync;
     std::mutex mutex_pld;
     std::condition_variable_any cond_sync;
@@ -34,7 +35,7 @@ class hwsync_t: public abstract_device_t {
     pthread_cond_t * pcond_sync;
 
   public:
-    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id);
+    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id, size_t session_id);
     virtual ~hwsync_t();
 
     bool enter(unsigned core_id);
