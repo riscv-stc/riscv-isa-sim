@@ -1,5 +1,5 @@
 // vfredmax vd, vs2, vs1
-bool is_propagate = false;
+bool is_propagate = true;
 VI_VFP_VV_LOOP_REDUCTION
 ({
   vd_0 = bf16_max(vd_0, vs2);
