@@ -45,5 +45,5 @@ package:
     - chmod 644 ~/.ssh/known_hosts
     - tar -jc archive $LINK | ssh release@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
   only:
-    - 2.x-dev
+    - 2.x-dev-ipa
     - tags
