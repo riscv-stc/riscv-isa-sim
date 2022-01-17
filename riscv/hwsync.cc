@@ -15,7 +15,7 @@
 uint32_t hw_sync = 0, hw_pld = 0;
 uint32_t mask_buf[16]= {'\0'};
 
-hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id) : group_count(16), board_id(board_id), chip_id(chip_id) {
+hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id, size_t session_id) : group_count(16), board_id(board_id), chip_id(chip_id), session_id(session_id) {
     if (hwsync_masks[0] != 0) {
         uint8_t index = 0;
         char *p = NULL;
@@ -29,15 +29,17 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t boa
         shm_name = "HWSYNC";
         shm_size = 256;
         char file_name[64];
-        sprintf(file_name, "/dev/shm/%s_%lu_%lu", shm_name, board_id, chip_id);
+        char hwsync_name[64];
+        sprintf(file_name, "/dev/shm/%s_%lu_%lu_%lu", shm_name, session_id, board_id, chip_id);
+        sprintf(hwsync_name, "%s_%lu_%lu_%lu", shm_name, session_id, board_id, chip_id);
 
         if (bank_id == 0) {
             chmod(file_name, 0666);
             munmap(shm_start, shm_size);
-            shm_unlink(shm_name);
+            shm_unlink(hwsync_name);
         }
 
-        shm_id = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+        shm_id = shm_open(hwsync_name, O_CREAT | O_RDWR, 0666);
         if (shm_id == -1)
             throw std::runtime_error("hwsync shmget failed");
 
@@ -127,13 +129,14 @@ hwsync_t::hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t boa
 hwsync_t::~hwsync_t() {
     if (shm_start) {
         char file_name[64];
-        sprintf(file_name, "/dev/shm/%s_%lu_%lu", shm_name, board_id, chip_id);
-
+        char hwsync_name[64];
+        sprintf(file_name, "/dev/shm/%s_%lu_%lu_%lu", shm_name, session_id, board_id, chip_id);
+        sprintf(hwsync_name, "%s_%lu_%lu_%lu", shm_name, session_id, board_id, chip_id);
         *req_sync = ~0;
         pthread_cond_broadcast(pcond_sync);
         chmod(file_name, 0666);
         munmap(shm_start, shm_size);
-        shm_unlink(shm_name);
+        shm_unlink(hwsync_name);
     } else {
         *req_sync = ~0;
         cond_sync.notify_all();

@@ -21,6 +21,8 @@
   g15= (vs2[16k+15])，
     (vs2[16k+1])= vs2[1] + vs2[17] + … + vs2[16k+1], k=0-vl/16
   vd = (((g0+g1) + (g2+g3)) + ((g4+g5) + (g6+g7))) + (((g8+g9) + (g10+g11)) + ((g12+g13) + (g14+g15)))
+
+  f32 vfredsum ==> f16 vfwredsum
 ######################*/
 
 #define SET  (16)
@@ -230,6 +232,59 @@
     vd_0    = bf16_add(sum_g0 , sum_g8);     \
     set_fp_exceptions;                       \
 
+#define VI_VFP_REDUCTION_F32_SUM_UNORDER(width)     \
+  float32_t vd_0  = P.VU.elt<float32_t>(rd_num, 0); \
+  float32_t vs1_0 = P.VU.elt<float32_t>(rs1_num, 0);\
+  float32_t vs2;\
+  float32_t sum_g0 = f32(0);\
+  float32_t sum_g1 = f32(0);\
+  float32_t sum_g2 = f32(0);\
+  float32_t sum_g3 = f32(0);\
+  float32_t sum_g4 = f32(0);\
+  float32_t sum_g5 = f32(0);\
+  float32_t sum_g6 = f32(0);\
+  float32_t sum_g7 = f32(0);\
+  bool is_active = false;\
+  bool is_first  = true; \
+  int cnt = vl/8;\
+  int rem = vl%8;\
+  if(rem) { cnt += 1;}\
+  if(cnt) {\
+    for(int i=0; i<cnt; i++) {\
+      int idx = 8*i;\
+      if (is_first) {\
+        GET_UNORDER_VS2_VALUE(vs2, idx, width)   \
+        sum_g0 = f32_add(vs1_0,vs2);             \
+        is_first = false;\
+      } else {\
+        GET_UNORDER_VS2_VALUE(vs2, idx, width)   \
+        sum_g0 = f32_add(sum_g0,vs2);            \
+      }\
+      GET_UNORDER_VS2_VALUE(vs2, (idx+1), width) \
+      sum_g1 = f32_add(sum_g1, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+2), width) \
+      sum_g2 = f32_add(sum_g2, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+3), width) \
+      sum_g3 = f32_add(sum_g3, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+4), width) \
+      sum_g4 = f32_add(sum_g4, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+5), width) \
+      sum_g5 = f32_add(sum_g5, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+6), width) \
+      sum_g6 = f32_add(sum_g6, vs2);             \
+      GET_UNORDER_VS2_VALUE(vs2, (idx+7), width) \
+      sum_g7 = f32_add(sum_g7, vs2);             \
+      set_fp_exceptions;                         \
+    }\
+    sum_g0 = f32_add(sum_g0 , sum_g1);        \
+    sum_g2 = f32_add(sum_g2 , sum_g3);        \
+    sum_g4 = f32_add(sum_g4 , sum_g5);        \
+    sum_g6 = f32_add(sum_g6 , sum_g7);        \
+    sum_g0 = f32_add(sum_g0 , sum_g2);        \
+    sum_g4 = f32_add(sum_g4 , sum_g6);        \
+    vd_0   = f32_add(sum_g0 , sum_g4);        \
+    set_fp_exceptions;                        \
+
 
 /*########### Begin ###########*/
 bool is_propagate = true;
@@ -248,7 +303,7 @@ VI_VFP_COMMON
       break; 
     }
     case e32: {
-      VI_VFP_REDUCTION_SUM_UNORDER(32) 
+      VI_VFP_REDUCTION_F32_SUM_UNORDER(32) 
       VI_VFP_LOOP_REDUCTION_END(e32) 
       break; 
     }
