@@ -12527,6 +12527,7 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
     }
 }
 
+#if 0
 /* virtual memory mte mov */
 void mte_vm_mov(uint64_t src, uint64_t dst, uint32_t esize, const struct MteShapeStride *mte_ss, 
         processor_t *p, bool is_rs1_local, bool is_rd_local)
@@ -12591,3 +12592,4 @@ void icmov_vm(uint64_t src, uint64_t dst, uint32_t esize, uint32_t dst_core_id,
         }
     }
 }
+#endif
