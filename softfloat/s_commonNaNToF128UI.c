@@ -34,9 +34,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
 
-#include <stdint.h>
+// #include <stdint.h>
+// #include "platform.h"
+// #include "primitives.h"
+// #include "specialize.h"
 #include "platform.h"
-#include "primitives.h"
+#include "primitiveTypes.h"
+
+#define softfloat_commonNaNToF128UI softfloat_commonNaNToF128UI
 #include "specialize.h"
 
 /*----------------------------------------------------------------------------
@@ -47,8 +52,11 @@ struct uint128 softfloat_commonNaNToF128UI( const struct commonNaN *aPtr )
 {
     struct uint128 uiZ;
 
-    uiZ = softfloat_shortShiftRight128( aPtr->v64, aPtr->v0, 16 );
-    uiZ.v64 |= (uint_fast64_t) aPtr->sign<<63 | UINT64_C( 0x7FFF800000000000 );
+    uiZ.v64 = defaultNaNF128UI64;
+    uiZ.v0  = defaultNaNF128UI0;
+
+   //  uiZ = softfloat_shortShiftRight128( aPtr->v64, aPtr->v0, 16 );
+   //  uiZ.v64 |= (uint_fast64_t) aPtr->sign<<63 | UINT64_C( 0x7FFF800000000000 );
     return uiZ;
 
 }
