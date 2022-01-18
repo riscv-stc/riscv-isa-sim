@@ -12,6 +12,10 @@ check_traps_pld(e_size);
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
+p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
+  uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(addr);
+  uint8_t* dst = (uint8_t*)MMU.get_phy_addr(dst_addr);
+  uint32_t core_map = (uint32_t)rs2;
 
 // #define PLD_OUTPUT_MSG
 
@@ -43,29 +47,35 @@ reg_t rs2 = RS2;
   std::cout << " " << std::endl;
 #endif
 
+  // do sync for pld
+  p->pld(core_map);
+
+  #if 0
+  //2020-01-04: the bit of current core is no need to set but the data will send
+  core_map |= 0x1 << p->get_csr(CSR_TID);
+  #endif
+
   //src shape
-  struct MteShapeStride mte_ss = {};
-  mte_ss.column = MTE_SHAPE_COLUMN;
-  mte_ss.row = MTE_SHAPE_ROW;
-  mte_ss.stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : 0);
-  mte_ss.stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : 0);
+  uint16_t col = MTE_SHAPE_COLUMN;
+  uint16_t row = MTE_SHAPE_ROW; 
+  uint32_t copy_stride_rs1 = 0;
+  uint32_t copy_stride_rd = 0;
+  uint32_t core_id = p->get_csr(CSR_TID);
 
-  p->run_async([p, addr, dst_addr, e_size, rs2, mte_ss]() {
-    uint32_t core_map = (uint32_t)rs2;
+  if (core_map != 0 && (core_map & (1 << core_id))) {
+    copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
+    copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
-    // do sync for pld
-    p->pld(core_map);
-
-    #if 0
-    //2020-01-04: the bit of current core is no need to set but the data will send
-    core_map |= 0x1 << p->get_csr(CSR_TID);
-    #endif
-
-    uint32_t core_id = p->get_csr(CSR_TID);
-
-    if (core_map != 0 && (core_map & (1 << core_id))) {
-      mte_vm_mov(addr, dst_addr, e_size, (const struct MteShapeStride *)&mte_ss, p, false, true);
+    if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {
+      memcpy(dst, src, col * row * e_size);
     }
-  }, true);
+    else {
+      for (int i = 0; i < row; i++) {
+        memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * e_size);
+      }
+    }
+    //mte_vm_mov(addr, dst_addr, e_size, (const struct MteShapeStride *)&mte_ss, p, false, true);
+  }
+}, true);
 
 wfi();
