@@ -12525,6 +12525,7 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
     } else {
         ;//throw trap_tcp_illegal_encoding();
     }
+    WRITE_MEM_STC(rd, (uint8_t*)dst_paddr, CMT_LOG_DMAE);  
 }
 
 #if 0
