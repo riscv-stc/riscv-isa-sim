@@ -23,4 +23,3 @@ uint64_t len = dmae_src_len(data_type, &dmae_ss);
 //dmae_mov(src, dst, data_type, &dmae_ss);
 dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(RD), data_type, &dmae_ss, p, false, true);
 
-WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_DMAE);  

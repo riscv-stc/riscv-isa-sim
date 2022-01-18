@@ -26,5 +26,3 @@ len = dmae_dst_len(data_type, &dmae_ss);
 
 // dmae_mov(src, dst, data_type, &dmae_ss);
 dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p, false, false);
-
-WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_DMAE);
