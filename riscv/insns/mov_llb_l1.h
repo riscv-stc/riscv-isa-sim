@@ -21,8 +21,6 @@ MTE_DTYPE_DECODING_TO_TYPE({
   uint16_t col = MTE_SHAPE_COLUMN;
   uint16_t row = MTE_SHAPE_ROW;
 
-  uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * esize;
-  uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * esize;
 // #define MOV_LLB_L1_OUTPUT_MSG
 
 #ifdef MOV_LLB_L1_OUTPUT_MSG
@@ -50,6 +48,8 @@ std::cout << "src addr: 0x" << std::hex << zext_xlen(RS1)  << std::endl;
 std::cout << "dst addr: 0x" << std::hex << (reg_t)RD  << std::endl;
 std::cout << " " << std::endl;
 #endif
+  uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * esize;
+  uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * esize;
 
   uint64_t len = row * copy_stride_rd;
   check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
@@ -62,6 +62,7 @@ std::cout << " " << std::endl;
       memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * esize);
     }
   }
+  //mte_vm_mov((reg_t)(RS1), (reg_t)(zext_xlen(RD)), esize, (const struct MteShapeStride *)&mte_ss, p, true, false);
 
   WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_MTE);  
     

@@ -12,6 +12,10 @@ check_traps_pld(e_size);
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
+p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
+  uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(addr);
+  uint8_t* dst = (uint8_t*)MMU.get_phy_addr(dst_addr);
+  uint32_t core_map = (uint32_t)rs2;
 
 // #define PLD_OUTPUT_MSG
 
@@ -43,11 +47,6 @@ reg_t rs2 = RS2;
   std::cout << " " << std::endl;
 #endif
 
-p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
-  uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(addr);
-  uint8_t* dst = (uint8_t*)MMU.get_phy_addr(dst_addr);
-  uint32_t core_map = (uint32_t)rs2;
-
   // do sync for pld
   p->pld(core_map);
 
@@ -75,6 +74,7 @@ p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
         memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * e_size);
       }
     }
+    //mte_vm_mov(addr, dst_addr, e_size, (const struct MteShapeStride *)&mte_ss, p, false, true);
   }
 }, true);
 

@@ -56,6 +56,7 @@ std::cout << " " << std::endl;
       memcpy(dst + i * copy_stride_rd, src + i * copy_stride_rs1, col * esize);
     }
   }
+  //mte_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(RD), esize, (const struct MteShapeStride *)&mte_ss, p, false, true);
 
   WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_MTE);  
 
