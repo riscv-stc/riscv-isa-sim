@@ -50,18 +50,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 uint_fast16_t
  softfloat_propagateNaNBF16UI( uint_fast16_t uiA, uint_fast16_t uiB )
 {
+    
     if ( softfloat_isSigNaNBF16UI( uiA ) || softfloat_isSigNaNBF16UI( uiB ) ) {
         softfloat_raiseFlags( softfloat_flag_invalid );
     }
     return defaultNaNBF16UI;
 
-    // bool isSigNaNA;
-    // // 0x40: for NaN, the max bit should be 1
-    // isSigNaNA = softfloat_isSigNaNBF16UI( uiA );
-    // if ( isSigNaNA || softfloat_isSigNaNBF16UI( uiB ) ) {
-    //     softfloat_raiseFlags( softfloat_flag_invalid );
-    //     if ( isSigNaNA ) return uiA | 0x40;
-    // }
-    // return (isNaNBF16UI( uiA ) ? uiA : uiB) | 0x40;
 }
 
