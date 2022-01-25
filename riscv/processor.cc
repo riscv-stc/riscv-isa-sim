@@ -2400,6 +2400,7 @@ bool processor_t::async_done() {
   if (state.async_started) {
     if (async_function == nullptr) {
       state.async_started = false;
+      hwsync->hwsync_timer_clear(id);
       return true;
     }
   }
@@ -2456,6 +2457,39 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
+}
+
+/* 输入x86机器耗费的时钟数和riscv二进制指令，粗略计算在npc耗费时钟数 */
+uint64_t processor_t::host_clks_2_npc(uint64_t host_clks, uint64_t insn_b) {
+    #define STAND_INSN_RATIO    5000
+    #define NPUV2_INSN_RATIO    5000
+    #define STAND_INSN_CLKS_MAX 100
+    #define NPUV2_INSN_CLKS_MAX 1000000
+    uint64_t hs_clks = 0;
+
+    switch((insn_b>>2) & 0x1f) {
+    case 0x02:  /* oem指令 */
+    case 0x0a:
+    case 0x16:
+    case 0x1e:
+        if (NPUV2_INSN_RATIO > host_clks)
+            hs_clks = 1;
+        else if (NPUV2_INSN_RATIO*NPUV2_INSN_CLKS_MAX > host_clks)
+            hs_clks = host_clks/NPUV2_INSN_RATIO;
+        else
+            hs_clks = NPUV2_INSN_CLKS_MAX;
+        break;
+    default:  /* 标准指令一般耗费1个时钟周期 */
+        if (STAND_INSN_RATIO > host_clks)
+            hs_clks = 1;
+        else if (STAND_INSN_RATIO*STAND_INSN_CLKS_MAX > host_clks)
+            hs_clks = host_clks/STAND_INSN_RATIO;
+        else 
+            hs_clks = STAND_INSN_CLKS_MAX;
+        break;
+    }
+
+    return hs_clks;
 }
 
 mbox_device_t* processor_t::add_mbox(mbox_device_t *box)

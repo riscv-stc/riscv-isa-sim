@@ -85,7 +85,7 @@ static void handle_signal(int sig)
 }
 
 sim_t::sim_t(const char* isa, const char* priv, const char* varch,
-             size_t nprocs, size_t bank_id, size_t die_id, char *hwsync_masks,
+             size_t nprocs, size_t bank_id, size_t die_id, char *hwsync_masks, uint32_t hwsync_timer_num,
              bool halted, bool real_time_clint,
              reg_t initrd_start, reg_t initrd_end, const char* bootargs,
              reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems,size_t ddr_size,
@@ -149,7 +149,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     shm_unlink(shm_hwsync_name);
   }
 
-  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id, session_id);
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, hwsync_timer_num, board_id, chip_id, session_id);
   bus.add_device(HWSYNC_START, hwsync);
   
   core_reset_n = 0;
