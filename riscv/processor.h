@@ -438,8 +438,6 @@ public:
   Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
-  uint32_t get_syncs() {return synctimes; };
-  uint32_t set_syncs(uint32_t times) {return synctimes = times; };
   uint32_t get_hwsync_status();
   uint32_t get_idx() {return idx; };
   uint32_t get_id() {return id; };
@@ -491,6 +489,18 @@ public:
   void run_async(std::function<void()> func, bool flag);
   bool async_done();
   bool async_state() { return state.async_started; };
+  uint64_t get_host_clks(void) {
+  #if defined (__i386__)
+    uint64_t x;
+    __asm__ volatile("rdtsc":"=A"(x));
+    return x;
+  #elif defined (__x86_64__)
+    uint32_t hi,lo;
+    __asm__ volatile("rdtsc":"=a"(lo),"=d"(hi));
+    return ((uint64_t)lo)|(((uint64_t)hi)<<32);
+  #endif
+  };
+  uint64_t host_clks_2_npc(uint64_t host_clks, uint64_t insn_b);
 
   void set_exit() { exit_request = true; };
   bool exited() { return exit_request; };
@@ -615,7 +625,6 @@ private:
   unsigned elen;
   unsigned slen;
   unsigned vlen;
-  uint32_t synctimes;
   reg_t max_isa;
   std::string isa_string;
   bool histogram_enabled;
