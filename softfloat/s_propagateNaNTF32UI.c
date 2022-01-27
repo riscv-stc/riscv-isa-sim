@@ -50,17 +50,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 uint_fast32_t
  softfloat_propagateNaNTF32UI( uint_fast32_t uiA, uint_fast32_t uiB )
 {
+    
     if ( softfloat_isSigNaNTF32UI( uiA ) || softfloat_isSigNaNTF32UI( uiB ) ) {
         softfloat_raiseFlags( softfloat_flag_invalid );
     }
     return defaultNaNTF32UI;
 
-    // bool isSigNaNA;
-    // isSigNaNA = softfloat_isSigNaNTF32UI( uiA );
-    // if ( isSigNaNA || softfloat_isSigNaNTF32UI( uiB ) ) {
-    //     softfloat_raiseFlags( softfloat_flag_invalid );
-    //     if ( isSigNaNA ) return uiA | 0x200;
-    // }
-    // return (isNaNTF32UI( uiA ) ? uiA : uiB) | 0x200;
 }
 

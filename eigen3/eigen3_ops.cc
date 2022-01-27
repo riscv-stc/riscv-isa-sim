@@ -12451,7 +12451,7 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
         processor_t *p, bool is_rs1_local, bool is_rd_local)
 {
     //src shape
-    uint16_t shape_x = dmae_ss->shape_x;
+    uint32_t shape_x = dmae_ss->shape_x;
     uint16_t shape_y = dmae_ss->shape_y;
     uint16_t shape_z = dmae_ss->shape_z;
 

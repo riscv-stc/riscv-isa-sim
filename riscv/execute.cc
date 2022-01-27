@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 
 #include "processor.h"
+#include "hwsync.h"
 #include "mmu.h"
 #include "disasm.h"
 #include <cassert>
@@ -750,14 +751,14 @@ void processor_t::step(size_t n)
     try
     {
       if (unlikely(sim->reset_signal(id))) {
-		 /*hart reset. */
+		    /*hart reset. */
         reset();
-	/* clear rst signal. */
-	sim->clear_reset_signal(id);
-        std::cout<< "hart[" << id << "] will reset." << std::endl;
-	break;
+        /* clear rst signal. */
+        sim->clear_reset_signal(id);
+              std::cout<< "hart[" << id << "] will reset." << std::endl;
+        break;
       }
-/* check current core sync state, if current core is sync,
+      /* check current core sync state, if current core is sync,
        * and wait for other core to sync, swap current core to idle,
        * and let other core to execute insn. */
       if (async_done()) {
@@ -768,21 +769,22 @@ void processor_t::step(size_t n)
           std::rethrow_exception(async_trap);
         }
       }
-/* if sync is started, let other core that not in sync to execute.
+
+      /* if sync is started, let other core that not in sync to execute.
        * the core will not ack interrupt if it is in sync. */
       if (unlikely(state.async_started))
-	break;
-/* check interrupt status, if there is any interrupt occur,
+	      break;
+      /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
       reg_t interrupts = (state.mip |
                           (state.mextip ?
                           (0x1 << IRQ_M_EXT) : 0));
- if (unlikely(interrupts & state.mie)) {
+      if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;
           state.wfi_flag = 0;
-		}
- }
+        }
+      }
       take_pending_interrupt(interrupts);
 
       if (unlikely(state.wfi_flag))
@@ -807,7 +809,32 @@ void processor_t::step(size_t n)
           insn_fetch_t fetch = mmu->load_insn(pc);
           if (debug && !state.serialized)
             disasm(fetch.insn);
-          pc = execute_insn(this, pc, fetch);
+
+          uint64_t start_rdtsc = 0;
+          uint64_t endl_rdtsc = 0;
+          uint64_t riscv_clks = 0;
+
+          /* core所在的grp在sync，该核运行时 hs_sync_timer_cnts 计数器累加 */
+          if (hwsync->is_hs_group_sync(id) && (!state.pld)) {
+            start_rdtsc = get_host_clks();
+            pc = execute_insn(this, pc, fetch);
+            endl_rdtsc = get_host_clks();
+
+            if (likely(endl_rdtsc > start_rdtsc)) {
+              riscv_clks = host_clks_2_npc(endl_rdtsc-start_rdtsc, fetch.insn.bits());
+            } else {
+              riscv_clks = host_clks_2_npc(endl_rdtsc+(~(uint64_t)(0))-start_rdtsc, fetch.insn.bits());
+            }
+            hwsync->hwsync_timer_cnts_add(id, riscv_clks);
+            if (hwsync->is_hwsync_timeout(id)) {
+              //hwsync->hwsync_timer_clear(id);
+              hwsync->hwsync_clear();
+              throw trap_sync_timeout_trigger();
+            }
+          } else {
+            pc = execute_insn(this, pc, fetch);
+          }
+
           advance_pc();
         }
       }
@@ -842,7 +869,27 @@ void processor_t::step(size_t n)
         // is located within the execute_insn() function call.
         #define ICACHE_ACCESS(i) { \
           insn_fetch_t fetch = ic_entry->data; \
-          pc = execute_insn(this, pc, fetch); \
+          uint64_t start_rdtsc = 0;   \
+          uint64_t endl_rdtsc = 0;    \
+          uint64_t riscv_clks = 0;    \
+          if (hwsync->is_hs_group_sync(id) && (!state.pld)) {   \
+            start_rdtsc = get_host_clks();   \
+            pc = execute_insn(this, pc, fetch); \
+            endl_rdtsc = get_host_clks();    \
+            if (likely(endl_rdtsc > start_rdtsc)) {   \
+              riscv_clks = host_clks_2_npc(endl_rdtsc-start_rdtsc, fetch.insn.bits());    \
+            } else {    \
+              riscv_clks = host_clks_2_npc(endl_rdtsc+(~(uint64_t)(0))-start_rdtsc, fetch.insn.bits());   \
+            }   \
+            hwsync->hwsync_timer_cnts_add(id, riscv_clks);    \
+            if (hwsync->is_hwsync_timeout(id)) {   \
+              /* hwsync->hwsync_timer_clear(id); */   \
+              hwsync->hwsync_clear();   \
+              throw trap_sync_timeout_trigger();  \
+            }   \
+          }else {   \
+            pc = execute_insn(this, pc, fetch); \
+          }   \
           ic_entry = ic_entry->next; \
           if (i == mmu_t::ICACHE_ENTRIES-1) break; \
           if (unlikely(ic_entry->tag != pc)) break; \
