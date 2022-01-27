@@ -94,7 +94,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask)
+             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask)
   : htif_t(args),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -117,6 +117,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     log(false),
     remote_bitbang(NULL),
     pcie_enabled(pcie_enabled),
+    file_name_with_bank_id(file_name_with_bank_id),
     debug_module(this, dm_config)
 {
   //char add_debug_dev = 1;
@@ -416,7 +417,7 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
         }
       } else {
         // dump llb or ddr range
-        if (hwsync_masks[0] != 0)
+        if (file_name_with_bank_id)
         {
           snprintf(fname, sizeof(fname), "%s/%s_b%lu@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), bank_id, start, len);
           dump_mem(fname, start, len, -1, true);

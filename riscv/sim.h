@@ -31,7 +31,7 @@ public:
         std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
-        bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask);
+        bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask);
   ~sim_t();
 
   // run the simulation to completion
@@ -124,6 +124,7 @@ private:
   bool histogram_enabled; // provide a histogram of PCs
   bool log;
   bool pcie_enabled;
+  bool file_name_with_bank_id;
   remote_bitbang_t* remote_bitbang;
 
   // memory-mapped I/O routines
