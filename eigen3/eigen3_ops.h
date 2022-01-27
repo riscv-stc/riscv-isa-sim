@@ -1376,7 +1376,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
 }
 
 template <typename OutDType, typename InDType>
-int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
+int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1418,7 +1418,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, bool relu)
         MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
     }
 
-    *rd = OutDType(rd_acc(0, 0));
+    *rd = rd_acc(0, 0);
 
     if (GLOBAL_DBG)
         cout << "rd:\n" << *rd << endl;

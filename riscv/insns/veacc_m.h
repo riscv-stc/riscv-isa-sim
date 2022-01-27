@@ -5,11 +5,10 @@ unsigned long rs1 = MMU.get_phy_addr(RS1);
 VME_DTYPE_DECODING_TO_TYPE({
     if(DIM == 0) {
         check_traps_vexxx_m_reduce_all(dtype_lut);
-        dtype_vd result;
+        dtype_in result;
         veacc_m<dtype_vd, dtype_in>((dtype_vd*)rs1, &result, &sst, relu);
-        Float32 f32res = Float32(result);
         float32_t f32reg;
-        f32reg.v = f32res.x;      
+        f32reg.v = result.x;      
         WRITE_FRD_STC(f32reg);  //WRITE_FRD(f32reg);    
     } else {
         check_traps_vexxx_m_reduce_vector(dtype_lut);

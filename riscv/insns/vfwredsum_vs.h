@@ -41,7 +41,7 @@
   float32_t vd_0  = P.VU.elt<float32_t>(rd_num, 0); \
   float32_t vs1_0 = P.VU.elt<float32_t>(rs1_num, 0);\
   float32_t vs2;\
-  float32_t zero   = *f0; \
+  float32_t zero  = STATE.frm == 0x2 ? f32(0) : *f0;\
   float32_t sum_g0 = zero;\
   float32_t sum_g1 = zero;\
   float32_t sum_g2 = zero;\
@@ -113,8 +113,8 @@
   float64_t *f0 = reinterpret_cast<float64_t*>(&val0);\
   float64_t vd_0  = P.VU.elt<float64_t>(rd_num, 0); \
   float64_t vs1_0 = P.VU.elt<float64_t>(rs1_num, 0);\
-  float64_t vs2;   \
-  float64_t zero = *f0;\
+  float64_t vs2;\
+  float64_t zero  = STATE.frm == 0x2 ? f64(0) : *f0;\
   float64_t sum_g0 = zero;\
   float64_t sum_g1 = zero;\
   float64_t sum_g2 = zero;\
