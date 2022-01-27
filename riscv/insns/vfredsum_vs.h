@@ -49,7 +49,7 @@
   float##width##_t vd_0  = P.VU.elt<float##width##_t>(rd_num, 0); \
   float##width##_t vs1_0 = P.VU.elt<float##width##_t>(rs1_num, 0);\
   float##width##_t vs2;            \
-  float##width##_t zero  = *f0;    \
+  float##width##_t zero  =  STATE.frm == 0x2 ? f##width(0) : *f0; \
   float##width##_t sum_g0  = zero; \
   float##width##_t sum_g1  = zero; \
   float##width##_t sum_g2  = zero; \
@@ -154,7 +154,7 @@
   bfloat16_t vd_0  = P.VU.elt<bfloat16_t>(rd_num, 0); \
   bfloat16_t vs1_0 = P.VU.elt<bfloat16_t>(rs1_num, 0);\
   bfloat16_t vs2;    \
-  bfloat16_t zero = *f0; \
+  bfloat16_t zero  = STATE.frm == 0x2 ? bf16(0) : *f0;\
   bfloat16_t sum_g0  = zero; \
   bfloat16_t sum_g1  = zero; \
   bfloat16_t sum_g2  = zero; \
@@ -179,7 +179,7 @@
     for(reg_t i=0; i<cnt; i++) {\
       reg_t idx = SET*i;\
       if (is_first) {\
-        GET_UNORDER_VS2_VALUE_BF(vs2, idx, zero)   \
+        GET_UNORDER_VS2_VALUE_BF(vs2, idx, zero)  \
         sum_g0 = f32_to_bf16( f32_add(bf16_to_f32(vs1_0), bf16_to_f32(vs2)) );       \
         is_first = false;\
       } else {\
@@ -233,7 +233,7 @@
     sum_g0  = f32_to_bf16( f32_add(bf16_to_f32(sum_g0) , bf16_to_f32(sum_g4)) );     \
     sum_g8  = f32_to_bf16( f32_add(bf16_to_f32(sum_g8) , bf16_to_f32(sum_g12)) );    \
     vd_0    = f32_to_bf16( f32_add(bf16_to_f32(sum_g0) , bf16_to_f32(sum_g8)) );     \
-    set_fp_exceptions;                       \
+    set_fp_exceptions;\
 
 
 #define GET_UNORDER_VS2_F32_VALUE(vs2, idx, zero)\
@@ -259,7 +259,7 @@
   float32_t vd_0  = P.VU.elt<float32_t>(rd_num, 0); \
   float32_t vs1_0 = P.VU.elt<float32_t>(rs1_num, 0);\
   float32_t vs2;\
-  float32_t zero   = *f0;\
+  float32_t zero  = STATE.frm == 0x2 ? f32(0) : *f0;\
   float32_t sum_g0 = zero;\
   float32_t sum_g1 = zero;\
   float32_t sum_g2 = zero;\
@@ -277,36 +277,36 @@
       reg_t idx = 8*i;\
       if (is_first) {\
         GET_UNORDER_VS2_F32_VALUE(vs2, idx, zero)   \
-        sum_g0 = f32_add(vs1_0,vs2);             \
+        sum_g0 = f32_add(vs1_0,vs2);                \
         is_first = false;\
       } else {\
         GET_UNORDER_VS2_F32_VALUE(vs2, idx, zero)   \
-        sum_g0 = f32_add(sum_g0,vs2);            \
+        sum_g0 = f32_add(sum_g0,vs2);               \
       }\
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+1), zero) \
-      sum_g1 = f32_add(sum_g1, vs2);             \
+      sum_g1 = f32_add(sum_g1, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+2), zero) \
-      sum_g2 = f32_add(sum_g2, vs2);             \
+      sum_g2 = f32_add(sum_g2, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+3), zero) \
-      sum_g3 = f32_add(sum_g3, vs2);             \
+      sum_g3 = f32_add(sum_g3, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+4), zero) \
-      sum_g4 = f32_add(sum_g4, vs2);             \
+      sum_g4 = f32_add(sum_g4, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+5), zero) \
-      sum_g5 = f32_add(sum_g5, vs2);             \
+      sum_g5 = f32_add(sum_g5, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+6), zero) \
-      sum_g6 = f32_add(sum_g6, vs2);             \
+      sum_g6 = f32_add(sum_g6, vs2);                \
       GET_UNORDER_VS2_F32_VALUE(vs2, (idx+7), zero) \
-      sum_g7 = f32_add(sum_g7, vs2);             \
-      set_fp_exceptions;                         \
+      sum_g7 = f32_add(sum_g7, vs2);                \
+      set_fp_exceptions;                            \
     }\
-    sum_g0 = f32_add(sum_g0 , sum_g1);        \
-    sum_g2 = f32_add(sum_g2 , sum_g3);        \
-    sum_g4 = f32_add(sum_g4 , sum_g5);        \
-    sum_g6 = f32_add(sum_g6 , sum_g7);        \
-    sum_g0 = f32_add(sum_g0 , sum_g2);        \
-    sum_g4 = f32_add(sum_g4 , sum_g6);        \
-    vd_0   = f32_add(sum_g0 , sum_g4);        \
-    set_fp_exceptions;                        \
+    sum_g0 = f32_add(sum_g0 , sum_g1);              \
+    sum_g2 = f32_add(sum_g2 , sum_g3);              \
+    sum_g4 = f32_add(sum_g4 , sum_g5);              \
+    sum_g6 = f32_add(sum_g6 , sum_g7);              \
+    sum_g0 = f32_add(sum_g0 , sum_g2);              \
+    sum_g4 = f32_add(sum_g4 , sum_g6);              \
+    vd_0   = f32_add(sum_g0 , sum_g4);              \
+    set_fp_exceptions;\
 
 
 /*########### Begin ###########*/
