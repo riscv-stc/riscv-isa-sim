@@ -1953,15 +1953,13 @@ int velkrelu_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool r
         cout << "rs1:\n" << rs1_matrix << endl;
     }
 
-    rd_matrix = (rs1_matrix.array() < (DType)0).select(rs1_matrix * rs2, rs1_matrix);
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
-    }
+    rd_matrix = (rs1_matrix.array() > (DType)0).select(rs1_matrix.array() * DType(1.0), rs1_matrix * rs2);
+
     if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
 
     return 0;
-}
+}   
 
 template <typename DType>
 int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
@@ -1983,9 +1981,8 @@ int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int d
     switch (dim) {
     case 0:
         for (int row = 0; row < rs1_matrix.rows(); row++)
-            rd_matrix.row(row) = (rs1_matrix.row(row).array() < (DType)0).select(
-                rs1_matrix.row(row).array() * vector_dim0.array(),
-                rs1_matrix.row(row));
+            rd_matrix.row(row) = (rs1_matrix.row(row).array() > (DType)0).select(
+                rs1_matrix.row(row).array() * DType(1.0), rs1_matrix.row(row).array() * vector_dim0.array() );
 
         if (GLOBAL_DBG) {
             cout << "rs2:" << endl << vector_dim0 << endl;
@@ -1994,9 +1991,8 @@ int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int d
         break;
     case 1:
         for (int col = 0; col < rs1_matrix.cols(); col++)
-            rd_matrix.col(col) = (rs1_matrix.col(col).array() < (DType)0).select(
-                rs1_matrix.col(col).array() * vector_dim1.array(),
-                rs1_matrix.col(col));
+            rd_matrix.col(col) = (rs1_matrix.col(col).array() > (DType)0).select(
+                rs1_matrix.col(col).array() * DType(1.0), rs1_matrix.col(col).array() * vector_dim1.array() );
 
         if (GLOBAL_DBG) {
             cout << "rs2:" << endl << vector_dim1 << endl;
@@ -2006,10 +2002,6 @@ int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int d
     default:
         cout << __FUNCTION__ << "error dim" << endl;
         return -BR_EPARAM;
-    }
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_matrix, rd_matrix, ss->shape1_row, ss->shape1_column, DType, ss->relu_threshhold);
     }
 
     return 0;
