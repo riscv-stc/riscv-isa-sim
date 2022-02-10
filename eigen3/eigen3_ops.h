@@ -173,9 +173,8 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype odd_acc = dtype(-0); \
-        dtype even_acc = dtype(-0); \
-        \
+        dtype odd_acc  = dtype(-0.0); \
+        dtype even_acc = dtype(-0.0); \
         for (int _row = 0; _row < row; _row++) { \
             if ((_row % 2) == 1) {\
                 odd_acc = src(_row, _col) + odd_acc; \
@@ -189,10 +188,10 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype acc0 = dtype(-0); \
-        dtype acc1 = dtype(-0); \
-        dtype acc2 = dtype(-0); \
-        dtype acc3 = dtype(-0); \
+        dtype acc0 = dtype(-0.0); \
+        dtype acc1 = dtype(-0.0); \
+        dtype acc2 = dtype(-0.0); \
+        dtype acc3 = dtype(-0.0); \
         int new_row = row % 2  == 0 ? row :  row + 1; \
         for (int _row = 0; _row < new_row; _row++) { \
             if (_row < row) { \
@@ -210,16 +209,16 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } else { \
                 if ((_row % 4) == 0) {\
-                    acc0 += dtype(0); \
+                    acc0 += dtype(-0.0); \
                 } \
                 if ((_row % 4) == 1) {\
-                    acc1 += dtype(0); \
+                    acc1 += dtype(-0.0); \
                 } \
                 if ((_row % 4) == 2) {\
-                    acc2 += dtype(0); \
+                    acc2 += dtype(-0.0); \
                 } \
                 if ((_row % 4) == 3) {\
-                    acc3 += dtype(0); \
+                    acc3 += dtype(-0.0); \
                 } \
             } \
         } \
@@ -1585,6 +1584,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         Map_OutDType vec_rs2_dim0(rs2, ss->shape1_row, 1, DynStride(1, 1));
         if (GLOBAL_DBG) {
             cout << "rs2:" << endl << vec_rs2_dim0 << endl;
+            cout << "dim: " << dim << endl;
         }
 
         MATRIX_MUL_VEC_V_CONVERT(rs1_matrix, vec_rs2_dim0, mul_result, ss->shape1_row, ss->shape1_column, InDType);
@@ -1611,6 +1611,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         Map_OutDType vec_rs2_dim1(rs2, 1, ss->shape1_column, DynStride(1, 1));
         if (GLOBAL_DBG) {
             cout << "rs2:" << endl << vec_rs2_dim1 << endl;
+            cout << "dim: " << dim << endl;
         }
 
         MATRIX_MUL_VEC_H_CONVERT(rs1_matrix, vec_rs2_dim1, mul_result, ss->shape1_row, ss->shape1_column, InDType);
