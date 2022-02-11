@@ -2004,10 +2004,10 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
             for (k = 0; k < okh * okw * in_c; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_i8 * col_matrix(0, k);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * col_matrix(0, k);
                 }
             }
@@ -3980,10 +3980,10 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
             for (k = 0; k < okh * okw * in_c; k++) {
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_i8 * col_matrix(0, k);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * col_matrix(0, k);
                 }              
             }
@@ -5590,9 +5590,9 @@ int CustomInsns::medeconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeS
             for (k = 0; k < kh * kw * in_c; k++){
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if (isSign) {
-                    res += f16_to_i8 (rs1_f16, softfloat_round_near_maxMag, true) * col_matrix(0, k);
+                    res += f16_to_i8 (rs1_f16, softfloat_roundingMode, true) * col_matrix(0, k);
                 } else {
-                    res += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * col_matrix(0, k);
+                    res += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * col_matrix(0, k);
                 }
                 
             }
@@ -7439,10 +7439,10 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
             for (k = 0; k < kh * kw * in_c; k++){
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if (isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_i8 * col_matrix(0, k);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * col_matrix(0, k);
                 }               
             }
@@ -7923,7 +7923,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
             res = 0;
             for (k = 0; k < okh * okw; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(left_matrix(i, k*in_c+j)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                 res += rs1_i8 * rs2_matrix(k, j);
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);
@@ -8706,10 +8706,10 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
             for (k = 0; k < ss->shape1_column; k++) {
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);              
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);             
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);             
                     res += rs1_i8 * rs2_matrix(k, j);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * rs2_matrix(k, j);
                 }
             }
@@ -9285,11 +9285,11 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k+sp_index1)), quant_coeff);
                 float16_t rs2_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k+sp_index2)), quant_coeff);
                 if (isSign) {
-                    even += f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2, j);
-                    odd  += f16_to_i8(rs2_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2+1, j);
+                    even += f16_to_i8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k/2, j);
+                    odd  += f16_to_i8(rs2_f16, softfloat_roundingMode, true) * rs2_matrix(k/2+1, j);
                 } else {
-                    even += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2, j);
-                    odd  += f16_to_ui8(rs2_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2+1, j);
+                    even += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k/2, j);
+                    odd  += f16_to_ui8(rs2_f16, softfloat_roundingMode, true) * rs2_matrix(k/2+1, j);
                 }                
             }
             rd_matrix(i ,j) = int32_mul_f16(odd+even, half_to_float16_t(dequant_matrix(0, j)));
@@ -9696,9 +9696,9 @@ int CustomInsns::memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStrid
             for (k = 0; k < ss->shape1_row; k++) {
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(k, i)), quant_coeff);
                 if (isSign) {
-                    res += f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k, j);
+                    res += f16_to_i8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k, j);
                 } else {
-                    res += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k, j);
+                    res += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k, j);
                 }                
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
