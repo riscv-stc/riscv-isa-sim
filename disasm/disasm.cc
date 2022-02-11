@@ -1074,6 +1074,9 @@ disassembler_t::disassembler_t(int xlen)
   add_insn(new disasm_insn_t("vse16pi.v", match_vse16pi_v, mask_vse16pi_v, v_st_unit));
   add_insn(new disasm_insn_t("vse32pi.v", match_vse32pi_v, mask_vse32pi_v, v_st_unit));
 
+  add_insn(new disasm_insn_t("vle1.v",  match_vle1_v,     mask_vle1_v, v_ld_unit));
+  add_insn(new disasm_insn_t("vse1.v",  match_vse1_v,     mask_vse1_v, v_st_unit));
+
   DISASM_VMEM_INSN(vle,    v_ld_unit,   );
   DISASM_VMEM_INSN(vluxei, v_ld_index,  );
   DISASM_VMEM_INSN(vlse,   v_ld_stride, );

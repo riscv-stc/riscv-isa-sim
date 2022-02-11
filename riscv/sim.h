@@ -101,7 +101,7 @@ private:
   log_file_t log_file;
 
   std::vector<bus_t*> local_bus;
-  bus_t mem_bus;
+  std::vector<bus_t*> mem_bus;
   pcie_driver_t *pcie_driver;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
@@ -140,9 +140,8 @@ private:
   void make_dtb();
   void set_rom();
 
-  bool is_glb_mem_addr(reg_t addr);
-  bool in_glb_mem(reg_t addr);
-  char* mem_bus_addr_to_mem(reg_t addr);
+  int get_target_glb_bank_id(reg_t addr);
+  char* mem_bus_addr_to_mem(reg_t addr, int id);
 
   const char* get_symbol(uint64_t addr);
 
