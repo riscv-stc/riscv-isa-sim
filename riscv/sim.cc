@@ -61,6 +61,7 @@
 char shm_l1_name[32] ;
 char shm_llb_name[32] ;
 char shm_hwsync_name[32];
+char shm_ddr_bank_name[4][32];
 
 char dev_shm_l1_name[64];
 char dev_shm_llb_name[64];
@@ -77,6 +78,10 @@ static void handle_signal(int sig)
     shm_unlink(shm_hwsync_name);
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
+
+    for (int i = 0; i < 4; i++)
+      shm_unlink(shm_ddr_bank_name[i]);
+
     exit(-1);
   }
 
@@ -103,6 +108,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     die_id(die_id),
     hwsync_masks(hwsync_masks),
     local_bus(std::max(nprocs, size_t(1))),
+    mem_bus(4),
     initrd_start(initrd_start),
     initrd_end(initrd_end),
     bootargs(bootargs),
@@ -125,6 +131,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   memset(shm_llb_name, 0, sizeof(shm_llb_name)); 
   memset(shm_hwsync_name, 0, sizeof(shm_hwsync_name));
 
+  for (int i = 0; i < 4; i++)
+    memset(shm_ddr_bank_name[i], 0, sizeof(shm_ddr_bank_name[0]));
+
   memset(dev_shm_l1_name, 0, sizeof(dev_shm_l1_name));
   memset(dev_shm_llb_name, 0, sizeof(dev_shm_llb_name));
   memset(dev_shm_hwsync_name, 0, sizeof(dev_shm_hwsync_name));
@@ -137,6 +146,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   snprintf(dev_shm_llb_name, sizeof(dev_shm_llb_name), "/dev/shm/%s", shm_llb_name);
   snprintf(dev_shm_hwsync_name, sizeof(dev_shm_hwsync_name), "/dev/shm/%s", shm_hwsync_name);
 
+  for (int i = 0; i < 4; i++)
+    snprintf(shm_ddr_bank_name[i], sizeof(shm_ddr_bank_name[0]), "DDR_BANK%d", i);
+
   signal(SIGINT, &handle_signal);
 
   if ((bank_id == 0) && has_hwsync_masks()) {
@@ -147,6 +159,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     shm_unlink(shm_l1_name);
     shm_unlink(shm_llb_name);
     shm_unlink(shm_hwsync_name);
+
+    for (int i = 0; i < 4; i++)
+      shm_unlink(shm_ddr_bank_name[i]);
   }
 
   hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, hwsync_timer_num, board_id, chip_id, session_id);
@@ -233,7 +248,15 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   }
 
   if (ddr_size > 0) {
-    mem_bus.add_device(ddr_mem_start, new mem_t(ddr_size));
+    if (hwsync_masks[0] != 0) {
+      for (int i = 0; i < 4; i++) {
+        mem_bus[i] = new bus_t();
+        mem_bus[i]->add_device(ddr_mem_start, new share_mem_t(ddr_size, shm_ddr_bank_name[i], 0));
+      }
+    } else {
+      mem_bus[bank_id] = new bus_t();
+      mem_bus[bank_id]->add_device(ddr_mem_start, new mem_t(ddr_size));
+    }
   }
 
   if (hwsync_masks[0] != 0) {
@@ -744,8 +767,10 @@ bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
   if (addr + len < addr || !paddr_ok(addr + len - 1))
     return false;
-  if (in_glb_mem(addr))
-    return mem_bus.load(addr & 0xffffffff, len, bytes);
+
+  int target_id = get_target_glb_bank_id(addr);
+  if (target_id >= 0)
+    return mem_bus[target_id]->load(addr & 0xffffffff, len, bytes);
   else
     return bus.load(addr, len, bytes);
 }
@@ -754,8 +779,10 @@ bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   if (addr + len < addr || !paddr_ok(addr + len - 1))
     return false;
-  if (in_glb_mem(addr))
-    return mem_bus.store(addr & 0xffffffff, len, bytes);
+
+  int target_id = get_target_glb_bank_id(addr);
+  if (target_id >= 0)
+    return mem_bus[target_id]->store(addr & 0xffffffff, len, bytes);
   else
     return bus.store(addr, len, bytes);
 }
@@ -913,8 +940,10 @@ bool sim_t::in_local_mem(reg_t addr, local_device_type type) {
 char* sim_t::addr_to_mem(reg_t addr) {
   if (!paddr_ok(addr))
     return NULL;
-  if (in_glb_mem(addr)) {
-      return mem_bus_addr_to_mem(addr & 0xffffffff);
+
+  int target_id = get_target_glb_bank_id(addr);
+  if (target_id >= 0) {
+      return mem_bus_addr_to_mem(addr & 0xffffffff, target_id);
   } else {
     auto desc = bus.find_device(addr);
 
@@ -996,49 +1025,69 @@ const char* sim_t::get_symbol(uint64_t addr)
   return htif_t::get_symbol(addr);
 }
 
-bool sim_t::is_glb_mem_addr(reg_t addr)
+int sim_t::get_target_glb_bank_id(reg_t addr)
 {
-  bool ret = false;
-  if ((die_id == 0) && addr >= (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR + bank_id * GLB_UPPER_REGION_SIZE) &&
-      addr < (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR + (bank_id+1) * GLB_UPPER_REGION_SIZE) ||
-      (die_id == 1) && addr >= (GLB_DIE1_UPPER_REGION_BANK0_START_ADDR + bank_id * GLB_UPPER_REGION_SIZE) &&
-      addr < (GLB_DIE1_UPPER_REGION_BANK0_START_ADDR + (bank_id+1) * GLB_UPPER_REGION_SIZE))
-    ret = true;
-  else if (addr >= 0 && addr < GLB_BOTTOM_REGION_SIZE)
-    ret = true;
-  else
-    ret = false;
-  
-  return ret;
-}
+  int target_bank_id = -1;
 
-bool sim_t::in_glb_mem(reg_t addr) { 
-
-  if (!is_glb_mem_addr(addr))
-    return false;
-
-  addr = addr & 0xffffffff;
-  auto desc = mem_bus.find_device(addr);
-
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (addr - desc.first <= mem->size()) {
-      return true;
+  for (int id = 0; id < 4; id++) {
+    if (die_id == 0) {
+      if (addr >= (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR + id * GLB_UPPER_REGION_SIZE) &&
+        addr < (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR + (id+1) * GLB_UPPER_REGION_SIZE)) { //is global ddr
+          target_bank_id = id;
+          break;
+      } else if (addr >= 0 && addr < GLB_BOTTOM_REGION_SIZE) { //is oneself local ddr address
+        target_bank_id = bank_id;
+        break;
+      }
+    } else {
+      if (addr >= (GLB_DIE1_UPPER_REGION_BANK0_START_ADDR + id * GLB_UPPER_REGION_SIZE) &&
+        addr < (GLB_DIE1_UPPER_REGION_BANK0_START_ADDR + (id+1) * GLB_UPPER_REGION_SIZE)) {
+          target_bank_id = id;
+          break;
+      } else if (addr >= 0 && addr < GLB_BOTTOM_REGION_SIZE) { //is oneself local ddr
+        target_bank_id = bank_id;
+        break;
+      }
     }
   }
 
-  return false;
+  //make sure target bank ddr connect to bus
+  if (target_bank_id >= 0) {
+    addr = addr & 0xffffffff;
+    auto desc = mem_bus[target_bank_id]->find_device(addr);
+
+    if (has_hwsync_masks()) {
+      if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+        assert(addr - desc.first <= mem->size());
+      }
+    } else {
+      if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+        assert(addr - desc.first <= mem->size());
+      }
+    }
+  }
+
+  return target_bank_id;
 }
 
-char* sim_t::mem_bus_addr_to_mem(reg_t addr) {
+char* sim_t::mem_bus_addr_to_mem(reg_t addr, int id) {
   std::ostringstream err;
 
   addr = addr & 0xffffffff;
-  auto desc = mem_bus.find_device(addr);
+  auto desc = mem_bus[id]->find_device(addr);
   
-  if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-    if (addr - desc.first < mem->size())
-        return mem->contents() + (addr - desc.first);
-    return NULL;
+  if (has_hwsync_masks()) {
+    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
+  } else {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      if (addr - desc.first < mem->size())
+          return mem->contents() + (addr - desc.first);
+      return NULL;
+    }
   }
 
   return NULL;
