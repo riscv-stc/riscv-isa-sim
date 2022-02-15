@@ -8817,8 +8817,8 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {  
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -8868,8 +8868,8 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) { 
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9003,8 +9003,8 @@ int CustomInsns::memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx,
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9057,8 +9057,8 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half 
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd  = 0x8000000;
-            even = 0x8000000;
+            odd  = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9112,8 +9112,8 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9166,8 +9166,8 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloa
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9220,8 +9220,8 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9277,8 +9277,8 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9338,8 +9338,8 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
