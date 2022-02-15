@@ -11490,13 +11490,15 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     }
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t odd = i32_to_f32(0);
-        float32_t even = i32_to_f32(0);
+        float32_t odd;
+        float32_t even;
+        odd.v = 0x80000000;
+        even.v = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
-            if (i%2)
-                odd = f32_add(odd, half_to_f32(rs1_matrix(i, j)));
+            if (j%2)
+                odd = f32_add(half_to_f32(rs1_matrix(i, j)), odd);
             else
-                even = f32_add(even, half_to_f32(rs1_matrix(i, j)));
+                even = f32_add(half_to_f32(rs1_matrix(i, j)), even);
         }
         rd_matrix(i, 0) = f32_to_half(f32_add(odd, even));
     }
