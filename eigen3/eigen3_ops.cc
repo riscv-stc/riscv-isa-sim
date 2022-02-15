@@ -8822,8 +8822,8 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
             for (k = 0; k < ss->shape1_column; k+=4) {  
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
-                odd  = f32_add(odd , half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)));
-                even = f32_add(even, half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)));
+                odd  = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)), odd);
+                even = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)), even);
                 if (debug ) {
                     cout << sp_index1 << ":"<< rs1_matrix(i, k+sp_index1) << "*" << rs2_matrix(k/2, j) << endl;
                     cout << sp_index2 << ":"<< rs1_matrix(i, k+sp_index2) << "*" << rs2_matrix(k/2+1, j)<< endl;
@@ -8873,8 +8873,8 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
             for (k = 0; k < ss->shape1_column; k+=4) { 
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
-                odd = f32_add(odd, half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)));
-                even = f32_add(even, half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j))); 
+                odd = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)), odd);
+                even = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)), even); 
             }
             rd_matrix(i, j) = f32_add(odd, even);
         }
