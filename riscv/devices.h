@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include "bankif.h"
 
 class pcie_driver_t;
 class processor_t;
@@ -99,7 +100,7 @@ class mbox_device_t : public abstract_device_t {
  */
 class sysdma_device_t : public abstract_device_t {
  public:
-  sysdma_device_t(int dma_idx, simif_t *sim);
+  sysdma_device_t(int dma_idx, simif_t *sim,bankif_t *bank);
   ~sysdma_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -146,6 +147,7 @@ class sysdma_device_t : public abstract_device_t {
 
   void dma_core(int ch);
   simif_t *sim;
+  bankif_t *bank;
 
   // dma direction
   enum direction_t {

@@ -42,8 +42,8 @@ static reg_t sysdma_base[] = {
 /**
  * @brief constructor
  */
-sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim)
-    : sim(sim) {
+sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim,bankif_t *bank)
+    : sim(sim),bank(bank) {
   // dma feature
   dma_enabled_ = false;
   dma_idx_ = dma_idx;
@@ -109,11 +109,15 @@ void sysdma_device_t::dma_core(int ch) {
       if(stride && stride < col)
         throw std::runtime_error("stride is smaller than col");
 
-      char *dst;
-      char *src;
+      char *dst = nullptr;
+      char *src = nullptr;
 
-      dst = sim->addr_to_mem(desc->ddar);
-      src = sim->addr_to_mem(desc->dsar);
+      if (!((dst=bank->bank_addr_to_mem(desc->ddar)) || (dst=sim->addr_to_mem(desc->ddar)))) {
+        throw std::runtime_error("dma_core() addr error");
+      }
+      if (!((src=bank->bank_addr_to_mem(desc->ddar)) || (src=sim->addr_to_mem(desc->ddar)))) {
+        throw std::runtime_error("dma_core() addr error");
+      }
 
       if (stride == 0) {
         memcpy(dst, src, col * row);

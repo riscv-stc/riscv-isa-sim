@@ -393,77 +393,67 @@ int which_npc(reg_t addr, reg_t *paddr)
 /* get data from npc addr, data will fill to buffer bytes. */
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
-  reg_t paddr = 0;
-  int idxinsim = -1;
+    reg_t paddr = 0;
+    int procid = 0;
+    int idxinbank  = 0;
+    char *host_addr = nullptr;
 
-  if (auto host_addr = mPSim->addr_to_mem(addr))
-    memcpy(bytes, host_addr, len);
-  else if (-1 != (idxinsim=mPSim->coreid_to_idxinsim(which_npc(addr, &paddr)))) {
-    int bankid = mPSim->get_bankid(idxinsim);
-    int idxinbank = mPSim->get_idxinbank(idxinsim);
-
-    if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
-      memcpy(bytes, host_addr, len);
-      return true;
+    procid = which_npc(addr, &paddr);
+    if (0 < procid) {
+        int idxinsim =mPSim->coreid_to_idxinsim(procid);
+        int bankid = mPSim->get_bankid(idxinsim);
+        idxinbank = mPSim->get_idxinbank(idxinsim);
+        host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
     }
 
-    if (!mPSim->npc_mmio_load(paddr, len, bytes, bankid, idxinbank)) {
-      std::cout << "load addr: 0x"
-      	  << hex
-      	  << addr
-      	  << " access fault."
-      	  << std::endl;
-      throw trap_load_access_fault(false, addr, 0, 0);
-    }
-  } else
-    if (!mPSim->mmio_load(addr, len, bytes)) {
-      std::cout << "PCIe driver load addr: 0x"
-      	  << hex
-      	  << addr
-      	  << " access fault."
-      	  << std::endl;
-      throw trap_load_access_fault(false, addr, 0, 0);
+    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(addr)) ||
+            (host_addr=mPSim->addr_to_mem(addr))) {
+        memcpy(bytes, host_addr, len);
+    } else if (!((mBank->npc_mmio_load(paddr, len, bytes,idxinbank)) ||
+            (mBank->bank_mmio_load(addr, len, bytes)) ||
+            (mPSim->mmio_load(addr, len, bytes)))) {
+        std::cout << "PCIe driver load addr: 0x"
+            << hex
+            << addr
+            << " access fault."
+            << std::endl;
+        throw trap_load_access_fault(false, addr, 0, 0);
     }
 
-  return true;
+    return true;
 }
 
 /* write bytes to npc addr. */
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  reg_t paddr = 0;
-  int idxinsim = -1;
+    reg_t paddr = 0;
+    int procid = 0;
+    int idxinbank  = 0;
+    char *host_addr = nullptr;
 
-  if (auto host_addr = mPSim->addr_to_mem(addr))
-    memcpy(host_addr, bytes, len);
-  else if (-1 != (idxinsim=mPSim->coreid_to_idxinsim(which_npc(addr, &paddr)))) {
-    int bankid = mPSim->get_bankid(idxinsim);
-    int idxinbank = mPSim->get_idxinbank(idxinsim);
+    procid = which_npc(addr, &paddr);
+    if (0 < procid) {
+        int idxinsim =mPSim->coreid_to_idxinsim(procid);
+        int bankid = mPSim->get_bankid(idxinsim);
+        idxinbank = mPSim->get_idxinbank(idxinsim);
+        host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
+    }
 
-    if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
+    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(addr)) ||
+            (host_addr=mPSim->addr_to_mem(addr))) {
         memcpy(host_addr, bytes, len);
-        return true;
+    } else if (!((mBank->npc_mmio_store(paddr, len, bytes,idxinbank)) ||
+            (mBank->bank_mmio_store(addr, len, bytes)) ||
+            (mPSim->mmio_store(addr, len, bytes)))) {
+        std::cout << "PCIe driver store addr: 0x"
+            << hex
+            << addr
+            << " access fault."
+            << std::endl;
+        throw trap_store_access_fault(false, addr, 0, 0);
     }
-
-    if (!mPSim->npc_mmio_store(paddr, len, bytes, bankid, idxinbank)) {
-      std::cout << "PCIe driver store addr: 0x"
-      	  << hex
-      	  << addr
-      	  << " access fault."
-      	  << std::endl;
-      throw trap_store_access_fault(false, addr, 0, 0);
-    }
-  }
-  else if (!mPSim->mmio_store(addr, len, bytes)) {
-    std::cout << "PCIe driver load addr: 0x"
-    	<< hex
-    	<< addr
-    	<< " access fault."
-    	<< std::endl;
-    throw trap_store_access_fault(false, addr, 0, 0);
-  }
-
-  return true;
+    
+    return true;
 }
 
 /* PCIe mbox address, send to txcmd or exttxcmd

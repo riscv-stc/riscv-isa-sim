@@ -23,20 +23,20 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
     /* 添加 sysdma */
     switch (bankid) {
     case 0:
-        bank_bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, sim));
-        bank_bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, sim));
+        bank_bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, sim, this));
+        bank_bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, sim, this));
         break;
     case 1:
-        bank_bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, sim));
-        bank_bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, sim));
+        bank_bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, sim, this));
+        bank_bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, sim, this));
         break;
     case 2:
-        bank_bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, sim));
-        bank_bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, sim));
+        bank_bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, sim, this));
+        bank_bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, sim, this));
         break;
     case 3:
-        bank_bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, sim));
-        bank_bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, sim)); 
+        bank_bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, sim, this));
+        bank_bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, sim, this));
         break;
     default:
         throw std::runtime_error("unsupported core id");
