@@ -758,10 +758,7 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
 
         for (int row = 0; row < rs1_matrix.rows(); row++)
             for (int column = 0; column < rs1_matrix.cols(); column++) {
-                if (isnan(rs1_matrix(row, column)) && isnan(vector_dim0(0, column)))
-                    rd_matrix(row, column) = rs1_matrix(row, column);
-                else
-                    rd_matrix(row, column) = vector_dim0(0, column) - rs1_matrix(row, column);
+                rd_matrix(row, column) = vector_dim0(0, column) - rs1_matrix(row, column);
             }
         break;
     case 1:
@@ -774,10 +771,7 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
         
         for (int row = 0; row < rs1_matrix.rows(); row++)
             for (int column = 0; column < rs1_matrix.cols(); column++) {
-                if (isnan(rs1_matrix(row, column)) && isnan(vector_dim1(row, 0)))
-                    rd_matrix(row, column) = rs1_matrix(row, column);
-                else
-                    rd_matrix(row, column) = vector_dim1(row, 0) - rs1_matrix(row, column);
+                rd_matrix(row, column) = vector_dim1(row, 0) - rs1_matrix(row, column);
             }
         break;
     default:
@@ -851,10 +845,7 @@ int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
 
     for (int row = 0; row < rs1_matrix.rows(); row++)
         for (int column = 0; column < rs1_matrix.cols(); column++) {
-            if (isnan(rs1_matrix(row, column)) && isnan(const_matrix(row, column)))
-                rd_matrix(row, column) = rs1_matrix(row, column);
-            else
-                rd_matrix(row, column) =  const_matrix(row, column) - rs1_matrix(row, column);
+            rd_matrix(row, column) =  const_matrix(row, column) - rs1_matrix(row, column);
         }
 
     if (GLOBAL_DBG)
