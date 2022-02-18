@@ -1,7 +1,6 @@
 #include <iostream>
 #include "devices.h"
 #include "mmu.h"
-#include "processor.h"
 #include "simif.h"
 #include "encoding.h"
 #include "unistd.h"
@@ -43,8 +42,8 @@ static reg_t sysdma_base[] = {
 /**
  * @brief constructor
  */
-sysdma_device_t::sysdma_device_t(int dma_idx, std::vector<processor_t*>& procs)
-    : procs_(procs) {
+sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim)
+    : sim(sim) {
   // dma feature
   dma_enabled_ = false;
   dma_idx_ = dma_idx;
@@ -113,7 +112,6 @@ void sysdma_device_t::dma_core(int ch) {
       char *dst;
       char *src;
 
-      simif_t *sim = procs_[0]->get_sim();
       dst = sim->addr_to_mem(desc->ddar);
       src = sim->addr_to_mem(desc->dsar);
 

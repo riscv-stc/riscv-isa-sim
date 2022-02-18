@@ -14,7 +14,7 @@ MTE_DTYPE_DECODING_TO_TYPE({
   esize = sizeof(dtype_lut);
   check_traps_mov_llb_l1(dtype_lut);
 
-  uint8_t* src = (uint8_t*)MMU.get_phy_addr(RS1);
+  uint8_t* src = (uint8_t*)MMU.npc_addr_to_mem(RS1);
   uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));
 
   //src shape

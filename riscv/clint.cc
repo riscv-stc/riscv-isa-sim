@@ -1,9 +1,10 @@
 #include <sys/time.h>
 #include "devices.h"
 #include "processor.h"
+#include "simif.h"
 
-clint_t::clint_t(std::vector<processor_t*>& procs, uint64_t freq_hz, bool real_time)
-  : procs(procs), freq_hz(freq_hz), real_time(real_time), mtime(0), mtimecmp(procs.size())
+clint_t::clint_t(simif_t *sim, uint64_t freq_hz, bool real_time)
+  : sim(sim), freq_hz(freq_hz), real_time(real_time), mtime(0), mtimecmp(sim->nprocs())
 {
   struct timeval base;
 
@@ -30,12 +31,12 @@ clint_t::clint_t(std::vector<processor_t*>& procs, uint64_t freq_hz, bool real_t
 bool clint_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
   increment(0);
-  if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + procs.size()*sizeof(msip_t)) {
-    std::vector<msip_t> msip(procs.size());
-    for (size_t i = 0; i < procs.size(); ++i)
-      msip[i] = !!(procs[i]->state.mip & MIP_MSIP);
+  if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + sim->nprocs()*sizeof(msip_t)) {
+    std::vector<msip_t> msip(sim->nprocs());
+    for (size_t i = 0; i < sim->nprocs(); ++i)
+      msip[i] = !!(sim->get_core_by_idxinsim(i)->state.mip & MIP_MSIP);
     memcpy(bytes, (uint8_t*)&msip[0] + addr - MSIP_BASE, len);
-  } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + procs.size()*sizeof(mtimecmp_t)) {
+  } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + sim->nprocs()*sizeof(mtimecmp_t)) {
     memcpy(bytes, (uint8_t*)&mtimecmp[0] + addr - MTIMECMP_BASE, len);
   } else if (addr >= MTIME_BASE && addr + len <= MTIME_BASE + sizeof(mtime_t)) {
     memcpy(bytes, (uint8_t*)&mtime + addr - MTIME_BASE, len);
@@ -47,18 +48,18 @@ bool clint_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool clint_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + procs.size()*sizeof(msip_t)) {
-    std::vector<msip_t> msip(procs.size());
-    std::vector<msip_t> mask(procs.size(), 0);
+  if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + sim->nprocs()*sizeof(msip_t)) {
+    std::vector<msip_t> msip(sim->nprocs());
+    std::vector<msip_t> mask(sim->nprocs(), 0);
     memcpy((uint8_t*)&msip[0] + addr - MSIP_BASE, bytes, len);
     memset((uint8_t*)&mask[0] + addr - MSIP_BASE, 0xff, len);
-    for (size_t i = 0; i < procs.size(); ++i) {
+    for (size_t i = 0; i < sim->nprocs(); ++i) {
       if (!(mask[i] & 0xFF)) continue;
-      procs[i]->state.mip &= ~MIP_MSIP;
+      sim->get_core_by_idxinsim(i)->state.mip &= ~MIP_MSIP;
       if (!!(msip[i] & 1))
-        procs[i]->state.mip |= MIP_MSIP;
+        sim->get_core_by_idxinsim(i)->state.mip |= MIP_MSIP;
     }
-  } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + procs.size()*sizeof(mtimecmp_t)) {
+  } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + sim->nprocs()*sizeof(mtimecmp_t)) {
     memcpy((uint8_t*)&mtimecmp[0] + addr - MTIMECMP_BASE, bytes, len);
   } else if (addr >= MTIME_BASE && addr + len <= MTIME_BASE + sizeof(mtime_t)) {
     memcpy((uint8_t*)&mtime + addr - MTIME_BASE, bytes, len);
@@ -71,19 +72,19 @@ bool clint_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
 void clint_t::increment(reg_t inc)
 {
-  if (real_time) {
-   struct timeval now;
-   uint64_t diff_usecs;
+    if (real_time) {
+        struct timeval now;
+        uint64_t diff_usecs;
 
-   gettimeofday(&now, NULL);
-   diff_usecs = ((now.tv_sec - real_time_ref_secs) * 1000000) + (now.tv_usec - real_time_ref_usecs);
-   mtime = diff_usecs * freq_hz / 1000000;
-  } else {
-    mtime += inc;
-  }
-  for (size_t i = 0; i < procs.size(); i++) {
-    procs[i]->state.mip &= ~MIP_MTIP;
-    if (mtime >= mtimecmp[i])
-      procs[i]->state.mip |= MIP_MTIP;
-  }
+        gettimeofday(&now, NULL);
+        diff_usecs = ((now.tv_sec - real_time_ref_secs) * 1000000) + (now.tv_usec - real_time_ref_usecs);
+        mtime = diff_usecs * freq_hz / 1000000;
+    } else {
+        mtime += inc;
+    }
+    for (size_t i = 0; i < sim->nprocs(); i++) {
+        sim->get_core_by_idxinsim(i)->state.mip &= ~MIP_MTIP;
+        if (mtime >= mtimecmp[i])
+            sim->get_core_by_idxinsim(i)->state.mip |= MIP_MTIP;
+    }
 }

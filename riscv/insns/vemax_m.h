@@ -1,8 +1,8 @@
 struct ShapeStride sst;
 class CustomInsns CusIns;
 sst_fill(sst, 1, 1);
-unsigned long rs1 = MMU.get_phy_addr(RS1);
-unsigned long rd  = MMU.get_phy_addr(RD);
+unsigned long rs1 = MMU.npc_addr_to_mem(RS1);
+unsigned long rd  = MMU.npc_addr_to_mem(RD);
 
 switch (VME_DTYPE) {
   case 0x0:         // f16
@@ -73,7 +73,7 @@ switch (VME_DTYPE) {
 //         WRITE_FRD_STC(f32res);  //WRITE_FRD(f32res);
 //     } else {
 //         check_traps_vexxx_m_reduce_vector(dtype_lut);
-//         unsigned long rd = MMU.get_phy_addr(RD);
+//         unsigned long rd = MMU.npc_addr_to_mem(RD);
 //         vemax_m<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM, relu);
 //         if(DIM_DM){
 //             WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM_W);

@@ -8,6 +8,7 @@
 #include "common.h"
 #include "config.h"
 #include "simif.h"
+#include "bankif.h"
 #include "processor.h"
 #include "memtracer.h"
 #include "byteorder.h"
@@ -69,7 +70,7 @@ class trigger_matched_t
 class mmu_t
 {
 public:
-  mmu_t(simif_t* sim, processor_t* proc);
+  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -350,13 +351,20 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   inline void acquire_load_reservation(reg_t vaddr)
   {
+    char *host_addr = nullptr;
+    int bankid = bank ? bank->get_bankid() : 0;
+    int idxinbank = proc ? proc->get_idxinbank() : 0;
+
     reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
-    if (auto host_addr = sim->addr_to_mem(paddr))
-      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
-    else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
-      load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
-    else
+
+    if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
+        load_reservation_address = refill_tlb(vaddr, paddr, host_addr, LOAD).target_offset + vaddr;
+    } else {
       throw trap_load_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow LR to I/O space
+    }
   }
 
   inline void load_reserved_address_misaligned(reg_t vaddr)
@@ -379,16 +387,23 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   inline bool check_load_reservation(reg_t vaddr, size_t size)
   {
+    char *host_addr = nullptr;
+    int bankid = bank ? bank->get_bankid() : 0;
+    int idxinbank = proc ? proc->get_idxinbank() : 0;
+
     if (vaddr & (size-1))
       store_conditional_address_misaligned(vaddr);
 
     reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
-    if (auto host_addr = sim->addr_to_mem(paddr))
-      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
-    else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0))
-      return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
-    else
+
+    if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
+        return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
+    } else {
       throw trap_store_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow SC to I/O space
+    }
   }
 
  /* local: NPC核内内存, l1, sp, index, misc, mbox */
@@ -399,7 +414,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     paddr = translate(vm, len, type, xlate_flags);
 
     if (is_local)
-      return (reg_t)get_phy_addr(paddr);
+      return (reg_t)npc_addr_to_mem(paddr);
     return (reg_t)sim->addr_to_mem(paddr);
   }
 
@@ -408,7 +423,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     reg_t paddr = 0;
 
     paddr = translate(vm, len, type, xlate_flags);
-    return (reg_t)sim->local_addr_to_mem_by_id_cluster(paddr, coreid);
+    return (reg_t)bank->npc_addr_to_mem(paddr, coreid);
   }
 
   static const reg_t ICACHE_ENTRIES = 1024;
@@ -468,7 +483,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   void flush_tlb();
   void flush_icache();
 
-  size_t get_phy_addr(reg_t paddr);
+  size_t npc_addr_to_mem(reg_t paddr);
 
   void register_memtracer(memtracer_t*);
 
@@ -516,6 +531,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
 private:
   simif_t* sim;
+  bankif_t* bank;
   processor_t* proc;
   memtracer_list_t tracer;
   reg_t load_reservation_address;

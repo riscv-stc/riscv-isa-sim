@@ -10,6 +10,8 @@
 
 #include "devices.h"
 
+//#define HWSYNC_USED_PMUTEX
+
 class hwsync_t: public abstract_device_t {
   private:
     uint32_t *masks;      /* masks[0]-masks[15]共16个sync组, 为0的bit对应的核在同一个sync组， 默认值{0xffffffff} */
@@ -17,29 +19,25 @@ class hwsync_t: public abstract_device_t {
     uint32_t *req_pld;
     int group_count;  /* 支持16个sync组 */
     int core_num;     /* 支持32个核 */
-    int shm_id;
-    int shm_size;
-    char *shm_ptr;
-    char *shm_start;
-    char * shm_name;
-    size_t board_id;
-    size_t chip_id;
-    size_t session_id;
-    
-    std::mutex mutex_sync;
-    std::mutex mutex_pld;
-    std::condition_variable_any cond_sync;
-    std::condition_variable_any cond_pld;
+    int hwsync_mem_size;
+    char *hwsync_shm_ptr;
+#ifdef HWSYNC_USED_PMUTEX
     pthread_mutex_t * pmutex_pld;
     pthread_mutex_t * pmutex_sync;
     pthread_cond_t * pcond_pld;
     pthread_cond_t * pcond_sync;
+#else
+    std::mutex mutex_sync;
+    std::mutex mutex_pld;
+    std::condition_variable_any cond_sync;
+    std::condition_variable_any cond_pld;
+#endif
     
     uint32_t *hs_sync_timer_num;  /* timeout阈值 HS_TIME_OUT_CNT，所有grp公用一个阈值 */
     uint32_t *hs_sync_timer_cnt;  /* 为每个核分配一个sync timer(硬件只有一个timer) */
 
   public:
-    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, uint32_t hwsync_timer_num,size_t board_id, size_t chip_id, size_t session_id);
+    hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num);
     virtual ~hwsync_t();
 
     bool enter(unsigned core_id);
@@ -60,10 +58,11 @@ class hwsync_t: public abstract_device_t {
     };
     void reset(uint32_t id) {
       *req_pld |= (0x1 << id);
-      if (shm_start)
+    #ifdef HWSYNC_USED_PMUTEX
         pthread_cond_broadcast(pcond_pld);
-      else
+    #else
         cond_pld.notify_all();
+    #endif
     }
 };
 

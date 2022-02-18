@@ -10,6 +10,7 @@
 
 #include "processor.h"
 #include "pcie_driver.h"
+#include "simif.h"
 
 #define PCIE_OK          (0)
 #define PCIE_UNINIT      (-1)
@@ -111,9 +112,9 @@ static const uint32_t noc_npc_base[] = {
 	      NOC_NPC31_BASE
 };
 
-pcie_driver_t::pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs,
-                                 uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id) : procs(procs), mPSim(sim), mBankId(bank_id), pcie_enabled(pcie_enabled),
-                                 board_id(board_id), chip_id(chip_id)
+pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, 
+        size_t board_id, size_t chip_id) : mPSim(sim), mBank(bank), mBankId(bank_id),
+        pcie_enabled(pcie_enabled), board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
   mDev = -1;
@@ -392,18 +393,26 @@ int which_npc(reg_t addr, reg_t *paddr)
 /* get data from npc addr, data will fill to buffer bytes. */
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
-  reg_t paddr;
-  int core_id;
+  reg_t paddr = 0;
+  int bankid = 0;
+  int idxinbank = 0;
+  int idxinsim = 0;
+
+  idxinsim = which_npc(addr, &paddr);
+  if (-1 != idxinsim) {
+      bankid = mPSim->get_bankid(idxinsim);
+      idxinbank = mPSim->get_idxinbank(idxinsim);
+  }
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(bytes, host_addr, len);
-  else if (-1 != (core_id = which_npc(addr, &paddr))) {
-    if (auto host_addr = mPSim->local_addr_to_mem(paddr, core_id)) {
+  else if (-1 != idxinsim) {
+    if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
       memcpy(bytes, host_addr, len);
       return true;
     }
 
-    if (!mPSim->local_mmio_load(paddr, len, bytes, core_id)) {
+    if (!mPSim->npc_mmio_load(paddr, len, bytes, bankid, idxinbank)) {
       std::cout << "load addr: 0x"
       	  << hex
       	  << addr
@@ -411,8 +420,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
       	  << std::endl;
       throw trap_load_access_fault(false, addr, 0, 0);
     }
-  }
-  else
+  } else
     if (!mPSim->mmio_load(addr, len, bytes)) {
       std::cout << "PCIe driver load addr: 0x"
       	  << hex
@@ -428,18 +436,27 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 /* write bytes to npc addr. */
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  reg_t paddr;
-  int core_id;
+  reg_t paddr = 0;
+  int bankid = 0;
+  int idxinbank = 0;
+  int idxinsim = 0;
+
+  idxinsim = which_npc(addr, &paddr);
+  if (-1 != idxinsim) {
+      bankid = mPSim->get_bankid(idxinsim);
+      idxinbank = mPSim->get_idxinbank(idxinsim);
+  }
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(host_addr, bytes, len);
-  else if (-1 != (core_id = which_npc(addr, &paddr))) {
-    if (auto host_addr = mPSim->local_addr_to_mem(paddr, core_id)) {
+  else if (-1 != idxinsim) {
+    if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
       memcpy(host_addr, bytes, len);
       return true;
     }
 
-    if (!mPSim->local_mmio_store(paddr, len, bytes, core_id)) {
+    if (!mPSim->npc_mmio_store(paddr, len, bytes, bankid, 
+            idxinbank)) {
       std::cout << "PCIe driver store addr: 0x"
       	  << hex
       	  << addr
@@ -483,9 +500,9 @@ int pcie_driver_t::get_sync_state()
   cmd.addr = PCIE_SYNC_STATE_ADDR;
   cmd.len = 4;
 
-  for (reg_t i = 0; i < procs.size(); i++)
-    if ((procs[i]->get_hwsync_status() & (1 << (mBankId * 8 + i))) == 0)
-      state |= 0x1 << procs[i]->id;
+  for (reg_t i = 0; i < mPSim->nprocs(); i++)
+    if ((mPSim->get_core_by_idxinsim(i)->get_hwsync_status() & (1 << (mBankId * 8 + i))) == 0)
+      state |= 0x1 << mPSim->get_core_by_idxinsim(i)->id;
 
   /* each bank core_id in spike is start at 0. */
   *(uint32_t *)cmd.data = state;
@@ -517,57 +534,57 @@ void pcie_driver_t::task_doing()
 
       switch (pCmd->code) {
         case CODE_READ:
-	  switch (pCmd->addr) {
-	    case PCIE_SYNC_STATE_ADDR:
-	      get_sync_state();
-	      break;
+          switch (pCmd->addr) {
+            case PCIE_SYNC_STATE_ADDR:
+              get_sync_state();
+              break;
 
-	    default:
-              read(pCmd->addr, pCmd->len);
-	  }
-	  usleep(1);
-          break;
+            default:
+                    read(pCmd->addr, pCmd->len);
+	        }
+        usleep(1);
+              break;
 
         case CODE_WRITE:
-	  switch (pCmd->addr) {
-	    /* PCIe mbox cfg addr. */
-            case PCIE_MBOX_CFG_ADDR:
-	      {
-                value = *(uint32_t *)pCmd->data;
-                mTxCfgAddr = value;
-                std::cout << "cfg tx dst addr " << value << std::endl;
-              }
-	      break;
+          switch (pCmd->addr) {
+            /* PCIe mbox cfg addr. */
+                  case PCIE_MBOX_CFG_ADDR:
+              {
+                      value = *(uint32_t *)pCmd->data;
+                      mTxCfgAddr = value;
+                      std::cout << "cfg tx dst addr " << value << std::endl;
+                    }
+              break;
 
-	    case PCIE_MBOX_TXCMD_ADDR:
+            case PCIE_MBOX_TXCMD_ADDR:
             case PCIE_MBOX_EXTTXCMD_ADDR:
-	      {
-                /* PCIe mbox txcmd or exttxcmd. */
-                value = *(uint32_t *)pCmd->data;
-                if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
-                  mTxCmd = value;
-                else
-                  mTxExtCmd = value;
+              {
+                      /* PCIe mbox txcmd or exttxcmd. */
+                      value = *(uint32_t *)pCmd->data;
+                      if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
+                        mTxCmd = value;
+                      else
+                        mTxExtCmd = value;
 
-                store_data(mTxCfgAddr, pCmd->len, pCmd->data);
-                std::cout << "pcie mbox send addr:0x"
-	    	    << hex
-	    	    << mTxCfgAddr
-	    	    << " value:0x"
-	    	    << value
-	    	    << std::endl;
-              }
-	      break;
+                      store_data(mTxCfgAddr, pCmd->len, pCmd->data);
+                      std::cout << "pcie mbox send addr:0x"
+                  << hex
+                  << mTxCfgAddr
+                  << " value:0x"
+                  << value
+                  << std::endl;
+                    }
+              break;
 
-	    case PCIE_CORE_RESET_ADDR:
-	      value = *(uint32_t *)pCmd->data;
-	      /* each bank in spike core_id is start at 0. */
-	      mPSim->hart_reset(value);
-	      break;
+            case PCIE_CORE_RESET_ADDR:
+              value = *(uint32_t *)pCmd->data;
+              /* each bank in spike core_id is start at 0. */
+              mPSim->hart_reset(value);
+              break;
 
-	    default:
-              store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
-	  }
+            default:
+                    store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+          }
           break;
 
         default:

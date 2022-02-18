@@ -23,12 +23,12 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-                         simif_t* sim, hwsync_t* hs, uint32_t idx,
-                         uint32_t id, bool halt_on_reset,
+                         simif_t* sim, bankif_t* bank, hwsync_t* hs, uint32_t idxinbank,
+                         uint32_t id, uint32_t bank_id, bool halt_on_reset,
                          FILE* log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), id(id), xlen(0),
+  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), ext(NULL), id(id), xlen(0),
   histogram_enabled(false), log_commits_enabled(false),
-  hwsync(hs), idx(idx), mbox(NULL),
+  hwsync(hs), idxinbank(idxinbank), bank_id(bank_id), mbox(NULL),
   async_running(true), exit_request(false),
   log_file(log_file), halt_on_reset(halt_on_reset),
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
@@ -40,7 +40,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   parse_varch_string(varch);
 
   register_base_instructions();
-  mmu = new mmu_t(sim, this);
+  mmu = new mmu_t(sim, bank, this);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)

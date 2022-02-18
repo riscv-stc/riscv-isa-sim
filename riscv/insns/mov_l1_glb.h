@@ -4,7 +4,7 @@ DMAE_DTYPE_DECODING_TO_ESIZE();
 check_trap_mov_l1_glb(out_esize);
 
 // uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RS1));
-// uint8_t* dst = (uint8_t*)MMU.get_phy_addr(RD);
+// uint8_t* dst = (uint8_t*)MMU.npc_addr_to_mem(RD);
 
 uint32_t data_type = DMAE_DATA_TYPE;
 struct DmaeShapeStride dmae_ss;

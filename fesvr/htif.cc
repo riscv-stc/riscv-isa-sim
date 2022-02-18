@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <getopt.h>
+#include "sim.h"
 
 /* Attempt to determine the execution prefix automatically.  autoconf
  * sets PREFIX, and pconfigure sets __PCONFIGURE__PREFIX. */
@@ -64,8 +65,9 @@ htif_t::htif_t(int argc, char** argv) : htif_t()
   register_devices();
 }
 
-htif_t::htif_t(const std::vector<std::string>& args) : htif_t()
+htif_t::htif_t(const std::vector<std::string>& args, simif_t *sim) : htif_t()
 {
+    simif = sim;
   int argc = args.size() + 1;
   char * argv[argc];
   argv[0] = (char *) "htif";
@@ -113,17 +115,33 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
   // that have already been preloaded through a sideband
   class preload_aware_memif_t : public memif_t {
    public:
-    preload_aware_memif_t(htif_t* htif) : memif_t(htif), htif(htif) {}
+    preload_aware_memif_t(htif_t* htif,simif_t *simif) : memif_t(htif), htif(htif), simif(simif) {}
 
     void write(addr_t taddr, size_t len, const void* src) override
     {
-      if (!htif->is_address_preloaded(taddr, len))
-        memif_t::write(taddr, len, src);
+        reg_t upaddr = 0;
+
+        if (!htif->is_address_preloaded(taddr, len)) {
+            if (simif->is_bottom_ddr(taddr)) {
+                for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
+                    upaddr = simif->bottom_ddr_to_upper((reg_t)taddr, i);
+                    if (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR <= upaddr) {
+                        memif_t::write(upaddr, len, src);
+                    } else {
+                        throw std::runtime_error("upaddr error");
+                        // 怎么报个警 ??
+                    }
+                }
+            } else {
+                memif_t::write(taddr, len, src);
+            }
+        }
     }
 
    private:
     htif_t* htif;
-  } preload_aware_memif(this);
+    simif_t *simif;
+  } preload_aware_memif(this, simif);
 
   return load_elf(path.c_str(), &preload_aware_memif, entry);
 }
@@ -230,25 +248,69 @@ int htif_t::run()
 
   while (!signal_exit && exitcode == 0)
   {
-    if (auto tohost = from_target(mem.read_uint64(tohost_addr))) {
-      mem.write_uint64(tohost_addr, target_endian<uint64_t>::zero);
-      command_t cmd(mem, tohost, fromhost_callback);
-      device_list.handle_command(cmd);
+    if (simif->is_bottom_ddr(tohost_addr)) {
+        bool is_all_to_host = true;
+        addr_t bank_tohost_addr = 0;
+        addr_t bank_fromhost_addr = 0;
+
+        for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
+            bank_tohost_addr = simif->bottom_ddr_to_upper(tohost_addr, bankid);
+
+            auto tohost = from_target(mem.read_uint64(bank_tohost_addr));
+            if (tohost) {
+                simif->set_bank_finish(bankid, true);
+            } else {
+                is_all_to_host = false;
+            }
+        }
+        if (is_all_to_host) {
+            for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
+                bank_tohost_addr = simif->bottom_ddr_to_upper(tohost_addr, bankid);
+                mem.write_uint64(bank_tohost_addr, target_endian<uint64_t>::zero);
+            }
+            command_t cmd(mem, is_all_to_host, fromhost_callback);
+            device_list.handle_command(cmd);
+        } else {
+            idle();
+        }
+
+        if (signal_dump) {
+            dump_mems();
+            signal_dump = false;
+            signal(SIGUSR1, &handle_dump_signal);
+        }
+
+        device_list.tick();
+
+        for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
+            bank_fromhost_addr = simif->bottom_ddr_to_upper(fromhost_addr, bankid);
+
+            if (!fromhost_queue.empty() && !mem.read_uint64(bank_fromhost_addr)) {
+                mem.write_uint64(bank_fromhost_addr, to_target(fromhost_queue.front()));
+                fromhost_queue.pop();
+            }
+        }
     } else {
-      idle();
-    }
+        if (auto tohost = from_target(mem.read_uint64(tohost_addr))) {
+        mem.write_uint64(tohost_addr, target_endian<uint64_t>::zero);
+        command_t cmd(mem, tohost, fromhost_callback);
+        device_list.handle_command(cmd);
+        } else {
+        idle();
+        }
 
-    if (signal_dump) {
-      dump_mems();
-      signal_dump = false;
-      signal(SIGUSR1, &handle_dump_signal);
-    }
+        if (signal_dump) {
+        dump_mems();
+        signal_dump = false;
+        signal(SIGUSR1, &handle_dump_signal);
+        }
 
-    device_list.tick();
+        device_list.tick();
 
-    if (!fromhost_queue.empty() && !mem.read_uint64(fromhost_addr)) {
-      mem.write_uint64(fromhost_addr, to_target(fromhost_queue.front()));
-      fromhost_queue.pop();
+        if (!fromhost_queue.empty() && !mem.read_uint64(fromhost_addr)) {
+        mem.write_uint64(fromhost_addr, to_target(fromhost_queue.front()));
+        fromhost_queue.pop();
+        }
     }
   }
 

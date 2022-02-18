@@ -7,6 +7,7 @@
 #include "devices.h"
 #include "trap.h"
 #include "simif.h"
+#include "bankif.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -362,8 +363,8 @@ class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, hwsync_t *hs, uint32_t idx,
-              uint32_t id, bool halt_on_reset,
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, uint32_t idxinbank,
+              uint32_t id, uint32_t bank_id, bool halt_on_reset,
               FILE *log_file);
   ~processor_t();
 
@@ -438,8 +439,10 @@ public:
   Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
+  bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();
-  uint32_t get_idx() {return idx; };
+  uint32_t get_idxinbank() {return idxinbank; };
+  uint32_t get_bank_id() {return bank_id;};
   uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
@@ -613,12 +616,14 @@ public:
 
 private:
   simif_t* sim;
+  bankif_t* bank;
   hwsync_t *hwsync;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
   state_t state;
-  uint32_t idx;
+  uint32_t idxinbank;
+  uint32_t bank_id;
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;

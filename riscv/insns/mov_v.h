@@ -3,8 +3,8 @@ require_extension('V');
 class CustomInsns CusIns;
 struct ShapeStride sst;
 sst_fill(sst, 1, 1);
-unsigned long rs1 = MMU.get_phy_addr(RS1);
-unsigned long rd = MMU.get_phy_addr(RD);
+unsigned long rs1 = MMU.npc_addr_to_mem(RS1);
+unsigned long rd = MMU.npc_addr_to_mem(RD);
 
 VME_DTYPE_DECODING_TO_TYPE({
     check_traps_mov_v(sizeof(dtype_lut));

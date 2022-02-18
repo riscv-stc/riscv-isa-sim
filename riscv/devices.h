@@ -25,6 +25,7 @@
 
 class pcie_driver_t;
 class processor_t;
+class simif_t;
 
 class abstract_device_t {
  public:
@@ -98,7 +99,7 @@ class mbox_device_t : public abstract_device_t {
  */
 class sysdma_device_t : public abstract_device_t {
  public:
-  sysdma_device_t(int dma_idx, std::vector<processor_t*>&);
+  sysdma_device_t(int dma_idx, simif_t *sim);
   ~sysdma_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -144,7 +145,7 @@ class sysdma_device_t : public abstract_device_t {
  private:
 
   void dma_core(int ch);
-  std::vector<processor_t*>& procs_;
+  simif_t *sim;
 
   // dma direction
   enum direction_t {
@@ -249,7 +250,7 @@ class share_mem_t : public abstract_device_t {
 
 class clint_t : public abstract_device_t {
  public:
-  clint_t(std::vector<processor_t*>&, uint64_t freq_hz, bool real_time);
+  clint_t(simif_t *sim, uint64_t freq_hz, bool real_time);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   size_t size() { return CLINT_SIZE; }
@@ -258,7 +259,8 @@ class clint_t : public abstract_device_t {
   typedef uint64_t mtime_t;
   typedef uint64_t mtimecmp_t;
   typedef uint32_t msip_t;
-  std::vector<processor_t*>& procs;
+  //std::vector<processor_t*>& procs;
+  simif_t *sim;
   uint64_t freq_hz;
   bool real_time;
   uint64_t real_time_ref_secs;

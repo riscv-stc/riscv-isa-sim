@@ -82,7 +82,7 @@ void debug_module_t::reset()
 {
   assert(sim->nprocs() > 0);
   for (unsigned i = 0; i < sim->nprocs(); i++) {
-    processor_t *proc = sim->get_core(i);
+    processor_t *proc = sim->get_core_by_idxinsim((int)i);
     if (proc)
       proc->halt_request = proc->HR_NONE;
   }
@@ -206,7 +206,7 @@ bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         for (unsigned i = 0; i < nprocs; i++) {
           if (!hart_state[i].halted &&
               hart_state[i].haltgroup == hart_state[id].haltgroup) {
-            processor_t *proc = sim->get_core(i);
+            processor_t *proc = sim->get_core_by_idxinsim((int)i);
             proc->halt_request = proc->HR_GROUP;
             // TODO: What if the debugger comes and writes dmcontrol before the
             // halt occurs?
@@ -273,7 +273,7 @@ processor_t *debug_module_t::processor(unsigned hartid) const
 {
   processor_t *proc = NULL;
   try {
-    proc = sim->get_core(hartid);
+    proc = sim->get_core_by_idxinsim((int)hartid);
   } catch (const std::out_of_range&) {
   }
   return proc;
@@ -829,7 +829,7 @@ bool debug_module_t::dmi_write(unsigned address, uint32_t value)
 
           if (dmcontrol.ndmreset) {
             for (size_t i = 0; i < sim->nprocs(); i++) {
-              processor_t *proc = sim->get_core(i);
+              processor_t *proc = sim->get_core_by_idxinsim((int)i);
               proc->reset();
             }
           }

@@ -3,10 +3,11 @@
 #include "mmu.h"
 #include "arith.h"
 #include "simif.h"
+#include "bankif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc)
- : sim(sim), proc(proc),
+mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc)
+ : sim(sim), bank(bank), proc(proc),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   target_big_endian(false),
 #endif
@@ -81,15 +82,23 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
 
 tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(vaddr, sizeof(fetch_temp), FETCH, 0);
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
-    return refill_tlb(vaddr, paddr, host_addr, FETCH);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     return refill_tlb(vaddr, paddr, host_addr, FETCH);
   } else {
-    if (!mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
+    if (!(((proc&&bank) && bank->npc_mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp,idxinbank)) ||
+        (bank && bank->bank_mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp)) ||
+        (sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp)))) {
+
       throw trap_instruction_access_fault(proc->state.v, vaddr, 0, 0);
+    }
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
     return entry;
   }
@@ -132,44 +141,47 @@ bool mmu_t::mmio_ok(reg_t addr, access_type type)
 
 bool mmu_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  if (!mmio_ok(addr, LOAD))
-    return false;
+    if (!mmio_ok(addr, LOAD))
+        return false;
 
-  return sim->mmio_load(addr, len, bytes);
+    if ((bank->bank_mmio_load(addr, len, bytes)) || (sim->mmio_load(addr, len, bytes))) {
+        return true;
+    }
+    return false;
 }
 
 bool mmu_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (!mmio_ok(addr, STORE))
+    if (!mmio_ok(addr, STORE))
+        return false;
+        
+    if ((bank->bank_mmio_store(addr, len, bytes)) || (sim->mmio_store(addr, len, bytes))) {
+        return true;
+    }
     return false;
-
-  return sim->mmio_store(addr, len, bytes);
 }
 
 void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate_flags)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     memcpy(bytes, host_addr, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
       tracer.trace(paddr, len, LOAD);
     else
       refill_tlb(addr, paddr, host_addr, LOAD);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
-    memcpy(bytes, host_addr, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
-      tracer.trace(paddr, len, LOAD);
-    else
-      refill_tlb(addr, paddr, host_addr, LOAD);
-  } else if (sim->in_local_mem(paddr, IO_DEVICE)) {
-    if (!sim->local_mmio_load(paddr, len, bytes, proc? proc->get_idx(): 0)) {
-      throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
-  } else {
-    if (!sim->mmio_load(paddr, len, bytes)) {
-		throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
+  } else if (!(((proc&&bank) && bank->npc_mmio_load(paddr, len, bytes,idxinbank)) ||
+        (bank && bank->bank_mmio_load(paddr, len, bytes)) ||
+        (sim->mmio_load(paddr, len, bytes)))) {
+
+    throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }
 
   if (!matched_trigger) {
@@ -182,6 +194,9 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
 
 void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_t xlate_flags)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
 
   if (!matched_trigger) {
@@ -191,35 +206,33 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
       throw *matched_trigger;
   }
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     memcpy(host_addr, bytes, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
       tracer.trace(paddr, len, STORE);
     else
       refill_tlb(addr, paddr, host_addr, STORE);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
-    memcpy(host_addr, bytes, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
-      tracer.trace(paddr, len, STORE);
-    else
-      refill_tlb(addr, paddr, host_addr, STORE);
-  } else if (sim->in_local_mem(paddr, IO_DEVICE)) {
-      if (!sim->local_mmio_store(paddr, len, bytes, proc? proc->get_idx(): 0)) {
-        throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-      }
-  } else {
-    if (!sim->mmio_store(paddr, len, bytes)) {
-      throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
+  } else if (!(((proc&&bank) && bank->npc_mmio_store(paddr, len, bytes,idxinbank)) ||
+        (bank && bank->bank_mmio_store(paddr, len, bytes)) ||
+        (sim->mmio_store(paddr, len, bytes)))) {
+
+    throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }
 }
 
-size_t mmu_t::get_phy_addr(reg_t paddr)
+size_t mmu_t::npc_addr_to_mem(reg_t paddr)
 {
   if (proc->get_xlen() == 32) {
     paddr &= 0xffffffff;
   }
-  return (size_t)sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0);
+  if (proc) {
+      return (size_t)proc->get_bank()->npc_addr_to_mem(paddr, proc->get_idxinbank());
+  } else {
+      return 0;
+  }
 }
 
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)

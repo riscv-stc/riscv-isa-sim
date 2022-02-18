@@ -2,7 +2,7 @@ require_extension('V');
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
-unsigned long rd = MMU.get_phy_addr(RD);
+unsigned long rd = MMU.npc_addr_to_mem(RD);
 uint8_t e_size = 2;
 
 switch (VME_DTYPE)
