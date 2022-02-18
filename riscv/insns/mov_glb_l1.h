@@ -21,4 +21,4 @@ uint64_t len = dmae_dst_len(data_type, &dmae_ss);
 // check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
 
 // dmae_mov(src, dst, data_type, &dmae_ss);
-dmae_vm_mov((reg_t)(RS1), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p, true, false);
+dmae_vm_mov((reg_t)(RS1), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p);

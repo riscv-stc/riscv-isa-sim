@@ -394,19 +394,14 @@ int which_npc(reg_t addr, reg_t *paddr)
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 {
   reg_t paddr = 0;
-  int bankid = 0;
-  int idxinbank = 0;
-  int idxinsim = 0;
-
-  idxinsim = which_npc(addr, &paddr);
-  if (-1 != idxinsim) {
-      bankid = mPSim->get_bankid(idxinsim);
-      idxinbank = mPSim->get_idxinbank(idxinsim);
-  }
+  int idxinsim = -1;
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(bytes, host_addr, len);
-  else if (-1 != idxinsim) {
+  else if (-1 != (idxinsim=mPSim->coreid_to_idxinsim(which_npc(addr, &paddr)))) {
+    int bankid = mPSim->get_bankid(idxinsim);
+    int idxinbank = mPSim->get_idxinbank(idxinsim);
+
     if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
       memcpy(bytes, host_addr, len);
       return true;
@@ -437,26 +432,20 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
 bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 {
   reg_t paddr = 0;
-  int bankid = 0;
-  int idxinbank = 0;
-  int idxinsim = 0;
-
-  idxinsim = which_npc(addr, &paddr);
-  if (-1 != idxinsim) {
-      bankid = mPSim->get_bankid(idxinsim);
-      idxinbank = mPSim->get_idxinbank(idxinsim);
-  }
+  int idxinsim = -1;
 
   if (auto host_addr = mPSim->addr_to_mem(addr))
     memcpy(host_addr, bytes, len);
-  else if (-1 != idxinsim) {
+  else if (-1 != (idxinsim=mPSim->coreid_to_idxinsim(which_npc(addr, &paddr)))) {
+    int bankid = mPSim->get_bankid(idxinsim);
+    int idxinbank = mPSim->get_idxinbank(idxinsim);
+
     if (auto host_addr = mPSim->npc_addr_to_mem(paddr, bankid, idxinbank)) {
-      memcpy(host_addr, bytes, len);
-      return true;
+        memcpy(host_addr, bytes, len);
+        return true;
     }
 
-    if (!mPSim->npc_mmio_store(paddr, len, bytes, bankid, 
-            idxinbank)) {
+    if (!mPSim->npc_mmio_store(paddr, len, bytes, bankid, idxinbank)) {
       std::cout << "PCIe driver store addr: 0x"
       	  << hex
       	  << addr

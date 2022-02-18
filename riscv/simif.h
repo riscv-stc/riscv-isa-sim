@@ -14,9 +14,9 @@ class processor_t;
 class simif_t
 {
 public:
-  // should return NULL for MMIO addresses
   virtual bool is_bottom_ddr(reg_t addr) const = 0;
   virtual reg_t bottom_ddr_to_upper(reg_t addr,int bankid) const = 0;
+
   virtual char* addr_to_mem(reg_t addr) = 0;
   virtual char* bank_addr_to_mem(reg_t addr, uint32_t bank_id) = 0;
   virtual char* npc_addr_to_mem(reg_t addr, uint32_t bank_id, uint32_t idxinbank) = 0;
@@ -40,14 +40,14 @@ public:
   virtual void dump_mems(std::string prefix, reg_t addr, size_t len, int proc_id) = 0;
 
     // get processor
+    virtual unsigned nprocs(void) const = 0;
+    virtual unsigned nbanks(void) const = 0;
+    virtual bank_t* get_bank(int idx) = 0;
     virtual int get_bankid(int idxinsim) const = 0;
     virtual int get_idxinbank(int idxinsim) const = 0;
     virtual int get_id_first_bank(void) const = 0;
     virtual int coreid_to_idxinsim(int coreid) = 0;
     virtual processor_t* get_core_by_idxinsim(int idxinsim) = 0;
-    virtual bank_t* get_bank(int idx) = 0;
-    virtual unsigned nprocs(void) const = 0;
-    virtual unsigned nbanks(void) const = 0;
 
     virtual void set_bank_finish(int bankid, bool finish) = 0;
     virtual bool is_bank_finish(int bankid) = 0;

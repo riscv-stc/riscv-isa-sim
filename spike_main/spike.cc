@@ -461,6 +461,11 @@ int main(int argc, char** argv)
     }
   }
 
+  if (((int)(nbanks)>(int)(nprocs)) || (0!=nprocs%nbanks)) {
+        std::cerr << "error " << "-p" << nprocs
+                << " -b" << nbanks << ".\n";
+        exit(1);
+  }
   sim_t s(isa, priv, varch, nprocs, nbanks, id_first_bank, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
       htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, board_id, chip_id, session_id, coremask);

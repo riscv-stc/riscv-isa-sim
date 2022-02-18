@@ -17,4 +17,4 @@ len = dmae_src_len(data_type, &dmae_ss);
 len = dmae_dst_len(data_type, &dmae_ss);
 //check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
 
-dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p, false, false);
+dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p);

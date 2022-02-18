@@ -229,7 +229,7 @@ size_t mmu_t::npc_addr_to_mem(reg_t paddr)
     paddr &= 0xffffffff;
   }
   if (proc) {
-      return (size_t)proc->get_bank()->npc_addr_to_mem(paddr, proc->get_idxinbank());
+      return (size_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank());
   } else {
       return 0;
   }

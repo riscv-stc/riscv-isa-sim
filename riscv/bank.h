@@ -50,6 +50,7 @@ private:
     int bank_id;
     int die_id;
     bool is_finish;
+    int pcie_enabled;
     std::vector<processor_t*> procs;
     pcie_driver_t *pcie_driver;
 

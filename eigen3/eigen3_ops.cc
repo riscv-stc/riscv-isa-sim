@@ -12447,8 +12447,7 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
  * virtual memory dmae mov
  * local_memory: NPC核内内存, l1, sp, index, misc, mbox
  */
-void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct DmaeShapeStride *dmae_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local)
+void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct DmaeShapeStride *dmae_ss, processor_t *p)
 {
     //src shape
     uint32_t shape_x = dmae_ss->shape_x;
@@ -12503,8 +12502,8 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
             dst_vaddr = (uint64_t)(rd);
             cpy_len = (uint64_t)(shape_x * shape_y * shape_z * e_size);
 
-            src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, is_rs1_local);
-            dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0, is_rd_local);
+            src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0);
+            dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0);
             
             memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
         }
@@ -12515,8 +12514,8 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
                     dst_vaddr = (uint64_t)(rd + j * copy_stride_d_x + i * copy_stride_d_y);
                     cpy_len = (uint64_t)(shape_x * e_size);
 
-                    src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, is_rs1_local);
-                    dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0, is_rd_local);
+                    src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0);
+                    dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0);
                     
                     memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
                 }
@@ -12527,70 +12526,3 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
     }
     WRITE_MEM_STC(rd, (uint8_t*)dst_paddr, CMT_LOG_DMAE);  
 }
-
-#if 0
-/* virtual memory mte mov */
-void mte_vm_mov(uint64_t src, uint64_t dst, uint32_t esize, const struct MteShapeStride *mte_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local)
-{
-    reg_t src_paddr = 0;
-    reg_t src_vaddr = 0;
-    reg_t dst_paddr = 0;
-    reg_t dst_vaddr = 0;
-    reg_t cpy_len = 0;
-
-    if ((mte_ss->stride_rd == 0) && (mte_ss->stride_rs1 == 0)) {
-        src_vaddr = (reg_t)src;
-        dst_vaddr = (reg_t)dst;
-        cpy_len = (reg_t)(mte_ss->column * mte_ss->row * esize);
-
-        src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, is_rs1_local);
-        dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0, is_rd_local);
-
-        memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-    } else {
-        for (int i = 0; i < mte_ss->row; i++) {
-            src_vaddr = (reg_t)(src + i * mte_ss->stride_rs1 * esize);
-            dst_vaddr = (reg_t)(dst + i * mte_ss->stride_rd * esize);
-            cpy_len = (reg_t)(mte_ss->column * esize);
-
-            src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, is_rs1_local);
-            dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0, is_rd_local);
-
-            memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-        }
-    }
-}
-
-void icmov_vm(uint64_t src, uint64_t dst, uint32_t esize, uint32_t dst_core_id,
-        const struct MteShapeStride *mte_ss, processor_t *p)
-{
-    reg_t src_paddr = 0;
-    reg_t src_vaddr = 0;
-    reg_t dst_paddr = 0;
-    reg_t dst_vaddr = 0;
-    reg_t cpy_len = 0;
-
-    if ((mte_ss->stride_rd == 0) && (mte_ss->stride_rs1 == 0)) {
-        src_vaddr = (reg_t)src;
-        dst_vaddr = (reg_t)dst;
-        cpy_len = (reg_t)(mte_ss->column * mte_ss->row * esize);
-
-        src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, true);
-        dst_paddr = MMU.vm_addr_to_mem_by_id_cluster(dst_vaddr, cpy_len, STORE, 0, dst_core_id);
-
-        memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-    } else {
-        for (int i = 0; i < mte_ss->row; i++) {
-            src_vaddr = (reg_t)(src + i * mte_ss->stride_rs1 * esize);
-            dst_vaddr = (reg_t)(dst + i * mte_ss->stride_rd * esize);
-            cpy_len = (reg_t)(mte_ss->column * esize);
-
-            src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0, true);
-            dst_paddr = MMU.vm_addr_to_mem_by_id_cluster(dst_vaddr, cpy_len, STORE, 0, dst_core_id);
-
-            memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-        }
-    }
-}
-#endif

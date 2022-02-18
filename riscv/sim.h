@@ -59,13 +59,15 @@ public:
     this->remote_bitbang = remote_bitbang;
   }
   const char* get_dts() { if (dts.empty()) reset(); return dts.c_str(); }
-  processor_t* get_core_by_idxinsim(int idxinsim);        /* index 0-31 */
-  bank_t* get_bank(int idx) { return banks.at(idx); }
-  void set_bank_finish(int bankid, bool finish);
-  bool is_bank_finish(int bankid);
+  
   unsigned nprocs(void) const { return sim_nprocs; }
   unsigned nbanks(void) const { return sim_nbanks; }
+
+  bank_t* get_bank(int idx) { return banks.at(idx); }
+  bool is_bank_finish(int bankid);
+  void set_bank_finish(int bankid, bool finish);
   int get_bankid(int idxinsim) const { return  idxinsim/core_num_of_bank + id_first_bank;};
+  processor_t* get_core_by_idxinsim(int idxinsim);        /* index 从0开始 */
   int get_idxinbank(int idxinsim) const { return  idxinsim%core_num_of_bank;};
   int get_id_first_bank(void) const {return id_first_bank;};
   int coreid_to_idxinsim(int coreid);
@@ -116,7 +118,8 @@ private:
   std::vector<std::string> exit_dump;
   std::string dump_path;
 
-  processor_t* get_core_by_idx(const std::string& i);
+  processor_t* get_core_by_id(int procid);
+  processor_t* get_core_by_id(const std::string& i);
   void step(size_t n); // step through simulation
   static const size_t INTERLEAVE = 5000;
   static const size_t INSNS_PER_RTC_TICK = 100; // 10 MHz clock for 1 BIPS core
@@ -135,6 +138,10 @@ private:
   // memory-mapped I/O routines
   bool is_upper_mem(reg_t addr);
   int get_bankid_by_uppermem(reg_t addr);
+
+  bool is_bottom_ddr(reg_t addr) const ;
+  reg_t bottom_ddr_to_upper(reg_t addr,int bankid) const;
+
   char* addr_to_mem(reg_t addr);
   char* bank_addr_to_mem(reg_t addr, uint32_t bank_id);
   char* npc_addr_to_mem(reg_t addr, uint32_t bank_id, uint32_t idxinbank);
@@ -150,9 +157,6 @@ private:
 
   void make_dtb();
   void set_rom();
-
-  bool is_bottom_ddr(reg_t addr) const ;
-  reg_t bottom_ddr_to_upper(reg_t addr,int bankid) const;
 
   const char* get_symbol(uint64_t addr);
 

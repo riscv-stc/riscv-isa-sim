@@ -406,24 +406,20 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     }
   }
 
- /* local: NPC核内内存, l1, sp, index, misc, mbox */
-  inline reg_t vm_addr_to_mem(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags, bool is_local)
+  inline reg_t vm_addr_to_mem(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags)
   {
     reg_t paddr = 0;
+    reg_t mem_addr = 0;
 
     paddr = translate(vm, len, type, xlate_flags);
 
-    if (is_local)
-      return (reg_t)npc_addr_to_mem(paddr);
-    return (reg_t)sim->addr_to_mem(paddr);
-  }
-
-  inline reg_t vm_addr_to_mem_by_id_cluster(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags,uint32_t coreid)
-  {
-    reg_t paddr = 0;
-
-    paddr = translate(vm, len, type, xlate_flags);
-    return (reg_t)bank->npc_addr_to_mem(paddr, coreid);
+    if ((mem_addr=(reg_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank())) ||
+        (mem_addr=(reg_t)bank->bank_addr_to_mem(paddr)) ||
+        (mem_addr=(reg_t)sim->addr_to_mem(paddr))) {
+        return mem_addr;
+    } else {
+        return 0;
+    }
   }
 
   static const reg_t ICACHE_ENTRIES = 1024;

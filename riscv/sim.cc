@@ -79,7 +79,6 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     remote_bitbang(NULL),
     debug_module(this, dm_config)
 {
-
     core_reset_n = 0;
     signal(SIGINT, &handle_signal);
 
@@ -90,9 +89,6 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
                 << nprocs << ").\n";
         exit(1);
     }
-
-    debug_module.add_device(&glb_bus);
-    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL);
 
     /* 创建并添加 hs */
     if ('\0' == hwsync_masks[0]) {
@@ -128,6 +124,9 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
                 hartids, halted);
     }
 
+    debug_module.add_device(&glb_bus);
+    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL);
+
     for (auto& x : mems)
         glb_bus.add_device(x.first, x.second);
 
@@ -140,13 +139,10 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
         *(uint32_t *)mem = (coremask & (0xff << i * 8)) >> i * 8;
     }
 
-#if 1   /* dtb机制暂不清晰，后续修改 */
     make_dtb();
-#endif
 
   void *fdt = (void *)dtb.c_str();
   //handle clic
-  #if 1 /* 迁移proc，解决proc和clint的关系" */
   clint.reset(new clint_t(this, /* procs */ CPU_HZ / INSNS_PER_RTC_TICK, real_time_clint));
   reg_t clint_base;
   if (fdt_parse_clint(fdt, &clint_base, "riscv,clint0")) {
@@ -154,7 +150,6 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
   } else {
     glb_bus.add_device(clint_base, clint.get());
   }
-  #endif
   
   //per core attribute
   int cpu_offset = 0, rc;
@@ -249,20 +244,26 @@ void sim_t::dump_mems() {
   dump_mems("output_mem", exit_dump, dump_path);
 }
 
-void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) {
-  if (prefix == "") prefix = "snapshot";
+void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) 
+{
+    char fname[256];
+    if (prefix == "") prefix = "snapshot";
 
-  // dump single memory range
-  char fname[256];
-  if (start >= l1_buffer_start && start + len < SRAM_START) {
-    snprintf(fname, sizeof(fname), "%s/%s@%d.0x%lx_0x%lx.dat",
-          dump_path.c_str(), prefix.c_str(), proc_id, start, len);
-    dump_mem(fname, start, len, proc_id, false);
-  } else {
-    snprintf(fname, sizeof(fname), "%s/%s@0x%lx_0x%lx.dat",
-          dump_path.c_str(), prefix.c_str(), start, len);
-    dump_mem(fname, start, len, -1, true);
-  }
+    // dump single memory range
+    if (is_upper_mem(start)) {        /* 高端内存 */
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(),start, len);
+        dump_mem(fname, start, len, proc_id, true);
+    } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {        /* npc_bus */
+        snprintf(fname, sizeof(fname),"%s/%s@%d.0x%lx_0x%lx.dat",
+            dump_path.c_str(), prefix.c_str(), proc_id, start, len);
+        dump_mem(fname, start, len, proc_id, false);
+    } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* bank_bus */
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(), start, len);
+        dump_mem(fname, start, len, proc_id, true);
+    } else {      /* glb_bus */
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(), start, len);
+        dump_mem(fname, start, len, -1, true);
+    }
 }
 
 void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::string path) {
@@ -277,8 +278,10 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       }
     } else if (mem == "llb") {
       // dump whole llb
-      snprintf(fname, sizeof(fname), "%s/%s@llb.dat", path.c_str(), prefix.c_str());
-      dump_mem(fname, LLB_AXI0_BUFFER_START + id_first_bank * LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
+      for (int i = get_id_first_bank() ; i < (int)(get_id_first_bank()+nbanks()) ; i++) {
+        snprintf(fname, sizeof(fname), "%s/%s_b%d@llb.dat", path.c_str(), prefix.c_str(),i);
+        dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BANK_BUFFER_SIZE, get_bank(i)->get_core_by_idxinbank(0)->get_id());
+      }
     } else {
       // dump memory range, format: <start>:<len>
       const std::regex re("(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)");
@@ -289,26 +292,24 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       }
       auto start = std::stoul(match[1], nullptr, 16);
       auto len = std::stoul(match[2], nullptr, 16);
-      if (start >= l1_buffer_start && start + len < SRAM_START) {
-        // dump l1 address range
+
+      if (is_upper_mem(start)) {        /* 高端内存 */
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(),start, len);
+        dump_mem(fname, start, len, get_bank(get_bankid_by_uppermem(start))->get_core_by_idxinbank(0)->get_id(), true);
+      } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {         /* npc_bus */
         for (int i=0; i < (int)nprocs(); i++) {
-          snprintf(fname, sizeof(fname),
-            "%s/%s@%d.0x%lx_0x%lx.dat",
-            path.c_str(), prefix.c_str(), get_core_by_idxinsim(i)->get_id(), start, len);
-          dump_mem(fname, start, len, get_core_by_idxinsim(i)->get_id(), true);
+            snprintf(fname, sizeof(fname),"%s/%s@%d.0x%lx_0x%lx.dat",
+                path.c_str(), prefix.c_str(), get_core_by_idxinsim(i)->get_id(), start, len);
+            dump_mem(fname, start, len, get_core_by_idxinsim(i)->get_id(), true);
         }
-      } else {
-        // dump llb or ddr range
-        if (hwsync_masks[0] != 0)
-        {
-          snprintf(fname, sizeof(fname), "%s/%s_b%lu@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), id_first_bank, start, len);
-          dump_mem(fname, start, len, -1, true);
+      } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* bank_bus */
+        for (int i = get_id_first_bank() ; i < (int)(get_id_first_bank()+nbanks()) ; i++) {
+            snprintf(fname, sizeof(fname), "%s/%s_b%d@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), i, start, len);
+            dump_mem(fname, start, len, get_bank(i)->get_core_by_idxinbank(0)->get_id(), true);
         }
-        else
-        {
-          snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
-          dump_mem(fname, start, len, -1, true);
-        }
+      } else {      /* glb_bus */
+        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
+        dump_mem(fname, start, len, -1, true);
       }
     }
   }
@@ -316,12 +317,18 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
 
 void sim_t::dump_mem(const char *fname, reg_t addr, size_t len, int proc_id, bool space_end)
 {
-    int bankid = get_bankid(proc_id);
-    int idxinbank = get_idxinbank(proc_id);
+    char *mem = nullptr;
+    int idxinsim = coreid_to_idxinsim(proc_id);
+    int bankid = get_bankid(idxinsim);
+    int idxinbank = get_idxinbank(idxinsim);
 
-  char *mem = (proc_id >= 0)?
-              npc_addr_to_mem(addr, bankid ,idxinbank) :
-              addr_to_mem(addr);
+    if ((0>idxinsim) || (!((mem=npc_addr_to_mem(addr,bankid,idxinbank)) || (mem=bank_addr_to_mem(addr,bankid))))) {
+        mem = addr_to_mem(addr);
+    }
+    if (!mem) {
+        std::cerr << "Dump addr 0x" << std::hex << addr << "error." << std::endl;
+        return ;
+    }
 
   std::cout << "Dump memory to " << fname
             << ", addr=0x" << std::hex << addr
@@ -383,15 +390,29 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
     const std::regex re4(".*@([0-9]+|ddr|llb)\\.(0x[0-9a-fA-F]+)_(0x[0-9a-fA-F]+)\\.([a-z]+)");
     std::smatch match;
 
+    // output_mem_b2@llb.bin
     if (std::regex_match(fname, match, re0)) {
       if (match[1] == "ddr") {
         reg_t start = 0;
         size_t len = 0xc0000000;
         load_mem(fname.c_str(), start, len);
       } else if (match[1] == "llb") {
-        reg_t start = LLB_AXI0_BUFFER_START + id_first_bank * LLB_BANK_BUFFER_SIZE;
+        std::string bankstr = {};
+        int pos = fname.find('@');
+        if (0 >= pos) {
+             std::cerr << "File name format error." << std::endl;
+        }
+        bankstr = fname.substr(0,pos);
+        pos = bankstr.rfind("_b");
+        if (0 >= pos) {
+             std::cerr << "File name format error, not found \"_bx\"" << std::endl;
+        }
+        bankstr = bankstr.substr(pos+2);
+        auto bankid = std::stoul(bankstr, nullptr, 16);
+
+        reg_t start = LLB_AXI0_BUFFER_START;
         size_t len = LLB_BANK_BUFFER_SIZE;
-        load_mem(fname.c_str(), start, len);
+        load_mem(fname.c_str(), start, len, get_bank(bankid)->get_core_by_idxinbank(0)->get_id());
       } else {
         auto proc_id = std::stoul(match[1], nullptr, 16);
         reg_t start = l1_buffer_start;
@@ -418,7 +439,24 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
       auto start = std::stoul(match[2], nullptr, 16);
       auto len = std::stoul(match[3], nullptr, 16);
       if (match[1] == "ddr" || match[1] == "llb") {
-        load_mem(fname.c_str(), start, len);
+          if (is_upper_mem(start)) {
+            load_mem(fname.c_str(), start, len, -1);
+          } else {
+            std::string bankstr = {};
+            int pos = fname.find('@');
+            if (0 >= pos) {
+                    std::cerr << "File name format error." << std::endl;
+            }
+            bankstr = fname.substr(0,pos);
+            pos = bankstr.rfind("_b");
+            if (0 >= pos) {
+                    std::cerr << "File name format error, not found \"_bx\"" << std::endl;
+            }
+            bankstr = bankstr.substr(pos+2);
+            auto bankid = std::stoul(bankstr, nullptr, 16);
+
+            load_mem(fname.c_str(), start, len, get_bank(bankid)->get_core_by_idxinbank(0)->get_id());
+          }
       } else {
         auto proc_id = std::stoul(match[1], nullptr, 16);
         load_mem(fname.c_str(), start, len, proc_id);
@@ -479,10 +517,18 @@ void sim_t::load_mem(const char *fname, reg_t addr, size_t len)
 
 void sim_t::load_mem(const char *fname, reg_t addr, size_t len, int proc_id)
 {
-    int bankid = get_bankid(proc_id);
-    int idxinbank = get_idxinbank(proc_id);
+    char *mem = nullptr;
+    int idxinsim = coreid_to_idxinsim(proc_id);
+    int bankid = get_bankid(idxinsim);
+    int idxinbank = get_idxinbank(idxinsim);
 
-  char *mem = npc_addr_to_mem(addr, bankid, idxinbank);
+    if ((0>idxinsim) || (!((mem=npc_addr_to_mem(addr,bankid,idxinbank)) || (mem=bank_addr_to_mem(addr,bankid))))) {
+        mem = addr_to_mem(addr);
+    }
+    if (!mem) {
+        std::cerr << "Load addr 0x" << std::hex << addr << "error." << std::endl;
+        return ;
+    }
 
   std::cout << "Load memory from " << fname
             << ", addr=0x" << std::hex << addr
@@ -756,9 +802,7 @@ char* sim_t::addr_to_mem(reg_t addr)
     if (!paddr_ok(addr))
         return NULL;
 
-    if (is_bottom_ddr(addr)) {      /* 临时措施，因signature需要 */
-        return bank_addr_to_mem(addr, get_id_first_bank());
-    } else if (is_upper_mem(addr)) {        /* 高端内存，访问upper region ddr建议使用bank级接口 */
+    if (is_upper_mem(addr)) {        /* 高端内存，访问upper region ddr建议使用bank级接口 */
         bankid = get_bankid_by_uppermem(addr);
         if (0 <= bankid) {
             return bank_addr_to_mem(addr, bankid);
@@ -890,7 +934,17 @@ void sim_t::proc_reset(unsigned id)
   debug_module.proc_reset(id);
 }
 
-/* index 0-31 */
+int sim_t::coreid_to_idxinsim(int coreid)
+{
+    for (int idxinsim = 0; idxinsim < (int)nprocs() ; idxinsim++) {
+        if (coreid == (int)get_core_by_idxinsim(idxinsim)->get_id())
+            return idxinsim;
+    }
+
+    return -1;
+}
+
+/* index, 从0开始, 0 ~ nprocs-1 */
 processor_t* sim_t::get_core_by_idxinsim(int idxinsim)
 {
     bank_t *pbank = nullptr;
@@ -902,14 +956,16 @@ processor_t* sim_t::get_core_by_idxinsim(int idxinsim)
         return nullptr;
 }
 
-int sim_t::coreid_to_idxinsim(int coreid)
+processor_t* sim_t::get_core_by_id(int procid)
 {
-    for (int idxinsim = 0; idxinsim < (int)nprocs() ; idxinsim++) {
-        if (coreid == (int)get_core_by_idxinsim(idxinsim)->get_id())
-            return idxinsim;
-    }
+    int idxinsim = 0;
 
-    return -1;
+    idxinsim = coreid_to_idxinsim(procid);
+    if (0 <= idxinsim) {
+        return get_core_by_idxinsim(idxinsim);
+    } else {
+        return nullptr;
+    }
 }
 
 void sim_t::set_bank_finish(int bankid, bool finish)

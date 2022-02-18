@@ -17,7 +17,7 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
             hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
             const std::vector<int> hartids, bool halted) : nprocs(bank_nprocs),
-            bank_id(bankid), procs(std::max(size_t(bank_nprocs),size_t(1))),
+            bank_id(bankid), pcie_enabled(pcie_enabled), procs(std::max(size_t(bank_nprocs),size_t(1))),
             npc_bus(std::max(size_t(bank_nprocs),size_t(1))),is_finish(false)
 {
     /* 添加 sysdma */
@@ -82,11 +82,13 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
 }
 
 bank_t::~bank_t() {
+    if(pcie_enabled) {
+        delete pcie_driver;
+    }
+
     for (size_t i = 0; i < nprocs; i++) {
         delete procs[i];
     }
-    delete pcie_driver;
-    //delete llb;
     
     for (size_t i = 0; i < nprocs; i++) {
         delete npc_bus[i];
@@ -118,8 +120,7 @@ bool bank_t::bank_mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 bool bank_t::in_npc_mem(reg_t addr, local_device_type type) {
-  auto desc = npc_bus[0]->find_device(addr);    
-  /* 这里需要该 npc_bus0 是否合理 */
+  auto desc = npc_bus[0]->find_device(addr);
 
   if (type == IO_DEVICE) {
     if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
@@ -179,7 +180,6 @@ reg_t bank_t::bottom_ddr_to_upper(reg_t addr) const
 /* 取bank内mem_t类型的资源, 如 sysdma llb ddr */
 char* bank_t::bank_addr_to_mem(reg_t addr) 
 {
-#if 1
     reg_t address = 0;
 
     if (is_bottom_ddr(addr)) {
@@ -197,31 +197,11 @@ char* bank_t::bank_addr_to_mem(reg_t addr)
     }
 
     return NULL;
-#else
-    if ((in_npc_mem(addr, L1_BUFFER) ||
-        (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-        (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
-            has_hwsync_masks()) {
-        if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
-            if (addr - desc.first < mem->size())
-                return mem->contents() + (addr - desc.first);
-            return NULL;
-        }
-    } else {
-        if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-            if (addr - desc.first < mem->size())
-                return mem->contents() + (addr - desc.first);
-            return NULL;
-            }
-    }
-    return NULL;
-#endif
 }
 
 /* 取npc内的 l1buffer im sp 等mem_t类型的资源 */
 char* bank_t::npc_addr_to_mem(reg_t addr, uint32_t idxinbank) 
 {
-#if 1
     auto desc = npc_bus[idxinbank]->find_device(addr);
 
     if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
@@ -231,29 +211,6 @@ char* bank_t::npc_addr_to_mem(reg_t addr, uint32_t idxinbank)
     }
 
   return NULL;
-#else
-  // addr on local bus (l1 | im cache)
-  auto desc = npc_bus[idx]->find_device(addr);
-  if ((in_npc_mem(addr, L1_BUFFER) ||
-    (addr >= LLB_AXI0_BUFFER_START) && (addr < LLB_AXI0_BUFFER_START + LLB_BUFFER_SIZE) ||
-    (addr >= LLB_AXI1_BUFFER_START) && (addr < LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE)) &&
-        has_hwsync_masks()) {
-    if (auto mem = dynamic_cast<share_mem_t *>(desc.second)) {
-      if (addr - desc.first < mem->size()) {
-          return mem->contents() + (addr - desc.first);
-      }
-      return NULL;
-    }
-  } else {
-    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-      if (addr - desc.first < mem->size())
-          return mem->contents() + (addr - desc.first);
-      return NULL;
-    }
-  }
-
-  return NULL;
-#endif
 }
 
 void bank_t::set_bank_finish(bool finish)
