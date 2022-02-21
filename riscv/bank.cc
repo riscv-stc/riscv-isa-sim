@@ -42,11 +42,6 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
         throw std::runtime_error("unsupported core id");
     }
 
-    /* 添加 llb */
-    mem_t *llb = new mem_t(LLB_BANK_BUFFER_SIZE);
-    bank_bus.add_device(LLB_AXI0_BUFFER_START, llb);
-    bank_bus.add_device(LLB_AXI1_BUFFER_START, llb);
-
     /* DDR */
     if (ddr_size > 0) {
         bank_bus.add_device(GLB_DIE0_UPPER_REGION_BANK0_START_ADDR+bank_id*GLB_UPPER_REGION_SIZE, new mem_t(ddr_size));

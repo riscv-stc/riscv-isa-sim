@@ -110,6 +110,11 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
     glb_bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
 
+    /* 添加 llb */
+    mem_t *llb = new mem_t(LLB_BANK_BUFFER_SIZE*4);
+    glb_bus.add_device(LLB_AXI0_BUFFER_START, llb);
+    glb_bus.add_device(LLB_AXI1_BUFFER_START, llb);
+
     /* 创建bank */
     if ((1<sim_nbanks) && (0!=(sim_nprocs%sim_nbanks))) {
         std::cerr << "Number of nprocs ("
@@ -277,10 +282,10 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
         dump_mem(fname, l1_buffer_start, l1_buffer_size, get_core_by_idxinsim(i)->get_id(), true);
       }
     } else if (mem == "llb") {
-      // dump whole llb
-      for (int i = get_id_first_bank() ; i < (int)(get_id_first_bank()+nbanks()) ; i++) {
+      // dump whole llb, 4*10=40M
+      for (int i = 0 ; i < 4 ; i++) {
         snprintf(fname, sizeof(fname), "%s/%s_b%d@llb.dat", path.c_str(), prefix.c_str(),i);
-        dump_mem(fname, LLB_AXI0_BUFFER_START, LLB_BANK_BUFFER_SIZE, get_bank(i)->get_core_by_idxinbank(0)->get_id());
+        dump_mem(fname, LLB_AXI0_BUFFER_START+i*LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
       }
     } else {
       // dump memory range, format: <start>:<len>
@@ -410,9 +415,9 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
         bankstr = bankstr.substr(pos+2);
         auto bankid = std::stoul(bankstr, nullptr, 16);
 
-        reg_t start = LLB_AXI0_BUFFER_START;
+        reg_t start = LLB_AXI0_BUFFER_START+bankid*LLB_BANK_BUFFER_SIZE;
         size_t len = LLB_BANK_BUFFER_SIZE;
-        load_mem(fname.c_str(), start, len, get_bank(bankid)->get_core_by_idxinbank(0)->get_id());
+        load_mem(fname.c_str(), start, len, -1);
       } else {
         auto proc_id = std::stoul(match[1], nullptr, 16);
         reg_t start = l1_buffer_start;
@@ -455,7 +460,11 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
             bankstr = bankstr.substr(pos+2);
             auto bankid = std::stoul(bankstr, nullptr, 16);
 
-            load_mem(fname.c_str(), start, len, get_bank(bankid)->get_core_by_idxinbank(0)->get_id());
+            if (match[1] == "llb") {
+                load_mem(fname.c_str(), start, len, -1);
+            } else {
+                load_mem(fname.c_str(), start, len, get_bank(bankid)->get_core_by_idxinbank(0)->get_id());
+            }
           }
       } else {
         auto proc_id = std::stoul(match[1], nullptr, 16);
