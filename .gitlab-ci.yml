@@ -43,7 +43,7 @@ package:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - tar -jc archive $LINK | ssh release@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
+    - tar -jc archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
   only:
     - 2.x-dev-centos7
     - tags
