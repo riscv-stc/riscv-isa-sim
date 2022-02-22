@@ -393,7 +393,7 @@ on `(hostname || uname -n) 2>/dev/null | sed 1q`
 "
 
 # Files that config.status was made for.
-config_files=" fesvr.mk:fesvr/fesvr.mk.in riscv.mk:riscv/riscv.mk.in disasm.mk:disasm/disasm.mk.in customext.mk:customext/customext.mk.in fdt.mk:fdt/fdt.mk.in softfloat.mk:softfloat/softfloat.mk.in eigen3.mk:eigen3/eigen3.mk.in spike_main.mk:spike_main/spike_main.mk.in spike_dasm.mk:spike_dasm/spike_dasm.mk.in Makefile riscv-fesvr.pc riscv-softfloat.pc riscv-eigen3.pc riscv-disasm.pc"
+config_files=" fesvr.mk:fesvr/fesvr.mk.in riscv.mk:riscv/riscv.mk.in disasm.mk:disasm/disasm.mk.in customext.mk:customext/customext.mk.in fdt.mk:fdt/fdt.mk.in softfloat.mk:softfloat/softfloat.mk.in iniparse.mk:iniparse/iniparse.mk.in eigen3.mk:eigen3/eigen3.mk.in spike_main.mk:spike_main/spike_main.mk.in spike_dasm.mk:spike_dasm/spike_dasm.mk.in Makefile riscv-fesvr.pc riscv-softfloat.pc riscv-eigen3.pc riscv-disasm.pc"
 config_headers=" config.h"
 
 ac_cs_usage="\
@@ -541,6 +541,7 @@ do
     "customext.mk") CONFIG_FILES="$CONFIG_FILES customext.mk:customext/customext.mk.in" ;;
     "fdt.mk") CONFIG_FILES="$CONFIG_FILES fdt.mk:fdt/fdt.mk.in" ;;
     "softfloat.mk") CONFIG_FILES="$CONFIG_FILES softfloat.mk:softfloat/softfloat.mk.in" ;;
+    "iniparse.mk") CONFIG_FILES="$CONFIG_FILES iniparse.mk:iniparse/iniparse.mk.in" ;;
     "spike_main.mk") CONFIG_FILES="$CONFIG_FILES spike_main.mk:spike_main/spike_main.mk.in" ;;
     "spike_dasm.mk") CONFIG_FILES="$CONFIG_FILES spike_dasm.mk:spike_dasm/spike_dasm.mk.in" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
@@ -613,8 +614,8 @@ echo 'BEGIN {' >"$ac_tmp/subs1.awk" &&
 cat >>"$ac_tmp/subs1.awk" <<\_ACAWK &&
 S["LTLIBOBJS"]=""
 S["LIBOBJS"]=""
-S["subprojects_enabled"]=" fesvr riscv disasm customext fdt softfloat eigen3 spike_main spike_dasm"
-S["subprojects"]=" fesvr riscv disasm customext fdt softfloat eigen3 spike_main spike_dasm"
+S["subprojects_enabled"]=" fesvr riscv disasm customext fdt softfloat iniparse eigen3 spike_main spike_dasm"
+S["subprojects"]=" fesvr riscv disasm customext fdt softfloat iniparse eigen3 spike_main spike_dasm"
 S["HAVE_DLOPEN"]="yes"
 S["HAVE_INT128"]="yes"
 S["INSTALL_DATA"]="${INSTALL} -m 644"
@@ -756,6 +757,7 @@ D["HAVE_LIBPTHREAD"]=" 1"
 D["DISASM_ENABLED"]=" /**/"
 D["CUSTOMEXT_ENABLED"]=" /**/"
 D["FDT_ENABLED"]=" /**/"
+D["INIPARSE_ENABLED"]=" /**/"
 D["SOFTFLOAT_ENABLED"]=" /**/"
 D["EIGEN3_ENABLED"]=" /**/"
 D["SPIKE_MAIN_ENABLED"]=" /**/"

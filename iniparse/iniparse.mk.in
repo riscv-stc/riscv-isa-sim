@@ -1,0 +1,9 @@
+iniparse_subproject_deps = \
+
+iniparse_hdrs = \
+	iniparser.h \
+	dictionary.h \
+
+iniparse_c_srcs = \
+	iniparser.c \
+	dictionary.c \
