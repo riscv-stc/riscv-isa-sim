@@ -2940,13 +2940,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
-#define VI_LD_PI(stride, offset, elt_width) \
+#define VI_LD_PI(stride, offset, elt_width, is_mask_ldst) \
   const reg_t nf = insn.v_nf() + 1; \
-  const reg_t vl = P.VU.vl; \
+  const reg_t vl = is_mask_ldst ? ((P.VU.vl + 7) / 8) : P.VU.vl; \
   const reg_t baseAddr = RS1; \
   const reg_t vd = insn.rd(); \
   WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
-  VI_CHECK_LOAD(elt_width, false); \
+  VI_CHECK_LOAD(elt_width, is_mask_ldst); \
   WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
   for (reg_t i = 0; i < vl; ++i) { \
     VI_ELEMENT_SKIP(i); \
@@ -3014,13 +3014,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
-#define VI_ST_PI(stride, offset, elt_width) \
+#define VI_ST_PI(stride, offset, elt_width, is_mask_ldst) \
   const reg_t nf = insn.v_nf() + 1; \
-  const reg_t vl = P.VU.vl; \
+  const reg_t vl = is_mask_ldst ? ((P.VU.vl + 7) / 8) : P.VU.vl; \
   const reg_t baseAddr = RS1; \
   const reg_t vs3 = insn.rd(); \
   WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
-  VI_CHECK_STORE(elt_width, false); \
+  VI_CHECK_STORE(elt_width, is_mask_ldst); \
   WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
   for (reg_t i = 0; i < vl; ++i) { \
     VI_STRIP(i) \

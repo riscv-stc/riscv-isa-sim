@@ -7649,7 +7649,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     half *rs1_start;
-    half *left_val, *row_val, *col_val;
+    half *left_val;
     half *start;
     half val;
 
@@ -7782,8 +7782,6 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
 
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -7809,8 +7807,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     half *rs1_start;
-    half *left_val, *row_val;
-    int8_t *col_val;
+    half *left_val;
     half *start;
     half val;
 
@@ -7931,9 +7928,6 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
         }
     }
 
-
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -7958,7 +7952,7 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     int8_t *rs1_start;
-    int8_t *left_val, *row_val, *col_val;
+    int8_t *left_val;
     int8_t *start;
     int32_t val;
 
@@ -8070,8 +8064,6 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
         }
     }
 
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -8100,7 +8092,7 @@ int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, stru
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     float32_t *rs1_start;
-    float32_t *left_val, *row_val, *col_val;
+    float32_t *left_val;
     float32_t *start;
     float32_t val;
 
@@ -8209,9 +8201,6 @@ int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, stru
         }
     }
 
-
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -10203,9 +10192,9 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     half max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            half tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(max)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
             } 
@@ -10214,13 +10203,13 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNF16UI_stc(half_to_float16_t(max))) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(max < tmp) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10229,7 +10218,7 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
         std::cout << "max:" << max << std::endl;
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10245,9 +10234,9 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     Bfloat16 max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            Bfloat16 tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            Bfloat16 tmp = rs1_matrix(j,i);
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
                 continue;
             } 
@@ -10256,13 +10245,13 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(max < tmp) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10271,7 +10260,7 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
         std::cout << "max:" << max << std::endl;
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10286,9 +10275,9 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t maxRow=0, maxCol=0;
     float32_t max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            float32_t tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(max) && isNaNF32UI_stc(tmp)) {
                 continue;
             } 
@@ -10297,13 +10286,13 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     continue;
                 } else if (isNaNF32UI_stc(max)) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(Float32(max) < Float32(tmp)) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10311,7 +10300,7 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
     }
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10993,9 +10982,9 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     half min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            half tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(min)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
             } 
@@ -11004,13 +10993,13 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNF16UI_stc(half_to_float16_t(min))) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(min > tmp) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11019,7 +11008,7 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
         std::cout << "min:" << min << std::endl;
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -11035,9 +11024,10 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     Bfloat16 min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            Bfloat16 tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            Bfloat16 tmp = rs1_matrix(j,i);
+            std::cout << "minRow:" << j <<  " minCol:" << i << std::endl;
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
                 continue;
             } 
@@ -11046,13 +11036,13 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(min > tmp) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11061,7 +11051,7 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
         std::cout << "min:" << min << std::endl;
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -11076,9 +11066,9 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t minRow=0, minCol=0;
     float32_t min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            float32_t tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(min) && isNaNF32UI_stc(tmp)) {
                 continue;
             } 
@@ -11087,13 +11077,13 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     continue;
                 } else if (isNaNF32UI_stc(min)) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(Float32(min) > Float32(tmp)) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11101,7 +11091,7 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
     }
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
