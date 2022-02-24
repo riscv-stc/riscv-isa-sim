@@ -41,6 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
+uint_fast8_t softfloat_countLeadingZeros64_subMagsF64( uint64_t a )
+    { return a ? __builtin_clzll( a ) : 64; }
+
 float64_t
  softfloat_subMagsF64( uint_fast64_t uiA, uint_fast64_t uiB, bool signZ )
 {
@@ -86,7 +89,7 @@ float64_t
             signZ = ! signZ;
             sigDiff = -sigDiff;
         }
-        shiftDist = softfloat_countLeadingZeros64( sigDiff ) - 11;
+        shiftDist = softfloat_countLeadingZeros64_subMagsF64( sigDiff ) - 11;
         expZ = expA - shiftDist;
         if ( expZ < 0 ) {
             shiftDist = expA;

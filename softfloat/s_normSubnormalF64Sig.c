@@ -38,12 +38,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "platform.h"
 #include "internals.h"
 
+uint_fast8_t softfloat_countLeadingZeros64_norm( uint64_t a )
+    { return a ? __builtin_clzll( a ) : 64; }
+
 struct exp16_sig64 softfloat_normSubnormalF64Sig( uint_fast64_t sig )
 {
     int_fast8_t shiftDist;
     struct exp16_sig64 z;
 
-    shiftDist = softfloat_countLeadingZeros64( sig ) - 11;
+    shiftDist = softfloat_countLeadingZeros64_norm( sig ) - 11;
     z.exp = 1 - shiftDist;
     z.sig = sig<<shiftDist;
     return z;

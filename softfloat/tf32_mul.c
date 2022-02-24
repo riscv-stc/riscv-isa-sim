@@ -111,7 +111,6 @@ float32_t tf32_mul( float32_t a, float32_t b )
     sig32Z = (uint_fast32_t) sigA * sigB;
     // sigA和sigB相乘，最小为0x4000*0x8000=0x20000000以满足32位要求，已经不需要再移位了
     sigZ = sig32Z;
-    if ( sig32Z & 0xFFFF ) sigZ |= 1;
     if ( sigZ < 0x40000000 ) {
         --expZ;
         sigZ <<= 1;
