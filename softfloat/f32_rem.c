@@ -60,6 +60,10 @@ float32_t f32_rem( float32_t a, float32_t b )
     uint_fast32_t uiZ;
     union ui32_f32 uZ;
 
+    //uint_fast8_t roundingMode = softfloat_round_min;
+    //bool exact = false;
+    //return f32_sub( a, f32_mul( f32_roundToInt( f32_mul( a, f32_reciprocal( b ) ), roundingMode, exact), b ) );
+
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     uA.f = a;
