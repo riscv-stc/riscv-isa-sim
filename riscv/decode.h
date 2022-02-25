@@ -1355,6 +1355,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
     throw trap_ncp_cust_invalid_param();    
 
+#define check_vme_stride_d( width, stride_d ) \
+  if ( ( stride_d != 0 ) && ( stride_d < width ) ) \
+    throw trap_ncp_cust_invalid_param(); 
+
 // check traps for ve***.m instructions, element-wise
 #define check_traps_vexxx_m_element_wise(etype) ({ \
         check_cust_misaligned_base(RS1, etype); \
@@ -1370,6 +1374,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
                       (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
+        check_vme_stride_d(SHAPE1_COLUMN, STRIDE_RD); \
   })
 
 // check traps for verand.v instructions
