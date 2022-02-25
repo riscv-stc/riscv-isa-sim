@@ -2260,7 +2260,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     }
     Map_half rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
     for (i = 0; i < kh * kw * in_c; i+=4){
-        for (j = 0; j < out_c; j++){
+        for (j = 0; j < out_c; j++) {
             sp_index1 = sp_matrix(i/2, j);
             sp_index2 = sp_matrix(i/2+1, j);
             rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
@@ -3878,7 +3878,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     Map_int8_t rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
     // pad_vs2
     int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
-    for (i = 0; i < kh * kw * in_c; i++){
+    for (i = 0; i < kh * kw * in_c; i++) {
         for (j = 0; j < out_c; j++){
             *(rs2_pad + i*out_c + j) = 0;
         }
@@ -3957,8 +3957,10 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     half *row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
     int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     //get de/quant coeff
     float16_t quant_coeff = f32_to_f16(ss->mme_quant_coeff);
@@ -3975,16 +3977,24 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
+                float16_t rs1_1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index1)), quant_coeff);
+                float16_t rs1_2_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index2)), quant_coeff);
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
-                    res += rs1_i8 * col_matrix(0, k);
+                    int8_t rs1_1_i8 = f16_to_i8(rs1_1_f16, softfloat_roundingMode, true);
+                    int8_t rs1_2_i8 = f16_to_i8(rs1_2_f16, softfloat_roundingMode, true);
+                    res += rs1_1_i8 * col_matrix(0, k/2);
+                    res += rs1_2_i8 * col_matrix(0, k/2+1);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
-                    res += rs1_ui8 * col_matrix(0, k);
+                    uint8_t rs1_1_ui8 = f16_to_ui8(rs1_1_f16, softfloat_roundingMode, true);
+                    uint8_t rs1_2_ui8 = f16_to_ui8(rs1_2_f16, softfloat_roundingMode, true);
+                    res += rs1_1_ui8 * col_matrix(0, k/2);
+                    res += rs1_2_ui8 * col_matrix(0, k/2+1);
                 }              
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
