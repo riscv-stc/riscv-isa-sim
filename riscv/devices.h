@@ -23,6 +23,45 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "bankif.h"
+#include "iniparser.h"
+
+#define HWSYNC_START          (0xd0080000)
+
+/* NPUV2 The lower 3GB region (0x00_0000_0000 ~ 0x00_BFFF_FFFF) is the remapping target region of DDR space */
+#define ddr_mem_start        (0x00000000)
+
+/* NPUV2 L1 Buffer (1024KB+288KB) */
+#define l1_buffer_start      (0xc0000000)
+#define l1_buffer_size       (0x00148000)
+
+/* NPUV2 Intermediate Buffer(256KB) */
+#define im_buffer_start      (0xc0400000)
+#define im_buffer_size       (0x00040000)
+
+/* NPUV2 Index(.sp) RAM (80KB) */
+#define sp_buffer_start      (0xc0500000)
+#define sp_buffer_size       (0x00014000)
+
+#define MISC_START           (0xc07f3000)   /* NPUV2 NP_MISC 4KB */
+#define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
+
+#define NP_IOV_ATU_START    (0xc07f7000)    /* ipa address trans unit */
+#define NP_IOV_ATU_SIZE     (0x1000)
+
+#define NPC_LOCAL_ADDR_START (l1_buffer_start)
+#define NPC_LOCAL_REGIN_SIZE (0x800000)
+
+//ddr high 1G address, just accessed by pcie and sysdma
+//range is 0xc0800000 ~ 0xf8000000
+/* NPUV2 SoC Region(non-cacheable) 0x00_C080_0000 */
+#define GLB_UPPER_REGION_BASE       (0)
+#define GLB_UPPER_REGION_SIZE      (0x100000000)
+#define GLB_BOTTOM_REGION_SIZE (0xC0000000)
+#define GLB_DIE0_UPPER_REGION_BANK0_START_ADDR (0x800000000)
+#define GLB_DIE1_UPPER_REGION_BANK0_START_ADDR (0x8800000000)
+
+#define IS_NPC_LOCAL_REGION(addr)   (((addr>=NPC_LOCAL_ADDR_START) && \
+        (addr<NPC_LOCAL_ADDR_START+NPC_LOCAL_REGIN_SIZE)) ? true : false)
 
 class pcie_driver_t;
 class processor_t;

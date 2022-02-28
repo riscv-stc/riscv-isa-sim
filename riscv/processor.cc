@@ -23,15 +23,15 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-                         simif_t* sim, bankif_t* bank, hwsync_t* hs, uint32_t idxinbank,
-                         uint32_t id, uint32_t bank_id, bool halt_on_reset,
-                         FILE* log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), ext(NULL), id(id), xlen(0),
-  histogram_enabled(false), log_commits_enabled(false),
-  hwsync(hs), idxinbank(idxinbank), bank_id(bank_id), mbox(NULL),
-  async_running(true), exit_request(false),
-  log_file(log_file), halt_on_reset(halt_on_reset),
-  extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
+              const char *ipaini,FILE *log_file)
+  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs),
+  pcie_driver(pcie_driver),ext(NULL), 
+  idxinbank(idxinbank), bank_id(bank_id), id(id), xlen(0),histogram_enabled(false), 
+  log_commits_enabled(false),log_file(log_file), halt_on_reset(halt_on_reset),
+  mbox(NULL),extension_table(256, false), impl_table(256, false),async_running(true), 
+  exit_request(false),last_pc(1), executions(1)
 {
   VU.p = this;
 
@@ -40,7 +40,20 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   parse_varch_string(varch);
 
   register_base_instructions();
-  mmu = new mmu_t(sim, bank, this);
+
+    npc_bus.add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    npc_bus.add_device(im_buffer_start, new mem_t(im_buffer_size));
+    npc_bus.add_device(sp_buffer_start, new mem_t(sp_buffer_size));
+    npc_bus.add_device(MISC_START, new misc_device_t(this));
+
+    mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , (pcie_driver) ? true : false);
+    npc_bus.add_device(MBOX_START, mbox);
+
+    /* ipa */
+    ipa = new ipa_t(ipaini, get_id());
+    npc_bus.add_device(NP_IOV_ATU_START, ipa);
+
+  mmu = new mmu_t(sim, bank, this,ipa);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -109,6 +122,8 @@ processor_t::~processor_t()
 
   delete mmu;
   delete disassembler;
+  delete mbox;
+  delete ipa;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -540,6 +555,8 @@ void processor_t::reset()
   if (ext)
     ext->reset(); // reset the extension
 
+  ipa->reset();
+
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
 }
@@ -596,6 +613,72 @@ void processor_t::set_mmu_capability(int cap)
       set_impl(IMPL_MMU, false);
       break;
   }
+}
+
+
+char* processor_t::addr_to_mem(reg_t addr)
+{
+    auto desc = npc_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+        if (addr - desc.first < mem->size())
+            return mem->contents() + (addr - desc.first);
+        return NULL;
+    }
+
+    return NULL;
+}
+
+bool processor_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    return npc_bus.load(addr & 0xffffffff, len, bytes);
+}
+
+bool processor_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    return npc_bus.store(addr & 0xffffffff, len, bytes);
+}
+
+bool processor_t::in_npc_mem(reg_t addr, local_device_type type) {
+  auto desc = npc_bus.find_device(addr);
+
+  if (type == IO_DEVICE) {
+    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+    return false;
+  } else if (type == L1_BUFFER) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = l1_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  } else if (type == SP_BUFFER) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = sp_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  } else if (IM_BUFFER == type) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = im_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void processor_t::take_interrupt(reg_t pending_interrupts)
@@ -2462,9 +2545,9 @@ void processor_t::trigger_updated()
 /* 输入x86机器耗费的时钟数和riscv二进制指令，粗略计算在npc耗费时钟数 */
 uint64_t processor_t::host_clks_2_npc(uint64_t host_clks, uint64_t insn_b) {
     #define STAND_INSN_RATIO    5000
-    #define NPUV2_INSN_RATIO    5000
+    #define NPUV2_INSN_RATIO    5000ul
     #define STAND_INSN_CLKS_MAX 100
-    #define NPUV2_INSN_CLKS_MAX 1000000
+    #define NPUV2_INSN_CLKS_MAX 1000000ul
     uint64_t hs_clks = 0;
 
     switch((insn_b>>2) & 0x1f) {

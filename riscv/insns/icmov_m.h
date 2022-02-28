@@ -10,7 +10,6 @@ else
 check_traps_icmov_m(e_size);
 
 auto dst_coreId = DST_CORE_ID;
-int dst_idxinsim = p->get_sim()->coreid_to_idxinsim(dst_coreId);
 
 //src shape
 // #define ICMOV_OUTPUT_MSG
@@ -46,11 +45,9 @@ uint16_t col = MTE_SHAPE_COLUMN;
 uint16_t row = MTE_SHAPE_ROW; 
 uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
 uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
-int dst_bankid = p->get_sim()->get_bankid(dst_idxinsim);
-int dst_idxinbank = p->get_sim()->get_idxinbank(dst_idxinsim);
 
-auto src = (uint8_t*)MMU.npc_addr_to_mem(RS1);
-auto dst = (uint8_t*)p->get_sim()->npc_addr_to_mem(zext_xlen(RD),dst_bankid, dst_idxinbank);
+auto src = (uint8_t*)MMU.mte_addr_to_mem(RS1);
+auto dst = (uint8_t*)MMU.mte_addr_to_mem(zext_xlen(RD),dst_coreId);
 assert(dst != nullptr && src != nullptr);
 
 if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {

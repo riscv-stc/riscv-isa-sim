@@ -12502,8 +12502,8 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
             dst_vaddr = (uint64_t)(rd);
             cpy_len = (uint64_t)(shape_x * shape_y * shape_z * e_size);
 
-            src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0);
-            dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0);
+            src_paddr = (uint64_t)(MMU.dmae_addr_to_mem(src_vaddr, cpy_len, LOAD, 0));
+            dst_paddr = (uint64_t)(MMU.dmae_addr_to_mem(dst_vaddr, cpy_len, STORE, 0));
             
             memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
         }
@@ -12514,9 +12514,9 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
                     dst_vaddr = (uint64_t)(rd + j * copy_stride_d_x + i * copy_stride_d_y);
                     cpy_len = (uint64_t)(shape_x * e_size);
 
-                    src_paddr = MMU.vm_addr_to_mem(src_vaddr, cpy_len, LOAD, 0);
-                    dst_paddr = MMU.vm_addr_to_mem(dst_vaddr, cpy_len, STORE, 0);
-                    
+                    src_paddr = (uint64_t)(MMU.dmae_addr_to_mem(src_vaddr, cpy_len, LOAD, 0));
+                    dst_paddr = (uint64_t)(MMU.dmae_addr_to_mem(dst_vaddr, cpy_len, STORE, 0));
+
                     memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
                 }
             }

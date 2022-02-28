@@ -25,7 +25,6 @@ public:
 
     virtual bool is_bottom_ddr(reg_t addr) const = 0;
     virtual reg_t bottom_ddr_to_upper(reg_t addr) const = 0;
-    virtual bool in_npc_mem(reg_t addr, local_device_type type) = 0;
 
     virtual char* bank_addr_to_mem(reg_t addr) = 0;
     virtual char* npc_addr_to_mem(reg_t addr, uint32_t idxinbank) = 0;

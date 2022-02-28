@@ -488,10 +488,10 @@ static inline void clear_bit(int nr, unsigned long *addr)
 
 // throw trap if rvv inst access out of l1&im buffer
 #define check_rvv_access_without_exception(x, len) \
-        (!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
-            !(p->get_bank()->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len-1, IM_BUFFER)))
+        (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
+            !(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len-1, IM_BUFFER)))
 
 
 //don't modify elment of big than vl
@@ -993,31 +993,31 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if cust inst access out of l1&im buffer
 #define check_cust_access(x, len) \
-        if (!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
-            !(p->get_bank()->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
+            !(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of l1 buffer
 #define check_cust_access_l1(x, len) \
-        if (!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of im buffer
 #define check_cust_access_im(x, len) \
-        if (!(p->get_bank()->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of sp_idx buffer
 #define check_cust_access_sp(x, len) \
-        if (!(p->get_bank()->in_npc_mem(zext_xlen(x), SP_BUFFER) && \
-              p->get_bank()->in_npc_mem(zext_xlen(x) + len - 1, SP_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, SP_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
@@ -1776,21 +1776,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_l1(x) \
-        if ((!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
-            (!(p->get_bank()->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
+        if ((!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
             throw trap_tcp_access_start(x); \
         }
 
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_icmov(x) \
-        if (!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
             throw trap_tcp_access_start_icmov(x); \
         }
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_l1(x) \
-        if ((!(p->get_bank()->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
-            (!(p->get_bank()->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
+        if ((!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
             throw trap_tcp_access_end_l1(x); \
         }
 

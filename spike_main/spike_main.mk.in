@@ -2,10 +2,10 @@ spike_main_subproject_deps = \
 	fdt \
 	fesvr \
 	softfloat \
+	iniparse \
     eigen3 \
 	disasm \
 	riscv \
-	iniparse \
 
 spike_main_install_prog_srcs = \
 	spike.cc \

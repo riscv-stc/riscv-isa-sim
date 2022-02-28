@@ -6,8 +6,8 @@
 #include "bankif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc)
- : sim(sim), bank(bank), proc(proc),
+mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, ipa_t *ipa)
+ : sim(sim), bank(bank), proc(proc), ipa(ipa),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   target_big_endian(false),
 #endif
@@ -86,6 +86,15 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(vaddr, sizeof(fetch_temp), FETCH, 0);
+#if 0       /* 取指可不用ipa, 这部分空间不会经过ipa映射 */
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, sizeof(fetch_temp))) {
+            ipa_trap(paddr);
+            return ;
+        }
+        paddr = ipa->translate(paddr, sizeof(fetch_temp));
+    }
+#endif
 
   if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
         (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
@@ -167,6 +176,13 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, len)) {
+            ipa_trap(paddr);
+            return ;
+        }
+        paddr = ipa->translate(paddr, len);
+    }
 
   if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
         (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
@@ -198,6 +214,13 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, len)) {
+            ipa_trap(paddr);
+            return ;
+        }
+        paddr = ipa->translate(paddr, len);
+    }
 
   if (!matched_trigger) {
     reg_t data = reg_from_bytes(len, bytes);
@@ -223,6 +246,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   }
 }
 
+/* 访问npc核内的 8M npc local region,不经过mmu和ipa */
 size_t mmu_t::npc_addr_to_mem(reg_t paddr)
 {
   if (proc->get_xlen() == 32) {
@@ -233,6 +257,109 @@ size_t mmu_t::npc_addr_to_mem(reg_t paddr)
   } else {
       return 0;
   }
+}
+
+/**
+ * mte访存特点:
+ * 1) 访问范围, llb, l1
+ * 2) 不经过 mmu , 经过 ipa at转换 
+ * 3) l1访存会跨核跨bank
+*/
+char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
+{
+    int len = 1;
+    char *host_addr = nullptr;
+    int bankid = sim->get_bankid(sim->coreid_to_idxinsim(procid));
+    int idxinbank = sim->get_idxinbank(sim->coreid_to_idxinsim(procid));
+
+    if (proc->get_xlen() == 32) {
+        paddr &= 0xffffffff;
+    }
+
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, len)) {
+            ipa_trap(paddr);
+            return nullptr;
+        }
+        paddr = ipa->translate(paddr, len);
+    }
+
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = sim->npc_addr_to_mem(paddr, bankid, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
+    // if (nullptr) {
+    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
+    // }
+    return host_addr;
+}
+
+char * mmu_t::mte_addr_to_mem(reg_t paddr)
+{
+    int len = 1;
+    char *host_addr = nullptr;
+    int idxinbank = proc ? proc->get_idxinbank() : 0;
+
+    if (proc->get_xlen() == 32) {
+        paddr &= 0xffffffff;
+    }
+
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, len)) {
+            ipa_trap(paddr);
+            return nullptr;
+        }
+        paddr = ipa->translate(paddr, len);
+    }
+
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
+    // if (nullptr==host_addr) {
+    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
+    // }
+    return host_addr;
+}
+
+/**
+ * dmae 访存特点:
+ * 1) 访问范围 l1, llb, glb
+ * 2) 经过 mmu 和 ipa at
+*/
+char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_t xlate_flags)
+{
+    char *host_addr = nullptr;
+    int idxinbank = proc ? proc->get_idxinbank() : 0;
+
+    if (proc->get_xlen() == 32) {
+        paddr &= 0xffffffff;
+    }
+
+    paddr = translate(paddr, len, type, xlate_flags);
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, len)) {
+            ipa_trap(paddr);
+            return nullptr;
+        }
+        paddr = ipa->translate(paddr, len);
+    }
+
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+    } else {
+        if (nullptr == (host_addr=bank->bank_addr_to_mem(paddr)))
+            host_addr = sim->addr_to_mem(paddr);
+    }
+
+    // if (nullptr==host_addr) {
+    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
+    // }
+    return host_addr;
 }
 
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)

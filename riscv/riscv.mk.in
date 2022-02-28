@@ -51,6 +51,7 @@ riscv_srcs = \
 	interactive.cc \
 	trap.cc \
 	cachesim.cc \
+	ipa.cc \
 	mmu.cc \
 	bank.cc \
 	hwsync.cc \

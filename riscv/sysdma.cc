@@ -115,7 +115,7 @@ void sysdma_device_t::dma_core(int ch) {
       if (!((dst=bank->bank_addr_to_mem(desc->ddar)) || (dst=sim->addr_to_mem(desc->ddar)))) {
         throw std::runtime_error("dma_core() addr error");
       }
-      if (!((src=bank->bank_addr_to_mem(desc->ddar)) || (src=sim->addr_to_mem(desc->ddar)))) {
+      if (!((src=bank->bank_addr_to_mem(desc->dsar)) || (src=sim->addr_to_mem(desc->dsar)))) {
         throw std::runtime_error("dma_core() addr error");
       }
 

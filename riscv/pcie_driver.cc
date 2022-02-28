@@ -355,8 +355,6 @@ int pcie_driver_t::recv()
 
 #define CORE_NUM_OF_BANK (0x8)
 #define CORE_ID_MASK     (0x7)
-#define NPC_LOCAL_ADDR_START (0xc0000000)
-#define NPC_LOCAL_REGIN_SIZE (0x800000)
 #define IGNORE_BANKID(core_id) ((core_id) & CORE_ID_MASK)
 #define NOC_NPC_TOTAL \
 	(sizeof(noc_npc_base) / \

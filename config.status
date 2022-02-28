@@ -614,8 +614,8 @@ echo 'BEGIN {' >"$ac_tmp/subs1.awk" &&
 cat >>"$ac_tmp/subs1.awk" <<\_ACAWK &&
 S["LTLIBOBJS"]=""
 S["LIBOBJS"]=""
-S["subprojects_enabled"]=" fesvr riscv disasm customext fdt softfloat iniparse eigen3 spike_main spike_dasm"
-S["subprojects"]=" fesvr riscv disasm customext fdt softfloat iniparse eigen3 spike_main spike_dasm"
+S["subprojects_enabled"]=" fesvr iniparse riscv disasm customext fdt softfloat eigen3 spike_main spike_dasm"
+S["subprojects"]=" fesvr iniparse riscv disasm customext fdt softfloat eigen3 spike_main spike_dasm"
 S["HAVE_DLOPEN"]="yes"
 S["HAVE_INT128"]="yes"
 S["INSTALL_DATA"]="${INSTALL} -m 644"

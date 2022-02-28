@@ -51,7 +51,8 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask)
+             bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, 
+             size_t chip_id, size_t session_id, uint32_t coremask, const char *ipaini)
   : htif_t(args, this),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -126,11 +127,11 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     for (size_t i = get_id_first_bank() ; i < nbanks()+get_id_first_bank() ; i++) {
         banks[i] = new bank_t(isa, priv, varch, this, ddr_size, hwsync,
                 log_file.get(), pcie_enabled, board_id, chip_id,core_num_of_bank, i,
-                hartids, halted);
+                hartids, halted, ipaini);
     }
 
     debug_module.add_device(&glb_bus);
-    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL);
+    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL, nullptr);
 
     for (auto& x : mems)
         glb_bus.add_device(x.first, x.second);

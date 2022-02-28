@@ -16,9 +16,9 @@
 bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
             hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
-            const std::vector<int> hartids, bool halted) : nprocs(bank_nprocs),
-            bank_id(bankid), pcie_enabled(pcie_enabled), procs(std::max(size_t(bank_nprocs),size_t(1))),
-            npc_bus(std::max(size_t(bank_nprocs),size_t(1))),is_finish(false)
+            const std::vector<int> hartids, bool halted, const char *ipaini) : nprocs(bank_nprocs),
+            bank_id(bankid),is_finish(false), pcie_enabled(pcie_enabled), 
+            procs(std::max(size_t(bank_nprocs),size_t(1)))
 {
     /* 添加 sysdma */
     switch (bankid) {
@@ -50,27 +50,15 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
     /* pcie driver */
     if(pcie_enabled) {
         pcie_driver = new pcie_driver_t(sim, this, bank_id, pcie_enabled, board_id, chip_id);
+    } else {
+        pcie_driver = nullptr;
     }
 
     /* 创建 processor */
-    for (size_t i = 0; i < nprocs; i++) {
-        int hart_id = hartids.empty() ? (i + bank_id * nprocs) : hartids[bank_id*nprocs+i];
-        procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, i,
-                    hart_id, bank_id, halted, log_file);
-    }
-
-    /* 为每个proc添加 npc_bus 资源 */
     for (int i = 0; i < nprocs; i++) {
-        npc_bus[i] = new bus_t();
-
-        npc_bus[i]->add_device(l1_buffer_start, new mem_t(l1_buffer_size));
-        npc_bus[i]->add_device(im_buffer_start, new mem_t(im_buffer_size));
-        npc_bus[i]->add_device(sp_buffer_start, new mem_t(sp_buffer_size));
-        npc_bus[i]->add_device(MISC_START, new misc_device_t(procs[i]));
-        
-        mbox_device_t *box = new mbox_device_t(pcie_driver, procs[i] , pcie_enabled);
-        npc_bus[i]->add_device(MBOX_START, box);
-        procs[i]->add_mbox(box);
+        int hart_id = hartids.empty() ? (i + bank_id * nprocs) : hartids[bank_id*nprocs+i];
+        procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, pcie_driver, i,
+                    hart_id, bank_id, halted, ipaini, log_file);
     }
 
     return ;
@@ -81,12 +69,8 @@ bank_t::~bank_t() {
         delete pcie_driver;
     }
 
-    for (size_t i = 0; i < nprocs; i++) {
+    for (int i = 0; i < nprocs; i++) {
         delete procs[i];
-    }
-    
-    for (size_t i = 0; i < nprocs; i++) {
-        delete npc_bus[i];
     }
 
     return ;
@@ -95,12 +79,12 @@ bank_t::~bank_t() {
 /* 取npc核内非 mem_t类型的资源，如 misc mbox */
 bool bank_t::npc_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idxinbank)
 {
-  return npc_bus[idxinbank]->load(addr & 0xffffffff, len, bytes);
+  return get_core_by_idxinbank(idxinbank)->mmio_load(addr, len, bytes);
 }
 
 bool bank_t::npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idxinbank)
 {
-  return npc_bus[idxinbank]->store(addr & 0xffffffff, len, bytes);
+  return get_core_by_idxinbank(idxinbank)->mmio_store(addr, len, bytes);
 }
 
 /* 取bank内非 mem_t类型的资源，如 hwsync */
@@ -112,48 +96,6 @@ bool bank_t::bank_mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 bool bank_t::bank_mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
     return bank_bus.store(addr, len, bytes);
-}
-
-bool bank_t::in_npc_mem(reg_t addr, local_device_type type) {
-  auto desc = npc_bus[0]->find_device(addr);
-
-  if (type == IO_DEVICE) {
-    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
-      if (addr - desc.first <= mem->size()) {
-        return true;
-      }
-    }
-
-    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
-      if (addr - desc.first <= mem->size()) {
-        return true;
-      }
-    }
-    return false;
-  } else if (type == L1_BUFFER) {
-    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-      reg_t start_addr = l1_buffer_start;
-      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
-        return true;
-      }
-    }
-  } else if (type == SP_BUFFER) {
-    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-      reg_t start_addr = sp_buffer_start;
-      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
-        return true;
-      }
-    }
-  } else if (IM_BUFFER == type) {
-    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-      reg_t start_addr = im_buffer_start;
-      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
-        return true;
-      }
-    }
-  }
-
-  return false;
 }
 
 bool bank_t::is_bottom_ddr(reg_t addr) const
@@ -197,15 +139,7 @@ char* bank_t::bank_addr_to_mem(reg_t addr)
 /* 取npc内的 l1buffer im sp 等mem_t类型的资源 */
 char* bank_t::npc_addr_to_mem(reg_t addr, uint32_t idxinbank) 
 {
-    auto desc = npc_bus[idxinbank]->find_device(addr);
-
-    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
-        if (addr - desc.first < mem->size())
-            return mem->contents() + (addr - desc.first);
-        return NULL;
-    }
-
-  return NULL;
+    return get_core_by_idxinbank(idxinbank)->addr_to_mem(addr);
 }
 
 void bank_t::set_bank_finish(bool finish)

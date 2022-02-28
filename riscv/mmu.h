@@ -70,7 +70,7 @@ class trigger_matched_t
 class mmu_t
 {
 public:
-  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc);
+  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, ipa_t *ipa);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -344,6 +344,16 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   amo_func(uint32)
   amo_func(uint64)
 
+  inline void ipa_trap(reg_t paddr)
+  {
+    try {
+        throw trap_ipa_pmp_trigger(false, paddr, 0, 0);
+    } catch(trap_ipa_pmp_trigger &t) {
+        cerr << "trap_ipa_pmp_trigger 0x" << hex << paddr << endl;
+        return ;
+    }
+  }
+
   inline void yield_load_reservation()
   {
     load_reservation_address = (reg_t)-1;
@@ -356,6 +366,13 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     int idxinbank = proc ? proc->get_idxinbank() : 0;
 
     reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, 1)) {
+            ipa_trap(paddr);
+            return ;
+        }
+        paddr = ipa->translate(paddr, 1);
+    }
 
     if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
         (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
@@ -395,6 +412,13 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
       store_conditional_address_misaligned(vaddr);
 
     reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
+    if(ipa && ipa->is_ipa_enabled()) {
+        if (!ipa->pmp_ok(paddr, 1)) {
+            ipa_trap(paddr);
+            return false;
+        }
+        paddr = ipa->translate(paddr, 1);
+    }
 
     if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
         (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
@@ -403,22 +427,6 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
         return load_reservation_address == refill_tlb(vaddr, paddr, host_addr, STORE).target_offset + vaddr;
     } else {
       throw trap_store_access_fault((proc) ? proc->state.v : false, vaddr, 0, 0); // disallow SC to I/O space
-    }
-  }
-
-  inline reg_t vm_addr_to_mem(reg_t vm, reg_t len, access_type type, uint32_t xlate_flags)
-  {
-    reg_t paddr = 0;
-    reg_t mem_addr = 0;
-
-    paddr = translate(vm, len, type, xlate_flags);
-
-    if ((mem_addr=(reg_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank())) ||
-        (mem_addr=(reg_t)bank->bank_addr_to_mem(paddr)) ||
-        (mem_addr=(reg_t)sim->addr_to_mem(paddr))) {
-        return mem_addr;
-    } else {
-        return 0;
     }
   }
 
@@ -481,6 +489,10 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   size_t npc_addr_to_mem(reg_t paddr);
 
+  char * mte_addr_to_mem(reg_t paddr, int procid);
+  char * mte_addr_to_mem(reg_t paddr);
+  char * dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_t xlate_flags);
+
   void register_memtracer(memtracer_t*);
 
   int is_dirty_enabled()
@@ -529,6 +541,7 @@ private:
   simif_t* sim;
   bankif_t* bank;
   processor_t* proc;
+  ipa_t *ipa = nullptr;
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;
