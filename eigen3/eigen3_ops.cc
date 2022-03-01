@@ -3444,9 +3444,11 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
     Map_uint8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     uint8_t *row_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
-    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_uint8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
     
     half *deq_val =  (half *)malloc(out_c * sizeof(half));
     if (deq_addr) {
@@ -3460,10 +3462,14 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j))); 
         }
@@ -3622,17 +3628,23 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     Map_int8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     int8_t *row_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
-    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_int8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
         }
@@ -3781,9 +3793,11 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     Map_uint8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     uint8_t *row_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
-    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_uint8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     Bfloat16 *deq_val =  (Bfloat16 *)malloc(out_c * sizeof(Bfloat16));
     if (deq_addr) {
@@ -3798,10 +3812,14 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));  
         }
@@ -4146,9 +4164,11 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     Map_Bfloat16 left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     Bfloat16 *row_val = (Bfloat16 *)malloc(okh * okw * in_c * sizeof(Bfloat16));
-    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_Bfloat16 row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     //get de/quant coeff
     Bfloat16 quant_coeff = Bfloat16(ss->mme_quant_coeff);
@@ -4165,14 +4185,20 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                Bfloat16 rs1_bf16 = row_matrix(0, k) * quant_coeff;
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                Bfloat16 rs1_1_bf16 = row_matrix(0, k + sp_index1) * quant_coeff;
+                Bfloat16 rs1_2_bf16 = row_matrix(0, k + sp_index2) * quant_coeff;
                 if(isSign) {
-                    res += int8_t(rs1_bf16) * col_matrix(0, k);
+                    res += int8_t(rs1_1_bf16) * col_matrix(0, k/2);
+                    res += int8_t(rs1_2_bf16) * col_matrix(0, k/2+1);
                 } else {
-                    res += uint8_t(rs1_bf16) * col_matrix(0, k);
+                    res += uint8_t(rs1_1_bf16) * col_matrix(0, k/2);
+                    res += uint8_t(rs1_2_bf16) * col_matrix(0, k/2+1);
                 }                
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
