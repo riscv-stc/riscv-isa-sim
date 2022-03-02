@@ -11526,7 +11526,7 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
             else
                 even = f32_add(half_to_f32(rs1_matrix(i, j)), even);
         }
-        rd_matrix(i, 0) = f32_to_half(f32_add(odd, even));
+        rd_matrix(i, 0) = f32_to_half(f32_add(even, odd));
     }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
@@ -11544,15 +11544,15 @@ int CustomInsns::meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t odd = i32_to_f32(0);
-        float32_t even = i32_to_f32(0);
+        float32_t odd = i32_to_f32(-0);
+        float32_t even = i32_to_f32(-0);
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
-                odd = f32_add(odd, rs1_matrix(i,j));
+                odd = f32_add(rs1_matrix(i,j), odd);
             else 
-                even = f32_add(even, rs1_matrix(i, j));
+                even = f32_add(rs1_matrix(i, j), even);
         }
-        rd_matrix(i, 0) = f32_add(odd, even);
+        rd_matrix(i, 0) = f32_add(even, odd);
     }
         
     return 0;
@@ -11568,15 +11568,15 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        Float32 odd = Float32(0);
-        Float32 even = Float32(0);
+        Float32 odd = Float32(-0);
+        Float32 even = Float32(-0);
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
-                odd += Float32(rs1_matrix(i, j));
+                odd = Float32(rs1_matrix(i, j)) + odd;
             else
-                even += Float32(rs1_matrix(i, j));
+                even = Float32(rs1_matrix(i, j)) + even;
         }
-        rd_matrix(i, 0) = Bfloat16(odd + even);
+        rd_matrix(i, 0) = Bfloat16(even + odd);
     }
     if (debug) {
         cout << "rs1: \n" << rs1_matrix << endl;
