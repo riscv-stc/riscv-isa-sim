@@ -216,12 +216,12 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
 sim_t::~sim_t()
 {
+    delete hwsync;
     for (int i = get_id_first_bank() ; i < (int)nbanks()+get_id_first_bank() ; i++) {
         delete banks[i];
     }
 
     delete debug_mmu;
-    delete hwsync;
 }
 
 void sim_thread_main(void* arg)

@@ -52,6 +52,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     /* ipa */
     ipa = new ipa_t(ipaini, get_id());
     npc_bus.add_device(NP_IOV_ATU_START, ipa);
+    add_mbox(mbox);
 
   mmu = new mmu_t(sim, bank, this,ipa);
 

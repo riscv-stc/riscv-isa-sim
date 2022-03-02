@@ -65,12 +65,12 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
 }
 
 bank_t::~bank_t() {
-    if(pcie_enabled) {
-        delete pcie_driver;
-    }
-
     for (int i = 0; i < nprocs; i++) {
         delete procs[i];
+    }
+    
+    if(pcie_enabled) {
+        delete pcie_driver;
     }
 
     return ;
