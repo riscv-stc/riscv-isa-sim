@@ -2342,15 +2342,15 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2537,15 +2537,15 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2727,15 +2727,15 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2918,15 +2918,15 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -11160,7 +11160,7 @@ int CustomInsns::veargmin_m(half *rs1, uint16_t *rd, struct ShapeStride *ss, int
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(min < rs1_matrix(i,j)) {
+                        if(min > rs1_matrix(i,j)) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
@@ -11233,7 +11233,7 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint16_t *rd, struct ShapeStride *ss,
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(min < rs1_matrix(i,j)) {
+                        if(min > rs1_matrix(i,j)) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
@@ -11305,7 +11305,7 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(Float32(min) < Float32(rs1_matrix(i,j))) {
+                        if(Float32(min) > Float32(rs1_matrix(i,j))) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
