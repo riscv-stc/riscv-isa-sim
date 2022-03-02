@@ -72,8 +72,8 @@
   }  
 //printf("debug3 res_exp:%x, res_frac:%x \n",res_exp,res_frac);
   
-  if(w_exp==255 && (w&0x7f)!=0)                     cal_res  =  0xffc0;  //nan
-  else if(w_exp==255 && (w&0x7f)==0 && a==0)         cal_res  =  0xffc0;  //inf*0=nan
+  if(w_exp==255 && (w&0x7f)!=0)                      cal_res  =  0x7fc0;  //nan
+  else if(w_exp==255 && (w&0x7f)==0 && a==0)         cal_res  =  0x7fc0;  //inf*0=nan
   else if(w_exp==255 && (w&0x7f)==0 && res_sign==0)  cal_res  =  0x7f80;  //inf
   else if(w_exp==255 && (w&0x7f)==0 && res_sign==1)  cal_res  =  0xff80;  //inf
   else if((a==0 || (w&0x7fff)==0) && res_sign==0)    cal_res  =  0x0;     //0*0       
