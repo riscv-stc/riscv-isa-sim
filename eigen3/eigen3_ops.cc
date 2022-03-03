@@ -2004,10 +2004,10 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
             for (k = 0; k < okh * okw * in_c; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_i8 * col_matrix(0, k);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * col_matrix(0, k);
                 }
             }
@@ -2260,7 +2260,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     }
     Map_half rs2_pad_matrix(rs2_pad, kh * kw * in_c, out_c, DynStride(out_c, 1));
     for (i = 0; i < kh * kw * in_c; i+=4){
-        for (j = 0; j < out_c; j++){
+        for (j = 0; j < out_c; j++) {
             sp_index1 = sp_matrix(i/2, j);
             sp_index2 = sp_matrix(i/2+1, j);
             rs2_pad_matrix(i+sp_index1, j) = rs2_matrix(i/2, j);
@@ -2342,15 +2342,15 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2537,15 +2537,15 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2727,15 +2727,15 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -2918,15 +2918,15 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         cout << "left: " << left_matrix << endl;
         cout << "rs2: " << rs2_matrix << endl;
         cout << "rs2_pad: " << rs2_pad_matrix << endl;
-        cout << "origin idx:\n";
-        for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
-            cout << (int32_t)tmp_matrix(0,i) << endl;
-        cout << "trans idx:\n";
-        for(i = 0; i < kw * kh * (in_c/2); i++){
-            for (j = 0; j < out_c; j++)
-                cout << (int32_t)sp_matrix(i,j) << "\t";
-            cout << endl;
-        }
+        // cout << "origin idx:\n";
+        // for (i = 0; i < (kw * kh * in_c/2 * (stride_idx) + 3)/4; i++)
+        //     cout << (int32_t)tmp_matrix(0,i) << endl;
+        // cout << "trans idx:\n";
+        // for(i = 0; i < kw * kh * (in_c/2); i++){
+        //     for (j = 0; j < out_c; j++)
+        //         cout << (int32_t)sp_matrix(i,j) << "\t";
+        //     cout << endl;
+        // }
     }
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
@@ -3274,9 +3274,11 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     Map_int8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     int8_t *row_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
-    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t  *col_val = (int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_int8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));  
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     //get de/quant coeff
     half *deq_val =  (half *)malloc(out_c * sizeof(half));
@@ -3291,10 +3293,14 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j))); 
         }
@@ -3444,9 +3450,11 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
     Map_uint8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     uint8_t *row_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
-    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_uint8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
     
     half *deq_val =  (half *)malloc(out_c * sizeof(half));
     if (deq_addr) {
@@ -3460,10 +3468,14 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j))); 
         }
@@ -3622,17 +3634,23 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     Map_int8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     int8_t *row_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
-    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_int8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
         }
@@ -3781,9 +3799,11 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     Map_uint8_t left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     uint8_t *row_val = (uint8_t *)malloc(okh * okw * in_c * sizeof(uint8_t));
-    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t  *col_val = ( int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_uint8_t row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c/2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     Bfloat16 *deq_val =  (Bfloat16 *)malloc(out_c * sizeof(Bfloat16));
     if (deq_addr) {
@@ -3798,10 +3818,14 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                res += (int32_t)(row_matrix(0, k) * col_matrix(0, k));
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                res += (int32_t)(row_matrix(0, k+sp_index1) * col_matrix(0, k/2));
+                res += (int32_t)(row_matrix(0, k+sp_index2) * col_matrix(0, k/2+1));
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));  
         }
@@ -3878,7 +3902,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     Map_int8_t rs2_matrix(rs2, kh * kw * (in_c/2), out_c, DynStride(k_stride, 1)); // the depth is same as in_c
     // pad_vs2
     int8_t *rs2_pad = (int8_t*)malloc(kh * kw * in_c * out_c * sizeof(int8_t));
-    for (i = 0; i < kh * kw * in_c; i++){
+    for (i = 0; i < kh * kw * in_c; i++) {
         for (j = 0; j < out_c; j++){
             *(rs2_pad + i*out_c + j) = 0;
         }
@@ -3957,8 +3981,10 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     Map_half rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     half *row_val = (half *)malloc(okh * okw * in_c * sizeof(half));
     int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_half row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     //get de/quant coeff
     float16_t quant_coeff = f32_to_f16(ss->mme_quant_coeff);
@@ -3975,16 +4001,24 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                sp_index1 = idx_matrix(0, k/2);
+                sp_index2 = idx_matrix(0, k/2+1);
+                float16_t rs1_1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index1)), quant_coeff);
+                float16_t rs1_2_f16 = f16_mul(half_to_float16_t(row_matrix(0, k+sp_index2)), quant_coeff);
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
-                    res += rs1_i8 * col_matrix(0, k);
+                    int8_t rs1_1_i8 = f16_to_i8(rs1_1_f16, softfloat_roundingMode, true);
+                    int8_t rs1_2_i8 = f16_to_i8(rs1_2_f16, softfloat_roundingMode, true);
+                    res += rs1_1_i8 * col_matrix(0, k/2);
+                    res += rs1_2_i8 * col_matrix(0, k/2+1);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
-                    res += rs1_ui8 * col_matrix(0, k);
+                    uint8_t rs1_1_ui8 = f16_to_ui8(rs1_1_f16, softfloat_roundingMode, true);
+                    uint8_t rs1_2_ui8 = f16_to_ui8(rs1_2_f16, softfloat_roundingMode, true);
+                    res += rs1_1_ui8 * col_matrix(0, k/2);
+                    res += rs1_2_ui8 * col_matrix(0, k/2+1);
                 }              
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
@@ -4136,9 +4170,11 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     Map_Bfloat16 left_matrix(left_val, h * w, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_Bfloat16 rd_matrix(rd, out_h * out_w, out_c, DynStride(out_stride, 1));
     Bfloat16 *row_val = (Bfloat16 *)malloc(okh * okw * in_c * sizeof(Bfloat16));
-    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c * sizeof(int8_t));
+    int8_t *col_val = (int8_t *)malloc(okh * okw * in_c/2 * sizeof(int8_t));
+    uint8_t *idx_val = (uint8_t *)malloc(okh * okw * in_c/2 * sizeof(uint8_t));
     Map_Bfloat16 row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
-    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
+    Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
+    Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
     //get de/quant coeff
     Bfloat16 quant_coeff = Bfloat16(ss->mme_quant_coeff);
@@ -4155,14 +4191,20 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
-            col_matrix = rs2_pad_matrix.col(j).transpose();
+            col_matrix = rs2_matrix.col(j).transpose();
+            idx_matrix = sp_matrix.col(j).transpose();
             int32_t res = 0;
-            for (k = 0; k < okh * okw * in_c; k++) {
-                Bfloat16 rs1_bf16 = row_matrix(0, k) * quant_coeff;
+            for (k = 0; k < okh * okw * in_c; k+=4) {
+                uint32_t sp_index1 = idx_matrix(0, k/2);
+                uint32_t sp_index2 = idx_matrix(0, k/2+1);
+                Bfloat16 rs1_1_bf16 = row_matrix(0, k + sp_index1) * quant_coeff;
+                Bfloat16 rs1_2_bf16 = row_matrix(0, k + sp_index2) * quant_coeff;
                 if(isSign) {
-                    res += int8_t(rs1_bf16) * col_matrix(0, k);
+                    res += int8_t(rs1_1_bf16) * col_matrix(0, k/2);
+                    res += int8_t(rs1_2_bf16) * col_matrix(0, k/2+1);
                 } else {
-                    res += uint8_t(rs1_bf16) * col_matrix(0, k);
+                    res += uint8_t(rs1_1_bf16) * col_matrix(0, k/2);
+                    res += uint8_t(rs1_2_bf16) * col_matrix(0, k/2+1);
                 }                
             }
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
@@ -5590,9 +5632,9 @@ int CustomInsns::medeconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeS
             for (k = 0; k < kh * kw * in_c; k++){
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if (isSign) {
-                    res += f16_to_i8 (rs1_f16, softfloat_round_near_maxMag, true) * col_matrix(0, k);
+                    res += f16_to_i8 (rs1_f16, softfloat_roundingMode, true) * col_matrix(0, k);
                 } else {
-                    res += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * col_matrix(0, k);
+                    res += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * col_matrix(0, k);
                 }
                 
             }
@@ -7439,10 +7481,10 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
             for (k = 0; k < kh * kw * in_c; k++){
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(row_matrix(0, k)), quant_coeff);
                 if (isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_i8 * col_matrix(0, k);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * col_matrix(0, k);
                 }               
             }
@@ -7649,7 +7691,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     half *rs1_start;
-    half *left_val, *row_val, *col_val;
+    half *left_val;
     half *start;
     half val;
 
@@ -7782,8 +7824,6 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
     if (debug)
         cout << "rd:" << endl << rd_matrix << endl;
 
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -7809,8 +7849,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     half *rs1_start;
-    half *left_val, *row_val;
-    int8_t *col_val;
+    half *left_val;
     half *start;
     half val;
 
@@ -7923,7 +7962,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
             res = 0;
             for (k = 0; k < okh * okw; k++) {
                 rs1_f16 = f16_mul(half_to_float16_t(left_matrix(i, k*in_c+j)), quant_coeff);
-                rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);
+                rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);
                 res += rs1_i8 * rs2_matrix(k, j);
             }
             rd_matrix(i, j) = int32_mul_f16(res, dequant_coeff);
@@ -7931,9 +7970,6 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
         }
     }
 
-
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -7958,7 +7994,7 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     int8_t *rs1_start;
-    int8_t *left_val, *row_val, *col_val;
+    int8_t *left_val;
     int8_t *start;
     int32_t val;
 
@@ -8070,8 +8106,6 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
         }
     }
 
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -8100,7 +8134,7 @@ int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, stru
     int i, j, k, ii, jj, kk, index_cin, counter;
     int row, col;
     float32_t *rs1_start;
-    float32_t *left_val, *row_val, *col_val;
+    float32_t *left_val;
     float32_t *start;
     float32_t val;
 
@@ -8209,9 +8243,6 @@ int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, stru
         }
     }
 
-
-    free(row_val);
-    free(col_val);
     free(left_val);
     return 0;
 }
@@ -8706,10 +8737,10 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
             for (k = 0; k < ss->shape1_column; k++) {
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k)), quant_coeff);              
                 if(isSign) {
-                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true);             
+                    int8_t rs1_i8 = f16_to_i8(rs1_f16, softfloat_roundingMode, true);             
                     res += rs1_i8 * rs2_matrix(k, j);
                 } else {
-                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true);
+                    uint8_t rs1_ui8 = f16_to_ui8(rs1_f16, softfloat_roundingMode, true);
                     res += rs1_ui8 * rs2_matrix(k, j);
                 }
             }
@@ -8817,13 +8848,13 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
     //rd_matrix = rs1_matrix * rs2_matrix;
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {  
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
-                odd  = f32_add(odd , half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)));
-                even = f32_add(even, half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)));
+                odd  = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)), odd);
+                even = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)), even);
                 if (debug ) {
                     cout << sp_index1 << ":"<< rs1_matrix(i, k+sp_index1) << "*" << rs2_matrix(k/2, j) << endl;
                     cout << sp_index2 << ":"<< rs1_matrix(i, k+sp_index2) << "*" << rs2_matrix(k/2+1, j)<< endl;
@@ -8868,13 +8899,13 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) { 
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
-                odd = f32_add(odd, half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)));
-                even = f32_add(even, half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j))); 
+                odd = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index1), rs2_matrix(k/2, j)), odd);
+                even = f32_add(half_mul_f32(rs1_matrix(i, k+sp_index2), rs2_matrix(k/2+1, j)), even); 
             }
             rd_matrix(i, j) = f32_add(odd, even);
         }
@@ -9003,8 +9034,8 @@ int CustomInsns::memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx,
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd.v = 0x8000000;
-            even.v = 0x8000000;
+            odd.v = 0x80000000;
+            even.v = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9057,8 +9088,8 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half 
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd  = 0x8000000;
-            even = 0x8000000;
+            odd  = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9112,8 +9143,8 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9166,8 +9197,8 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloa
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9220,8 +9251,8 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9277,19 +9308,19 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k+sp_index1)), quant_coeff);
                 float16_t rs2_f16 = f16_mul(half_to_float16_t(rs1_matrix(i, k+sp_index2)), quant_coeff);
                 if (isSign) {
-                    even += f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2, j);
-                    odd  += f16_to_i8(rs2_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2+1, j);
+                    even += f16_to_i8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k/2, j);
+                    odd  += f16_to_i8(rs2_f16, softfloat_roundingMode, true) * rs2_matrix(k/2+1, j);
                 } else {
-                    even += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2, j);
-                    odd  += f16_to_ui8(rs2_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k/2+1, j);
+                    even += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k/2, j);
+                    odd  += f16_to_ui8(rs2_f16, softfloat_roundingMode, true) * rs2_matrix(k/2+1, j);
                 }                
             }
             rd_matrix(i ,j) = int32_mul_f16(odd+even, half_to_float16_t(dequant_matrix(0, j)));
@@ -9338,8 +9369,8 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
 
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            odd = 0x8000000;
-            even = 0x8000000;
+            odd = 0x80000000;
+            even = 0x80000000;
             for (k = 0; k < ss->shape1_column; k+=4) {
                 uint32_t sp_index1 = sp_matrix(k/2, j);
                 uint32_t sp_index2 = sp_matrix(k/2+1, j);
@@ -9696,9 +9727,9 @@ int CustomInsns::memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStrid
             for (k = 0; k < ss->shape1_row; k++) {
                 float16_t rs1_f16 = f16_mul(half_to_float16_t(rs1_matrix(k, i)), quant_coeff);
                 if (isSign) {
-                    res += f16_to_i8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k, j);
+                    res += f16_to_i8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k, j);
                 } else {
-                    res += f16_to_ui8(rs1_f16, softfloat_round_near_maxMag, true) * rs2_matrix(k, j);
+                    res += f16_to_ui8(rs1_f16, softfloat_roundingMode, true) * rs2_matrix(k, j);
                 }                
             }
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
@@ -10203,9 +10234,9 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     half max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            half tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(max)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
             } 
@@ -10214,13 +10245,13 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNF16UI_stc(half_to_float16_t(max))) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(max < tmp) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10229,7 +10260,7 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
         std::cout << "max:" << max << std::endl;
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10245,9 +10276,9 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     Bfloat16 max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            Bfloat16 tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            Bfloat16 tmp = rs1_matrix(j,i);
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
                 continue;
             } 
@@ -10256,13 +10287,13 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max))) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(max < tmp) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10271,7 +10302,7 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
         std::cout << "max:" << max << std::endl;
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10286,9 +10317,9 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t maxRow=0, maxCol=0;
     float32_t max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            float32_t tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(max) && isNaNF32UI_stc(tmp)) {
                 continue;
             } 
@@ -10297,13 +10328,13 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     continue;
                 } else if (isNaNF32UI_stc(max)) {
                     max = tmp;
-                    maxRow = i;
-                    maxCol = j;
+                    maxRow = j;
+                    maxCol = i;
                 } else {
                     if(Float32(max) < Float32(tmp)) {
                         max = tmp;
-                        maxRow = i;
-                        maxCol = j;
+                        maxRow = j;
+                        maxCol = i;
                     }
                 }
             }            
@@ -10311,7 +10342,7 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
     }
     *(uint32_t *)rd = maxCol << 16 | maxRow;
     if (GLOBAL_DBG) {
-        std::cout << "maxRow:" << maxRow <<  "maxCol:" << maxCol << std::endl;
+        std::cout << "maxRow:" << maxRow <<  "  maxCol:" << maxCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -10993,9 +11024,9 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     half min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            half tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(min)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
             } 
@@ -11004,13 +11035,13 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNF16UI_stc(half_to_float16_t(min))) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(min > tmp) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11019,7 +11050,7 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
         std::cout << "min:" << min << std::endl;
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -11035,9 +11066,10 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     Bfloat16 min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            Bfloat16 tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            Bfloat16 tmp = rs1_matrix(j,i);
+            std::cout << "minRow:" << j <<  " minCol:" << i << std::endl;
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
                 continue;
             } 
@@ -11046,13 +11078,13 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     continue;
                 } else if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min))) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(min > tmp) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11061,7 +11093,7 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
         std::cout << "min:" << min << std::endl;
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -11076,9 +11108,9 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t minRow=0, minCol=0;
     float32_t min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_row; i++) {
-        for(int j = 0; j < ss->shape1_column; j++) {
-            float32_t tmp = rs1_matrix(i,j);
+    for (int i = 0; i < ss->shape1_column; i++) {
+        for(int j = 0; j < ss->shape1_row; j++) {
+            float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(min) && isNaNF32UI_stc(tmp)) {
                 continue;
             } 
@@ -11087,13 +11119,13 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     continue;
                 } else if (isNaNF32UI_stc(min)) {
                     min = tmp;
-                    minRow = i;
-                    minCol = j;
+                    minRow = j;
+                    minCol = i;
                 } else {
                     if(Float32(min) > Float32(tmp)) {
                         min = tmp;
-                        minRow = i;
-                        minCol = j;
+                        minRow = j;
+                        minCol = i;
                     }
                 }
             }            
@@ -11101,7 +11133,7 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
     }
     *(uint32_t *)rd = minCol << 16 | minRow;
     if (GLOBAL_DBG) {
-        std::cout << "minRow:" << minRow <<  "minCol:" << minCol << std::endl;
+        std::cout << "minRow:" << minRow <<  "  minCol:" << minCol << std::endl;
         std::cout << "rd:" << *rd << std::endl;
     }
     return 0;
@@ -11134,7 +11166,7 @@ int CustomInsns::veargmin_m(half *rs1, uint16_t *rd, struct ShapeStride *ss, int
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(min < rs1_matrix(i,j)) {
+                        if(min > rs1_matrix(i,j)) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
@@ -11207,7 +11239,7 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint16_t *rd, struct ShapeStride *ss,
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(min < rs1_matrix(i,j)) {
+                        if(min > rs1_matrix(i,j)) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
@@ -11279,7 +11311,7 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint16_t *rd, struct ShapeStride *ss
                         min = rs1_matrix(i,j);
                         minRow = i;
                     } else {
-                        if(Float32(min) < Float32(rs1_matrix(i,j))) {
+                        if(Float32(min) > Float32(rs1_matrix(i,j))) {
                             min = rs1_matrix(i,j);
                             minRow = i;
                         }
@@ -11490,15 +11522,17 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     }
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t odd = i32_to_f32(0);
-        float32_t even = i32_to_f32(0);
+        float32_t odd;
+        float32_t even;
+        odd.v = 0x80000000;
+        even.v = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
-            if (i%2)
-                odd = f32_add(odd, half_to_f32(rs1_matrix(i, j)));
+            if (j%2)
+                odd = f32_add(half_to_f32(rs1_matrix(i, j)), odd);
             else
-                even = f32_add(even, half_to_f32(rs1_matrix(i, j)));
+                even = f32_add(half_to_f32(rs1_matrix(i, j)), even);
         }
-        rd_matrix(i, 0) = f32_to_half(f32_add(odd, even));
+        rd_matrix(i, 0) = f32_to_half(f32_add(even, odd));
     }
     if (debug)
         cout << "rd:\n" << rd_matrix << endl;
@@ -11516,15 +11550,16 @@ int CustomInsns::meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t odd = i32_to_f32(0);
-        float32_t even = i32_to_f32(0);
+        float32_t odd, even;
+        odd.v = 0x80000000;
+        even.v = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
-                odd = f32_add(odd, rs1_matrix(i,j));
+                odd = f32_add(rs1_matrix(i,j), odd);
             else 
-                even = f32_add(even, rs1_matrix(i, j));
+                even = f32_add(rs1_matrix(i, j), even);
         }
-        rd_matrix(i, 0) = f32_add(odd, even);
+        rd_matrix(i, 0) = f32_add(even, odd);
     }
         
     return 0;
@@ -11540,15 +11575,16 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        Float32 odd = Float32(0);
-        Float32 even = Float32(0);
+        Float32 odd, even;
+        odd.x = 0x80000000;
+        even.x = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
-                odd += Float32(rs1_matrix(i, j));
+                odd = Float32(rs1_matrix(i, j)) + odd;
             else
-                even += Float32(rs1_matrix(i, j));
+                even = Float32(rs1_matrix(i, j)) + even;
         }
-        rd_matrix(i, 0) = Bfloat16(odd + even);
+        rd_matrix(i, 0) = Bfloat16(even + odd);
     }
     if (debug) {
         cout << "rs1: \n" << rs1_matrix << endl;

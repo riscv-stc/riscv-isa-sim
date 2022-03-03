@@ -107,7 +107,7 @@ bfloat16_t bf16_mul( bfloat16_t a, bfloat16_t b )
     sigB = (sigB | 0x0080)<<5;
     sig32Z = (uint_fast32_t) sigA * sigB;
     sigZ = sig32Z>>13;
-    if ( sig32Z & 0xFFFF ) sigZ |= 1;
+    if ( sig32Z & 0x1FFF ) sigZ |= 1;
     if ( sigZ < 0x800 ) {
         --expZ;
         sigZ <<= 1;

@@ -1355,6 +1355,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
     throw trap_ncp_cust_invalid_param();    
 
+#define check_vme_stride_d( width, stride_d ) \
+  if ( ( stride_d != 0 ) && ( stride_d < width ) ) \
+    throw trap_ncp_cust_invalid_param(); 
+
 // check traps for ve***.m instructions, element-wise
 #define check_traps_vexxx_m_element_wise(etype) ({ \
         check_cust_misaligned_base(RS1, etype); \
@@ -1370,6 +1374,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
                       (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
+        check_vme_stride_d(SHAPE1_COLUMN, STRIDE_RD); \
   })
 
 // check traps for verand.v instructions
@@ -2940,13 +2945,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
-#define VI_LD_PI(stride, offset, elt_width) \
+#define VI_LD_PI(stride, offset, elt_width, is_mask_ldst) \
   const reg_t nf = insn.v_nf() + 1; \
-  const reg_t vl = P.VU.vl; \
+  const reg_t vl = is_mask_ldst ? ((P.VU.vl + 7) / 8) : P.VU.vl; \
   const reg_t baseAddr = RS1; \
   const reg_t vd = insn.rd(); \
   WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
-  VI_CHECK_LOAD(elt_width, false); \
+  VI_CHECK_LOAD(elt_width, is_mask_ldst); \
   WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
   for (reg_t i = 0; i < vl; ++i) { \
     VI_ELEMENT_SKIP(i); \
@@ -3014,13 +3019,13 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   } \
   P.VU.vstart = 0;
 
-#define VI_ST_PI(stride, offset, elt_width) \
+#define VI_ST_PI(stride, offset, elt_width, is_mask_ldst) \
   const reg_t nf = insn.v_nf() + 1; \
-  const reg_t vl = P.VU.vl; \
+  const reg_t vl = is_mask_ldst ? ((P.VU.vl + 7) / 8) : P.VU.vl; \
   const reg_t baseAddr = RS1; \
   const reg_t vs3 = insn.rd(); \
   WRITE_RS1(RS1 + vl*sizeof(elt_width##_t));\
-  VI_CHECK_STORE(elt_width, false); \
+  VI_CHECK_STORE(elt_width, is_mask_ldst); \
   WRITE_RS1(RS1 - vl*sizeof(elt_width##_t));\
   for (reg_t i = 0; i < vl; ++i) { \
     VI_STRIP(i) \
