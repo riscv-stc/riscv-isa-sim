@@ -11544,8 +11544,9 @@ int CustomInsns::meacc_m(float32_t *rs1, float32_t *rd, struct ShapeStride *ss)
     Map_float32_t rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        float32_t odd = i32_to_f32(-0);
-        float32_t even = i32_to_f32(-0);
+        float32_t odd, even;
+        odd.v = 0x80000000;
+        even.v = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
                 odd = f32_add(rs1_matrix(i,j), odd);
@@ -11568,8 +11569,9 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
     for (i = 0; i < ss->shape1_row; i++) {
-        Float32 odd = Float32(-0);
-        Float32 even = Float32(-0);
+        Float32 odd, even;
+        odd.x = 0x80000000;
+        even.x = 0x80000000;
         for(j = 0; j < ss->shape1_column; j++){
             if (j%2)
                 odd = Float32(rs1_matrix(i, j)) + odd;
