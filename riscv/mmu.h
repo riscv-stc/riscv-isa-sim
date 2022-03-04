@@ -344,15 +344,9 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   amo_func(uint32)
   amo_func(uint64)
 
-  inline void ipa_trap(reg_t paddr)
-  {
-    try {
-        throw trap_ipa_pmp_trigger(false, paddr, 0, 0);
-    } catch(trap_ipa_pmp_trigger &t) {
-        cerr << "trap_ipa_pmp_trigger 0x" << hex << paddr << endl;
-        return ;
-    }
-  }
+  void dmae_smmu_trap(reg_t paddr, int channel);
+  void dmae_ipa_trap(reg_t paddr, int channel);
+  reg_t smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type type, uint32_t xlate_flags);
 
   inline void yield_load_reservation()
   {
@@ -368,10 +362,12 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, 1)) {
-            ipa_trap(paddr);
-            return ;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
         paddr = ipa->translate(paddr, 1);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
     }
 
     if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
@@ -414,10 +410,12 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, 1)) {
-            ipa_trap(paddr);
-            return false;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
         paddr = ipa->translate(paddr, 1);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+        }
     }
 
     if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
@@ -491,7 +489,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   char * mte_addr_to_mem(reg_t paddr, int procid);
   char * mte_addr_to_mem(reg_t paddr);
-  char * dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_t xlate_flags);
+  char * dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type type, uint32_t xlate_flags);
 
   void register_memtracer(memtracer_t*);
 
@@ -577,6 +575,7 @@ private:
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   bool mmio_ok(reg_t addr, access_type type);
   reg_t translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_flags);
+  void throw_access_exception(bool virt, reg_t addr, access_type type);
 
   // ITLB lookup
   inline tlb_entry_t translate_insn_addr(reg_t addr) {

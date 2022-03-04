@@ -13,23 +13,6 @@ ipa_t::ipa_t(const char *ipaini,int procid) : procid(procid)
     at_reg_base = (uint32_t *)new uint8_t[len];
     memset(at_reg_base, 0, len);
     
-    int entryid = 0;
-    struct ipa_at_t at = {};
-
-    // entryid = 2;
-    // at.pa_base = 0x00000000;
-    // at.ipa_start = 0x00000000;
-    // at.ipa_end = 0xc0000000;
-    // reg_add_at(&at, entryid, at_reg_base);
-    // reg_at_entry_enable(entryid, true, at_reg_base);
-
-    // entryid = 6;
-    // at.pa_base = 0xd9000000;
-    // at.ipa_start = 0xd9000000;
-    // at.ipa_end = 0xdb800000;
-    // reg_add_at(&at, entryid, at_reg_base);
-    // reg_at_entry_enable(entryid, true, at_reg_base);
-
     if (nullptr != ipaini) {
         atini = iniparser_load(ipaini);
     }
@@ -71,7 +54,7 @@ bool ipa_t:: pmp_ok(reg_t addr, reg_t len) const
 
 reg_t ipa_t::translate(reg_t addr, reg_t len) const
 {
-    reg_t paddr = 0;
+    reg_t paddr = IPA_INVALID_ADDR;
 
     if (!is_ipa_enabled()) {
         return addr;
@@ -84,37 +67,34 @@ reg_t ipa_t::translate(reg_t addr, reg_t len) const
     for (int i = 0 ; i < (int)ipa_at.size() ; i++) {
         if ((addr>=ipa_at[i].ipa_start) && (addr<ipa_at[i].ipa_end)) {
             paddr = addr - ipa_at[i].ipa_start + ipa_at[i].pa_base;
+            return paddr;
         }
     }
 
-    return paddr;
+    return IPA_INVALID_ADDR;
 }
 
 bool ipa_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    int offset = addr - NP_IOV_ATU_START;
-
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if ((offset<0) || (offset+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
         return false;
     }
-    memcpy(bytes, (char *)at_reg_base + offset, len);
+    memcpy(bytes, (char *)at_reg_base + addr, len);
     return true;
 }
 
 bool ipa_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    int offset = addr - NP_IOV_ATU_START;
-
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if ((offset<0) || (offset+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
         return false;
     }
-    memcpy((char *)at_reg_base + offset, bytes, len);
+    memcpy((char *)at_reg_base + addr, bytes, len);
     return true;
 }
 
@@ -129,11 +109,10 @@ int ipa_t::at_update(uint32_t *at_base)
 
     ipa_at.clear();
 
-    if (!is_ipa_enabled()) {
+    if (!IS_AT_ENABLE(at_base)) {
         at_enabled = false;
         return 0;
     }
-    at_enabled = true;
 
     for (int i = 0 ; i < ipa_entry_max ; i++) {
         if (!IS_ENTRY_ENABLE(at_base, i)) {
@@ -145,6 +124,7 @@ int ipa_t::at_update(uint32_t *at_base)
         at.ipa_end = IPA_START_END(at_base, i);
         ipa_at.push_back(at);
     }
+    at_enabled = true;
 
     return 0;
 }
@@ -227,7 +207,7 @@ int ipa_t::reset(void)
     return 0;
 }
 
-/* 编辑寄存器区域添加 at 表项 */
+/* 调试接口,编辑寄存器区域添加 at 表项. (at_update()后才能生效) */
 int ipa_t::reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base)
 {
     uint32_t *pa_l_addr = nullptr;
@@ -263,6 +243,7 @@ int ipa_t::reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base)
     return 0;
 }
 
+/* 调试接口,编辑寄存器区域 写 AT_CTL_REG_ADDR. (at_update()后才能生效) */
 int ipa_t::reg_at_enable(bool enabled, uint32_t *at_base)
 {
     if (nullptr == at_base)
@@ -271,6 +252,7 @@ int ipa_t::reg_at_enable(bool enabled, uint32_t *at_base)
     *(uint32_t *)((uint8_t *)at_base + AT_CTL_REG_OFFSET) = (enabled) ? 1 : 0;
 }
 
+/* 调试接口,编辑寄存器区域 写 ENTRY_IPA_EN_ADDR. (at_update()后才能生效) */
 int ipa_t::reg_at_entry_enable(int entry_id, bool enabled, uint32_t *at_base)
 {
     if((nullptr==at_base) || (0>=entry_id) || (IPA_ENTRY_TOTAL<=entry_id)) {

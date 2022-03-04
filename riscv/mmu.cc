@@ -39,7 +39,7 @@ void mmu_t::flush_tlb()
   flush_icache();
 }
 
-static void throw_access_exception(bool virt, reg_t addr, access_type type)
+void mmu_t::throw_access_exception(bool virt, reg_t addr, access_type type)
 {
   switch (type) {
     case FETCH: throw trap_instruction_access_fault(virt, addr, 0, 0);
@@ -86,15 +86,16 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(vaddr, sizeof(fetch_temp), FETCH, 0);
-#if 0       /* 取指可不用ipa, 这部分空间不会经过ipa映射 */
+
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, sizeof(fetch_temp))) {
-            ipa_trap(paddr);
-            return ;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
         }
         paddr = ipa->translate(paddr, sizeof(fetch_temp));
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
+        }
     }
-#endif
 
   if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
         (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
@@ -178,10 +179,12 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, len)) {
-            ipa_trap(paddr);
-            return ;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
         paddr = ipa->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
     }
 
   if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
@@ -216,10 +219,12 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, len)) {
-            ipa_trap(paddr);
-            return ;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
         paddr = ipa->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+        }
     }
 
   if (!matched_trigger) {
@@ -278,10 +283,12 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
 
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, len)) {
-            ipa_trap(paddr);
-            return nullptr;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
         paddr = ipa->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
     }
 
     if(IS_NPC_LOCAL_REGION(paddr)) {
@@ -308,10 +315,12 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr)
 
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, len)) {
-            ipa_trap(paddr);
-            return nullptr;
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
         paddr = ipa->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
     }
 
     if(IS_NPC_LOCAL_REGION(paddr)) {
@@ -326,12 +335,75 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr)
     return host_addr;
 }
 
+/* 执行dmae指令产生的mmu问题和ipa at问题报中断，而不是trap */
+void mmu_t::dmae_smmu_trap(reg_t paddr, int channel)
+{
+    uint32_t mcu_irq_bit = 0;
+    uint32_t mcu_irq_status = 0;
+
+    mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_SMMU0;
+    if (MCU_IRQ_STATUS_BIT_DMA3_SMMU0 < mcu_irq_bit) {
+        mcu_irq_bit = MCU_IRQ_STATUS_BIT_DMA3_SMMU0;
+    }
+
+    proc->mmio_load(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
+    mcu_irq_status |= (1<<mcu_irq_bit);
+    proc->mmio_store(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
+}
+
+void mmu_t::dmae_ipa_trap(reg_t paddr, int channel)
+{
+    uint32_t mcu_irq_bit = 0;
+    uint32_t mcu_irq_status = 0;
+
+    mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_ATU0;
+    if (MCU_IRQ_STATUS_BIT_DMA3_ATU0 < mcu_irq_bit) {
+        mcu_irq_bit = MCU_IRQ_STATUS_BIT_DMA3_ATU0;
+    }
+
+    proc->mmio_load(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
+    mcu_irq_status |= (1<<mcu_irq_bit);
+    proc->mmio_store(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
+}
+
+/* dmae的smmu,与mmu使用相同的页表项, 区别是出错时产生中断而不是trap */
+reg_t mmu_t::smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type type, uint32_t xlate_flags)
+{
+  if (!proc)
+    return addr;
+
+  bool mxr = get_field(proc->state.mstatus, MSTATUS_MXR);
+  bool virt = (proc) ? proc->state.v : false;
+  reg_t mode = proc->state.prv;
+  if (type != FETCH) {
+    if (!proc->state.debug_mode && get_field(proc->state.mstatus, MSTATUS_MPRV)) {
+      mode = get_field(proc->state.mstatus, MSTATUS_MPP);
+      if (get_field(proc->state.mstatus, MSTATUS_MPV))
+        virt = true;
+    }
+    if (!proc->state.debug_mode && (xlate_flags & RISCV_XLATE_VIRT)) {
+      virt = true;
+      mode = get_field(proc->state.hstatus, HSTATUS_SPVP);
+      if (type == LOAD && (xlate_flags & RISCV_XLATE_VIRT_MXR)) {
+        mxr = true;
+      }
+    }
+  }
+
+  reg_t paddr = walk(addr, type, mode, virt, mxr) | (addr & (PGSIZE-1));
+  if (!pma_ok(paddr, len, type,!!(xlate_flags&RISCV_XLATE_AMO_FLAG)))
+    dmae_smmu_trap(addr, channel);
+  if (!pmp_ok(paddr, len, type, mode))
+    dmae_smmu_trap(addr, channel);
+  return paddr;
+}
+
 /**
  * dmae 访存特点:
  * 1) 访问范围 l1, llb, glb
  * 2) 经过 mmu 和 ipa at
 */
-char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_t xlate_flags)
+char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type type, uint32_t xlate_flags)
 {
     char *host_addr = nullptr;
     int idxinbank = proc ? proc->get_idxinbank() : 0;
@@ -340,13 +412,17 @@ char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_
         paddr &= 0xffffffff;
     }
 
-    paddr = translate(paddr, len, type, xlate_flags);
+    paddr = smmu_translate(paddr, len, channel, type, xlate_flags);
     if(ipa && ipa->is_ipa_enabled()) {
         if (!ipa->pmp_ok(paddr, len)) {
-            ipa_trap(paddr);
+            dmae_ipa_trap(paddr, channel);
             return nullptr;
         }
         paddr = ipa->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            dmae_ipa_trap(paddr, channel);
+            return nullptr;
+        }
     }
 
     if(IS_NPC_LOCAL_REGION(paddr)) {
@@ -356,9 +432,6 @@ char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, access_type type, uint32_
             host_addr = sim->addr_to_mem(paddr);
     }
 
-    // if (nullptr==host_addr) {
-    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
-    // }
     return host_addr;
 }
 

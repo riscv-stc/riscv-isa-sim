@@ -394,6 +394,8 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define DMAE_STRIDE_D_X       (STATE.dmae_stride_d1)
 #define DMAE_STRIDE_D_Y       (STATE.dmae_stride_d2)
 
+#define DMAE_CHANNEL          (STATE.dmae_ctrl&0x07)
+
 #define SRC_CORE_ID           ((STATE.mte_icdest >> 16) & 0xFF)
 #define DST_CORE_ID           (STATE.mte_icdest & 0xFF)
 

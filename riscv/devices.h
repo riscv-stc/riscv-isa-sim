@@ -43,6 +43,19 @@
 #define sp_buffer_size       (0x00014000)
 
 #define MISC_START           (0xc07f3000)   /* NPUV2 NP_MISC 4KB */
+#define MISC_SIZE            (0x1000)
+#define MCU_IRQ_STATUS_OFFSET   (0x9a8)
+#define MCU_IRQ_ENABLE_OFFSET   (0x9ac)
+#define MCU_IRQ_CLEAR_OFFSET    (0x9b0)
+#define MCU_IRQ_STATUS_BIT_DMA0_SMMU0   (4)
+#define MCU_IRQ_STATUS_BIT_DMA1_SMMU0   (5)
+#define MCU_IRQ_STATUS_BIT_DMA2_SMMU0   (6)
+#define MCU_IRQ_STATUS_BIT_DMA3_SMMU0   (7)
+#define MCU_IRQ_STATUS_BIT_DMA0_ATU0    (8)
+#define MCU_IRQ_STATUS_BIT_DMA1_ATU0    (9)
+#define MCU_IRQ_STATUS_BIT_DMA2_ATU0    (10)
+#define MCU_IRQ_STATUS_BIT_DMA3_ATU0    (11)
+
 #define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
 
 #define NP_IOV_ATU_START    (0xc07f7000)    /* ipa address trans unit */
@@ -102,12 +115,13 @@ class misc_device_t : public abstract_device_t {
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
-  size_t size() { return len; }
+  size_t size() { return buf_len; }
   ~misc_device_t();
  private:
-  std::vector<char> data;
+  std::vector<char> buf;        /* 调试用，uart存字符串 */
+  size_t buf_len;
+  uint8_t *reg_base = nullptr;  /* 寄存器地址空间 */
   processor_t* proc;
-  size_t len;
 
   uint32_t dump_addr;
   uint32_t dump_len;

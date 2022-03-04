@@ -675,6 +675,7 @@ private:
 
   friend class mmu_t;
   friend class clint_t;
+  friend class misc_device_t;
   friend class extension_t;
   friend class pcie_driver_t;
   friend class mbox_device_t;

@@ -35,6 +35,8 @@
 
 #define IS_AT_ENABLE(at_base)               (*(uint32_t *)((char *)at_base+AT_CTL_REG_OFFSET) & 0x01)
 
+#define IPA_INVALID_ADDR            (~((reg_t)0))
+
 struct ipa_at_t {
     reg_t pa_base;
     reg_t ipa_start;        /* 包含该地址 */

@@ -479,6 +479,8 @@ struct DmaeShapeStride
     unsigned int stride_d_x;
     unsigned int stride_d_y;
 
+    unsigned int channel;
+
 };
 
 struct VmeShapeStride
