@@ -157,6 +157,10 @@ class misc_device_t : public abstract_device_t {
   void inst_cnt_stop(void)      {inst_start = false;};
   bool is_inst_start(void)      {return inst_start;};
   void inst_cnt_clear(void);
+
+  /* 只读寄存器的写操作不放在store中 */
+  bool ro_register_write(reg_t addr, uint32_t val);
+  bool ro_register_write(reg_t addr, uint64_t val);
  private:
   std::vector<char> buf;        /* 调试用，uart存字符串 */
   size_t buf_len;
@@ -167,10 +171,6 @@ class misc_device_t : public abstract_device_t {
   uint32_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
-
-  /* 只读寄存器的写操作不放在store中 */
-  bool ro_register_write(reg_t addr, uint32_t val);
-  bool ro_register_write(reg_t addr, uint64_t val);
 };
 
 class mbox_device_t : public abstract_device_t {

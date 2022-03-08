@@ -80,7 +80,6 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case (DUMP_BASE + DUMP_LEN_OFFSET):
         dump_len = *((uint32_t*)bytes);
         break;
-    case MCU_IRQ_STATUS_OFFSET:
     case MCU_IRQ_ENABLE_OFFSET:
         {
         memcpy((uint8_t *)reg_base+addr, bytes, len);
@@ -123,12 +122,25 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memset((uint8_t *)reg_base+addr, 0, 4);
         }
         break;
+    /* RO */
+    case NCP_VME_INST_CNT:
+    case NCP_MME_INST_CNT:
+    case NCP_RVV_INST_CNT:
+    case NCP_SYN_INST_CNT:
+    case NCP_SYN_DONE_INST_CNT:
+    case MTE_PLD_INST_CNT:
+    case MTE_PLD_DONE_INST_CNT:
+    case MTE_ICMOV_INST_CNT:
+    case MTE_MOV_INST_CNT:
+    case DMA_INST_CNT:
+    case MCU_IRQ_STATUS_OFFSET:
+        return false;
     default:
         memcpy((uint8_t *)reg_base+addr, bytes, len);
         break;
     }
 
-  return true;
+    return true;
 }
 
 misc_device_t::~misc_device_t()
@@ -209,7 +221,23 @@ bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
     if (addr > MISC_SIZE-sizeof(val))
         return false;
     
-    *(uint32_t *)((uint8_t *)reg_base+addr) = val;
+    switch(addr) {
+    case MCU_IRQ_STATUS_OFFSET:
+    case MCU_IRQ_ENABLE_OFFSET:
+        {
+        *(uint32_t *)((uint8_t *)reg_base+addr) = val;
+        *(uint32_t *)((uint8_t *)reg_base+addr) &= MCU_IRQ_ENABLE_MASK;
+        uint32_t reg_status = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET);
+        uint32_t reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
+        if (reg_status & reg_enable) {
+            proc->state.mip |= MIP_MEIP;
+        }
+        }
+        break;
+    default:
+        *(uint32_t *)((uint8_t *)reg_base+addr) = val;
+        break;
+    }
     
     return true;
 
