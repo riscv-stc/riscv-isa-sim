@@ -44,6 +44,22 @@
 
 #define MISC_START           (0xc07f3000)   /* NPUV2 NP_MISC 4KB */
 #define MISC_SIZE            (0x1000)
+
+/* 64bit RO 指令计数寄存器 */
+#define NCP_VME_INST_CNT        (0x000)     
+#define NCP_MME_INST_CNT        (0x008)
+#define NCP_RVV_INST_CNT        (0x010)     /* v2没有rvv，这个保留暂不生效 */
+#define NCP_SYN_INST_CNT        (0x018)
+#define NCP_SYN_DONE_INST_CNT   (0x020)
+#define MTE_PLD_INST_CNT        (0x028)
+#define MTE_PLD_DONE_INST_CNT   (0x030)
+#define MTE_ICMOV_INST_CNT      (0x038)
+#define MTE_MOV_INST_CNT        (0x040)
+#define DMA_INST_CNT            (0x048)
+
+#define MCU_PERF_CNT_CTRL       (0x080)
+
+/* 32bit 中断寄存器 */
 #define MCU_IRQ_STATUS_OFFSET   (0x9a8)
 #define MCU_IRQ_ENABLE_OFFSET   (0x9ac)
 #define MCU_IRQ_CLEAR_OFFSET    (0x9b0)
@@ -55,6 +71,23 @@
 #define MCU_IRQ_STATUS_BIT_DMA1_ATU0    (9)
 #define MCU_IRQ_STATUS_BIT_DMA2_ATU0    (10)
 #define MCU_IRQ_STATUS_BIT_DMA3_ATU0    (11)
+
+#define IS_STC_NPUV2_INST(bits) (((insn_bits_t)(bits)&0x7f) == 0x7b)
+#define IS_PLD_INST(bits)       (((insn_bits_t)(bits)&MASK_PLD) == MATCH_PLD)
+#define IS_ICMOV_M_INST(bits)   (((insn_bits_t)(bits)&MASK_ICMOV_M) == MATCH_ICMOV_M)
+
+#define IS_MTE_MOV_INST(bits)    ((((insn_bits_t)(bits)&MASK_MOV_LLB_L1)==MATCH_MOV_LLB_L1) \
+            || (((insn_bits_t)(bits)&MASK_MOV_L1_LLB)==MATCH_MOV_L1_LLB))
+
+#define IS_SYNC_INST(bits)      (IS_STC_NPUV2_INST(bits) && \
+            ((bits>>26) == (MATCH_SYNC>>26)))
+
+#define IS_MME_INST(bits)       (IS_STC_NPUV2_INST(bits) && \
+            ((bits>>26) >= (MATCH_METR_M>>26)) && ((bits>>26) <= (MATCH_MEACC_M>>26)))
+
+#define IS_DMAE_INST(bits)      (((bits&MASK_MOV_L1_GLB) >= MATCH_MOV_L1_GLB) && \
+            ((bits&MASK_MOV_LLB_LLB) <= MATCH_MOV_LLB_LLB))
+
 
 #define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
 
@@ -117,15 +150,27 @@ class misc_device_t : public abstract_device_t {
 
   size_t size() { return buf_len; }
   ~misc_device_t();
+
+  void inst_cnt(insn_bits_t bits);      /* 更新指令计数器 */
+  void inst_done_cnt(insn_bits_t bits); /* sync done, pld done */
+  void inst_cnt_start(void)     {inst_start = true;};
+  void inst_cnt_stop(void)      {inst_start = false;};
+  bool is_inst_start(void)      {return inst_start;};
+  void inst_cnt_clear(void);
  private:
   std::vector<char> buf;        /* 调试用，uart存字符串 */
   size_t buf_len;
   uint8_t *reg_base = nullptr;  /* 寄存器地址空间 */
   processor_t* proc;
+  bool inst_start = false;
 
   uint32_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
+
+  /* 只读寄存器的写操作不放在store中 */
+  bool ro_register_write(reg_t addr, uint32_t val);
+  bool ro_register_write(reg_t addr, uint64_t val);
 };
 
 class mbox_device_t : public abstract_device_t {

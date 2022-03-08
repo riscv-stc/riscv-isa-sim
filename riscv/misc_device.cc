@@ -109,6 +109,20 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memset((uint8_t *)reg_base+addr, 0, 4);
         }
         break;
+    case MCU_PERF_CNT_CTRL:
+        {
+        uint32_t val32 = 0;
+        memcpy((uint8_t *)reg_base+addr, bytes, len);
+        val32 = *(uint32_t *)((uint8_t *)reg_base+addr);
+        if ((val32>>2) & 0x01)
+            inst_cnt_clear();
+        if ((val32>>1) & 0x01)
+            inst_cnt_stop();
+        if ((val32>>0) & 0x01)
+            inst_cnt_start();
+        memset((uint8_t *)reg_base+addr, 0, 4);
+        }
+        break;
     default:
         memcpy((uint8_t *)reg_base+addr, bytes, len);
         break;
@@ -124,4 +138,106 @@ misc_device_t::~misc_device_t()
     buf.clear();
   }
   delete reg_base;
+}
+
+void misc_device_t::inst_cnt(insn_bits_t bits)
+{
+    uint64_t addr = 0;
+    uint64_t val64 = 0;
+
+    if (!IS_STC_NPUV2_INST(bits) || !is_inst_start())
+        return;
+    
+    if (IS_PLD_INST(bits)) {
+        addr = MTE_PLD_INST_CNT;
+    } else if (IS_ICMOV_M_INST(bits)) {
+        addr = MTE_ICMOV_INST_CNT;
+    } else if (IS_MTE_MOV_INST(bits)) {
+        addr = MTE_MOV_INST_CNT;
+    } else if (IS_SYNC_INST(bits)) {
+        addr = NCP_SYN_INST_CNT;
+    } else if (IS_MME_INST(bits)) {
+        addr = NCP_MME_INST_CNT;
+    } else if (IS_DMAE_INST(bits)) {
+        addr = DMA_INST_CNT;
+    } else {        /* vme */
+        addr = NCP_VME_INST_CNT;
+    }
+    load(addr, sizeof(val64), (uint8_t*)&val64);
+    val64 += 1;
+    ro_register_write(addr, val64);
+}
+
+void misc_device_t::inst_done_cnt(insn_bits_t bits)
+{
+    uint64_t addr = 0;
+    uint64_t val64 = 0;
+
+    if (!IS_STC_NPUV2_INST(bits) || !is_inst_start())
+        return;
+    
+    if (IS_PLD_INST(bits)) {
+        addr = MTE_PLD_DONE_INST_CNT;
+    } else if (IS_SYNC_INST(bits)) {
+        addr = NCP_SYN_DONE_INST_CNT;
+    } else {
+        return;
+    }
+    
+    load(addr, sizeof(val64), (uint8_t*)&val64);
+    val64 += 1;
+    ro_register_write(addr, val64);
+}
+
+void misc_device_t::inst_cnt_clear(void)
+{
+    uint64_t val64 = 0;
+
+    ro_register_write(NCP_VME_INST_CNT, val64);
+    ro_register_write(NCP_MME_INST_CNT, val64);
+    ro_register_write(NCP_SYN_INST_CNT, val64);
+    ro_register_write(NCP_SYN_DONE_INST_CNT, val64);
+    ro_register_write(MTE_PLD_INST_CNT, val64);
+    ro_register_write(MTE_PLD_DONE_INST_CNT, val64);
+    ro_register_write(MTE_ICMOV_INST_CNT, val64);
+    ro_register_write(MTE_MOV_INST_CNT, val64);
+    ro_register_write(DMA_INST_CNT, val64);
+}
+
+bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
+{
+    if (addr > MISC_SIZE-sizeof(val))
+        return false;
+    
+    *(uint32_t *)((uint8_t *)reg_base+addr) = val;
+    
+    return true;
+
+}
+
+bool misc_device_t::ro_register_write(reg_t addr, uint64_t val)
+{
+    if (addr > MISC_SIZE-sizeof(val))
+        return false;
+    
+    switch(addr) {
+    case NCP_VME_INST_CNT:
+    case NCP_MME_INST_CNT:
+    case NCP_RVV_INST_CNT:
+    case NCP_SYN_INST_CNT:
+    case NCP_SYN_DONE_INST_CNT:
+    case MTE_PLD_INST_CNT:
+    case MTE_PLD_DONE_INST_CNT:
+    case MTE_ICMOV_INST_CNT:
+    case MTE_MOV_INST_CNT:
+    case DMA_INST_CNT:
+        *(uint64_t *)((uint8_t *)reg_base+addr) = val;
+        break;
+    default:
+        *(uint64_t *)((uint8_t *)reg_base+addr) = val;
+        break;
+
+    }
+    
+    return true;
 }

@@ -44,7 +44,8 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     npc_bus.add_device(l1_buffer_start, new mem_t(l1_buffer_size));
     npc_bus.add_device(im_buffer_start, new mem_t(im_buffer_size));
     npc_bus.add_device(sp_buffer_start, new mem_t(sp_buffer_size));
-    npc_bus.add_device(MISC_START, new misc_device_t(this));
+    misc_dev = new misc_device_t(this);
+    npc_bus.add_device(MISC_START, misc_dev);
 
     mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , (pcie_driver) ? true : false);
     npc_bus.add_device(MBOX_START, mbox);
@@ -124,6 +125,7 @@ processor_t::~processor_t()
   delete mmu;
   delete disassembler;
   delete mbox;
+  delete misc_dev;
   delete ipa;
 }
 
@@ -2485,6 +2487,12 @@ bool processor_t::async_done() {
     if (async_function == nullptr) {
       state.async_started = false;
       hwsync->hwsync_timer_clear(id);
+      if (state.pld) {
+          state.pld = false;
+          misc_dev->inst_done_cnt(MATCH_PLD);
+      } else {
+          misc_dev->inst_done_cnt(MATCH_SYNC);
+      }
       return true;
     }
   }

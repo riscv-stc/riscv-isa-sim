@@ -821,6 +821,7 @@ void processor_t::step(size_t n)
           /* core所在的grp在sync，该核运行时 hs_sync_timer_cnts 计数器累加 */
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {
             start_rdtsc = get_host_clks();
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
             endl_rdtsc = get_host_clks();
 
@@ -836,6 +837,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();
             }
           } else {
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
           }
 
@@ -878,6 +880,7 @@ void processor_t::step(size_t n)
           uint64_t riscv_clks = 0;    \
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {   \
             start_rdtsc = get_host_clks();   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
             endl_rdtsc = get_host_clks();    \
             if (likely(endl_rdtsc > start_rdtsc)) {   \
@@ -892,6 +895,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();  \
             }   \
           }else {   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
           }   \
           ic_entry = ic_entry->next; \
@@ -931,6 +935,7 @@ void processor_t::step(size_t n)
         // instructions are idempotent so restarting is safe.)
 
         insn_fetch_t fetch = mmu->load_insn(pc);
+        misc_dev->inst_cnt(fetch.insn.bits());
         pc = execute_insn(this, pc, fetch);
         advance_pc();
 

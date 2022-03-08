@@ -646,6 +646,7 @@ private:
   FILE *log_file;
   bool halt_on_reset;
   mbox_device_t *mbox;
+  misc_device_t *misc_dev = nullptr;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
 
