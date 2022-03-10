@@ -65,8 +65,6 @@ public:
   unsigned nbanks(void) const { return sim_nbanks; }
 
   bank_t* get_bank(int idx) { return banks.at(idx); }
-  bool is_bank_finish(int bankid);
-  void set_bank_finish(int bankid, bool finish);
   int get_bankid(int idxinsim) const { return  idxinsim/core_num_of_bank + id_first_bank;};
   processor_t* get_core_by_idxinsim(int idxinsim);        /* index 从0开始 */
   int get_idxinbank(int idxinsim) const { return  idxinsim%core_num_of_bank;};

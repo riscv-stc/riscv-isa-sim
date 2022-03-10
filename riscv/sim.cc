@@ -977,21 +977,3 @@ processor_t* sim_t::get_core_by_id(int procid)
         return nullptr;
     }
 }
-
-void sim_t::set_bank_finish(int bankid, bool finish)
-{
-    bank_t *bank = get_bank(bankid);
-    if (bank) {
-        bank->set_bank_finish(finish);
-    } 
-}
-
-bool sim_t::is_bank_finish(int bankid)
-{
-    bank_t *bank = get_bank(bankid);
-    if (bank) {
-        return bank->is_bank_finish();
-    } else {
-        return true;
-    }
-}

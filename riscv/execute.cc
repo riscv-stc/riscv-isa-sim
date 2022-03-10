@@ -759,9 +759,6 @@ void processor_t::step(size_t n)
         break;
       }
 
-      if (unlikely(bank->is_bank_finish()))
-	      break;
-
       /* check current core sync state, if current core is sync,
        * and wait for other core to sync, swap current core to idle,
        * and let other core to execute insn. */

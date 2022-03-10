@@ -17,7 +17,7 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
             hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
             const std::vector<int> hartids, bool halted, const char *ipaini) : nprocs(bank_nprocs),
-            bank_id(bankid),is_finish(false), pcie_enabled(pcie_enabled), 
+            bank_id(bankid), pcie_enabled(pcie_enabled), 
             procs(std::max(size_t(bank_nprocs),size_t(1)))
 {
     /* 添加 sysdma */
@@ -140,14 +140,4 @@ char* bank_t::bank_addr_to_mem(reg_t addr)
 char* bank_t::npc_addr_to_mem(reg_t addr, uint32_t idxinbank) 
 {
     return get_core_by_idxinbank(idxinbank)->addr_to_mem(addr);
-}
-
-void bank_t::set_bank_finish(bool finish)
-{
-    is_finish = finish;
-}
-
-bool bank_t::is_bank_finish(void)
-{
-    return is_finish;
 }

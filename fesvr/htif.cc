@@ -312,22 +312,13 @@ int htif_t::run()
         for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
             bank_tohost_addr = simif->bottom_ddr_to_upper(tohost_addr, bankid);
 
-            auto tohost = from_target(mem.read_uint64(bank_tohost_addr));
-            if (tohost) {
-                simif->set_bank_finish(bankid, true);
-            } else {
-                is_all_to_host = false;
-            }
-        }
-        if (is_all_to_host) {
-            for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
-                bank_tohost_addr = simif->bottom_ddr_to_upper(tohost_addr, bankid);
+            if (auto tohost = from_target(mem.read_uint64(bank_tohost_addr))) {
                 mem.write_uint64(bank_tohost_addr, target_endian<uint64_t>::zero);
+                command_t cmd(mem, tohost, fromhost_callback);
+                device_list.handle_command(cmd);
+            } else {
+                idle();
             }
-            command_t cmd(mem, is_all_to_host, fromhost_callback);
-            device_list.handle_command(cmd);
-        } else {
-            idle();
         }
 
         if (signal_dump) {

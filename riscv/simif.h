@@ -48,9 +48,6 @@ public:
     virtual int get_id_first_bank(void) const = 0;
     virtual int coreid_to_idxinsim(int coreid) = 0;
     virtual processor_t* get_core_by_idxinsim(int idxinsim) = 0;
-
-    virtual void set_bank_finish(int bankid, bool finish) = 0;
-    virtual bool is_bank_finish(int bankid) = 0;
 };
 
 #endif

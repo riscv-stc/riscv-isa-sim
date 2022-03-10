@@ -19,7 +19,6 @@ class bank_t : public bankif_t {
 private:
     int nprocs;     /* bank内核心数 */
     int bank_id;
-    bool is_finish;
     int pcie_enabled;
     std::vector<processor_t*> procs;
     pcie_driver_t *pcie_driver;
@@ -48,9 +47,6 @@ public:
     processor_t* get_core_by_idxinbank(int idx) { return procs.at(idx); }
 
     char* npc_addr_to_mem(reg_t addr, uint32_t idxinbank);
-
-    void set_bank_finish(bool finish);
-    bool is_bank_finish(void);
 };
 
 #endif // __BANK_H__
