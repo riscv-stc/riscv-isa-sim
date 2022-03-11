@@ -33,8 +33,11 @@ struct command_head_t {
     unsigned short code;
     unsigned short len;
     unsigned long addr;
-    unsigned char data[4];
+    unsigned char data[16];
 };
+
+#define COMMAND_HEAD_SIZE (sizeof(command_head_t) - 16)
+#define PCIE_COMMAND_SEND_SIZE(cmd)  (sizeof(cmd)-sizeof(cmd.data)+cmd.len)
 
 class pcie_driver_t {
  public:

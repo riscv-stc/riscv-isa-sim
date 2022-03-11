@@ -63,6 +63,7 @@
 #define MCU_IRQ_STATUS_OFFSET   (0x9a8)
 #define MCU_IRQ_ENABLE_OFFSET   (0x9ac)
 #define MCU_IRQ_CLEAR_OFFSET    (0x9b0)
+#define MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ (0)
 #define MCU_IRQ_STATUS_BIT_DMA0_SMMU0   (4)
 #define MCU_IRQ_STATUS_BIT_DMA1_SMMU0   (5)
 #define MCU_IRQ_STATUS_BIT_DMA2_SMMU0   (6)
@@ -158,9 +159,8 @@ class misc_device_t : public abstract_device_t {
   bool is_inst_start(void)      {return inst_start;};
   void inst_cnt_clear(void);
 
-  /* 只读寄存器的写操作不放在store中 */
-  bool ro_register_write(reg_t addr, uint32_t val);
-  bool ro_register_write(reg_t addr, uint64_t val);
+  void set_mcu_irq_status(int mcu_irq_status_bit, bool val);
+
  private:
   std::vector<char> buf;        /* 调试用，uart存字符串 */
   size_t buf_len;
@@ -171,26 +171,32 @@ class misc_device_t : public abstract_device_t {
   uint32_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
+
+  /* 只读寄存器的写操作不放在store中 */
+  bool ro_register_write(reg_t addr, uint32_t val);
+  bool ro_register_write(reg_t addr, uint64_t val);
 };
 
 class mbox_device_t : public abstract_device_t {
  public:
-  mbox_device_t(pcie_driver_t * pcie, processor_t* p, bool pcie_enabled);
+  mbox_device_t(pcie_driver_t * pcie, processor_t* p, misc_device_t *misc, bool pcie_enabled);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   void reset();
-  size_t size() { return 4096; }
+  size_t size() { return sizeof(reg_base); }
   // const std::vector<char>& contents() { return data; }
   ~mbox_device_t();
+
+  /* 只读寄存器的写操作不放在store中 */
+  bool ro_register_write(reg_t addr, uint32_t val);
+  bool ro_register_write(reg_t addr, uint64_t val);
  private:
-  uint32_t cmd_count;
   std::queue<uint32_t> cmd_value;
-  uint32_t cmdext_count;
-  std::queue<uint32_t> cmdext_value;
   processor_t* p;
-  uint8_t data[4096];
+  uint8_t reg_base[4096];
   bool pcie_enabled;
   pcie_driver_t *pcie_driver;
+  misc_device_t *misc_dev = nullptr;
 };
 
 /**

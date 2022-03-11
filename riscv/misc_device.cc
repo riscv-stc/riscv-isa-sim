@@ -11,9 +11,9 @@
 #define DUMP_ADDR_OFFSET    0x8
 #define DUMP_LEN_OFFSET     0x10
 
-#define MCU_IRQ_STATUS_MASK     0x1fff
-#define MCU_IRQ_ENABLE_MASK     0x1fff
-#define MCU_IRQ_CLEAR_MASK      0x1fff
+#define MCU_IRQ_STATUS_MASK     0x1ff7
+#define MCU_IRQ_ENABLE_MASK     MCU_IRQ_STATUS_MASK
+#define MCU_IRQ_CLEAR_MASK      0x1ffe
 
 misc_device_t::misc_device_t(processor_t* proc)
   : proc(proc), buf_len(0x4000), dump_count(0)
@@ -81,15 +81,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         dump_len = *((uint32_t*)bytes);
         break;
     case MCU_IRQ_ENABLE_OFFSET:
-        {
-        memcpy((uint8_t *)reg_base+addr, bytes, len);
-        *(uint32_t *)((uint8_t *)reg_base+addr) &= MCU_IRQ_ENABLE_MASK;
-        uint32_t reg_status = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET);
-        uint32_t reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
-        if (reg_status & reg_enable) {
-            proc->state.mip |= MIP_MEIP;
-        }
-        }
+        ro_register_write(addr, *(uint32_t*)bytes);
         break;
     case MCU_IRQ_CLEAR_OFFSET:
         {
@@ -231,6 +223,8 @@ bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
         uint32_t reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
         if (reg_status & reg_enable) {
             proc->state.mip |= MIP_MEIP;
+        } else {
+            proc->state.mip &= ~MIP_MEIP;
         }
         }
         break;
@@ -268,4 +262,18 @@ bool misc_device_t::ro_register_write(reg_t addr, uint64_t val)
     }
     
     return true;
+}
+
+void misc_device_t::set_mcu_irq_status(int mcu_irq_status_bit, bool val)
+{
+    uint32_t irq_status = 0;
+
+    load(MCU_IRQ_STATUS_OFFSET, sizeof(irq_status), (uint8_t *)&irq_status);
+    if (val) {
+        irq_status |= (1<<mcu_irq_status_bit);
+    } else {
+        irq_status &= (~(1<<mcu_irq_status_bit));
+    }
+    irq_status &= MCU_IRQ_STATUS_MASK;
+    ro_register_write(MCU_IRQ_STATUS_OFFSET, (uint32_t)irq_status);
 }

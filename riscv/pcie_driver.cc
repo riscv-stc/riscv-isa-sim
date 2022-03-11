@@ -278,13 +278,12 @@ int pcie_driver_t::update_status(NL_STATUS status)
    cmd.addr = mBankId;
    cmd.len = 4;
    *(uint32_t *)cmd.data = (uint32_t)status;
-   rv = send((const uint8_t *)&cmd, sizeof(cmd));
+   rv = send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
    std::cout << "tell peer status:" << status << std::endl;
    return rv;
 }
 
 /* get npc data for kernel at address in npc view */
-#define COMMAND_HEAD_SIZE (sizeof(command_head_t) - 4)
 int pcie_driver_t::read(reg_t addr, size_t length)
 {
   int rv = 0;
@@ -483,7 +482,7 @@ int pcie_driver_t::get_sync_state()
 
   /* each bank core_id in spike is start at 0. */
   *(uint32_t *)cmd.data = state;
-  rv = send((const uint8_t *)&cmd, sizeof(cmd));
+  rv = send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
   return rv;
 }
 

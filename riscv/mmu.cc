@@ -339,31 +339,25 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr)
 void mmu_t::dmae_smmu_trap(reg_t paddr, int channel)
 {
     uint32_t mcu_irq_bit = 0;
-    uint32_t mcu_irq_status = 0;
 
     mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_SMMU0;
     if (MCU_IRQ_STATUS_BIT_DMA3_SMMU0 < mcu_irq_bit) {
-        mcu_irq_bit = MCU_IRQ_STATUS_BIT_DMA3_SMMU0;
+        return ;
     }
 
-    proc->mmio_load(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
-    mcu_irq_status |= (1<<mcu_irq_bit);
-    proc->misc_dev->ro_register_write(MCU_IRQ_STATUS_OFFSET, (uint32_t)mcu_irq_status);
+    proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
 void mmu_t::dmae_ipa_trap(reg_t paddr, int channel)
 {
     uint32_t mcu_irq_bit = 0;
-    uint32_t mcu_irq_status = 0;
 
     mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_ATU0;
     if (MCU_IRQ_STATUS_BIT_DMA3_ATU0 < mcu_irq_bit) {
-        mcu_irq_bit = MCU_IRQ_STATUS_BIT_DMA3_ATU0;
+       return ;
     }
 
-    proc->mmio_load(MISC_START+MCU_IRQ_STATUS_OFFSET, 4, (uint8_t*)(&mcu_irq_status));
-    mcu_irq_status |= (1<<mcu_irq_bit);
-    proc->misc_dev->ro_register_write(MCU_IRQ_STATUS_OFFSET, (uint32_t)mcu_irq_status);
+    proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
 /* dmae的smmu,与mmu使用相同的页表项, 区别是出错时产生中断而不是trap */

@@ -777,9 +777,7 @@ void processor_t::step(size_t n)
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
-      reg_t interrupts = (state.mip |
-                          (state.mextip ?
-                          (0x1 << IRQ_M_EXT) : 0));
+      reg_t interrupts = state.mip;
       if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;
