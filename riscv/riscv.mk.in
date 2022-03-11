@@ -1061,6 +1061,16 @@ riscv_insn_ext_andes_s = 	\
 	shgp					\
 	swgp					\
 	sdgp					\
+	ffb						\
+	ffzmism					\
+	ffmism					\
+	flmism					\
+	vln8_v					\
+	vlnu8_v					\
+	fcvt_s_bf16				\
+	fcvt_bf16_s				\
+	vfwcvt_s_bf16			\
+	vfncvt_bf16_s			\
 
 
 riscv_insn_list = \
