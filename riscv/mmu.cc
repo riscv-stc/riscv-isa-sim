@@ -607,7 +607,10 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
 
     // check that physical address of PTE is legal
     auto pte_paddr = base + idx * vm.ptesize;
-    auto ppte = sim->addr_to_mem(pte_paddr);
+    char *ppte = nullptr;
+    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
+        ppte = sim->addr_to_mem(pte_paddr);
+    }
     
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD)) {
       throw_access_exception(virt, gva, trap_type);
@@ -694,7 +697,10 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
 
     // check that physical address of PTE is legal
     auto pte_paddr = s2xlate(addr, base + idx * vm.ptesize, LOAD, type, virt, false);
-    auto ppte = sim->addr_to_mem(pte_paddr);
+    char *ppte = nullptr;
+    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
+        ppte = sim->addr_to_mem(pte_paddr);
+    }
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD))
       throw_access_exception(virt, addr, type);
     if (!ppte || !pmp_ok(pte_paddr, vm.ptesize, LOAD, PRV_S))
