@@ -30,7 +30,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
   fprintf(stderr, "  --pcie-enabled        Start PCIE driver\n");
-  fprintf(stderr, "  --output-flag         Output memery file name with bank id [default false]\n");
+  fprintf(stderr, "  --output-ddr-id-enabled         Output memery file name with bank id [default false]\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
   fprintf(stderr, "  --priv=<m|mu|msu>     RISC-V privilege modes supported [default %s]\n", DEFAULT_PRIV);
   fprintf(stderr, "  --varch=<name>        RISC-V Vector uArch string [default %s]\n", DEFAULT_VARCH);
@@ -357,7 +357,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
-  parser.option(0, "pcie-enabled", 0, [&](const char *s) { file_name_with_bank_id = true; });
+  parser.option(0, "output-ddr-id-enabled", 0, [&](const char *s) { file_name_with_bank_id = true; });
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
   parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
