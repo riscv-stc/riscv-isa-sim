@@ -680,6 +680,7 @@ inline float16_t f16(freg_t r) { return f16(unboxF16(r)); }
 inline float32_t f32(freg_t r) { return f32(unboxF32(r)); }
 inline float64_t f64(freg_t r) { return f64(unboxF64(r)); }
 inline float128_t f128(freg_t r) { return r; }
+inline freg_t freg(bfloat16_t f) { return { ((uint64_t)-1 << 16) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float16_t f) { return { ((uint64_t)-1 << 16) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float32_t f) { return { ((uint64_t)-1 << 32) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float64_t f) { return { f.v, (uint64_t)-1 }; }
@@ -2926,6 +2927,35 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   } \
 }
+
+#define VI_LD_INT4_EXT(stride, offset, elt_width, is_mask_ldst, is_zero) \
+	const reg_t nf = insn.v_nf() + 1; \
+	const reg_t vl = is_mask_ldst ? ((P.VU.vl + 7) / 8) : P.VU.vl; \
+	const reg_t baseAddr = RS1; \
+	const reg_t vd = insn.rd(); \
+  const reg_t elt_width_bit_half = sizeof(elt_width##_t) * 4;   \
+	const reg_t elt_width_bit_val = pow( 2, (sizeof(elt_width##_t) * 4 )) - 1; \
+	VI_CHECK_LOAD(elt_width, is_mask_ldst); \
+  for (reg_t i = 0; i < vl; ++i) { \
+	  VI_ELEMENT_SKIP(i); \
+	  VI_STRIP(i); \
+	  P.VU.vstart = i; \
+	  for (reg_t fn = 0; fn < nf; ++fn) { \
+		  elt_width##_t val = MMU.load_##elt_width( \
+		    baseAddr + (stride) + (offset) * sizeof(elt_width##_t)); \
+		  if (i % 2 ) { \
+			  val = (val >> elt_width_bit_half) & elt_width_bit_val ;\
+		  } \
+		  else { \
+			  val = val & elt_width_bit_val;\
+		  }\
+      if (is_zero && val >> (elt_width_bit_half - 1)){ \
+			  val = (elt_width_bit_val << elt_width_bit_half) | val; \
+		  } \
+		  P.VU.elt<elt_width##_t>(vd + fn * emul, vreg_inx, true) = val; \
+	  } \
+	} \
+	P.VU.vstart = 0;
 
 #define VI_LD(stride, offset, elt_width, is_mask_ldst) \
   const reg_t nf = insn.v_nf() + 1; \

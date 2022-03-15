@@ -30,6 +30,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
   fprintf(stderr, "  --pcie-enabled        Start PCIE driver\n");
+  fprintf(stderr, "  --output-ddr-id-enabled         Output memery file name with bank id [default false]\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
   fprintf(stderr, "  --priv=<m|mu|msu>     RISC-V privilege modes supported [default %s]\n", DEFAULT_PRIV);
   fprintf(stderr, "  --varch=<name>        RISC-V Vector uArch string [default %s]\n", DEFAULT_VARCH);
@@ -240,6 +241,7 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   bool real_time_clint = false;
   bool pcie_enabled = false;
+  bool file_name_with_bank_id = false;
   size_t nprocs = 1;
   uint64_t ddr_size = 0x100000000; //4G ddr
   size_t board_id = 0;
@@ -355,6 +357,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
+  parser.option(0, "output-ddr-id-enabled", 0, [&](const char *s) { file_name_with_bank_id = true; });
   parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
   parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
@@ -460,7 +463,7 @@ int main(int argc, char** argv)
 
   sim_t s(isa, priv, varch, nprocs, bank_id, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
-      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, board_id, chip_id, session_id, coremask);
+      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

@@ -539,6 +539,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_ANDES_XSHSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_shimm})
   #define DEFINE_ANDES_XSWSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_swimm})
   #define DEFINE_ANDES_XSDSTORE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_sdimm})
+  #define DEFINE_ANDES_FR2TYPE(code) DISASM_INSN(#code, code, 0, {&frd, &frs2})
 
 
   DEFINE_XLOAD(lb)
@@ -1012,6 +1013,11 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_ANDES_XSWSTORE(swgp)
   DEFINE_ANDES_XSDSTORE(sdgp)
   DEFINE_ANDES_RTYPE(ffb)
+  DEFINE_ANDES_RTYPE(ffzmism)
+  DEFINE_ANDES_RTYPE(ffmism)
+  DEFINE_ANDES_RTYPE(flmism)
+  DEFINE_ANDES_FR2TYPE(fcvt_s_bf16)
+  DEFINE_ANDES_FR2TYPE(fcvt_bf16_s)
 
   DISASM_INSN("c.ebreak", c_add, mask_rd | mask_rvc_rs2, {});
   add_insn(new disasm_insn_t("ret", match_c_jr | match_rd_ra, mask_c_jr | mask_rd | mask_rvc_imm, {}));
@@ -1104,7 +1110,10 @@ disassembler_t::disassembler_t(int xlen)
       {match_vloxei8_v, mask_vloxei8_v, "vloxseg%dei%d.v", v_ld_index},
       {match_vsoxei8_v, mask_vsoxei8_v, "vsoxseg%dei%d.v", v_st_index},
 
-      {match_vle8ff_v, mask_vle8ff_v, "vlseg%de%dff.v", v_ld_unit}
+      {match_vle8ff_v, mask_vle8ff_v, "vlseg%de%dff.v", v_ld_unit},
+
+      {match_vln8_v,   mask_vln8_v,   "vlseg%de%d.v",   v_ld_unit},
+      {match_vlnu8_v,   mask_vlnu8_v,   "vlseg%de%d.v",   v_ld_unit},
     };
 
     reg_t elt_map[] = {0x00000000, 0x00005000, 0x00006000, 0x00007000,
@@ -1500,11 +1509,13 @@ disassembler_t::disassembler_t(int xlen)
 
   DISASM_VFUNARY0_INSN(vfw, v);
   DISASM_INSN("vfwcvt.f.f.v", vfwcvt_f_f_v, 0, {&vd, &vs2, &opt, &vm});
+  DISASM_INSN("vfwcvt.s.bf16", vfwcvt_s_bf16, 0, {&vd, &vs2, &opt, &vm});
+
 
   DISASM_VFUNARY0_INSN(vfn, w);
   DISASM_INSN("vfncvt.f.f.w", vfncvt_f_f_w, 0, {&vd, &vs2, &opt, &vm});
   DISASM_INSN("vfncvt.rod.f.f.w", vfncvt_rod_f_f_w, 0, {&vd, &vs2, &opt, &vm});
-
+  DISASM_INSN("vfncvt.bf16.s", vfncvt_bf16_s, 0, {&vd, &vs2, &opt, &vm});
   //vfunary1
   DISASM_INSN("vfsqrt.v", vfsqrt_v, 0, {&vd, &vs2, &opt, &vm});
   DISASM_INSN("vfrsqrte7.v", vfrsqrte7_v, 0, {&vd, &vs2, &opt, &vm});

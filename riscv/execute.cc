@@ -397,7 +397,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         xx  = BC_SHAPE2_COLUMN;
         yy  = BC_SHAPE1_COLUMN;
       } else if(CMT_LOG_MME_CONV == type) {
-        //pad = CONV_COUT >= CONV_OUT_STRIDE ? CONV_COUT : CONV_OUT_STRIDE ; 
+        pad = CONV_COUT >= CONV_OUT_STRIDE ? CONV_COUT : CONV_OUT_STRIDE ; 
         xx  = CONV_OUT_COLUMN;
         yy  = CONV_OUT_ROW;
         zz  = CONV_COUT;
@@ -478,10 +478,10 @@ static void commit_log_print_stc_mem_info(processor_t *p)
             0x30d0f == MME_DATA_TYPE || 0x30e0f == MME_DATA_TYPE || 0x30d10 == MME_DATA_TYPE || 0x30e10 == MME_DATA_TYPE ||\
             0x00000 == MME_DATA_TYPE || 0x10101 == MME_DATA_TYPE ) { 
           size = 2;   //float16, float16
-          for(int out=0; out < zz; out++) { 
-            for(int row=0; row < yy; row++) { 
-              for(int col=0; col < xx; col++) {  
-                int idx = out*yy*xx + row*xx + col;
+          for(int row=0; row < yy; row++) { 
+            for(int col=0; col < xx; col++) { 
+              for(int out=0; out < zz; out++) {
+                int idx = row*xx*pad + col*pad + out;
                 fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
                 fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
               }         
@@ -489,10 +489,10 @@ static void commit_log_print_stc_mem_info(processor_t *p)
           }
         } else if(0x2 == MME_DATA_TYPE || 0x10102 == MME_DATA_TYPE || 0x20202 == MME_DATA_TYPE ) { 
           size = 4;   //float32
-          for(int out=0; out < zz; out++) { 
-            for(int row=0; row < yy; row++) { 
-              for(int col=0; col < xx; col++) {  
-                int idx = out*yy*xx + row*xx + col;
+          for(int row=0; row < yy; row++) { 
+            for(int col=0; col < xx; col++) { 
+              for(int out=0; out < zz; out++) {
+                int idx = row*xx*pad + col*pad + out;
                 fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
                 fprintf(log_file, " 0x%08" PRIx32, *((uint32_t *)paddr+idx));
               }         

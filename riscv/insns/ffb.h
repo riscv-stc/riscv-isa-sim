@@ -6,7 +6,7 @@ union test {
 
 c.a = 0x1;
 
-uint8 rs2_vall8 = RS2 & 0xFF;
+uint8_t rs2_vall8 = RS2 & 0xFF;
 
 uint64_t rs1_val = RS1;
 
@@ -24,26 +24,8 @@ bool found = match1 || match2 || match3 || match4 || match5 || match6 || \
 
     if (!found)
         WRITE_RD(0);
-    else if(c.b = 0x1) //Big Endian
+    else if(c.b & 0x1) //Little Endian
     {
-        if(match8)
-            WRITE_RD(-8);
-        else if(match7)
-            WRITE_RD(-7);
-        else if(match6)
-            WRITE_RD(-6);
-        else if(match5)
-            WRITE_RD(-5);
-        else if(match4)
-            WRITE_RD(-4);
-        else if(match3)
-            WRITE_RD(-3);
-        else if(match2)
-            WRITE_RD(-2);
-        else 
-            WRITE_RD(-1);
-    }
-    else{    //Little Endian
         if(match1)
             WRITE_RD(-8);
         else if(match2)
@@ -57,6 +39,25 @@ bool found = match1 || match2 || match3 || match4 || match5 || match6 || \
         else if(match6)
             WRITE_RD(-3);
         else if(match7)
+            WRITE_RD(-2);
+        else 
+            WRITE_RD(-1);
+    }
+    else{    //Big Endian
+        
+        if(match8)
+            WRITE_RD(-8);
+        else if(match7)
+            WRITE_RD(-7);
+        else if(match6)
+            WRITE_RD(-6);
+        else if(match5)
+            WRITE_RD(-5);
+        else if(match4)
+            WRITE_RD(-4);
+        else if(match3)
+            WRITE_RD(-3);
+        else if(match2)
             WRITE_RD(-2);
         else 
             WRITE_RD(-1);
