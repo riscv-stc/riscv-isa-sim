@@ -11,6 +11,13 @@ check_traps_icmov_m(e_size);
 
 auto dst_coreId = DST_CORE_ID;
 
+
+
+uint16_t col = MTE_SHAPE_COLUMN;
+uint16_t row = MTE_SHAPE_ROW; 
+uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
+uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
+
 //src shape
 // #define ICMOV_OUTPUT_MSG
 #ifdef ICMOV_OUTPUT_MSG
@@ -40,11 +47,6 @@ std::cout << "src addr: 0x" << std::hex << zext_xlen(RS1) << std::endl;
 std::cout << "dst addr: 0x" << std::hex << reg_t(RD) << std::endl;
 std::cout << " " << std::endl;
 #endif
-
-uint16_t col = MTE_SHAPE_COLUMN;
-uint16_t row = MTE_SHAPE_ROW; 
-uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
-uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
 auto src = (uint8_t*)MMU.get_phy_addr(RS1);
 auto dst = (uint8_t*)p->get_sim()->local_addr_to_mem_by_id_cluster(zext_xlen(RD), dst_coreId);

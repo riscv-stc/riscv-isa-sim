@@ -25,6 +25,10 @@ MTE_DTYPE_DECODING_TO_TYPE({
 
 // #define MOV_L1_LLB_OUTPUT_MSG
 #ifdef MOV_L1_LLB_OUTPUT_MSG
+std::cout << " " << std::endl;
+std::cout << "insn: mov.l1.llb" << std::endl;
+std::cout << "core id: " << std::dec << p->get_csr(CSR_TID) <<std::endl;
+
 if (MTE_DATA_TYPE == 0x0)
   std::cout << "data type: fp16" << std::endl;
 else if (MTE_DATA_TYPE == 0x101)
