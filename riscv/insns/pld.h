@@ -13,7 +13,7 @@ reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
 
-#define PLD_OUTPUT_MSG
+// #define PLD_OUTPUT_MSG
 
 #ifdef PLD_OUTPUT_MSG
  //output case message
