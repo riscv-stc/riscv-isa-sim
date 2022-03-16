@@ -173,8 +173,9 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_PARITY(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype odd_acc  = dtype(-0.0); \
-        dtype even_acc = dtype(-0.0); \
+        Float32 odd_acc, even_acc; \
+        odd_acc.x  = 0x80000000; \
+        even_acc.x = 0x80000000; \
         for (int _row = 0; _row < row; _row++) { \
             if ((_row % 2) == 1) {\
                 odd_acc = src(_row, _col) + odd_acc; \
@@ -188,10 +189,11 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMH_4PART(src, dest, dtype, row, column) do { \
     for (int _col = 0; _col < column; _col++) { \
-        dtype acc0 = dtype(-0.0); \
-        dtype acc1 = dtype(-0.0); \
-        dtype acc2 = dtype(-0.0); \
-        dtype acc3 = dtype(-0.0); \
+        Float32 acc0, acc1, acc2, acc3; \
+        acc0.x = 0x80000000; \
+        acc1.x = 0x80000000; \
+        acc2.x = 0x80000000; \
+        acc3.x = 0x80000000; \
         int new_row = row % 2  == 0 ? row :  row + 1; \
         for (int _row = 0; _row < new_row; _row++) { \
             if (_row < row) { \
@@ -209,16 +211,16 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } else { \
                 if ((_row % 4) == 0) {\
-                    acc0 += dtype(-0.0); \
+                    acc0.x += 0x80000000; \
                 } \
                 if ((_row % 4) == 1) {\
-                    acc1 += dtype(-0.0); \
+                    acc1.x += 0x80000000; \
                 } \
                 if ((_row % 4) == 2) {\
-                    acc2 += dtype(-0.0); \
+                    acc2.x += 0x80000000; \
                 } \
                 if ((_row % 4) == 3) {\
-                    acc3 += dtype(-0.0); \
+                    acc3.x += 0x80000000; \
                 } \
             } \
         } \
