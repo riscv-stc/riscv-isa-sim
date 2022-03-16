@@ -139,7 +139,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     for (auto& x : plugin_devices)
         glb_bus.add_device(x.first, x.second);
 
-    //write cluster-ID'cormask to 0xC1004400 + ID*4
+    //write cluster-ID'cormask to iram 0xD3D84400 + ID*4
     for (size_t i = get_id_first_bank() ; i < nbanks()+get_id_first_bank(); i++) {
         char *mem = addr_to_mem(STC_VALID_NPCS_BASE + i * 4);
         *(uint32_t *)mem = (coremask & (0xff << i * 8)) >> i * 8;
@@ -259,15 +259,16 @@ void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id)
     if (is_upper_mem(start)) {        /* 高端内存 */
         snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(),start, len);
         dump_mem(fname, start, len, proc_id, true);
-    } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {        /* npc_bus */
+    } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {        /* l1 im sp  */
         snprintf(fname, sizeof(fname),"%s/%s@%d.0x%lx_0x%lx.dat",
             dump_path.c_str(), prefix.c_str(), proc_id, start, len);
         dump_mem(fname, start, len, proc_id, false);
-    } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* bank_bus */
-        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(), start, len);
+    } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* ddr sysdma */
+        snprintf(fname, sizeof(fname), "%s/%s_b%d@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), 
+                prefix.c_str(), get_core_by_id(proc_id)->get_bank_id(),start, len);
         dump_mem(fname, start, len, proc_id, true);
-    } else {      /* glb_bus */
-        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(), start, len);
+    } else {      /* llb iram */
+        snprintf(fname, sizeof(fname), "%s/%s@0x%lx_0x%lx.dat", dump_path.c_str(), prefix.c_str(), start, len);
         dump_mem(fname, start, len, -1, true);
     }
 }
@@ -302,19 +303,19 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       if (is_upper_mem(start)) {        /* 高端内存 */
         snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(),start, len);
         dump_mem(fname, start, len, get_bank(get_bankid_by_uppermem(start))->get_core_by_idxinbank(0)->get_id(), true);
-      } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {         /* npc_bus */
+      } else if (npc_addr_to_mem(start,get_id_first_bank(),0)) {         /* l1 im sp  */
         for (int i=0; i < (int)nprocs(); i++) {
             snprintf(fname, sizeof(fname),"%s/%s@%d.0x%lx_0x%lx.dat",
                 path.c_str(), prefix.c_str(), get_core_by_idxinsim(i)->get_id(), start, len);
             dump_mem(fname, start, len, get_core_by_idxinsim(i)->get_id(), true);
         }
-      } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* bank_bus */
+      } else if (bank_addr_to_mem(start,get_id_first_bank())) {         /* ddr sysdma */
         for (int i = get_id_first_bank() ; i < (int)(get_id_first_bank()+nbanks()) ; i++) {
             snprintf(fname, sizeof(fname), "%s/%s_b%d@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), i, start, len);
             dump_mem(fname, start, len, get_bank(i)->get_core_by_idxinbank(0)->get_id(), true);
         }
-      } else {      /* glb_bus */
-        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
+      } else {      /* llb iram */
+        snprintf(fname, sizeof(fname), "%s/%s@0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
         dump_mem(fname, start, len, -1, true);
       }
     }

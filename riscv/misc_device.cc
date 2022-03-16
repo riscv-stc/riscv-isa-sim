@@ -68,7 +68,12 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         auto prefix_addr = *((uint32_t*)bytes);
         std::string prefix = "snapshot-" + to_string(dump_count);
         if (prefix_addr != 0) {
-        prefix = proc->get_sim()->addr_to_mem(prefix_addr);
+            char *str = nullptr;
+            if ((str = proc->get_sim()->addr_to_mem(prefix_addr)) ||
+                    (str = proc->bank->bank_addr_to_mem(prefix_addr)) ||
+                    (str = proc->get_sim()->addr_to_mem(prefix_addr))) {
+                prefix = str;
+            }
         } else {
         dump_count ++;
         }
