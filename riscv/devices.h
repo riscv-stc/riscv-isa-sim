@@ -60,10 +60,12 @@
 #define MCU_PERF_CNT_CTRL       (0x080)
 
 /* 32bit 中断寄存器 */
+#define NP_IRQ_OUT_CTRL         (0x9a0)
 #define MCU_IRQ_STATUS_OFFSET   (0x9a8)
 #define MCU_IRQ_ENABLE_OFFSET   (0x9ac)
 #define MCU_IRQ_CLEAR_OFFSET    (0x9b0)
 #define MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ (0)
+#define MCU_IRQ_STATUS_BIT_NPC_IN_IRQ   (1)
 #define MCU_IRQ_STATUS_BIT_DMA0_SMMU0   (4)
 #define MCU_IRQ_STATUS_BIT_DMA1_SMMU0   (5)
 #define MCU_IRQ_STATUS_BIT_DMA2_SMMU0   (6)
@@ -145,7 +147,7 @@ class rom_device_t : public abstract_device_t {
 
 class misc_device_t : public abstract_device_t {
  public:
-  misc_device_t(processor_t* proc);
+  misc_device_t(pcie_driver_t * pcie, processor_t* proc);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
@@ -171,6 +173,8 @@ class misc_device_t : public abstract_device_t {
   uint32_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
+
+  pcie_driver_t *pcie_driver = nullptr;
 
   /* 只读寄存器的写操作不放在store中 */
   bool ro_register_write(reg_t addr, uint32_t val);

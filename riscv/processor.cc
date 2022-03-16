@@ -44,7 +44,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     npc_bus.add_device(l1_buffer_start, new mem_t(l1_buffer_size));
     npc_bus.add_device(im_buffer_start, new mem_t(im_buffer_size));
     npc_bus.add_device(sp_buffer_start, new mem_t(sp_buffer_size));
-    misc_dev = new misc_device_t(this);
+    misc_dev = new misc_device_t(pcie_driver, this);
     npc_bus.add_device(MISC_START, misc_dev);
 
     mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , misc_dev, (pcie_driver) ? true : false);
