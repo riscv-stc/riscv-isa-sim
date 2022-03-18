@@ -10,7 +10,20 @@ mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p, misc_device_t 
   reset();
 }
 
-/* 64bit寄存器 */
+#ifdef MBOX_V1_ENABLE
+#define RX_CFIFO_VAL     0x2
+#define RX_EXT_CFIFO_VAL 0x4
+#define MBOX_MTXCFG         (0x0)
+#define MBOX_MTXCMD         (0x4)
+#define MBOX_MEXTTXCMD      (0x8)
+#define PCIE0_MBOX_MRXCMD    (0xE30A100C)
+#define PCIE0_MBOX_MRXCMDEXT    (0xE30A1010)
+#define MBOX_MRXCMD_ADDR     (0x0c)
+#define MBOX_MRXCMDEXT_ADDR  (0x10)
+#define MBOX_INT_PEND        (0x20)
+
+#else
+/* MBV2 Registers 64bit寄存器 */
 #define MBV2_TXCFG_L            (0x00)
 #define MBV2_TXCFG_H            (0x04)
 #define MBV2_TXDAT_L            (0x08)
@@ -25,6 +38,8 @@ mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p, misc_device_t 
 #define INT_BIT_TX_DONE         (0)
 #define INT_BIT_RX_VALID        (2)
 
+#endif  /* #define MBOX_V1_ENABLE */
+
 bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
     if (unlikely(!bytes || (size() <= addr+len))) {
@@ -32,7 +47,41 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
             << " len: " << hex << len << std::endl;
         return false;
     }
-    
+#ifdef MBOX_V1_ENABLE
+  if (MBOX_MRXCMD_ADDR == addr) {
+    if (cmd_value.empty())
+      return false;
+
+    uint32_t value = cmd_value.front();
+    cmd_value.pop();
+    cmd_count--;
+
+    memcpy(bytes, &value, 4);
+    // if (cmd_value.empty()) {
+      // p->state.mextip &= ~(1 << RX_CFIFO_VAL);
+      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
+    // }
+    return true;
+  }
+
+  if (MBOX_MRXCMDEXT_ADDR == addr) {
+    if (cmdext_value.empty())
+      return false;
+
+    uint32_t value = cmdext_value.front();
+    cmdext_value.pop();
+    cmdext_count--;
+
+    memcpy(bytes, &value, 4);
+    // if (cmdext_value.empty()) {
+      // p->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
+      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_EXT_CFIFO_VAL);
+    //}
+    return true;
+  }
+
+  memcpy(bytes, reg_base + addr, len);
+#else
     switch(addr) {
     case MBV2_RXREG_L:
         if (cmd_value.empty())
@@ -47,6 +96,7 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     default:
         memcpy(bytes, (uint8_t*)reg_base+addr, len);
     }
+#endif  /* #define MBOX_V1_ENABLE */
     return true;
 }
 
@@ -57,7 +107,43 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
             << " len: " << hex << len << std::endl;
         return false;
     }
+#ifdef MBOX_V1_ENABLE
+  if (MBOX_INT_PEND == addr) {
+    uint32_t v = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+    p->state.mextip &= ~v;
+    p->state.mextip |= ((cmd_value.empty() ? 0 : 1) << RX_CFIFO_VAL) |
+	    ((cmdext_value.empty() ? 0 : 1) << RX_EXT_CFIFO_VAL);
+    *(uint32_t *)(reg_base + MBOX_INT_PEND) = p->state.mextip;
+    return true;
+  }
 
+  memcpy(reg_base + addr, bytes, len);
+  if (((MBOX_MTXCMD == addr) | (MBOX_MEXTTXCMD == addr)) &&
+		((PCIE0_MBOX_MRXCMD == *(uint32_t *)reg_base) |
+		(PCIE0_MBOX_MRXCMDEXT == *(uint32_t *)reg_base))) {
+    command_head_t cmd;
+    cmd.code = CODE_INTERRUPT;
+    cmd.addr = addr;
+    cmd.len = 4;
+    *(uint32_t *)cmd.data = *(uint32_t *)bytes;
+    if(pcie_enabled)
+    	pcie_driver->send((const uint8_t *)&cmd, sizeof(cmd));
+  }
+
+  if (MBOX_MRXCMD_ADDR == addr) {
+    cmd_count++;
+    cmd_value.push(*(uint32_t*)bytes);
+    p->state.mextip = p->state.mextip | (1 << RX_CFIFO_VAL);
+    *(uint32_t *)(reg_base + MBOX_INT_PEND) |= 1 << RX_CFIFO_VAL;
+  }
+
+  if (MBOX_MRXCMDEXT_ADDR == addr) {
+    cmdext_count++;
+    cmdext_value.push(*(uint32_t*)bytes);
+    p->state.mextip = p->state.mextip | (1 << RX_EXT_CFIFO_VAL);
+    *(uint32_t *)(reg_base + MBOX_INT_PEND) |= 1 << RX_EXT_CFIFO_VAL;
+  }
+#else
     switch(addr) {
     case MBV2_TXCFG_L:
         memcpy((uint8_t *)reg_base+addr, bytes, len);
@@ -123,12 +209,24 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         return false;
         break;
     }
-
+#endif  /* #define MBOX_V1_ENABLE */
     return true;
 }
 
 void mbox_device_t::reset()
 {
+#ifdef MBOX_V1_ENABLE
+  cmd_count = 0;
+  cmdext_count = 0;
+  p->state.mextip = 0;
+  memset(reg_base, 0, 4096);
+
+  while (!cmd_value.empty())
+    cmd_value.pop();
+
+  while (!cmdext_value.empty())
+    cmdext_value.pop();
+#else
     uint32_t val = 0;
     memset(reg_base, 0, size());
     val = INT_REG_MASK;
@@ -136,12 +234,14 @@ void mbox_device_t::reset()
 
     while (!cmd_value.empty())
         cmd_value.pop();
+#endif  /* #define MBOX_V1_ENABLE */
 }
 
 mbox_device_t::~mbox_device_t()
 {
 }
 
+#ifndef MBOX_V1_ENABLE
 bool mbox_device_t::ro_register_write(reg_t addr, uint32_t val)
 {
     if (addr > size()-sizeof(val))
@@ -188,3 +288,4 @@ bool mbox_device_t::ro_register_write(reg_t addr, uint64_t val)
     
     return true;
 }
+#endif  /* #define MBOX_V1_ENABLE */

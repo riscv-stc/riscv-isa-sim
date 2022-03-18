@@ -181,6 +181,7 @@ class misc_device_t : public abstract_device_t {
   bool ro_register_write(reg_t addr, uint64_t val);
 };
 
+#define MBOX_V1_ENABLE
 class mbox_device_t : public abstract_device_t {
  public:
   mbox_device_t(pcie_driver_t * pcie, processor_t* p, misc_device_t *misc, bool pcie_enabled);
@@ -195,6 +196,11 @@ class mbox_device_t : public abstract_device_t {
   bool ro_register_write(reg_t addr, uint32_t val);
   bool ro_register_write(reg_t addr, uint64_t val);
  private:
+#ifdef MBOX_V1_ENABLE
+  uint32_t cmd_count;
+  uint32_t cmdext_count;
+  std::queue<uint32_t> cmdext_value;
+#endif
   std::queue<uint32_t> cmd_value;
   processor_t* p;
   uint8_t reg_base[4096];
