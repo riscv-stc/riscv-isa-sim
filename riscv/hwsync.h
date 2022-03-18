@@ -64,6 +64,7 @@ class hwsync_t: public abstract_device_t {
         cond_pld.notify_all();
     #endif
     }
+    size_t size(void) {return 0x80000;};
 };
 
 #endif // __HWSYNC_H__

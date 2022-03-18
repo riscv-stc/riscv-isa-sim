@@ -22,14 +22,16 @@ mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p, misc_device_t 
 #define MBV2_INT_MASK           (0x28)      /* 0使能中断,1屏蔽 */
 
 #define INT_REG_MASK            (0x1f)      /* 中断寄存器的有效位 */
-
 #define INT_BIT_TX_DONE         (0)
 #define INT_BIT_RX_VALID        (2)
 
 bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    if (unlikely(!bytes || addr >= size()))
+    if (unlikely(!bytes || (size() <= addr+len))) {
+        std::cout << "mbox: unsupported load register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
         return false;
+    }
     
     switch(addr) {
     case MBV2_RXREG_L:
@@ -50,8 +52,11 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    if (unlikely(!bytes || addr >= size()))
+    if (unlikely(!bytes || (size() <= addr+len))) {
+        std::cout << "mbox: unsupported store register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
         return false;
+    }
 
     switch(addr) {
     case MBV2_TXCFG_L:

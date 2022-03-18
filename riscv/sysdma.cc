@@ -28,6 +28,13 @@
 #define DMA_C1_LLPR_OFFSET 0X214
 #define DMA_C1_PCNT_OFFSET 0X218
 
+#define SYS_DMAX_C1_ATU_OFFSET      0x5000
+#define SYS_DMAX_C1_ATU_SIZE        0x1000
+#define SYS_DMAX_C1_ATU_END         (SYS_DMAX_C1_ATU_OFFSET+SYS_DMAX_C1_ATU_SIZE)
+#define SYS_DMAX_DMMY_OFFSET        0x8000
+#define SYS_DMAX_DMMY_SIZE          0x2000
+#define SYS_DMAX_DMMY_END           (SYS_DMAX_DMMY_OFFSET+SYS_DMAX_DMMY_SIZE)
+
 static reg_t sysdma_base[] = {
 	SYSDMA0_BASE,
 	SYSDMA1_BASE,
@@ -146,6 +153,12 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
     std::cout << "sysdma: load wrong len:" << len << std::endl;
   }
 
+  if (((SYS_DMAX_DMMY_END)<addr) || ((SYS_DMAX_C1_ATU_END<addr) && (SYS_DMAX_DMMY_OFFSET>addr))) {
+    std::cout << "sysdma: unsupported load register offset: " << addr
+            << std::endl;
+    return false;
+  }
+
   switch (addr) {
     // get status of dma transfer
     case DMA_CISR_OFFSET: {
@@ -212,6 +225,7 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
           *((uint32_t*)bytes) = *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]);
       }else {
           std::cout << "sysdma: unsupported load address " << addr << std::endl;
+          return false;
       }
       break;
   }
@@ -224,6 +238,13 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
 bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
   if (len != 4) {
     std::cout << "sysdma: store wrong len:" << len << std::endl;
+    return false;
+  }
+
+  if (((SYS_DMAX_DMMY_END)<addr) || ((SYS_DMAX_C1_ATU_END<addr) && (SYS_DMAX_DMMY_OFFSET>addr))) {
+    std::cout << "sysdma: unsupported store register offset: " << addr
+            << std::endl;
+    return false;
   }
 
   uint32_t val = *((uint32_t*)bytes);
@@ -335,8 +356,9 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
       if (addr >= DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
           *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]) = val;
       } else {
-          std::cout << "sysdma: unsupported store register offset: " << addr
-                << std::endl;
+            std::cout << "sysdma: unsupported store register offset: " << addr
+                    << std::endl;
+            return false;
       }
       break;
   }

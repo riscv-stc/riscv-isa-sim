@@ -30,6 +30,12 @@ clint_t::clint_t(simif_t *sim, uint64_t freq_hz, bool real_time)
 
 bool clint_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
+    if (size() <= addr+len) {
+        std::cout << "clint: unsupported load register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
+        return false;
+    }
+
   increment(0);
   if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + sim->nprocs()*sizeof(msip_t)) {
     std::vector<msip_t> msip(sim->nprocs());
@@ -48,6 +54,12 @@ bool clint_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool clint_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
+    if (size() <= addr+len) {
+        std::cout << "clint: unsupported store register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
+        return false;
+    }
+
   if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + sim->nprocs()*sizeof(msip_t)) {
     std::vector<msip_t> msip(sim->nprocs());
     std::vector<msip_t> mask(sim->nprocs(), 0);
