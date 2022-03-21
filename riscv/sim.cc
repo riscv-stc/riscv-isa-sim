@@ -57,12 +57,12 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     mems(mems),
     plugin_devices(plugin_devices),
     /* procs(std::max(nprocs, size_t(1))),  */
-    banks(std::max(size_t(_nbanks+id_first_bank), size_t(1))),
+banks(std::max(size_t(_nbanks+id_first_bank), size_t(1))),
     core_num_of_bank(nprocs/_nbanks),
     id_first_bank(id_first_bank),
     sim_nprocs(nprocs),
     sim_nbanks(_nbanks),
-    die_id(die_id),
+die_id(die_id),
     hwsync_masks(hwsync_masks),
     initrd_start(initrd_start),
     initrd_end(initrd_end),
@@ -688,18 +688,54 @@ static bool paddr_ok(reg_t addr)
   return (addr >> MAX_PADDR_BITS) == 0;
 }
 
+bool sim_t::in_mmio(reg_t addr)
+{
+    auto desc = glb_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<clint_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<debug_module_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<rom_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<hwsync_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
     if (addr + len < addr || !paddr_ok(addr + len - 1))
         return false;
-    return glb_bus.load(addr & 0xffffffff, len, bytes);
+    if (in_mmio(addr)) {
+        return glb_bus.load(addr & 0xffffffff, len, bytes);
+    }
+    return false;
 }
 
 bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
     if (addr + len < addr || !paddr_ok(addr + len - 1))
         return false;
-    return glb_bus.store(addr & 0xffffffff, len, bytes);
+    if (in_mmio(addr)) {
+        return glb_bus.store(addr & 0xffffffff, len, bytes);
+    }
+    return false;
 }
 
 bool sim_t::bank_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t bank_id)

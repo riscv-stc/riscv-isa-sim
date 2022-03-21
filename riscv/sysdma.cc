@@ -88,7 +88,7 @@ void sysdma_device_t::dma_core(int ch) {
               dma_channel_[ch].llp >= sysdma_base[dma_idx_] + DMA_BUF_OFFSET+DMA_BUF_SIZE)
           throw std::runtime_error("sysdma:wrong llp");
 
-      struct dma_desc_t* desc = (struct dma_desc_t*)&dma_buf_[dma_channel_[ch].llp - sysdma_base[dma_idx_] - DMA_BUF_OFFSET];
+      struct dma_desc_t* desc = (struct dma_desc_t*)&sys_dma_reg[dma_channel_[ch].llp - sysdma_base[dma_idx_]];
 
       // std::cout << "desc:" << hex << desc << "desc next:" << desc->llpr
       //           << "sysdma: ctlr:" << desc->ctlr.full << std::endl;
@@ -149,10 +149,6 @@ void sysdma_device_t::dma_core(int ch) {
  * @brief device load func
  */
 bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
-  if (len != 4) {
-    std::cout << "sysdma: load wrong len:" << len << std::endl;
-  }
-
   if (((SYS_DMAX_DMMY_END)<addr) || ((SYS_DMAX_C1_ATU_END<addr) && (SYS_DMAX_DMMY_OFFSET>addr))) {
     std::cout << "sysdma: unsupported load register offset: " << addr
             << std::endl;
@@ -222,10 +218,9 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
 
     default:
       if (addr >=DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
-          *((uint32_t*)bytes) = *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]);
+          memcpy(bytes, (uint8_t*)sys_dma_reg + addr, len);
       }else {
-          std::cout << "sysdma: unsupported load address " << addr << std::endl;
-          return false;
+          memcpy(bytes, (uint8_t*)sys_dma_reg + addr, len);
       }
       break;
   }
@@ -236,11 +231,6 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
  * @brief device store func
  */
 bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
-  if (len != 4) {
-    std::cout << "sysdma: store wrong len:" << len << std::endl;
-    return false;
-  }
-
   if (((SYS_DMAX_DMMY_END)<addr) || ((SYS_DMAX_C1_ATU_END<addr) && (SYS_DMAX_DMMY_OFFSET>addr))) {
     std::cout << "sysdma: unsupported store register offset: " << addr
             << std::endl;
@@ -354,11 +344,9 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
 
     default:
       if (addr >= DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
-          *((uint32_t *)&dma_buf_[addr-DMA_BUF_OFFSET]) = val;
+          memcpy((uint8_t*)sys_dma_reg + addr, bytes, len);
       } else {
-            std::cout << "sysdma: unsupported store register offset: " << addr
-                    << std::endl;
-            return false;
+          memcpy((uint8_t*)sys_dma_reg + addr, bytes, len);
       }
       break;
   }

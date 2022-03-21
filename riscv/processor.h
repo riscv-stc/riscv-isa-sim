@@ -619,6 +619,7 @@ public:
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   bool in_npc_mem(reg_t addr, local_device_type type);
+  bool in_npc_mmio(reg_t addr);
 
 private:
   simif_t* sim;

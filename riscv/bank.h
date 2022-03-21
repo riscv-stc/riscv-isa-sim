@@ -38,6 +38,7 @@ public:
     reg_t bottom_ddr_to_upper(reg_t addr) const;
     char* bank_addr_to_mem(reg_t addr);
 
+    bool in_bank_mmio(reg_t addr);
     bool bank_mmio_load(reg_t addr, size_t len, uint8_t* bytes);
     bool bank_mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
 

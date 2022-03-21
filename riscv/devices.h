@@ -138,6 +138,7 @@ class bus_t : public abstract_device_t {
 class rom_device_t : public abstract_device_t {
  public:
   rom_device_t(std::vector<char> data);
+  size_t size(void) {return data.size();};
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   const std::vector<char>& contents() { return data; }
@@ -220,6 +221,8 @@ class sysdma_device_t : public abstract_device_t {
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
+  size_t size(void) {return sizeof(sys_dma_reg);};
+
   // dma descriptor
   struct dma_desc_t {
     union {
@@ -280,7 +283,9 @@ class sysdma_device_t : public abstract_device_t {
   int dma_idx_;
   // size of dma buffer
   #define DMA_BUF_SIZE 0x1000
-  char dma_buf_[DMA_BUF_SIZE];
+  #define DMA_REGION_SIZE 0x10000       /* 64kB */
+
+  char sys_dma_reg[DMA_REGION_SIZE];
   enum {
     DDR_DIR_SRC = 0,
     DDR_DIR_DST,

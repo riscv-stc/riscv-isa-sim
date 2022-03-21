@@ -143,6 +143,7 @@ private:
   char* bank_addr_to_mem(reg_t addr, uint32_t bank_id);
   char* npc_addr_to_mem(reg_t addr, uint32_t bank_id, uint32_t idxinbank);
 
+  bool in_mmio(reg_t addr);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
 

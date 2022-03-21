@@ -632,14 +632,43 @@ char* processor_t::addr_to_mem(reg_t addr)
     return NULL;
 }
 
+bool processor_t::in_npc_mmio(reg_t addr) {
+    auto desc = npc_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<ipa_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool processor_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    return npc_bus.load(addr & 0xffffffff, len, bytes);
+    if (in_npc_mmio(addr)) {
+        return npc_bus.load(addr & 0xffffffff, len, bytes);
+    }
+    return false;
 }
 
 bool processor_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    return npc_bus.store(addr & 0xffffffff, len, bytes);
+    if (in_npc_mmio(addr)) {
+        return npc_bus.store(addr & 0xffffffff, len, bytes);
+    }
+    return false;
 }
 
 bool processor_t::in_npc_mem(reg_t addr, local_device_type type) {

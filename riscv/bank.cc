@@ -87,15 +87,33 @@ bool bank_t::npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32
   return get_core_by_idxinbank(idxinbank)->mmio_store(addr, len, bytes);
 }
 
+bool bank_t::in_bank_mmio(reg_t addr) {
+    auto desc = bank_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<sysdma_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /* 取bank内非 mem_t类型的资源，如 hwsync */
 bool bank_t::bank_mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    return bank_bus.load(addr, len, bytes);
+    if (in_bank_mmio(addr)) {
+        return bank_bus.load(addr, len, bytes);
+    }
+    return false;
 }
 
 bool bank_t::bank_mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    return bank_bus.store(addr, len, bytes);
+    if (in_bank_mmio(addr)) {
+        return bank_bus.store(addr, len, bytes);
+    }
+    return false;
 }
 
 bool bank_t::is_bottom_ddr(reg_t addr) const
