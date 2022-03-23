@@ -70,7 +70,7 @@ class trigger_matched_t
 class mmu_t
 {
 public:
-  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, ipa_t *ipa);
+  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *atu);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -345,7 +345,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   amo_func(uint64)
 
   void dmae_smmu_trap(reg_t paddr, int channel);
-  void dmae_ipa_trap(reg_t paddr, int channel);
+  void dmae_atu_trap(reg_t paddr, int channel);
   reg_t smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type type, uint32_t xlate_flags);
 
   inline void yield_load_reservation()
@@ -360,11 +360,11 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     int idxinbank = proc ? proc->get_idxinbank() : 0;
 
     reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, 1)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, 1)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
-        paddr = ipa->translate(paddr, 1);
+        paddr = atu->translate(paddr, 1);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
@@ -408,11 +408,11 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
       store_conditional_address_misaligned(vaddr);
 
     reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, 1)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, 1)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
-        paddr = ipa->translate(paddr, 1);
+        paddr = atu->translate(paddr, 1);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
@@ -539,7 +539,7 @@ private:
   simif_t* sim;
   bankif_t* bank;
   processor_t* proc;
-  ipa_t *ipa = nullptr;
+  atu_t *atu = nullptr;
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;

@@ -1,5 +1,6 @@
 #include <iostream>
 #include "devices.h"
+#include "sysdma.h"
 #include "mmu.h"
 #include "simif.h"
 #include "encoding.h"

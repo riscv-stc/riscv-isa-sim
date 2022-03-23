@@ -15,7 +15,7 @@
 #include <cassert>
 #include <functional>
 #include "debug_rom_defines.h"
-#include "ipa.h"
+#include "atu.h"
 
 class processor_t;
 class mmu_t;
@@ -630,7 +630,7 @@ private:
   hwsync_t *hwsync;
   pcie_driver_t *pcie_driver = nullptr;
   bus_t npc_bus;
-  ipa_t *ipa = nullptr;
+  atu_t *atu = nullptr;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;

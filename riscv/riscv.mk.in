@@ -14,6 +14,8 @@ riscv_hdrs = \
 	common.h \
 	decode.h \
 	devices.h \
+	atu.h \
+	sysdma.h \
 	disasm.h \
 	dts.h \
 	mmu.h \
@@ -51,7 +53,7 @@ riscv_srcs = \
 	interactive.cc \
 	trap.cc \
 	cachesim.cc \
-	ipa.cc \
+	atu.cc \
 	mmu.cc \
 	bank.cc \
 	hwsync.cc \

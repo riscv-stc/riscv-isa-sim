@@ -6,8 +6,8 @@
 #include "bankif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, ipa_t *ipa)
- : sim(sim), bank(bank), proc(proc), ipa(ipa),
+mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *atu)
+ : sim(sim), bank(bank), proc(proc), atu(atu),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   target_big_endian(false),
 #endif
@@ -87,11 +87,11 @@ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(vaddr, sizeof(fetch_temp), FETCH, 0);
 
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, sizeof(fetch_temp))) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, sizeof(fetch_temp))) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
         }
-        paddr = ipa->translate(paddr, sizeof(fetch_temp));
+        paddr = atu->translate(paddr, sizeof(fetch_temp));
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
         }
@@ -177,11 +177,11 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, len)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
-        paddr = ipa->translate(paddr, len);
+        paddr = atu->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
@@ -217,11 +217,11 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
   int bankid = bank ? bank->get_bankid() : 0;
   int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, len)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
-        paddr = ipa->translate(paddr, len);
+        paddr = atu->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
@@ -267,7 +267,7 @@ size_t mmu_t::npc_addr_to_mem(reg_t paddr)
 /**
  * mte访存特点:
  * 1) 访问范围, llb, l1
- * 2) 不经过 mmu , 经过 ipa at转换 
+ * 2) 不经过 mmu , 经过 atu 转换 
  * 3) l1访存会跨核跨bank
 */
 char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
@@ -281,11 +281,11 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
         paddr &= 0xffffffff;
     }
 
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, len)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
-        paddr = ipa->translate(paddr, len);
+        paddr = atu->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
@@ -313,11 +313,11 @@ char * mmu_t::mte_addr_to_mem(reg_t paddr)
         paddr &= 0xffffffff;
     }
 
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, len)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
-        paddr = ipa->translate(paddr, len);
+        paddr = atu->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
@@ -348,7 +348,7 @@ void mmu_t::dmae_smmu_trap(reg_t paddr, int channel)
     proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
-void mmu_t::dmae_ipa_trap(reg_t paddr, int channel)
+void mmu_t::dmae_atu_trap(reg_t paddr, int channel)
 {
     uint32_t mcu_irq_bit = 0;
 
@@ -395,7 +395,7 @@ reg_t mmu_t::smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type ty
 /**
  * dmae 访存特点:
  * 1) 访问范围 l1, llb, glb
- * 2) 经过 mmu 和 ipa at
+ * 2) 经过 mmu 和 atu
 */
 char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type type, uint32_t xlate_flags)
 {
@@ -407,14 +407,14 @@ char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type
     }
 
     paddr = smmu_translate(paddr, len, channel, type, xlate_flags);
-    if(ipa && ipa->is_ipa_enabled()) {
-        if (!ipa->pmp_ok(paddr, len)) {
-            dmae_ipa_trap(paddr, channel);
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
+            dmae_atu_trap(paddr, channel);
             return nullptr;
         }
-        paddr = ipa->translate(paddr, len);
+        paddr = atu->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
-            dmae_ipa_trap(paddr, channel);
+            dmae_atu_trap(paddr, channel);
             return nullptr;
         }
     }

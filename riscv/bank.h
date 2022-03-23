@@ -14,6 +14,7 @@
 #include "hwsync.h"
 #include "pcie_driver.h"
 #include "processor.h"
+#include "sysdma.h"
 
 class bank_t : public bankif_t {
 private:
@@ -22,7 +23,7 @@ private:
     int pcie_enabled;
     std::vector<processor_t*> procs;
     pcie_driver_t *pcie_driver;
-
+    sysdma_device_t *sysdma[2] = {nullptr, nullptr};    /* 每个bank包含2个sysdma控制器 */
     bus_t bank_bus;
 public:
     bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,

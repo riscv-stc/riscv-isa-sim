@@ -1,5 +1,5 @@
-#ifndef _RISCV_IPA_H
-#define _RISCV_IPA_H
+#ifndef _RISCV_ATU_H
+#define _RISCV_ATU_H
 
 #include "decode.h"
 #include <cstdlib>
@@ -43,11 +43,11 @@ struct ipa_at_t {
     reg_t ipa_end;          /* 不包含该地址 */
 };
 
-class ipa_t : public abstract_device_t
+class atu_t : public abstract_device_t
 {
 public:
-    ipa_t(const char *ipaini, int procid);
-    ~ipa_t();
+    atu_t(const char *ipaini, int procid);
+    ~atu_t();
 
     bool pmp_ok(reg_t addr, reg_t len) const;
     reg_t translate(reg_t addr, reg_t len) const;

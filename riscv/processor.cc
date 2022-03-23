@@ -50,12 +50,12 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , misc_dev, (pcie_driver) ? true : false);
     npc_bus.add_device(MBOX_START, mbox);
 
-    /* ipa */
-    ipa = new ipa_t(ipaini, get_id());
-    npc_bus.add_device(NP_IOV_ATU_START, ipa);
+    /* atu */
+    atu = new atu_t(ipaini, get_id());
+    npc_bus.add_device(NP_IOV_ATU_START, atu);
     add_mbox(mbox);
 
-  mmu = new mmu_t(sim, bank, this,ipa);
+  mmu = new mmu_t(sim, bank, this,atu);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -126,7 +126,7 @@ processor_t::~processor_t()
   delete disassembler;
   delete mbox;
   delete misc_dev;
-  delete ipa;
+  delete atu;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -559,7 +559,7 @@ void processor_t::reset()
   if (ext)
     ext->reset(); // reset the extension
 
-  ipa->reset();
+  atu->reset();
 
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
@@ -648,7 +648,7 @@ bool processor_t::in_npc_mmio(reg_t addr) {
         }
     }
 
-    if (auto mem = dynamic_cast<ipa_t *>(desc.second)) {
+    if (auto mem = dynamic_cast<atu_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }

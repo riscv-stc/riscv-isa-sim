@@ -2,13 +2,13 @@
 
 #include <iostream>
 #include <iomanip>
-#include "ipa.h"
+#include "atu.h"
 
 using namespace std;
 
 #define IPA_DEBUG
 
-ipa_t::ipa_t(const char *ipaini,int procid) : procid(procid)
+atu_t::atu_t(const char *ipaini,int procid) : procid(procid)
 {
     at_reg_base = (uint32_t *)new uint8_t[len];
     memset(at_reg_base, 0, len);
@@ -18,7 +18,7 @@ ipa_t::ipa_t(const char *ipaini,int procid) : procid(procid)
     }
 }
 
-ipa_t::~ipa_t()
+atu_t::~atu_t()
 {
     if (atini)
         iniparser_freedict(atini);
@@ -28,7 +28,7 @@ ipa_t::~ipa_t()
 }
 
 /* 启用了ipa但地址不在映射范围内则报trap(0xc0000000的8MB空间除外) */
-bool ipa_t:: pmp_ok(reg_t addr, reg_t len) const
+bool atu_t:: pmp_ok(reg_t addr, reg_t len) const
 {
     reg_t check_addr = addr;
     reg_t check_end = addr + len;
@@ -52,7 +52,7 @@ bool ipa_t:: pmp_ok(reg_t addr, reg_t len) const
     return false;
 }
 
-reg_t ipa_t::translate(reg_t addr, reg_t len) const
+reg_t atu_t::translate(reg_t addr, reg_t len) const
 {
     reg_t paddr = IPA_INVALID_ADDR;
 
@@ -74,7 +74,7 @@ reg_t ipa_t::translate(reg_t addr, reg_t len) const
     return IPA_INVALID_ADDR;
 }
 
-bool ipa_t::load(reg_t addr, size_t len, uint8_t* bytes)
+bool atu_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
@@ -86,7 +86,7 @@ bool ipa_t::load(reg_t addr, size_t len, uint8_t* bytes)
     return true;
 }
 
-bool ipa_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+bool atu_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
@@ -99,7 +99,7 @@ bool ipa_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 /* 根据寄存器配置更新 ipa vt 映射表, 成功返回0 */
-int ipa_t::at_update(uint32_t *at_base)
+int atu_t::at_update(uint32_t *at_base)
 {
     struct ipa_at_t at = {};
 
@@ -130,7 +130,7 @@ int ipa_t::at_update(uint32_t *at_base)
 }
 
 /* 根据配置文件更新 ipa vt 映射表 */
-int ipa_t::at_update(dictionary *ini, int procid)
+int atu_t::at_update(dictionary *ini, int procid)
 {
     int nkeys = 0;
     int nsec = 0;
@@ -197,7 +197,7 @@ int ipa_t::at_update(dictionary *ini, int procid)
     return 0;
 }
 
-int ipa_t::reset(void)
+int atu_t::reset(void)
 {
     if (atini) {
         at_update(atini,procid);
@@ -208,7 +208,7 @@ int ipa_t::reset(void)
 }
 
 /* 调试接口,编辑寄存器区域添加 at 表项. (at_update()后才能生效) */
-int ipa_t::reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base)
+int atu_t::reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base)
 {
     uint32_t *pa_l_addr = nullptr;
     uint32_t *pa_u_addr = nullptr;
@@ -244,7 +244,7 @@ int ipa_t::reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base)
 }
 
 /* 调试接口,编辑寄存器区域 写 AT_CTL_REG_ADDR. (at_update()后才能生效) */
-int ipa_t::reg_at_enable(bool enabled, uint32_t *at_base)
+int atu_t::reg_at_enable(bool enabled, uint32_t *at_base)
 {
     if (nullptr == at_base)
         return -1;
@@ -253,7 +253,7 @@ int ipa_t::reg_at_enable(bool enabled, uint32_t *at_base)
 }
 
 /* 调试接口,编辑寄存器区域 写 ENTRY_IPA_EN_ADDR. (at_update()后才能生效) */
-int ipa_t::reg_at_entry_enable(int entry_id, bool enabled, uint32_t *at_base)
+int atu_t::reg_at_entry_enable(int entry_id, bool enabled, uint32_t *at_base)
 {
     if((nullptr==at_base) || (0>=entry_id) || (IPA_ENTRY_TOTAL<=entry_id)) {
         return -1;
