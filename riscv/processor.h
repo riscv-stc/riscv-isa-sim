@@ -186,6 +186,9 @@ struct state_t
   reg_t mideleg;
   uint32_t mcounteren;
   uint32_t scounteren;
+  reg_t mcounterwen;
+  reg_t mhpmcounter[32];
+  reg_t mhpmevent[32];
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;

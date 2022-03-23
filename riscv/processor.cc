@@ -385,6 +385,7 @@ void state_t::reset(reg_t max_isa)
   mideleg = 0;
   mcounteren = 0;
   scounteren = 0;
+  mcounterwen = 0;
   sepc = 0;
   stval = 0;
   sscratch = 0;
@@ -1022,6 +1023,18 @@ reg_t processor_t::cal_satp(reg_t val) const
 }
 void processor_t::set_csr(int which, reg_t val)
 {
+  uint32_t ctr_en = -1;
+
+  ctr_en &= state.mcounterwen;
+  bool ctr_ok = (ctr_en >> (which & 31)) & 1;
+
+  if (which >= CSR_CYCLE && which <= CSR_HPMCOUNTER31) {
+    if (!ctr_ok) {
+    //   goto throw_illegal;
+      return ;
+    }
+  }
+
 #if defined(RISCV_ENABLE_COMMITLOG)
 #define LOG_CSR(rd) \
   STATE.log_reg_write[((which) << 4) | 4] = {get_csr(rd), 0};
@@ -1368,6 +1381,25 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_MCOUNTEREN:
       state.mcounteren = val;
+      break;
+    case CSR_MCOUNTERWEN:
+      state.mcounterwen = val;
+      break;
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+      state.mhpmcounter[which&0x1f] = val;
+      break;
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
+      state.mhpmevent[which&0x1f] = val;
       break;
     case CSR_SSTATUS: {
       reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_SPP | SSTATUS_FS
@@ -1767,6 +1799,19 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MCYCLEH:
     case CSR_SCOUNTEREN:
     case CSR_MCOUNTEREN:
+    case CSR_MCOUNTERWEN:
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
     case CSR_SATP:
     case CSR_SEPC:
     case CSR_STVEC:
@@ -1800,8 +1845,11 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
   uint32_t ctr_en = -1;
   if (state.prv < PRV_M)
     ctr_en &= state.mcounteren;
+#if 0
+  /* npuv2 不支持 S */
   if (state.prv < PRV_S)
     ctr_en &= state.scounteren;
+#endif
   bool ctr_ok = (ctr_en >> (which & 31)) & 1;
   if (state.v)
     ctr_en &= state.hcounteren;
@@ -1813,20 +1861,18 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     goto out; \
   } while (false)
 
-  if ((which >= CSR_HPMCOUNTER3 && which <= CSR_HPMCOUNTER31) ||
+  if ((which >= CSR_CYCLE && which <= CSR_HPMCOUNTER31) ||
       (xlen == 32 && which >= CSR_HPMCOUNTER3H && which <= CSR_HPMCOUNTER31H)) {
     if (!ctr_ok)
       goto throw_illegal;
     if (!ctr_v_ok)
       goto throw_virtual;
-    ret(0);
   }
-  if (which >= CSR_MHPMCOUNTER3 && which <= CSR_MHPMCOUNTER31)
-    ret(0);
-  if (xlen == 32 && which >= CSR_MHPMCOUNTER3H && which <= CSR_MHPMCOUNTER31H)
-    ret(0);
-  if (which >= CSR_MHPMEVENT3 && which <= CSR_MHPMEVENT31)
-    ret(0);
+  if ((which >= CSR_MCYCLE && which <= CSR_MHPMCOUNTER31) || 
+        (xlen == 32 && which >= CSR_MHPMCOUNTER3H && which <= CSR_MHPMCOUNTER31H)) {
+    if (!ctr_ok)
+      goto throw_illegal;
+  }
 
   if (which >= CSR_PMPADDR0 && which < CSR_PMPADDR0 + state.max_pmp) {
     // If n_pmp is zero, that means pmp is not implemented hence raise trap if it tries to access the csr
@@ -2106,6 +2152,33 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('U'))
         break;
       ret(state.mcounteren);
+    case CSR_MCOUNTERWEN:
+      if (!supports_extension('U'))
+        break;
+      ret(state.mcounterwen);
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+    {
+      /* event仅支持 type=0, sel 1 and 2 */
+      reg_t event = state.mhpmevent[which&0x1f];
+      if ((1<<4 == event) || (2<<4 == event)) {
+          ret(state.minstret);
+      } else {
+          ret(0);
+      }
+    //   ret(state.mhpmcounter[which&0x1f]);
+    }
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
+      ret(state.mhpmevent[which&0x1f]);
     case CSR_MCOUNTINHIBIT: ret(0);
     case CSR_SSTATUS: {
       reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_UBE | SSTATUS_SPP
