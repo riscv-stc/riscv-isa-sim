@@ -529,7 +529,7 @@ disassembler_t::disassembler_t(int xlen)
   #define DEFINE_CV3TYPE(code) DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &frs2, &dmx})
 
   #define DEFINE_ANDES_ITYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_imm})
-  #define DEFINE_ANDES_BTYPE(code)  DISASM_INSN(#code, code, 0, {&xrs1, &andes_branch_target})
+  #define DEFINE_ANDES_BTYPE(code)  DISASM_INSN(#code, code, 0, {&xrs1, &ade_imm, &andes_branch_target})
   #define DEFINE_ANDES_I1TYPE(code)  DISASM_INSN(#code, code, 0, {&xrd, &xrs1, &ade_bf_msb, &ade_bf_lsb})
   #define DEFINE_ANDES_XLHLOAD(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_lhimm})
   #define DEFINE_ANDES_XLWLOAD(code)  DISASM_INSN(#code, code, 0, {&xrd, &ade_lwimm})

@@ -104,7 +104,7 @@ public:
   int64_t ade_bbc_cimm() {return ((x(7, 1) << 5) + (x(20, 5))); }
   int64_t ade_bec_cimm() {return ((x(7, 1) << 5) + (x(20, 5))) + (x(30, 1) << 6); }
   int64_t ade_bf_msb() {return (x(26, 6)); }
-  int64_t ade_bf_lsb() {return (x(20, 25));}
+  int64_t ade_bf_lsb() {return (x(20, 6));}
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
   uint64_t v_uimm() { return x(15, 5); }

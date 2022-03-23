@@ -1,1 +1,1 @@
-WRITE_RD(MMU.load_int16(RDGP + (insn.ade_lhimm() << 1)));
+WRITE_RD(MMU.load_int16(RDGP + (insn.ade_lhimm())));

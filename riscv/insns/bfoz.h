@@ -6,8 +6,8 @@ int64_t lsbm1 = LSB - 1;
 int64_t msbm1 = MSB - 1;
 
 int64_t lenm1 = 0;
-int64_t rd_val = 0;
-int64_t rs1_val = 0;
+uint64_t rd_val = 0;
+uint64_t rs1_val = 0;
 
 rd_val = RD;
 rs1_val = RS1;
@@ -15,77 +15,55 @@ rs1_val = RS1;
 if(MSB == 0)
 {
     if(GET_BIT(rs1_val, 0))
-    {
         set_bit(LSB, (unsigned long *)&rd_val);
-        WRITE_RD(rd_val);
-    }
     else
-    {
         clear_bit(LSB, (unsigned long *)&rd_val);
-        WRITE_RD(rd_val);
-    }
+
     
     if(LSB < 63)
     {
-        WRITE_RD(rd_val & ((1 << lsbp1) - 1));
+        rd_val &= ((1UL << lsbp1) - 1);
     }
 
     if(LSB > 0)
     {
-        if (LSB < 63)
-            WRITE_RD(rd_val & (~(1 << lsbm1 + 1) + 1));
-        else
-            WRITE_RD(0);
+        rd_val &= (~(1UL << (lsbm1 + 1)) + 1);  
     }
-        
+     WRITE_RD(rd_val);
 }
 else if (MSB < LSB)
 {
     lenm1 = LSB - MSB;
-    if (lenm1 < 63)
-    {      
-        rd_val = (rd_val & ((1 << MSB) - 1)) | (rd_val & (~(1 << LSB + 1) + 1)) | ( (rs1_val & (1 << (lenm1 + 1) - 1)) << MSB);
-        WRITE_RD(rd_val); 
+    if (LSB == 63)
+    {
+        rd_val = (rd_val & ((1UL << MSB) - 1)) ;
+        rs1_val = (rs1_val & ((1UL << (lenm1 + 1)) - 1)) ;
+        rd_val |= (rs1_val << MSB);
     }
     else
     {
-        WRITE_RD(rs1_val); 
-    }
+        rd_val = (rd_val & ((1UL << MSB) - 1)) | (rd_val & (~(1UL << (LSB + 1)) + 1)) | ( (rs1_val & ((1UL << (lenm1 + 1)) - 1)) << MSB);
 
-    if(LSB < 63)
-    {
-        WRITE_RD(rd_val & ((1 << lsbp1) - 1));
+        if(LSB < 63)
+        {
+            rd_val &= ((1UL << lsbp1) - 1);
+        }
     }
-    WRITE_RD(rd_val & ((1 << (~(msbm1 + 1))) + 1));
+    rd_val &= ( (~(1UL << (msbm1 + 1))) + 1);
+    WRITE_RD(rd_val); 
 }
 else
 {
     lenm1 = MSB - LSB;
-    if (lenm1 < 63)
-    {
-        if (MSB < 60)
-            rd_val = (rd_val & (~(1 << lenm1) + 1)) | ((rs1_val & ((1 << (MSB + 1)) - 1)) >> LSB);
-        else
-            rd_val = (rd_val & (~(1 << lenm1) + 1)) | (rs1_val >> LSB);
-
-        WRITE_RD(rd_val);
-    }
-    else
+    rd_val = 0;
+    if ((MSB == 63) && (LSB == 0))  
     {
         WRITE_RD(rs1_val);
     }
-    
-    if (lenm1 < 63)
-    {
-        if(GET_BIT(rs1_val, MSB))
-        {
-            WRITE_RD(rd_val | (~(1 << (lenm1 + 1)) + 1));
-        }
-        else
-        {
-            WRITE_RD(rd_val & ((1 << (lenm1 + 1)) - 1));
-        }
-    }   
     else
-        return 0;
+    {
+        rd_val =  ((rs1_val >> LSB ) & ((1UL << (lenm1 + 1)) - 1)) ;
+        WRITE_RD(rd_val);
+    }
+
 }
