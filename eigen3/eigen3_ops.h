@@ -261,12 +261,12 @@ typedef Stride<Dynamic, Dynamic> DynStride;
 
 #define MATRIX_ACC_DIMW(src, dest, dtype, row, column) do { \
     uint8_t once_max = 128; \
-    queue<dtype> dat_q; \
-    queue<dtype> dat_q_128;\
-    queue<dtype> acc_dat_q; \
-    queue<dtype> acc_dat_q_tmp; \
-    queue<dtype> acc_last; \
-    dtype mul_ret, a, b, acc_ab, acc_current, new_last, old_last; \
+    queue<Float32> dat_q; \
+    queue<Float32> dat_q_128;\
+    queue<Float32> acc_dat_q; \
+    queue<Float32> acc_dat_q_tmp; \
+    queue<Float32> acc_last; \
+    Float32 mul_ret, a, b, acc_ab, acc_current, new_last, old_last; \
     if(is_same< dtype, Float32 >::value) {\
         once_max = 64; \
     } \
@@ -277,7 +277,7 @@ typedef Stride<Dynamic, Dynamic> DynStride;
             dat_q.push(mul_ret); \
         } \
         while (dat_q.size() != 0) { \
-            dat_q_128 = queue<dtype>(); \
+            dat_q_128 = queue<Float32>(); \
             for(int i = 0; i < once_max; i++) { \
                 if(dat_q.size() != 0) { \
                     dat_q_128.push(dat_q.front()); \
@@ -285,10 +285,10 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } \
             \
-            acc_dat_q = queue<dtype>(); \
+            acc_dat_q = queue<Float32>(); \
             int end_flag = 0; \
             while(end_flag == 0) { \
-                acc_dat_q = queue<dtype>(); \
+                acc_dat_q = queue<Float32>(); \
                 while(dat_q_128.size() >=2) { \
                     a = dat_q_128.front(); \
                     dat_q_128.pop(); \
@@ -1349,7 +1349,7 @@ int veacc_m(OutDType *rs1, OutDType *rd, struct ShapeStride *ss, int dim, bool r
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
         //rd_row_sum_inner = rs1_matrix_inner.rowwise().sum();
-        MATRIX_ACC_DIMW(rs1_matrix_inner, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(rs1_matrix_inner, rd_row_sum_inner, OutDType, ss->shape1_row, ss->shape1_column);
         //rd_row_sum = rd_row_sum_inner.cast<OutDType>();
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1403,7 +1403,7 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
 
     //InDType rd_tmp = rd_col_sum.sum();
     Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
     //*rd = OutDType(rd_tmp);
 
     if (relu) {
@@ -1478,7 +1478,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
 
-        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, OutDType, ss->shape1_row, ss->shape1_column);
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1533,7 +1533,7 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
     }
 
     Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, InDType, 1, ss->shape1_column);
+    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
 
     if (relu) {
         MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
@@ -1612,7 +1612,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
         InDType *rd_row_buf = (InDType *)malloc(ss->shape1_row * sizeof(InDType));
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
         //MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, OutDType, ss->shape1_row, ss->shape1_column);
         Map_OutDType rd_row_sum(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
@@ -1685,7 +1685,7 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
         Map_InDType rd_row_sum_inner(rd_row_buf, ss->shape1_row, 1, DynStride(1, 1));
 
         //MATRIX_ACC_DIMW_PAIR(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
-        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, InDType, ss->shape1_row, ss->shape1_column);
+        MATRIX_ACC_DIMW(mul_result, rd_row_sum_inner, OutDType, ss->shape1_row, ss->shape1_column);
 
         MATRIX_CAST(rd_row_sum_inner, rd_row_sum, OutDType, ss->shape1_row, 1);
         free(rd_row_buf);
