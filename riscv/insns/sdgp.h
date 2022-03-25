@@ -1,1 +1,1 @@
-MMU.store_uint8(RDGP + (insn.ade_sdimm() << 3), RS2);
+MMU.store_uint64(RDGP + (insn.ade_sdimm()), RS2);

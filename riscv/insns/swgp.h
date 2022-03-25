@@ -1,1 +1,1 @@
-MMU.store_uint8(RDGP + (insn.ade_swimm() << 2), RS2);
+MMU.store_uint32(RDGP + (insn.ade_swimm()), RS2 & 0xFFFFFFFF);

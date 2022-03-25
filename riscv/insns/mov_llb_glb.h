@@ -3,9 +3,6 @@ DMAE_DTYPE_DECODING_TO_ESIZE();
 
 check_trap_mov_llb_glb(out_esize);
 
-// uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RS1));
-// uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));
-
 uint32_t data_type = DMAE_DATA_TYPE;
 struct DmaeShapeStride dmae_ss;
 dmae_ss.shape_x = DMAE_SHAPE_X;
@@ -26,3 +23,6 @@ len = dmae_dst_len(data_type, &dmae_ss);
 
 // dmae_mov(src, dst, data_type, &dmae_ss);
 dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p, false, false);
+
+uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));
+WRITE_MEM_STC(RD, (uint8_t*)dst, CMT_LOG_DMAE);  
