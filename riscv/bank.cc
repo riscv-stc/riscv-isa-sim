@@ -16,27 +16,27 @@
 bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
             hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
-            const std::vector<int> hartids, bool halted, const char *ipaini) : nprocs(bank_nprocs),
+            const std::vector<int> hartids, bool halted, const char *atuini) : nprocs(bank_nprocs),
             bank_id(bankid), pcie_enabled(pcie_enabled), 
             procs(std::max(size_t(bank_nprocs),size_t(1)))
 {
     /* 添加 sysdma */
     switch (bankid) {
     case 0:
-        bank_bus.add_device(SYSDMA0_BASE, new sysdma_device_t(0, sim, this));
-        bank_bus.add_device(SYSDMA1_BASE, new sysdma_device_t(1, sim, this));
+        bank_bus.add_device(SYSDMA0_BASE, sysdma[0] = new sysdma_device_t(0, sim, this, atuini));
+        bank_bus.add_device(SYSDMA1_BASE, sysdma[1] = new sysdma_device_t(1, sim, this, atuini));
         break;
     case 1:
-        bank_bus.add_device(SYSDMA2_BASE, new sysdma_device_t(2, sim, this));
-        bank_bus.add_device(SYSDMA3_BASE, new sysdma_device_t(3, sim, this));
+        bank_bus.add_device(SYSDMA2_BASE, sysdma[0] = new sysdma_device_t(2, sim, this, atuini));
+        bank_bus.add_device(SYSDMA3_BASE, sysdma[1] = new sysdma_device_t(3, sim, this, atuini));
         break;
     case 2:
-        bank_bus.add_device(SYSDMA4_BASE, new sysdma_device_t(4, sim, this));
-        bank_bus.add_device(SYSDMA5_BASE, new sysdma_device_t(5, sim, this));
+        bank_bus.add_device(SYSDMA4_BASE, sysdma[0] = new sysdma_device_t(4, sim, this, atuini));
+        bank_bus.add_device(SYSDMA5_BASE, sysdma[1] = new sysdma_device_t(5, sim, this, atuini));
         break;
     case 3:
-        bank_bus.add_device(SYSDMA6_BASE, new sysdma_device_t(6, sim, this));
-        bank_bus.add_device(SYSDMA7_BASE, new sysdma_device_t(7, sim, this));
+        bank_bus.add_device(SYSDMA6_BASE, sysdma[0] = new sysdma_device_t(6, sim, this, atuini));
+        bank_bus.add_device(SYSDMA7_BASE, sysdma[1] = new sysdma_device_t(7, sim, this, atuini));
         break;
     default:
         throw std::runtime_error("unsupported core id");
@@ -58,7 +58,7 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
     for (int i = 0; i < nprocs; i++) {
         int hart_id = hartids.empty() ? (i + bank_id * nprocs) : hartids[bank_id*nprocs+i];
         procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, pcie_driver, i,
-                    hart_id, bank_id, halted, ipaini, log_file);
+                    hart_id, bank_id, halted, atuini, log_file);
     }
 
     return ;
@@ -158,4 +158,12 @@ char* bank_t::bank_addr_to_mem(reg_t addr)
 char* bank_t::npc_addr_to_mem(reg_t addr, uint32_t idxinbank) 
 {
     return get_core_by_idxinbank(idxinbank)->addr_to_mem(addr);
+}
+
+char* bank_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc)
+{
+    if (4 <= channel) 
+        return nullptr;
+        
+    return sysdma[channel/2]->dmae_addr_to_mem(paddr, len, channel, proc);
 }

@@ -46,7 +46,8 @@ struct ipa_at_t {
 class atu_t : public abstract_device_t
 {
 public:
-    atu_t(const char *ipaini, int procid);
+    atu_t(const char *atuini, int procid);      /* npc */
+    atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base);    /* sysdma */
     ~atu_t();
 
     bool pmp_ok(reg_t addr, reg_t len) const;
@@ -64,11 +65,16 @@ private:
     dictionary *atini = nullptr;
     bool at_enabled = false;
     int ipa_entry_max = IPA_ENTRY_TOTAL;
-    uint32_t *at_reg_base = nullptr;
+    uint8_t *at_reg_base = nullptr;
     size_t len = 4096;
+    /* sysdma atu */
+    bool is_sysdma_atu;
+    int dma_id;
+    int ch_id;
 
-    int at_update(uint32_t *at_base);
+    int at_update(uint8_t *at_base);
     int at_update(dictionary *ini, int procid);
+    int at_update(dictionary *ini, int dma_id, int ch_id);
 
     /* 寄存器操作接口,操作寄存器后 at_update() 才能生效 */
     int reg_add_at(struct ipa_at_t *at, int entry_id, uint32_t *at_base);

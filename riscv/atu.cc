@@ -8,13 +8,30 @@ using namespace std;
 
 #define IPA_DEBUG
 
-atu_t::atu_t(const char *ipaini,int procid) : procid(procid)
+/* npc atu， 每个proc包含一个,根据 procid 解析 ini 配置 */
+atu_t::atu_t(const char *atuini,int procid) : procid(procid), is_sysdma_atu(false)
 {
-    at_reg_base = (uint32_t *)new uint8_t[len];
+    at_reg_base = (uint8_t *)new uint8_t[len];
     memset(at_reg_base, 0, len);
     
-    if (nullptr != ipaini) {
-        atini = iniparser_load(ipaini);
+    if (nullptr != atuini) {
+        atini = iniparser_load(atuini);
+    }
+}
+
+/**
+ * 说明: sysdma atu，每个sysdma包含2个atu，通过sysdma id核ch id解析ini
+ *      另外寄存器地址空间由外部传给构造函数
+ * 参数: dma_id 0-7，4个bank共8个sysdma控制器
+ * 参数: ch_id 0-1, 每个控制器2个channel
+ */
+atu_t::atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base) : at_reg_base((uint8_t *)reg_base),
+        is_sysdma_atu(true), dma_id(dma_id), ch_id(ch_id)
+{
+    memset(at_reg_base, 0, len);
+    
+    if (nullptr != atuini) {
+        atini = iniparser_load(atuini);
     }
 }
 
@@ -23,7 +40,7 @@ atu_t::~atu_t()
     if (atini)
         iniparser_freedict(atini);
 
-    if (at_reg_base)
+    if ((!is_sysdma_atu) && at_reg_base)
         delete at_reg_base;
 }
 
@@ -99,7 +116,7 @@ bool atu_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 /* 根据寄存器配置更新 ipa vt 映射表, 成功返回0 */
-int atu_t::at_update(uint32_t *at_base)
+int atu_t::at_update(uint8_t *at_base)
 {
     struct ipa_at_t at = {};
 
@@ -129,7 +146,7 @@ int atu_t::at_update(uint32_t *at_base)
     return 0;
 }
 
-/* 根据配置文件更新 ipa vt 映射表 */
+/* npc atu 根据配置文件更新 ipa vt 映射表 */
 int atu_t::at_update(dictionary *ini, int procid)
 {
     int nkeys = 0;
@@ -189,7 +206,78 @@ int atu_t::at_update(dictionary *ini, int procid)
             continue;
         } else {
             cerr << "ini [" << section_name << "]:entry" << i << " invalid" <<endl;
-            throw std::invalid_argument("ipaini parse error");
+            throw std::invalid_argument("atuini parse error");
+        }
+    }
+
+    at_enabled = true;
+    return 0;
+}
+
+/* sysamd atu 根据配置文件更新 ipa vt 映射表 */
+int atu_t::at_update(dictionary *ini, int dma_id, int ch_id)
+{
+    int nkeys = 0;
+    int nsec = 0;
+    const char *secname = nullptr;
+    string section_name = "";
+
+    if (nullptr == ini)
+        return -1;
+
+    section_name.assign("ipa-trans-sysdma");
+    section_name.append(to_string(dma_id));
+    section_name.append("-");
+    section_name.append("ch");
+    section_name.append(to_string(ch_id));
+
+    nkeys = iniparser_getsecnkeys(ini, section_name.c_str());
+    if (0 >= nkeys) {
+        return -2;
+    }
+
+    ipa_at.clear();
+    string keys_name;
+    struct ipa_at_t at = {};
+    for (int i = 0 ; i < ipa_entry_max; i++) {
+        memset(&at, 0 , sizeof(at));
+#define LONGINT_INVALID       ((reg_t)(0)-1)
+        keys_name = section_name + ":entry";
+        keys_name.append(to_string(i));
+        keys_name.append(".pa.base");
+        at.pa_base = iniparser_getlongint(ini, keys_name.c_str(), LONGINT_INVALID);
+
+        keys_name = section_name + ":entry";
+        keys_name.append(to_string(i));
+        keys_name.append(".ipa.start");
+        at.ipa_start = iniparser_getlongint(ini, keys_name.c_str(), LONGINT_INVALID);
+
+        keys_name = section_name + ":entry";
+        keys_name.append(to_string(i));
+        keys_name.append(".ipa.end");
+        at.ipa_end = iniparser_getlongint(ini, keys_name.c_str(), LONGINT_INVALID);
+
+        if ((LONGINT_INVALID!=at.pa_base) && (LONGINT_INVALID!=at.ipa_start) &&(LONGINT_INVALID!=at.ipa_end)) {
+            if ((at.ipa_end < at.ipa_start)) {
+                cerr << section_name << ":entry" << i
+                    << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
+                    << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
+                    << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;
+                throw std::range_error("ipa range error");
+            } else {
+                #ifdef IPA_DEBUG
+                cout << section_name << ":entry" << i
+                    << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
+                    << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
+                    << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;
+                #endif
+                ipa_at.push_back(at);
+            }
+        } else if ((LONGINT_INVALID==at.pa_base) && (LONGINT_INVALID==at.ipa_start) && (LONGINT_INVALID==at.ipa_end)) {
+            continue;
+        } else {
+            cerr << "ini [" << section_name << "]:entry" << i << " invalid" <<endl;
+            throw std::invalid_argument("atuini parse error");
         }
     }
 
@@ -200,7 +288,11 @@ int atu_t::at_update(dictionary *ini, int procid)
 int atu_t::reset(void)
 {
     if (atini) {
-        at_update(atini,procid);
+        if (is_sysdma_atu) {
+            at_update(atini, dma_id, ch_id);
+        } else {
+            at_update(atini,procid);
+        }
     } else {
         at_update(at_reg_base);
     }

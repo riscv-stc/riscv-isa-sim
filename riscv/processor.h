@@ -369,7 +369,7 @@ public:
   processor_t(const char* isa, const char* priv, const char* varch,
               simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
-              const char *ipaini,FILE *log_file);
+              const char *atuini,FILE *log_file);
   ~processor_t();
 
   void set_debug(bool value);
@@ -684,6 +684,8 @@ private:
   friend class extension_t;
   friend class pcie_driver_t;
   friend class mbox_device_t;
+  friend class smmu_t;
+  friend class sysdma_device_t;
 
   void parse_varch_string(const char*);
   void parse_priv_string(const char*);

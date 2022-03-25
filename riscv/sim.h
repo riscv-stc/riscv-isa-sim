@@ -32,7 +32,7 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
         bool dtb_enabled, const char *dtb_file, bool pcie_enabled, size_t board_id, 
-        size_t chip_id, size_t session_id, uint32_t coremask, const char *ipaini);
+        size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini);
   ~sim_t();
 
   // run the simulation to completion

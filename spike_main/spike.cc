@@ -59,7 +59,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --session-id=<n>      HWsync shared memory id [default 0]\n");
   fprintf(stderr, "  --core-mask=<n>         set core mask, bit0-bit31 for core0-core31 [default 0xffffffff all unmask]\n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
-  fprintf(stderr, "  --ipaini=<path>       Address translation configuration file for virtualization\n");
+  fprintf(stderr, "  --atuini=<path>       Address translation configuration file for virtualization\n");
   fprintf(stderr, "  --kernel=<path>       Load kernel flat image into memory\n");
   fprintf(stderr, "  --initrd=<path>       Load kernel initrd into memory\n");
   fprintf(stderr, "  --bootargs=<args>     Provide custom bootargs for kernel [default: console=hvc0 earlycon=sbi]\n");
@@ -254,7 +254,7 @@ int main(int argc, char** argv)
   uint32_t hwsync_timer_num = 0xffffffff;    /* hs register HS_SYNC_REQ_ THRESH */
   char masks_buf[178]={'\0'};
   char *hwsync_masks = masks_buf;
-  const char* ipaini = nullptr;         /* 地址转换单元的配置文件 */
+  const char* atuini = nullptr;         /* 地址转换单元的配置文件 */
 
   const char* kernel = NULL;
   reg_t kernel_offset, kernel_size;
@@ -385,7 +385,7 @@ int main(int argc, char** argv)
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "dtb", 1, [&](const char *s){dtb_file = s;});
-  parser.option(0, "ipaini", 1, [&](const char* s){ipaini = s;});
+  parser.option(0, "atuini", 1, [&](const char* s){atuini = s;});
   parser.option(0, "kernel", 1, [&](const char* s){kernel = s;});
   parser.option(0, "initrd", 1, [&](const char* s){initrd = s;});
   parser.option(0, "bootargs", 1, [&](const char* s){bootargs = s;});
@@ -472,7 +472,7 @@ int main(int argc, char** argv)
   sim_t s(isa, priv, varch, nprocs, nbanks, id_first_bank, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
       htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
-      pcie_enabled, board_id, chip_id, session_id, coremask, ipaini);
+      pcie_enabled, board_id, chip_id, session_id, coremask, atuini);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

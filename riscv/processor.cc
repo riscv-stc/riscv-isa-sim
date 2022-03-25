@@ -25,7 +25,7 @@
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
               simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
-              const char *ipaini,FILE *log_file)
+              const char *atuini,FILE *log_file)
   : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs),
   pcie_driver(pcie_driver),ext(NULL), 
   idxinbank(idxinbank), bank_id(bank_id), id(id), xlen(0),histogram_enabled(false), 
@@ -51,7 +51,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     npc_bus.add_device(MBOX_START, mbox);
 
     /* atu */
-    atu = new atu_t(ipaini, get_id());
+    atu = new atu_t(atuini, get_id());
     npc_bus.add_device(NP_IOV_ATU_START, atu);
     add_mbox(mbox);
 

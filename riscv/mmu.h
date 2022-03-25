@@ -346,7 +346,6 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   void dmae_smmu_trap(reg_t paddr, int channel);
   void dmae_atu_trap(reg_t paddr, int channel);
-  reg_t smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type type, uint32_t xlate_flags);
 
   inline void yield_load_reservation()
   {
@@ -489,7 +488,6 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   char * mte_addr_to_mem(reg_t paddr, int procid);
   char * mte_addr_to_mem(reg_t paddr);
-  char * dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type type, uint32_t xlate_flags);
 
   void register_memtracer(memtracer_t*);
 
@@ -565,7 +563,7 @@ private:
   reg_t s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_type, bool virt, bool mxr);
 
   // perform a page table walk for a given VA; set referenced/dirty bits
-  reg_t walk(reg_t addr, access_type type, reg_t prv, bool virt, bool mxr);
+  reg_t walk(reg_t addr, access_type type, reg_t prv, bool virt, bool mxr, reg_t satp);
 
   // handle uncommon cases: TLB misses, page faults, MMIO
   tlb_entry_t fetch_slow_path(reg_t addr);
@@ -634,6 +632,7 @@ private:
   trigger_matched_t *matched_trigger;
 
   friend class processor_t;
+  friend class smmu_t;
 };
 
 struct vm_info {

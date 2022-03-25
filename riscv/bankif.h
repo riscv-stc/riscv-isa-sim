@@ -32,6 +32,8 @@ public:
 
     virtual bool npc_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idxinbank) = 0;
     virtual bool npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idxinbank) = 0;
+
+    virtual char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc) = 0;
 };
 
 #endif

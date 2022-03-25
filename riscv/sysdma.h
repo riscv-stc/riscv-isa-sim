@@ -3,19 +3,35 @@
 
 #include "device.h"
 #include "atu.h"
+#include "mmu.h"
+
+class smmu_t : public mmu_t
+{
+public:
+    smmu_t(simif_t *sim, bankif_t *bank, uint8_t *sysdma_smmu_base);
+    ~smmu_t();
+    reg_t translate(reg_t addr, reg_t len, processor_t* proc);
+
+private:
+    simif_t *sim;
+    bankif_t *bank;
+    uint8_t *reg_base;
+    reg_t satp = ~(reg_t)(0);
+};
 
 /**
  * @brief The sysdma_device_t class
  */
 class sysdma_device_t : public abstract_device_t {
  public:
-  sysdma_device_t(int dma_idx, simif_t *sim,bankif_t *bank);
+  sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, const char *atuini);
   ~sysdma_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
-
   size_t size(void) {return sizeof(sys_dma_reg);};
+
+  char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
 
   // dma descriptor
   struct dma_desc_t {
@@ -55,10 +71,14 @@ class sysdma_device_t : public abstract_device_t {
   };
 
  private:
-
+ 
   void dma_core(int ch);
   simif_t *sim;
   bankif_t *bank;
+  smmu_t *smmu[2];
+  atu_t *atu[2];
+
+  void dmae_atu_trap(reg_t paddr, int channel, processor_t* proc);
 
   // dma direction
   enum direction_t {

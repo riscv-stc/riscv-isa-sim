@@ -12502,8 +12502,8 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
             dst_vaddr = (uint64_t)(rd);
             cpy_len = (uint64_t)(shape_x * shape_y * shape_z * e_size);
 
-            src_paddr = (uint64_t)(MMU.dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, LOAD, 0));
-            dst_paddr = (uint64_t)(MMU.dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, STORE, 0));
+            src_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, p));
+            dst_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, p));
 
             /* smmu或ipa翻译错误，不执行指令，不报trap，报中断 */
             if (src_paddr && dst_paddr) {
@@ -12517,8 +12517,8 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
                     dst_vaddr = (uint64_t)(rd + j * copy_stride_d_x + i * copy_stride_d_y);
                     cpy_len = (uint64_t)(shape_x * e_size);
 
-                    src_paddr = (uint64_t)(MMU.dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, LOAD, 0));
-                    dst_paddr = (uint64_t)(MMU.dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, STORE, 0));
+                    src_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, p));
+                    dst_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, p));
 
                     if (src_paddr && dst_paddr) {
                         memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);

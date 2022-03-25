@@ -71,8 +71,9 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
       }
     }
   }
-
-  reg_t paddr = walk(addr, type, mode, virt, mxr) | (addr & (PGSIZE-1));
+  
+  reg_t satp = (virt) ? proc->get_state()->vsatp : proc->get_state()->satp;
+  reg_t paddr = walk(addr, type, mode, virt, mxr, satp) | (addr & (PGSIZE-1));
   if (!pma_ok(paddr, len, type,!!(xlate_flags&RISCV_XLATE_AMO_FLAG)))
     throw_access_exception(virt, addr, type);
   if (!pmp_ok(paddr, len, type, mode))
@@ -360,75 +361,6 @@ void mmu_t::dmae_atu_trap(reg_t paddr, int channel)
     proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
-/* dmae的smmu,与mmu使用相同的页表项, 区别是出错时产生中断而不是trap */
-reg_t mmu_t::smmu_translate(reg_t addr, reg_t len, reg_t channel, access_type type, uint32_t xlate_flags)
-{
-  if (!proc)
-    return addr;
-
-  bool mxr = get_field(proc->state.mstatus, MSTATUS_MXR);
-  bool virt = (proc) ? proc->state.v : false;
-  reg_t mode = proc->state.prv;
-  if (type != FETCH) {
-    if (!proc->state.debug_mode && get_field(proc->state.mstatus, MSTATUS_MPRV)) {
-      mode = get_field(proc->state.mstatus, MSTATUS_MPP);
-      if (get_field(proc->state.mstatus, MSTATUS_MPV))
-        virt = true;
-    }
-    if (!proc->state.debug_mode && (xlate_flags & RISCV_XLATE_VIRT)) {
-      virt = true;
-      mode = get_field(proc->state.hstatus, HSTATUS_SPVP);
-      if (type == LOAD && (xlate_flags & RISCV_XLATE_VIRT_MXR)) {
-        mxr = true;
-      }
-    }
-  }
-
-  reg_t paddr = walk(addr, type, mode, virt, mxr) | (addr & (PGSIZE-1));
-  if (!pma_ok(paddr, len, type,!!(xlate_flags&RISCV_XLATE_AMO_FLAG)))
-    dmae_smmu_trap(addr, channel);
-  if (!pmp_ok(paddr, len, type, mode))
-    dmae_smmu_trap(addr, channel);
-  return paddr;
-}
-
-/**
- * dmae 访存特点:
- * 1) 访问范围 l1, llb, glb
- * 2) 经过 mmu 和 atu
-*/
-char * mmu_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel,access_type type, uint32_t xlate_flags)
-{
-    char *host_addr = nullptr;
-    int idxinbank = proc ? proc->get_idxinbank() : 0;
-
-    if (proc->get_xlen() == 32) {
-        paddr &= 0xffffffff;
-    }
-
-    paddr = smmu_translate(paddr, len, channel, type, xlate_flags);
-    if(atu && atu->is_ipa_enabled()) {
-        if (!atu->pmp_ok(paddr, len)) {
-            dmae_atu_trap(paddr, channel);
-            return nullptr;
-        }
-        paddr = atu->translate(paddr, len);
-        if (IPA_INVALID_ADDR == paddr) {
-            dmae_atu_trap(paddr, channel);
-            return nullptr;
-        }
-    }
-
-    if(IS_NPC_LOCAL_REGION(paddr)) {
-        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
-    } else {
-        if (nullptr == (host_addr=bank->bank_addr_to_mem(paddr)))
-            host_addr = sim->addr_to_mem(paddr);
-    }
-
-    return host_addr;
-}
-
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)
 {
   reg_t idx = (vaddr >> PGSHIFT) % TLB_ENTRIES;
@@ -594,6 +526,7 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     return gpa;
 
   reg_t base = vm.ptbase;
+  reg_t mmio_ppte_val = 0;
   for (int i = vm.levels - 1; i >= 0; i--) {
     int ptshift = i * vm.idxbits;
     int idxbits = (i == (vm.levels - 1)) ? vm.idxbits + vm.widenbits : vm.idxbits;
@@ -604,6 +537,9 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     char *ppte = nullptr;
     if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
         ppte = sim->addr_to_mem(pte_paddr);
+    } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
+                (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
+        ppte = (char *)(&mmio_ppte_val);
     }
     
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD)) {
@@ -666,10 +602,9 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
   }
 }
 
-reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
+reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr, reg_t satp)
 {
   reg_t page_mask = (reg_t(1) << PGSHIFT) - 1;
-  reg_t satp = (virt) ? proc->get_state()->vsatp : proc->get_state()->satp;
   vm_info vm = decode_vm_info(proc->max_xlen, false, mode, satp);
   if (vm.levels == 0)
     return s2xlate(addr, addr & ((reg_t(2) << (proc->xlen-1))-1), type, type, virt, mxr) & ~page_mask; // zero-extend from xlen
@@ -685,6 +620,7 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
     vm.levels = 0;
 
   reg_t base = vm.ptbase;
+  reg_t mmio_ppte_val = 0;
   for (int i = vm.levels - 1; i >= 0; i--) {
     int ptshift = i * vm.idxbits;
     reg_t idx = (addr >> (PGSHIFT + ptshift)) & ((1 << vm.idxbits) - 1);
@@ -694,6 +630,9 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
     char *ppte = nullptr;
     if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
         ppte = sim->addr_to_mem(pte_paddr);
+    } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
+                (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
+        ppte = (char *)(&mmio_ppte_val);
     }
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD))
       throw_access_exception(virt, addr, type);
