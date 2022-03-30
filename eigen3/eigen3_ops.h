@@ -211,16 +211,16 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } else { \
                 if ((_row % 4) == 0) {\
-                    acc0.x += 0x80000000; \
+                    acc0.x += 0x0; \
                 } \
                 if ((_row % 4) == 1) {\
-                    acc1.x += 0x80000000; \
+                    acc1.x += 0x0; \
                 } \
                 if ((_row % 4) == 2) {\
-                    acc2.x += 0x80000000; \
+                    acc2.x += 0x0; \
                 } \
                 if ((_row % 4) == 3) {\
-                    acc3.x += 0x80000000; \
+                    acc3.x += 0x0; \
                 } \
             } \
         } \
