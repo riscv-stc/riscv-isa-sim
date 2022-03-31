@@ -230,6 +230,24 @@ typedef Stride<Dynamic, Dynamic> DynStride;
     } \
 } while(0);
 
+#define MATRIX_ACC_DIMH_2PART(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        Float32 acc0, acc1; \
+        acc0.x = 0x80000000; \
+        acc1.x = 0x80000000; \
+        for (int _row = 0; _row < row; _row++) { \
+            \
+            if ((_row % 2) == 0) {\
+                acc0 += src(_row, _col); \
+            } \
+            if ((_row % 2) == 1) {\
+                acc1 += src(_row, _col); \
+            } \
+        } \
+        dest(0, _col) = acc0 + acc1; \
+    } \
+} while(0);
+
 #define MATRIX_ACC_DIMW_PAIR(src, dest, dtype, row, column) do { \
     dtype *pbuf = new dtype[column]; \
     for (int _row = 0; _row < row; _row++) { \
@@ -1387,6 +1405,16 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
+    int new_row = (ss->shape1_row + 1) / 2;
+    int row_is_odd = ss->shape1_row % 2;
+    int new_column = ss->shape1_column * 2;
+    InDType *new_rs1_buf = (InDType *)malloc(new_row * new_column * sizeof(InDType));
+    Map_InDType new_rs1_matrix_inner(new_rs1_buf, new_row, new_column, DynStride(new_column, 1));
+
+    InDType *new_pcol_sum = (InDType *)malloc(new_column * sizeof(InDType));
+    Map_InDType new_rd_col_sum(new_pcol_sum, 1, new_column, DynStride(1, 1));
+    Matrix_InDType rd_acc(1, 1);
+
     uint32_t MAX_COLUMN;
     if(is_same< OutDType, Float32 >::value)
         MAX_COLUMN = 32;
@@ -1396,18 +1424,23 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
     //rd_col_sum = rs1_matrix_inner.colwise().sum();
     if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
             && ss->stride_rs1 == ss->shape1_column) {
-        MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+        for (int row = 0; row < new_row; row++) {
+            for (int col = 0; col < new_column; col++) {
+                if (col >= new_column / 2) {
+                    if ((row_is_odd == 1) && (row == new_row - 1) && (col > new_column / 2 -1))
+                        new_rs1_matrix_inner(row, col).x =  0x0;
+                    else
+                        new_rs1_matrix_inner(row, col) = rs1_matrix_inner(row *2 + 1, col -ss->shape1_column);
+                }
+                else
+                    new_rs1_matrix_inner(row, col) = rs1_matrix_inner(row * 2, col);
+            }
+        }
+        MATRIX_ACC_DIMH_2PART(new_rs1_matrix_inner, new_rd_col_sum, InDType, new_row, new_column);
+        MATRIX_ACC_DIMW(new_rd_col_sum, rd_acc, OutDType, 1, new_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
-    }
-
-    //InDType rd_tmp = rd_col_sum.sum();
-    Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
-    //*rd = OutDType(rd_tmp);
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+        MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
     }
 
     *rd = rd_acc(0, 0);
@@ -1417,6 +1450,8 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
 
     free(pcol_sum);
     free(rs1_buf);
+    free(new_rs1_buf);
+    free(new_pcol_sum);
 
     return 0;
 }
@@ -1518,6 +1553,17 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
+    int new_row = (ss->shape1_row + 1) / 2;
+    int row_is_odd = ss->shape1_row % 2;
+    int new_column = ss->shape1_column * 2;
+
+    InDType *new_mul_buf = (InDType *)malloc(new_row * new_column * sizeof(InDType));
+    Map_InDType new_mul_result(new_mul_buf, new_row, new_column, DynStride(new_column, 1));
+    InDType *new_pcol_sum = (InDType *)malloc(new_column * sizeof(InDType));
+    Map_InDType new_rd_col_sum(new_pcol_sum, 1, new_column, DynStride(1, 1));
+
+    Matrix_InDType rd_acc(1, 1);
+
     uint32_t MAX_COLUMN;
     if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
@@ -1527,16 +1573,23 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
 
     if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
             && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
-        MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+        for (int row = 0; row < new_row; row++) {
+            for (int col = 0; col < new_column; col++) {
+                if (col >= new_column / 2) {
+                    if ((row_is_odd == 1) && (row == new_row - 1) && (col > new_column / 2 -1))
+                        new_mul_result(row, col).x =  0x0;
+                    else
+                        new_mul_result(row, col) = mul_result(row *2 + 1, col -ss->shape1_column);
+                }
+                else
+                    new_mul_result(row, col) = mul_result(row * 2, col);
+            }
+        }
+        MATRIX_ACC_DIMH_2PART(new_mul_result, new_rd_col_sum, InDType, new_row, new_column);
+        MATRIX_ACC_DIMW(new_rd_col_sum, rd_acc, OutDType, 1, new_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
-    }
-
-    Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+        MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
     }
 
     *rd = rd_acc(0, 0);
@@ -1546,6 +1599,8 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
 
     free(pcol_sum);
     free(mul_buf);
+    free(new_mul_buf);
+    free(new_pcol_sum);
 
     return 0;
 }
