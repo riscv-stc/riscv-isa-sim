@@ -170,7 +170,7 @@ int main(int argc, char **argv)
   std::vector<std::string> load_files;
   std::vector<std::string> init_dump;
   std::vector<std::string> exit_dump;
-  std::string dump_path = ".";
+  std::string dump_path = "";
   uint16_t rbb_port = 0;
   bool use_rbb = false;
   unsigned progsize = 2;

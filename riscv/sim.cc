@@ -295,12 +295,23 @@ void sim_t::dump_mems(std::string prefix, reg_t start, size_t len, int proc_id) 
 
   // dump single memory range
   char fname[256];
+  char *format_str;
+
   if (start >= l1_buffer_start && start + len < SRAM_START) {
-    snprintf(fname, sizeof(fname), "%s/%s@%d.0x%lx_0x%lx.dat",
+    if (dump_path == "")
+      format_str = "%s%s@%d.0x%lx_0x%lx.dat";
+    else
+      format_str = "%s/%s@%d.0x%lx_0x%lx.dat";
+
+    snprintf(fname, sizeof(fname), format_str,
           dump_path.c_str(), prefix.c_str(), proc_id, start, len);
     dump_mem(fname, start, len, proc_id, false);
   } else {
-    snprintf(fname, sizeof(fname), "%s/%s@0x%lx_0x%lx.dat",
+    if (dump_path == "")
+      format_str = "%s%s@0x%lx_0x%lx.dat";
+    else
+      format_str = "%s/%s@0x%lx_0x%lx.dat";
+    snprintf(fname, sizeof(fname), format_str,
           dump_path.c_str(), prefix.c_str(), start, len);
     dump_mem(fname, start, len, -1, true);
   }
@@ -566,17 +577,28 @@ void sim_t::load_mems(std::vector<std::string> load_files) {
 
 void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::string path) {
   char fname[256];
+  char *format_str;
 
   for (const std::string& mem: mems) {
     if (mem == "l1") {
       // dump whole l1 buffer for all procs
+      if (dump_path == "")
+        format_str = "%s%s@%d.dat";
+      else
+        format_str = "%s/%s@%d.dat";
+
       for (auto i=0u; i< nprocs(); i++) {
-        snprintf(fname, sizeof(fname), "%s/%s@%d.dat", path.c_str(), prefix.c_str(), procs[i]->get_id());
+        snprintf(fname, sizeof(fname), format_str, path.c_str(), prefix.c_str(), procs[i]->get_id());
         dump_mem(fname, l1_buffer_start, l1_buffer_size, procs[i]->get_id(), true);
       }
     } else if (mem == "llb") {
+      if (dump_path == "")
+        format_str = "%s%s@llb%d.dat";
+      else
+        format_str = "%s/%s@llb%d.dat";
+
       // dump whole llb
-      snprintf(fname, sizeof(fname), "%s/%s@llb%d.dat", path.c_str(), prefix.c_str(),bank_id);
+      snprintf(fname, sizeof(fname), format_str, path.c_str(), prefix.c_str(),bank_id);
       dump_mem(fname, LLB_AXI0_BUFFER_START + bank_id * LLB_BANK_BUFFER_SIZE, LLB_BANK_BUFFER_SIZE, -1);
     } else {
       // dump memory range, format: <start>:<len>
@@ -590,15 +612,25 @@ void sim_t::dump_mems(std::string prefix, std::vector<std::string> mems, std::st
       auto len = std::stoul(match[2], nullptr, 16);
       if (start >= l1_buffer_start && start + len < SRAM_START) {
         // dump l1 address range
+        if (dump_path == "")
+          format_str = "%s%s@%d.0x%lx_0x%lx.dat";
+        else
+          format_str = "%s/%s@%d.0x%lx_0x%lx.dat";
+
         for (auto i=0u; i< nprocs(); i++) {
           snprintf(fname, sizeof(fname),
-            "%s/%s@%d.0x%lx_0x%lx.dat",
+            format_str,
             path.c_str(), prefix.c_str(), procs[i]->get_id(), start, len);
           dump_mem(fname, start, len, procs[i]->get_id(), true);
         }
       } else {
         // dump llb or ddr range
-        snprintf(fname, sizeof(fname), "%s/%s@ddr.0x%lx_0x%lx.dat", path.c_str(), prefix.c_str(), start, len);
+        if (dump_path == "")
+          format_str = "%s%s@ddr.0x%lx_0x%lx.dat";
+        else
+          format_str = "%s/%s@ddr.0x%lx_0x%lx.dat";
+
+        snprintf(fname, sizeof(fname), format_str, path.c_str(), prefix.c_str(), start, len);
         dump_mem(fname, start, len, -1, true);
       }
     }
