@@ -28,7 +28,6 @@ reg_t t_rd = RD;
     WRITE_MEM_STC(RD, (uint16_t*)rd, CMT_LOG_MME_DATA16);
     break;
   default:
-    check_cust_invalid_vme_or_reduce_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break; 
   };

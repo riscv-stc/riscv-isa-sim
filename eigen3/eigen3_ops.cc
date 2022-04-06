@@ -9542,7 +9542,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
 
 
 /**
- * memul_mm() memul.mm
+ * memul_ts_mm() memul.mm
  * 
  * 矩阵和矩阵算术乘，正常算术运算 M = M1.M2
  * 源操作矩阵一的列值必须和源操作矩阵二的行值相等，如果不等则直接返回错误
@@ -9572,10 +9572,11 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride 
     Map_half rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
+    float32_t even, odd;
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            float32_t even = i32_to_f32(0);
-            float32_t odd = i32_to_f32(0);
+            even.v = 0x80000000;
+            odd.v  = 0x80000000;
             for (k = 0; k < ss->shape1_row; k++) {
                 if (!(k % 2))
                     even = f32_add(even, half_mul_f32(rs1_matrix(k, i), rs2_matrix(k, j)));
@@ -9602,10 +9603,11 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeSt
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_float32_t rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    float32_t even, odd;
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            float32_t even = i32_to_f32(0);
-            float32_t odd  = i32_to_f32(0);
+            even.v = 0x80000000;
+            odd.v  = 0x80000000;
             for (k = 0; k < ss->shape1_row; k++) {
                 if (!(k % 2))
                     even = f32_add(even, half_mul_f32(rs1_matrix(k, i), rs2_matrix(k, j)));
@@ -9689,10 +9691,11 @@ int CustomInsns::memul_ts_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_float32_t rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    float32_t even, odd;
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
-            float32_t even = i32_to_f32(0);
-            float32_t odd = i32_to_f32(0);
+            even.v = 0x80000000;
+            odd.v  = 0x80000000;            
             for (k = 0; k < ss->shape1_row; k++) {
                 if (!(k % 2))
                     even = f32_add(even, tf32_mul(rs1_matrix(k, i), rs2_matrix(k, j)));

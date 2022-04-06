@@ -34,7 +34,6 @@ require_extension('V');
     break;
 
   default:
-    check_cust_invalid_mme_tran_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break;    
   }

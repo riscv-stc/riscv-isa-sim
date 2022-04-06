@@ -152,7 +152,6 @@ reg_t t_deq = MME_DEQUANT_COEFF;
     break;  
 
   default:
-    check_cust_invalid_mme_matrix_conv_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break;
   }
