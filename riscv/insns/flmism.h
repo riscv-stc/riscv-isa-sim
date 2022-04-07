@@ -11,14 +11,14 @@ union test {
 
 c.a = 0x1;
 
-F1 = ((rs1_val & 0xFF) == 0) || ((rs1_val & 0xFF) != (rs2_val & 0xFF));
-F2 = (((rs1_val >> 8) & 0xFF) == 0) || (((rs1_val >> 8)& 0xFF) != ((rs2_val >> 8) & 0xFF));
-F3 = (((rs1_val >> 16) & 0xFF) == 0) || (((rs1_val >> 16)& 0xFF) != ((rs2_val >> 16) & 0xFF));
-F4 = (((rs1_val >> 24) & 0xFF) == 0) || (((rs1_val >> 24)& 0xFF) != ((rs2_val >> 24) & 0xFF));
-F5 = (((rs1_val >> 32) & 0xFF) == 0) || (((rs1_val >> 32)& 0xFF) != ((rs2_val >> 32) & 0xFF));
-F6 = (((rs1_val >> 40) & 0xFF) == 0) || (((rs1_val >> 40)& 0xFF) != ((rs2_val >> 40) & 0xFF));
-F7 = (((rs1_val >> 48) & 0xFF) == 0) || (((rs1_val >> 48)& 0xFF) != ((rs2_val >> 48) & 0xFF));
-F8 = (((rs1_val >> 56) & 0xFF) == 0) || (((rs1_val >> 56)& 0xFF) != ((rs2_val >> 56) & 0xFF));
+F1 = ((rs1_val & 0xFF) != (rs2_val & 0xFF));
+F2 = (((rs1_val >> 8)& 0xFF) != ((rs2_val >> 8) & 0xFF));
+F3 = (((rs1_val >> 16)& 0xFF) != ((rs2_val >> 16) & 0xFF));
+F4 = (((rs1_val >> 24)& 0xFF) != ((rs2_val >> 24) & 0xFF));
+F5 = (((rs1_val >> 32)& 0xFF) != ((rs2_val >> 32) & 0xFF));
+F6 = (((rs1_val >> 40)& 0xFF) != ((rs2_val >> 40) & 0xFF));
+F7 = (((rs1_val >> 48)& 0xFF) != ((rs2_val >> 48) & 0xFF));
+F8 = (((rs1_val >> 56)& 0xFF) != ((rs2_val >> 56) & 0xFF));
 
 found = F1 || F2 || F3 || F4 || F5 || F6 || F7 || F8;
 
