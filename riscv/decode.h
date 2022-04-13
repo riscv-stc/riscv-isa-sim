@@ -292,7 +292,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define VILL (P.VU.vill)
 
 // vme macros
-#define VME_DTYPE (STATE.vme_data_type)
+#define VME_DTYPE ((STATE.vme_data_type) & 0xFF)
 #define VME_DTYPE_VD (STATE.vme_data_type & 0xFF)
 #define VME_DTYPE_VS1 ((STATE.vme_data_type & 0xFF00) >> 8)
 #define VME_DTYPE_VS2 ((STATE.vme_data_type & 0xFF0000) >> 16)
@@ -1341,9 +1341,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access(RD, rd_size); \
   })
 
-#define check_vme_data_type \
-  if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
-    throw trap_ncp_cust_invalid_param();    
+// #define check_vme_data_type \
+//   if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
+//     throw trap_ncp_cust_invalid_param();    
 
 #define check_vme_stride_d( width, stride_d ) \
   if ( ( stride_d != 0 ) && ( stride_d < width ) ) \
@@ -1354,7 +1354,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        check_vme_data_type \
         int esize = sizeof(etype); \
         int rs1_size = STRIDE_RS1 ? \
                        (STRIDE_RS1 * (SHAPE1_ROW -1) + SHAPE1_COLUMN) * esize : \
@@ -1372,7 +1371,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_misaligned_base(RS1, etype); \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        check_vme_data_type; \
         int esize = sizeof(etype); \
         int rs1_size = 256; \
         int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) * esize + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
@@ -1384,7 +1382,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_traps_verand_m(etype) ({ \
         check_cust_misaligned_base(RD, etype); \
         check_cust_invalid_shape(SHAPE1_COLUMN, SHAPE1_ROW); \
-        check_vme_data_type; \
         int esize = sizeof(etype); \
         int rd_size = STRIDE_RD ? (STRIDE_RD * (SHAPE1_ROW -1) * esize + SHAPE1_COLUMN * esize) : (SHAPE1_COLUMN * esize) * SHAPE1_ROW; \
         check_cust_access(RD, rd_size); \
@@ -3878,20 +3875,20 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         __VA_ARGS__ \
     } \
         break; \
-    case 0x10101: { \
+    case 0x01: { \
         using dtype_vd = Bfloat16; \
         using dtype_lut = uint16_t; \
         __VA_ARGS__ \
     } \
         break; \
-    case 0x20202: { \
+    case 0x02: { \
         using dtype_vd = Float32; \
         using dtype_lut = uint32_t; \
         __VA_ARGS__ \
     } \
         break; \
     default: \
-        throw trap_ncp_cust_invalid_param(); \
+        break; \
     }
 
 #define MTE_DTYPE_DECODING_TO_TYPE(...) \
