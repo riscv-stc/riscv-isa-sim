@@ -995,6 +995,20 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (VILL) \
              throw trap_ncp_vill_invalid_inst();
 
+#define check_tcp_mte_dtype \
+  switch (MTE_DATA_TYPE) { \
+    case 0x0: \
+      break; \
+    case 0x101: \
+      break; \
+    case 0x202: \
+      break; \
+    case 0x303: \
+      break; \
+    default: \
+        throw trap_tcp_illegal_encoding(); \
+  }
+
 // throw trap if cust inst access out of l1&im buffer
 #define check_cust_access(x, len) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
@@ -1758,6 +1772,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_tcp_icmov_invalid_core(); \
         }
 
+// throw trap if tcp pld's target coremap not exist
+#define check_tcp_icmov_invalid_coremap(coremap) \
+        if (coremap == 0) { \
+            throw trap_tcp_coremap_zero(); \
+        }
+
+
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_l1(x) \
         if ((!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) && \
@@ -1768,7 +1789,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_icmov(x) \
         if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
-            throw trap_tcp_access_start_icmov(x); \
+            throw trap_tcp_access_start(x); \
         }
 
 // throw trap if tcp source end address in L1Buffer
@@ -1791,7 +1812,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (!((zext_xlen(x) >= LLB_AXI0_BUFFER_START && zext_xlen(x) <= LLB_AXI0_BUFFER_START + \
             LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
             zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
-            throw trap_tcp_illegal_encoding(); \
+            throw trap_tcp_access_end_llb(x); \
         } 
         
 
@@ -1812,6 +1833,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 // check traps for icmov instruction
 #define check_traps_icmov ({ \
         check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
+        check_tcp_mte_dtype\
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_icmov(RD) \
         check_tcp_access_end_l1(RS1 + RS2) \
@@ -1822,6 +1844,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define check_traps_icmov_m(esize) ({ \
         check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
         check_tcp_data_type \
+        check_tcp_mte_dtype\
+        check_tcp_misaligned_base(RS1, MTE_DATA_TYPE) \
+        check_tcp_misaligned_base(RD, MTE_DATA_TYPE) \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_icmov(RD) \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
@@ -1833,6 +1858,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 // check traps for pld instruction
 #define check_traps_pld(esize) ({ \
         check_tcp_data_type \
+        check_tcp_mte_dtype \
+        check_tcp_misaligned_base(RS1, MTE_DATA_TYPE) \
+        check_tcp_misaligned_base(RD, MTE_DATA_TYPE) \
+        check_tcp_icmov_invalid_coremap(RS2) \
         check_tcp_access_start_l1(RD) \
         check_tcp_access_start_llb_pld(RS1) \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
@@ -1843,6 +1872,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for mov.l1.llb instruction
 #define check_traps_mov_l1_llb(etype) ({ \
+        check_tcp_mte_dtype \
         check_tcp_misaligned_base(RS1, etype); \
         check_tcp_misaligned_base(RD, etype); \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
@@ -1856,6 +1886,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for mov.llb.l instruction
 #define check_traps_mov_llb_l1(etype) ({ \
+        check_tcp_mte_dtype \
         check_tcp_misaligned_base(RS1, etype); \
         check_tcp_misaligned_base(RD, etype); \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
