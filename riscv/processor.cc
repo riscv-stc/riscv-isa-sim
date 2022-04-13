@@ -1158,7 +1158,10 @@ void processor_t::set_csr(int which, reg_t val)
       state.mme_sparseidx_stride = val;
       break;
     case CSR_VME_DATA_TYPE:
-      state.vme_data_type = val;
+      if (((val & 0xFF) == 0) || ((val & 0xFF) == 1) || ((val & 0xFF) == 2) )
+        state.vme_data_type = val;
+      else 
+        throw trap_ncp_vill_invalid_inst();
       break;
     case CSR_MME_DATA_TYPE:
       state.mme_data_type = val;

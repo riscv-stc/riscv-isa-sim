@@ -406,7 +406,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_Bfloat16( (i*col+j) % 32 ).x;
+                rand_value[i][j].x = rand_Bfloat16( j % 32 ).x;
               }
           }
       }
@@ -416,7 +416,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_half( (i*col+j) % 32 ).x;
+                rand_value[i][j].x = rand_half( j % 32 ).x;
               }
           }
       }
@@ -426,7 +426,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_Float32( (i*col+j) % 16 ).x;
+                rand_value[i][j].x = rand_Float32( j % 16 ).x;
               }
           }          
       }
