@@ -370,7 +370,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStrid
 
     /*calculate the input shape*/
     Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -511,7 +511,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStrid
             }
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -773,7 +773,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Co
     /*calculate the input shape*/
     Map_Bfloat16 rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -915,7 +915,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Co
             }
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -1382,7 +1382,7 @@ int CustomInsns::meconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeS
     kw = w;
     /*calculate the input shape*/
     Map_int8_t rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -1465,7 +1465,7 @@ int CustomInsns::meconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeS
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j))); 
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
     free(row_val);
     free(col_val);
@@ -1509,6 +1509,8 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ConvShape
     dilation_w = dilation_w == 0? dilation_h : dilation_w;
     sk_w = sk_w == 0? sk_h : sk_w;
     int k_stride = ss->conv_kernel_params2 & 0xffff;
+    // assert(k_stride % 2 == 0);
+    k_stride = k_stride > 0 ? k_stride : out_c;//FIXME:
     int s2_stride = ss->conv_kernel_params3 & 0xffff;
     s2_stride = s2_stride == 0? in_c : s2_stride;
 
@@ -1678,7 +1680,7 @@ int CustomInsns::meconv_mm( int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     kw = w;
     /*calculate the input shape*/
     Map_int8_t rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -1763,7 +1765,7 @@ int CustomInsns::meconv_mm( int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));  
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -1834,7 +1836,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     kw = w;
     /*calculate the input shape*/
     Map_uint8_t rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -1919,7 +1921,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));  
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -1991,7 +1993,7 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
     /*calculate the input shape*/
     Map_half rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -2087,7 +2089,7 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
             rd_matrix(i, j) = int32_mul_f16(res,  half_to_float16_t(dequant_matrix(0, j)));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -2158,7 +2160,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Conv
     kw = w;
     /*calculate the input shape*/
     Map_Bfloat16 rs1_matrix(rs1, in_h * in_w, in_c, DynStride(in_stride, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         MECONV_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
         cout << "rs2:" << endl << rs2_matrix << endl;
@@ -2251,7 +2253,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Conv
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
     free(row_val);
     free(col_val);
@@ -2459,7 +2461,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
             rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }  
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -2853,7 +2855,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
             rd_matrix(i, j) = Bfloat16(even + odd);
         }
     }   
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -3049,7 +3051,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
             rd_matrix(i, j) = even + odd;
         }
     }   
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -3415,7 +3417,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
         }
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -3597,7 +3599,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j))); 
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -3781,7 +3783,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
         }
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
     free(row_val);
     free(col_val);
@@ -3963,7 +3965,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));  
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -4166,7 +4168,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
         }
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -4359,7 +4361,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -4548,7 +4550,7 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
             }
         } 
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -4861,7 +4863,7 @@ int CustomInsns::medeconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct 
             }
         } 
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -5021,7 +5023,7 @@ int CustomInsns::medeconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct C
             }
         } 
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -6127,7 +6129,7 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
         }
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -6521,7 +6523,7 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx
             rd_matrix(i, j) = Bfloat16((even + odd));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -7641,7 +7643,7 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
             if (debug) cout << "rd: " << hex << rd_matrix(i, j).x << endl;
         } 
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -7808,7 +7810,7 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, 
             if (debug) cout << "rd: " << hex << rd_matrix(i, j).x << endl;
         } 
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     free(row_val);
@@ -8487,7 +8489,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_matrix << endl;
@@ -8525,7 +8527,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
             }
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8620,7 +8622,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Sha
         }
     }
     
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8748,7 +8750,7 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8817,7 +8819,7 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeSt
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j)); 
         }
     }  
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8852,7 +8854,7 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeS
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));
         }
     } 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8896,7 +8898,7 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
             rd_matrix(i, j) = int32_mul_f16(res, half_to_float16_t(dequant_matrix(0, j)));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
        cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8938,7 +8940,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Shape
             rd_matrix(i, j) = int32_mul_bf16(res, dequant_matrix(0, j));        
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
        cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -8971,7 +8973,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
     Map_uint8_t tmp_matrix(sparseidx, 1, i, DynStride(i, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_matrix << endl;
@@ -9012,7 +9014,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
             rd_matrix(i, j) = f32_to_half(f32_add(odd, even));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
 
     free(sp_idx_data); 
@@ -9558,7 +9560,7 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride 
     int i, j, k;
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     Map_half rs2_matrix(rs2, ss->shape2_row, ss->shape2_column, DynStride(ss->stride_rs2, 1));    
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
         cout << "rs2:\n" << rs2_matrix << endl;
@@ -9586,7 +9588,7 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride 
             rd_matrix(i, j) = f32_to_half(f32_add(even, odd));
         }
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -11524,7 +11526,7 @@ int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
@@ -11536,7 +11538,7 @@ int CustomInsns::memin_m(half *rs1, half *rd, struct ShapeStride *ss)
         rd_matrix(i, 0) = float16_t_to_half(res);
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
     return 0;
 }
@@ -11546,7 +11548,7 @@ int CustomInsns::memin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     Map_Bfloat16 rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
@@ -11558,7 +11560,7 @@ int CustomInsns::memin_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
         rd_matrix(i, 0) = bfloat16_t_to_Bfloat16(res);
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;    
     return 0;
 }
@@ -11594,7 +11596,7 @@ int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
@@ -11606,7 +11608,7 @@ int CustomInsns::memax_m(half *rs1, half *rd, struct ShapeStride *ss)
         rd_matrix(i, 0) = float16_t_to_half(res);
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;       
     return 0;
 }
@@ -11617,7 +11619,7 @@ int CustomInsns::memax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
@@ -11629,7 +11631,7 @@ int CustomInsns::memax_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
         rd_matrix(i, 0) = bfloat16_t_to_Bfloat16(res);
     }
 
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;     
     return 0;
 }
@@ -11668,7 +11670,7 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
     SET_DEFAULT_STRIDE(ss->stride_rd, 1);
     Map_half rd_matrix(rd, ss->shape1_row, 1, DynStride(ss->stride_rd, 1));
 
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:\n" << rs1_matrix << endl;
     }
@@ -11686,7 +11688,7 @@ int CustomInsns::meacc_m(half *rs1, half *rd, struct ShapeStride *ss)
         }
         rd_matrix(i, 0) = f32_to_half(f32_add(even, odd));
     }
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:\n" << rd_matrix << endl;
         
     return 0;
@@ -11738,7 +11740,7 @@ int CustomInsns::meacc_m(Bfloat16 *rs1, Bfloat16 *rd, struct ShapeStride *ss)
         }
         rd_matrix(i, 0) = Bfloat16(even + odd);
     }
-    if (debug) {
+    if (GLOBAL_DBG) {
         cout << "rs1: \n" << rs1_matrix << endl;
         cout << "rd: \n" << rd_matrix << endl;
     }
@@ -11761,13 +11763,13 @@ int CustomInsns::metr_m(half *rs1, half *rd, struct ShapeStride *ss)
     Map_half rs1_matrix(rs1, ss->shape1_row, ss->shape1_column, DynStride(ss->stride_rs1, 1));
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape1_row);
     Map_half rd_matrix(rd, ss->shape1_column, ss->shape1_row, DynStride(ss->stride_rd, 1));
-    if (debug) {
+    if (GLOBAL_DBG) {
         SHAPE_STRIDE_INFO(ss);
         cout << "rs1:" << endl << rs1_matrix << endl;
     }
 
     rd_matrix = rs1_matrix.transpose();
-    if (debug)
+    if (GLOBAL_DBG)
         cout << "rd:" << endl << rd_matrix << endl;
 
     return 0;

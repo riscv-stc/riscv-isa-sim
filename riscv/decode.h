@@ -118,6 +118,7 @@ public:
   uint64_t dim() { return (x(25, 1) << 1) + x(14, 1); }
   uint64_t ts() { return (x(25, 1) << 1) + x(14, 1); }
   uint64_t iorw() { return x(20, 8); }
+  uint64_t op_ve() { return x(0, 7); }
 
   int64_t rvc_imm() { return x(2, 5) + (xs(12, 1) << 5); }
   int64_t rvc_zimm() { return x(2, 5) + (x(12, 1) << 5); }
@@ -1069,9 +1070,35 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
           type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
           type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
           type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
-          type==0x102   || type==0x201   || type==0x200))) {\
+          type==0x102   || type==0x201   || type==0x200   || type==0x10102))) {\
+            throw trap_ncp_vill_invalid_inst(); \
+        } 
+
+// throw trap if cust inst use invalid data_type(vme or mme reduce)
+#define check_cust_invalid_vme_or_reduce_data_type(type) \
+        if (unlikely(      type==0x30303 || type==0x3030b || type==0x3030c ||\
+          type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
+          type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
+          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
+          type==0x102   || type==0x201   || type==0x200   || type==0x10102)) {\
             throw trap_ncp_cust_invalid_param(); \
         } 
+
+// throw trap if cust inst use invalid mme data_type(transpose)
+#define check_cust_invalid_mme_tran_data_type(type) \
+        if (unlikely(      type==0x3030b || type==0x3030c || type==0x10102 ||\
+          type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
+          type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
+          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
+          type==0x102   || type==0x201   || type==0x200)) {\
+            throw trap_ncp_cust_invalid_param(); \
+        } 
+
+// throw trap if cust inst use invalid mme data_type(matrix and conv)
+#define check_cust_invalid_mme_matrix_conv_data_type(type) \
+        if (unlikely(type==0x30303 || type==0x101 || type==0x202 || type==0x303 || type==0x102 || type==0x201 || type==0x200)) {\
+            throw trap_ncp_cust_invalid_param(); \
+        }    
 
 // throw trap if cust inst use invalid params-misaligned-4 (matrix and conv)
 #define check_cust_invalid_params_misaligned_4(conv) \

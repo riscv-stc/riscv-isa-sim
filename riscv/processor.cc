@@ -1163,7 +1163,8 @@ void processor_t::set_csr(int which, reg_t val)
       else 
         throw trap_ncp_vill_invalid_inst();
       break;
-    case CSR_MME_DATA_TYPE:
+    case CSR_MME_DATA_TYPE: //excep_41
+      check_cust_invalid_npu_data_type(val);
       state.mme_data_type = val;
       break;
     case CSR_VME_RELU_THRESHHOLD:
@@ -2288,7 +2289,11 @@ out:
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc)
 {
-  throw trap_illegal_instruction(insn.bits());
+  if (insn.op_ve() == 0x7b) {
+    throw trap_ncp_illegal_encoding();
+  } else {
+    throw trap_illegal_instruction(insn.bits());
+  }
 }
 
 insn_func_t processor_t::decode_insn(insn_t insn)
