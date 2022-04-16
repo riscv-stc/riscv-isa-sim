@@ -23,7 +23,7 @@ switch (VME_DTYPE) {
         } 
     }
     break;
-  case 0x10101:     // bf16
+  case 0x01:     // bf16
     if (DIM == 0) {
         check_traps_vexxx_m_reduce_all(uint16_t);
         Bfloat16 res;
@@ -41,7 +41,7 @@ switch (VME_DTYPE) {
         } 
     }
     break;
-  case 0x020202:    // f32
+  case 0x02:    // f32
     if (DIM == 0) {
         check_traps_vexxx_m_reduce_all(uint32_t);
         float32_t res;
@@ -58,7 +58,7 @@ switch (VME_DTYPE) {
     }
     break; 
   default:
-    trap_ncp_cust_invalid_param(); 
+    break;
 }
 
 // VME_DTYPE_DECODING_TO_TYPE({

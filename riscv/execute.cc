@@ -96,7 +96,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ; 
         int xx  = SHAPE1_COLUMN;
         int yy  = SHAPE1_ROW;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int row=0; row < yy; row++) {
             for(int col=0; col < xx; col++) {
@@ -105,7 +105,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
               fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
             }         
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int row=0; row < yy; row++) {
             for(int col=0; col < xx; col++) {
@@ -128,14 +128,14 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
         
         int xx  = SHAPE1_COLUMN;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int col=0; col < xx; col++)  {
             int idx = col;
             fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
             fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));       
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int col=0; col < xx; col++) {
             int idx = col;
@@ -156,14 +156,14 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
 
         int yy  = SHAPE1_ROW;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int row=0; row < yy; row++) {
             int idx = row;
             fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
             fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));        
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int row=0; row < yy; row++) {
             int idx = row;
@@ -201,7 +201,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         int xx  = VME_WOUT;
         int yy  = VME_HOUT;
         int zz  = VME_CIN;
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) {  
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16, float16
           for(int out=0; out < zz; out++) { 
             for(int row=0; row < yy; row++) { 
@@ -212,7 +212,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
               }         
             } 
           }
-        } else if (0x20202 == VME_DTYPE) {
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int out=0; out < zz; out++) { 
             for(int row=0; row < yy; row++) { 

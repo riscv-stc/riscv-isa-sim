@@ -977,7 +977,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(versub_mv);
   DEFINE_CV2TYPE(versub_mf);
   DEFINE_R1TYPE(verot180_m);
-  DEFINE_FR2TYPE(verev_m);
+  DEFINE_R1TYPE(verev_m);
   DEFINE_R1TYPE(verand_v)
   DEFINE_R4TYPE(verand_m)
 
