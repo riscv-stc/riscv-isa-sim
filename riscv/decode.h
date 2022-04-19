@@ -1064,39 +1064,36 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_cust_invalid_param(); \
         }   
 
-// throw trap if cust inst use invalid npu_v2 data_type
+// throw trap if cust mme inst use invalid npu_v2 data_type
 #define check_cust_invalid_npu_data_type(type) \
         if (!(unlikely( type==0x0 || type==0x10101 || type==0x20202 || type==0x30303 || type==0x3030b || type==0x3030c ||\
           type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
           type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
-          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
-          type==0x102   || type==0x201   || type==0x200   || type==0x10102))) {\
+          type==0x30d10 || type==0x30e10 || type==0x1     || type==0x2     || type==0x10102))) {\
             throw trap_ncp_vill_invalid_inst(); \
         } 
 
-// throw trap if cust inst use invalid data_type(vme or mme reduce)
+// throw trap if cust mme inst use invalid data_type(vme or mme reduce)
 #define check_cust_invalid_vme_or_reduce_data_type(type) \
         if (unlikely(      type==0x30303 || type==0x3030b || type==0x3030c ||\
           type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
           type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
-          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
-          type==0x102   || type==0x201   || type==0x200   || type==0x10102)) {\
+          type==0x30d10 || type==0x30e10 || type==0x10102)) {\
             throw trap_ncp_cust_invalid_param(); \
         } 
 
-// throw trap if cust inst use invalid mme data_type(transpose)
+// throw trap if cust mme inst use invalid mme data_type(transpose)
 #define check_cust_invalid_mme_tran_data_type(type) \
-        if (unlikely(      type==0x3030b || type==0x3030c || type==0x10102 ||\
+        if (unlikely(      type==0x3030b || type==0x3030c || \
           type==0x3040b || type==0x3040c || type==0x3030f || type==0x30310 || type==0x3040f || type==0x30410 ||\
           type==0x3090b || type==0x30a0b || type==0x3090c || type==0x30a0c || type==0x30d0f || type==0x30e0f ||\
-          type==0x30d10 || type==0x30e10 || type==0x2     || type==0x101   || type==0x202   || type==0x303   ||\
-          type==0x102   || type==0x201   || type==0x200)) {\
+          type==0x30d10 || type==0x30e10 || type==0x10102   )) {\
             throw trap_ncp_cust_invalid_param(); \
         } 
 
 // throw trap if cust inst use invalid mme data_type(matrix and conv)
 #define check_cust_invalid_mme_matrix_conv_data_type(type) \
-        if (unlikely(type==0x30303 || type==0x101 || type==0x202 || type==0x303 || type==0x102 || type==0x201 || type==0x200)) {\
+        if (unlikely(type==0x30303)) {\
             throw trap_ncp_cust_invalid_param(); \
         }    
 
