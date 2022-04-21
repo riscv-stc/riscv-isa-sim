@@ -4761,7 +4761,7 @@ _ACEOF
 else
 
 cat >>confdefs.h <<_ACEOF
-#define DEFAULT_ISA "RV64IMAFDC"
+#define DEFAULT_ISA "rv64gcv_zfh"
 _ACEOF
 
 fi
@@ -4795,7 +4795,7 @@ _ACEOF
 else
 
 cat >>confdefs.h <<_ACEOF
-#define DEFAULT_VARCH "vlen:1024,elen:32,slen:1024"
+#define DEFAULT_VARCH "vlen:256,elen:32,slen:256"
 _ACEOF
 
 fi
