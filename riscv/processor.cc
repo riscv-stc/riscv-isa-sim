@@ -2290,7 +2290,10 @@ out:
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc)
 {
   if (insn.op_ve() == 0x7b) {
-    throw trap_ncp_illegal_encoding();
+      if((insn.ade_bf_msb() == 0xD) || (insn.ade_bf_msb() == 0xF))
+        throw trap_tcp_illegal_encoding();
+      else
+        throw trap_ncp_illegal_encoding();
   } else {
     throw trap_illegal_instruction(insn.bits());
   }
