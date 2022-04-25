@@ -1,3 +1,5 @@
+DMAE_DTYPE_DECODING_TO_ESIZE();
+check_trap_dmae_xx_xx(esize);
 
 uint32_t data_type = DMAE_DATA_TYPE;
 struct DmaeShapeStride dmae_ss;

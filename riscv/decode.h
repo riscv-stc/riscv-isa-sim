@@ -1064,6 +1064,23 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_ncp_cust_invalid_param(); \
         }   
 
+#define check_dmae_cust_invalid_shape(x, y, z) \
+        if (unlikely(x == 0 || y == 0 || z == 0)) { \
+            throw trap_dmae_invalid_param(); \
+        }
+
+#define check_dmae_invalid_stride(shape_x, shape_y, stride_x, stride_y) \
+      if (unlikely((stride_x > 0 && stride_x < shape_x) || \
+        (stride_y > 0 && (stride_y < (stride_x > 0 ? stride_x : shape_x) * shape_y)))) { \
+          throw trap_dmae_invalid_param(); \
+      }
+
+// throw trap if cust inst access misaligned base address
+#define check_dmae_cust_misaligned_base(x, esize) \
+        if (unlikely(x & (esize - 1))) { \
+            throw trap_dmae_base_misaligned(false, x, 0, 0); \
+        }
+
 // throw trap if cust mme inst use invalid npu_v2 data_type
 #define check_cust_invalid_npu_data_type(type) \
         if (!(unlikely( type==0x0 || type==0x10101 || type==0x20202 || type==0x30303 || type==0x3030b || type==0x3030c ||\
@@ -1825,22 +1842,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             throw trap_tcp_access_end_l1(x); \
         }
 
-// throw trap if tcp source start address in LLB for mov*
-#define check_tcp_access_start_llb_mov(x) \
+// throw trap if tcp source start address in LLB
+#define check_tcp_access_start_llb(x) \
         if (!((zext_xlen(x) >= LLB_AXI0_BUFFER_START && zext_xlen(x) <= LLB_AXI0_BUFFER_START + \
             LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
             zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
             throw trap_tcp_access_start(x); \
         }
-
-// throw trap if tcp source start address in LLB for pld
-#define check_tcp_access_start_llb_pld(x) \
-        if (!((zext_xlen(x) >= LLB_AXI0_BUFFER_START && zext_xlen(x) <= LLB_AXI0_BUFFER_START + \
-            LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
-            zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
-            throw trap_tcp_access_start(x); \
-        } 
-        
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_llb(x) \
@@ -1848,6 +1856,36 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
             LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
             zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
             throw trap_tcp_access_end_llb(x); \
+        }
+
+// throw trap if dmae source start address in L1Buffer
+#define check_dmae_access_start_l1(x) \
+        if ((!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER)))) { \
+            throw trap_dmae_access_addr_fault(x); \
+        }
+
+// throw trap if dmae source end address in L1Buffer
+#define check_dmae_access_end_l1(x) \
+        if ((!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER)))) { \
+            throw trap_dmae_access_addr_fault(x); \
+        }
+
+// throw trap if dmae source start address in LLB
+#define check_dmae_access_start_llb(x) \
+        if (!((zext_xlen(x) >= LLB_AXI0_BUFFER_START && zext_xlen(x) <= LLB_AXI0_BUFFER_START + \
+            LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
+            zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
+            throw trap_dmae_access_addr_fault(x); \
+        }
+
+// throw trap if dmae source end address in L1Buffer
+#define check_dmae_access_end_llb(x) \
+        if (!((zext_xlen(x) >= LLB_AXI0_BUFFER_START && zext_xlen(x) <= LLB_AXI0_BUFFER_START + \
+            LLB_BUFFER_SIZE) || (zext_xlen(x) >= LLB_AXI1_BUFFER_START && \
+            zext_xlen(x) <= LLB_AXI1_BUFFER_START + LLB_BUFFER_SIZE))) { \
+            throw trap_dmae_access_addr_fault(x); \
         }
 
 // throw trap if tcp source end address in L1Buffer
@@ -1889,7 +1927,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_tcp_misaligned_base_esize(RD, esize) \
         check_tcp_icmov_invalid_coremap(RS2) \
         check_tcp_access_start_l1(RD) \
-        check_tcp_access_start_llb_pld(RS1) \
+        check_tcp_access_start_llb(RS1) \
         check_tcp_invalid_dst_stride(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
@@ -1903,7 +1941,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_tcp_misaligned_base(RS1, etype); \
         check_tcp_misaligned_base(RD, etype); \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
-        check_tcp_access_start_llb_mov(RS1) \
+        check_tcp_access_start_llb(RS1) \
         check_tcp_access_start_l1(RD) \
         check_tcp_invalid_dst_stride(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
@@ -1912,13 +1950,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_tcp_access_end_l1(RD + rd_size) \
 })
 
-// check traps for mov.llb.l instruction
+// check traps for mov.llb.l1 instruction
 #define check_traps_mov_llb_l1(etype) ({ \
         check_tcp_misaligned_base(RS1, etype); \
         check_tcp_misaligned_base(RD, etype); \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_access_start_l1(RS1) \
-        check_tcp_access_start_llb_mov(RD) \
+        check_tcp_access_start_llb(RD) \
         check_tcp_invalid_dst_stride(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1(RS1 + rs_size) \
@@ -1928,52 +1966,85 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 //check trap mov.l1.glb
 #define check_trap_mov_l1_glb(esize)({ \
-        check_tcp_access_start_l1(RD) \
+        check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+        check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+        check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+        check_dmae_cust_misaligned_base(RS1, esize) \
+        check_dmae_cust_misaligned_base(RD, esize) \
+        check_dmae_access_start_l1(RD) \
         int rd_size = (DMAE_STRIDE_D_Y ? (DMAE_STRIDE_D_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
           (DMAE_STRIDE_D_X ? (DMAE_STRIDE_D_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
-        check_tcp_access_end_l1(RD + rd_size) \
+        check_dmae_access_end_l1(RD + rd_size) \
 })
 
 //check trap mov.glb.l1
 #define check_trap_mov_glb_l1(esize)({ \
-        check_tcp_access_start_l1(RS1) \
+        check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+        check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+        check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+        check_dmae_cust_misaligned_base(RS1, esize) \
+        check_dmae_cust_misaligned_base(RD, esize) \
+        check_dmae_access_start_l1(RS1) \
         int rs_size = (DMAE_STRIDE_S_Y ? (DMAE_STRIDE_S_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
           (DMAE_STRIDE_S_X ? (DMAE_STRIDE_S_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
-        check_tcp_access_end_l1(RS1 + rs_size) \
+        check_dmae_access_end_l1(RS1 + rs_size) \
 })
 
 //check trap mov.llb.glb
 #define check_trap_mov_llb_glb(esize) ({ \
-  check_tcp_access_start_llb_mov(RD) \
+  check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+  check_dmae_cust_misaligned_base(RS1, esize) \
+  check_dmae_cust_misaligned_base(RD, esize) \
+  check_dmae_access_start_llb(RD) \
    int rd_size = (DMAE_STRIDE_D_Y ? (DMAE_STRIDE_D_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
           (DMAE_STRIDE_D_X ? (DMAE_STRIDE_D_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
-  check_tcp_access_end_llb(RD + rd_size) \
+  check_dmae_access_end_llb(RD + rd_size) \
 })
 
 //check trap mov.glb.llb
 #define check_trap_mov_glb_llb(esize) ({ \
-  check_tcp_access_start_llb_mov(RS1) \
+  check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+  check_dmae_cust_misaligned_base(RS1, esize) \
+  check_dmae_cust_misaligned_base(RD, esize) \
+  check_dmae_access_start_llb(RS1) \
   int rs_size = (DMAE_STRIDE_S_Y ? (DMAE_STRIDE_S_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
           (DMAE_STRIDE_S_X ? (DMAE_STRIDE_S_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
-  check_tcp_access_end_llb(RS1 + rs_size) \
+  check_dmae_access_end_llb(RS1 + rs_size) \
 })
 
 //check trap mov.llb.llb
-#define check_trap_mov_llb_llb(in_esize, out_esize) ({ \
-  check_tcp_access_start_llb_mov(RS1) \
+#define check_trap_mov_llb_llb(esize) ({ \
+  check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+  check_dmae_cust_misaligned_base(RS1, esize) \
+  check_dmae_cust_misaligned_base(RD, esize) \
+  check_dmae_access_start_llb(RS1) \
   int rs_size = (DMAE_STRIDE_S_Y ? (DMAE_STRIDE_S_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
-          (DMAE_STRIDE_S_X ? (DMAE_STRIDE_S_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * in_esize; \
-  check_tcp_access_end_llb(RS1 + rs_size) \
-  check_tcp_access_start_llb_mov(RD) \
+          (DMAE_STRIDE_S_X ? (DMAE_STRIDE_S_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
+  check_dmae_access_end_llb(RS1 + rs_size) \
+  check_dmae_access_start_llb(RD) \
    int rd_size = (DMAE_STRIDE_D_Y ? (DMAE_STRIDE_D_Y * (DMAE_SHAPE_Z -1) + DMAE_SHAPE_X * DMAE_SHAPE_Y) : \
-          (DMAE_STRIDE_D_X ? (DMAE_STRIDE_D_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * out_esize; \
-  check_tcp_access_end_llb(RD + rd_size) \
+          (DMAE_STRIDE_D_X ? (DMAE_STRIDE_D_X  * (DMAE_SHAPE_Y - 1) + DMAE_SHAPE_X): DMAE_SHAPE_X * DMAE_SHAPE_Y) * DMAE_SHAPE_Z) * esize; \
+  check_dmae_access_end_llb(RD + rd_size) \
 })
 
 #define check_trap_mmu_pmp_ok(addr, len, type, mode) ({ \
   reg_t ret = MMU.check_pmp_ok(addr, len, type, mode); \
   if (!ret) \
     throw trap_ncp_cust_access(false, addr, 0, 0); \
+})
+
+#define check_trap_dmae_xx_xx(esize) ({ \
+  check_dmae_cust_invalid_shape(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_SHAPE_Z) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_S_X, DMAE_STRIDE_S_Y) \
+  check_dmae_invalid_stride(DMAE_SHAPE_X, DMAE_SHAPE_Y, DMAE_STRIDE_D_X, DMAE_STRIDE_D_Y) \
+  check_dmae_cust_misaligned_base(RS1, esize) \
+  check_dmae_cust_misaligned_base(RD, esize) \
 })
 
 //
@@ -3953,51 +4024,20 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   }
 
 #define DMAE_DTYPE_DECODING_TO_ESIZE() \
-  uint8_t in_esize = 2; \
-  uint8_t out_esize = 2; \
+  uint8_t esize = 2; \
   switch (DMAE_DATA_TYPE) { \
-    case 0x0: {\
-      in_esize = 2; \
-      out_esize = 2; \
-    } \
+    case 0x0: \
+    case 0x101: \
+      esize = 2; \
       break; \
-    case 0x101: {\
-      in_esize = 2; \
-      out_esize = 2; \
-    } \
+    case 0x202: \
+      esize = 4; \
       break; \
-    case 0x202: {\
-      in_esize = 4; \
-      out_esize = 4; \
-    } \
+    case 0x303: \
+      esize = 1; \
       break; \
-    case 0x303: {\
-      in_esize = 1; \
-      out_esize = 1; \
-    } \
+    default: \
       break; \
-    /*  \
-    case 0x2: {\
-      in_esize = 2; \
-      out_esize = 4; \
-    } \
-      break; \
-    case 0x102: {\
-      in_esize = 2; \
-      out_esize = 4; \
-    } \
-      break; \
-    case 0x201: {\
-      in_esize = 4; \
-      out_esize = 2; \
-    } \
-      break; \
-    case 0x200: {\
-      in_esize = 4; \
-      out_esize = 2; \
-    } \
-      break; \
-    */ \
   }
 
 #endif
