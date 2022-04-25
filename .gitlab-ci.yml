@@ -33,13 +33,19 @@ test:
   stage : test
   script:
     - export PATH=$CI_PROJECT_DIR/build_v2:$RISCV/bin:$PATH
-    - which spike
-    - git clone git@code.streamcomputing.com:toolchain/libnpurt.git && cd libnpurt/ && cmake -DCMAKE_INSTALL_PREFIX=$RISCV -DCMAKE_ENABLE_RV64=On ./ && make -j install && cd ..
+    - curl http://releases.streamcomputing.com/host-sdk/hpe/hpe2.x-latest | bash
     - curl http://releases.streamcomputing.com/toolchain/llvm-12/latest | bash
-    - git clone --recurse-submodules http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/rvpvp-npuv2.git
-    - cd rvpvp-npuv2 && virtualenv -p python3 .env && source .env/bin/activate && pip install -U pip && pip install --editable rvpvp && pip install -r requirements.txt
-    - vme_specs=`find specs/custom/vme/ -name "*.spec.yml" |sort --random-sort` && mme_specs=`find specs/custom/mme/ -name "*.spec.yml" |sort --random-sort` && specs_list=$vme_specs' '$mme_specs
-    - for specs in $specs_list; do  rm -rf build; rvpvp gen -n `nproc` --specs $specs --basic; rvpvp run --nproc `nproc`; done
+    - git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/rvpvp-npuv2.git
+    - which spike
+    - python3 -m pip install --upgrade pip && pip install virtualenv
+    - cd rvpvp-npuv2
+    - virtualenv -p python3 .env
+    - source .env/bin/activate
+    - pip install tensorflow
+    - pip install -U pip
+    - pip install --editable rvpvp
+    - rvpvp gen --basic --nproc `nproc`
+    - rvpvp run --nproc `nproc`
 
   artifacts:
     paths:

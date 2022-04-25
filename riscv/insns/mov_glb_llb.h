@@ -1,7 +1,7 @@
 
 DMAE_DTYPE_DECODING_TO_ESIZE();
 
-check_trap_mov_glb_llb(in_esize);
+check_trap_mov_glb_llb(esize);
 
 uint32_t data_type = DMAE_DATA_TYPE;
 struct DmaeShapeStride dmae_ss;

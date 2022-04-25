@@ -1191,8 +1191,6 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_VME_FM_PADDING:
       state.vme_FM_padding = val;
       break;
-    case CSR_VME_MAX_MIN_IDX:
-      break;
     case CSR_CONV_KERNEL_PARAMS3:
         state.conv_kernel_params3 = val;
         break; //read only
@@ -1209,7 +1207,10 @@ void processor_t::set_csr(int which, reg_t val)
       state.mte_stride_d = val;
       break;
     case CSR_DMAE_DATA_TYPE:
-      state.dmae_data_type = val;
+      if ((val == 0x0) || (val == 0x202) || (val == 0x303) || (val == 0x101))
+        state.dmae_data_type = val;
+      else
+         throw trap_tcp_icmov_invalid_core();
       break;
     case CSR_MTE_DATA_TYPE:
       state.mte_data_type = val;
@@ -1595,6 +1596,10 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_USER7:
       state.user7 = val;
       break;
+    case 0x401:
+    case 0x41e:
+      throw trap_ncp_rw_illegal_csr();
+    break;
   }
 
 #if defined(RISCV_ENABLE_COMMITLOG)
@@ -1885,10 +1890,6 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.vme_kernel_param2;
-    case CSR_VME_MAX_MIN_IDX:
-      if(!supports_extension('V'))
-        break;
-      return state.vme_max_min_idx;
     case CSR_VME_FM_PADDING:
       if(!supports_extension('V'))
         break;
@@ -2248,6 +2249,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_USER5: ret(state.user5);
     case CSR_USER6: ret(state.user6);
     case CSR_USER7: ret(state.user7);
+    case 0x401:
+    case 0x41e:
+      throw trap_ncp_rw_illegal_csr();
+    break;
   }
 
 #undef ret
