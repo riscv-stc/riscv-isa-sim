@@ -413,6 +413,10 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CONV_KERNEL_PARAMS2   (STATE.conv_kernel_params2)
 #define CONV_KERNEL_PARAMS3   (STATE.conv_kernel_params3)
 #define CONV_PADDING          (STATE.conv_padding)
+#define CONV_PAD_U            ((STATE.conv_padding & 0xFF000000) >> 24)
+#define CONV_PAD_D            ((STATE.conv_padding & 0x00FF0000) >> 16)
+#define CONV_PAD_L            ((STATE.conv_padding & 0x0000FF00) >>  8)
+#define CONV_PAD_R             (STATE.conv_padding & 0x000000FF) 
 #define MME_QUANT_COEFF       (STATE.mme_quant_coeff)
 #define MME_DEQUANT_COEFF     (STATE.mme_dequant_coeff)
 
@@ -1080,6 +1084,11 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         if (unlikely(x & (esize - 1))) { \
             throw trap_dmae_base_misaligned(false, x, 0, 0); \
         }
+// throw trap if cust inst use invalid padding: N_pad_u’=Kh-N_pad_u-1 < 0
+#define check_cust_invalid_deconv_padding(kernal_shape, padding) \
+        if (unlikely(kernal_shape < (padding + 1) )) { \
+            throw trap_ncp_cust_invalid_param(); \
+        } 
 
 // throw trap if cust mme inst use invalid npu_v2 data_type
 #define check_cust_invalid_npu_data_type(type) \
@@ -1381,11 +1390,11 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_access(RS1, rs1_size); \
         check_cust_access(RD, rd_size); \
   })
-
+/*
 // #define check_vme_data_type \
 //   if ( (VME_DATA_TYPE != 0x0 ) && (VME_DATA_TYPE != 0x010101 ) && (VME_DATA_TYPE != 0x020202 ) ) \
 //     throw trap_ncp_cust_invalid_param();    
-
+*/
 #define check_vme_stride_d( width, stride_d ) \
   if ( ( stride_d != 0 ) && ( stride_d < width ) ) \
     throw trap_ncp_cust_invalid_param(); 
@@ -1696,6 +1705,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        check_cust_invalid_deconv_padding(CONV_KH, CONV_PAD_U); \
+        check_cust_invalid_deconv_padding(CONV_KW, CONV_PAD_L); \
         if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \
@@ -1726,6 +1737,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
         check_cust_invalid_params_misaligned_4(TRAP_CONV);\
+        check_cust_invalid_deconv_padding(CONV_KH, CONV_PAD_U); \
+        check_cust_invalid_deconv_padding(CONV_KW, CONV_PAD_L); \
         if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
             throw trap_ncp_cust_invalid_param(); \
         } \

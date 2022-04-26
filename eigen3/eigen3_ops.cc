@@ -8504,7 +8504,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
             third.v = 0x80000000;
             forth.v = 0x80000000;
             counter = 0;
-            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){ 
+            if (ss->shape2_column <= 32 && ss->stride_rs2 == ss->shape2_column){ 
                 for (k = 0; k < ss->shape1_column; k++) {
                     res_tmp = half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j));
                     if(counter%4 == 0)      first = f32_add(res_tmp, first);
@@ -8552,7 +8552,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStrid
             third.v = 0x80000000;
             forth.v = 0x80000000;
             counter = 0;
-            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+            if (ss->shape2_column <= 32 && ss->stride_rs2 == ss->shape2_column){
                 for (k = 0; k < ss->shape1_column; k++) {
                     res_tmp = half_mul_f32(rs1_matrix(i, k), rs2_matrix(k, j));
                     if(counter%4 == 0)      first = f32_add(res_tmp, first);
@@ -8598,7 +8598,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Sha
             third.x = 0x80000000;
             forth.x = 0x80000000;
             counter = 0;
-            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+            if (ss->shape2_column <= 32 && ss->stride_rs2 == ss->shape2_column){
                 for (k = 0; k < ss->shape1_column; k++) {
                     res_tmp = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j));
                     if(counter%4 == 0)      first =  res_tmp + first;
@@ -8647,7 +8647,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct Shap
             third.x = 0x80000000;
             forth.x = 0x80000000;
             counter = 0;
-            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+            if (ss->shape2_column <= 32 && ss->stride_rs2 == ss->shape2_column){
                 for (k = 0; k < ss->shape1_column; k++) {
                     res_tmp = Float32::mulConvert(rs1_matrix(i, k), rs2_matrix(k, j));
                     if(counter%4 == 0)      first =  res_tmp + first;
@@ -8693,7 +8693,7 @@ int CustomInsns::memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct 
             third.v = 0x80000000;
             forth.v = 0x80000000;
             counter = 0;
-            if (ss->shape2_column <= 32 && ss->stride_rd == ss->shape2_column){
+            if (ss->shape2_column <= 32 && ss->stride_rs2 == ss->shape2_column){
                 for (k = 0; k < ss->shape1_column; k++) {
                     res_tmp = tf32_mul(rs1_matrix(i, k), rs2_matrix(k, j));
                     if(counter%4 == 0)      first = f32_add(res_tmp, first);
