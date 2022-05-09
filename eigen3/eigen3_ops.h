@@ -7293,7 +7293,7 @@ class Vfexp
  * @return 执行结果
  */
 template <typename DType>
-int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+int vemaskmov_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(DType)
 
