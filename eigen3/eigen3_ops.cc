@@ -7831,7 +7831,7 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, 
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss)
+int CustomInsns::medwconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk_h, sk_w;
@@ -7989,7 +7989,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStr
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::medwconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk_h, sk_w;
@@ -8134,7 +8134,7 @@ int CustomInsns::medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeS
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::medwconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk_h, sk_w;
@@ -8274,7 +8274,7 @@ int CustomInsns::medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShap
  * @param ss 矩阵形状描述
  * @return 执行结果
  */
-int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss)
+int CustomInsns::medwconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss)
 {
     int pad_top, pad_bottom, pad_left, pad_right;
     int kw, kh, okw, okh, k_stride, sk_h, sk_w;

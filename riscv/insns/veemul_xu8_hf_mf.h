@@ -9,5 +9,5 @@ unsigned long rs1 = MMU.get_phy_addr(RS1);
 unsigned long rd = MMU.get_phy_addr(RD);
 half vr2;
 vr2.x = f32_to_f16(f32(FRS2)).v;
-veemul_xu8_hf_mf<unsigned char, half>((half *)rs1, (unsigned char *)rd, vr2, &sst, STATE.frm);
+veemul_xu8_hf_mf<unsigned char, half>((half *)rs1, vr2, (unsigned char *)rd, &sst, STATE.frm);
 WRITE_MEM_STC(RD, (unsigned char*)rd, CMT_LOG_VME_DATA8);

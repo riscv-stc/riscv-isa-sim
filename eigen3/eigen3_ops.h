@@ -561,7 +561,7 @@ enum {
 
 
 template <typename DType>
-int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int veadd_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -590,7 +590,7 @@ int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veadd_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -640,7 +640,7 @@ int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int veadd_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -672,7 +672,7 @@ int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int vesub_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -704,7 +704,7 @@ int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int vesub_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -754,7 +754,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int versub_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -805,7 +805,7 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
 }
 
 template <typename DType>
-int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vesub_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -840,7 +840,7 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int versub_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1071,7 +1071,7 @@ int verand_m(DType *rd, struct ShapeStride *ss, DType **rand_value, bool verand_
 
 
 template <typename DType>
-int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vediv_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1135,7 +1135,7 @@ int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int vediv_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1253,7 +1253,7 @@ int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vediv_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1457,7 +1457,7 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1532,7 +1532,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss, bool relu)
+int veemacc_mm(OutDType *rs1, OutDType *rs2, InDType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1606,7 +1606,7 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mv(OutDType *rs1, OutDType *rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1685,7 +1685,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mf(OutDType *rs1, OutDType rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1815,7 +1815,7 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
 // }
 
 template <typename DType>
-int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int veemul_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1843,7 +1843,7 @@ int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool re
 }
 
 template <typename DType>
-int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemul_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1885,7 +1885,7 @@ int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
 }
 
 template <typename DType>
-int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int veemul_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1935,7 +1935,7 @@ int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
 }
 
 template <typename DType>
-int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int vemin_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1963,7 +1963,7 @@ int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemin_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2011,7 +2011,7 @@ int velkrelu_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool r
 }   
 
 template <typename DType>
-int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int velkrelu_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2097,7 +2097,7 @@ int velut_m(AddrDType *rs1, unsigned long rs2, DType *rd, struct ShapeStride *ss
 #define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
 
 template <typename DType>
-int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemgt_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2166,7 +2166,7 @@ int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemeq_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2229,7 +2229,7 @@ int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemlt_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2292,7 +2292,7 @@ int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemgt_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2358,7 +2358,7 @@ int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemeq_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2418,7 +2418,7 @@ int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vemlt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemlt_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2928,7 +2928,7 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss)
+int veemul_xx_xx_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2959,7 +2959,7 @@ int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_x8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_x8_hf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2992,7 +2992,7 @@ int veemul_x8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xu8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_xu8_hf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -3025,7 +3025,7 @@ int veemul_xu8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride
 }
 
 template <typename OutDType, typename InDType>
-int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_x8_bf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -3059,7 +3059,7 @@ int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xu8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_xu8_bf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -4112,10 +4112,10 @@ public:
     int medeconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
     
 
-    int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
     
 };
 
