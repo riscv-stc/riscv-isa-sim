@@ -300,7 +300,7 @@ struct state_t
   reg_t user5;
   reg_t user6;
   reg_t user7;
-
+  reg_t mcache_ctl;
   reg_t wfi_flag;
   /* mextip is ext interrupt pending status for mbox,
    * just effect mip ext interrupt bit. */

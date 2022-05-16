@@ -1570,6 +1570,7 @@ void processor_t::set_csr(int which, reg_t val)
       VU.vxrm = val & 0x3ul;
       break;
     case CSR_MCACHE_CTL:
+      state.mcache_ctl= val;
       break;
     /* STC NPUV2 MCU user csr */
     case CSR_USER0:
@@ -2239,8 +2240,7 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret(VU.vlenb);
-    case CSR_MCACHE_CTL:
-      return 0;
+    case CSR_MCACHE_CTL: ret(state.mcache_ctl);
     case CSR_USER0: ret(state.user0);
     case CSR_USER1: ret(state.user1);
     case CSR_USER2: ret(state.user2);

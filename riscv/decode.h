@@ -1835,8 +1835,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         }
 
 // throw trap if tcp pld's target coremap not exist
-#define check_tcp_icmov_invalid_coremap(coremap) \
-        if (coremap == 0) { \
+#define check_tcp_pld_invalid_coremap(core_id, coremap) \
+        if (!((1 << core_id ) & coremap)) { \
             throw trap_tcp_coremap_zero(); \
         }
 
@@ -1927,19 +1927,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // check traps for icmov_m instruction
 #define check_traps_icmov_m(esize) ({ \
-        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
         check_tcp_mte_dtype\
-        check_tcp_misaligned_base_esize(RS1, esize) \
-        check_tcp_misaligned_base_esize(RD, esize) \
+        check_tcp_icmov_invalid_core_id(DST_CORE_ID, CORE_COUNT) \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_l1(RD) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1)\
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
-        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_misaligned_base_esize(RS1, esize) \
+        check_tcp_misaligned_base_esize(RD, esize) \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1(RS1 + rs_size) \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1(RD + rd_size) \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1)\
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
 })
 
 #define check_trap_sync_mte_r() ({\
@@ -1949,48 +1949,47 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 // check traps for pld instruction
 #define check_traps_pld(esize) ({ \
         check_tcp_mte_dtype \
-        check_tcp_misaligned_base_esize(RS1, esize) \
-        check_tcp_misaligned_base_esize(RD, esize) \
-        check_tcp_icmov_invalid_coremap(RS2) \
         check_tcp_access_start_l1_with_IRAM(RD) \
         check_tcp_access_start_llb(RS1) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
-        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_misaligned_base_esize(RS1, esize) \
+        check_tcp_misaligned_base_esize(RD, esize) \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1_with_IRAM(RD + rd_size) \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_llb(RS1 + rs_size) \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
 })
 
 // check traps for mov.l1.llb instruction
 #define check_traps_mov_l1_llb(etype) ({ \
-        check_tcp_misaligned_base(RS1, etype); \
-        check_tcp_misaligned_base(RD, etype); \
-        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_access_start_llb(RS1) \
         check_tcp_access_start_l1_with_IRAM(RD) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
-        int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
-        check_tcp_access_end_llb(RS1 + rs_size) \
+        check_tcp_misaligned_base(RS1, etype); \
+        check_tcp_misaligned_base(RD, etype); \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1_with_IRAM(RD + rd_size) \
+        int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
+        check_tcp_access_end_llb(RS1 + rs_size) \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \      
 })
 
 // check traps for mov.llb.l1 instruction
 #define check_traps_mov_llb_l1(etype) ({ \
-        check_tcp_misaligned_base(RS1, etype); \
-        check_tcp_misaligned_base(RD, etype); \
-        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_access_start_l1(RS1) \
         check_tcp_access_start_llb(RD) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
+        check_tcp_misaligned_base(RS1, etype); \
+        check_tcp_misaligned_base(RD, etype); \
         int rs_size = MTE_STRIDE_RS1 ? (MTE_STRIDE_RS1 * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_l1(RS1 + rs_size) \
         int rd_size = MTE_STRIDE_RD ? (MTE_STRIDE_RD * (MTE_SHAPE_ROW -1) + MTE_SHAPE_COLUMN) * esize : MTE_SHAPE_COLUMN * esize * MTE_SHAPE_ROW; \
         check_tcp_access_end_llb(RD + rd_size) \
+        check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
 })
 
 //check trap mov.l1.glb
