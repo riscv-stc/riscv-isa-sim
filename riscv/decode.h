@@ -195,14 +195,15 @@ private:
 #define P (*p)
 #define FLEN (p->get_flen())
 
-// Seems that 0x0 doesn't work.
-#define DEBUG_BASE              (0xc0500000)
+// Consistent with hardware (npu v2)
+#define DEBUG_BASE              (0xC07F0000)
 #define DEBUG_ROM_BASE          (DEBUG_BASE)
 #define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
-#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
-
+//#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
+#define CHECK_REG(reg) ((void) 0)
+#define READ_REG(reg) ({ CHECK_REG(reg); STATE.XPR[reg]; })
 #define READ_FREG(reg) STATE.FPR[reg]
 #define RD READ_REG(insn.rd())
 #define RDGP READ_REG(X_GP)
@@ -3992,8 +3993,8 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
       break; \
   }
 
-#define DEBUG_START             (0x100)
-#define DEBUG_END               (0xc0501000 - 1)
+#define DEBUG_START             (0xC07F0000)
+#define DEBUG_END               (0xC07F1000 - 1)
 
 #define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \

@@ -437,7 +437,7 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
       reg_t vpn = gpa >> PGSHIFT;
       reg_t page_mask = (reg_t(1) << PGSHIFT) - 1;
 
-      int napot_bits = ((pte & PTE_N) ? (ctz(ppn) + 1) : 0);
+    int napot_bits = ((pte & PTE_N) ? (ctz(ppn) + 1) : 0);
       if (((pte & PTE_N) && (ppn == 0 || i != 0)) || (napot_bits != 0 && napot_bits != 4))
         break;
 
