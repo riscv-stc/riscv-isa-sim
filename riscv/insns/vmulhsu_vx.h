@@ -1,4 +1,6 @@
 // vmulhsu.vx vd, vs2, rs1
+require(P.VU.vstart == 0);
+
 VI_CHECK_SSS(false);
 VI_LOOP_BASE
 switch(sew) {

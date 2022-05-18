@@ -1,4 +1,6 @@
 // vslideup.vi vd, vs2, rs1
+require(P.VU.vstart == 0);
+
 VI_CHECK_SLIDE(true);
 
 const reg_t offset = insn.v_zimm5();

@@ -1,3 +1,5 @@
+require(P.VU.vstart == 0);
+
 VI_VFP_CVT_SCALE
 ({
   ;

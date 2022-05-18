@@ -1,4 +1,6 @@
 // vfclass.v vd, vs2, vm
+require(P.VU.vstart == 0);
+
 VI_VFP_V_LOOP
 ({
   check_tcp_csr_bf16(STATE.bf16);

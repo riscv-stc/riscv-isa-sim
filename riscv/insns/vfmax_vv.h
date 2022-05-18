@@ -1,4 +1,6 @@
 // vfmax
+require(P.VU.vstart == 0);
+
 VI_VFP_VV_LOOP
 ({
   vd = bf16_max(vs2, vs1);

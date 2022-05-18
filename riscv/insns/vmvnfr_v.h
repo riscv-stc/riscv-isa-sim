@@ -1,4 +1,6 @@
 // vmv1r.v vd, vs2
+require(P.VU.vstart == 0);
+
 require_vector_novtype(true, true);
 const reg_t baseAddr = RS1;
 const reg_t vd = insn.rd();

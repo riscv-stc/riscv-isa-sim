@@ -1,4 +1,6 @@
 // vmadc.vim vd, vs2, simm5
+require(P.VU.vstart == 0);
+
 VI_XI_LOOP_CARRY
 ({
   auto v0 = P.VU.elt<uint64_t>(0, midx);

@@ -1,4 +1,6 @@
 // vfmv_s_f: vd[0] = rs1 (vs2=0)
+require(P.VU.vstart == 0);
+
 require_vector(true);
 require_fp;
 require((P.VU.vsew == e16 && p->supports_extension(EXT_ZFH)) ||

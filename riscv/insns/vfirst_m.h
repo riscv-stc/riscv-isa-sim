@@ -1,4 +1,6 @@
 // vmfirst rd, vs2
+require(P.VU.vstart == 0);
+
 require(P.VU.vsew >= e8 && P.VU.vsew <= e64);
 require_vector(true);
 reg_t vl = P.VU.vl;

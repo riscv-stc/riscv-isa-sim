@@ -1,4 +1,6 @@
 // vmsif.m rd, vs2, vm
+require(P.VU.vstart == 0);
+
 require(P.VU.vsew >= e8 && P.VU.vsew <= e64);
 require_vector(true);
 require(P.VU.vstart == 0);

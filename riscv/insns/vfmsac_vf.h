@@ -1,4 +1,6 @@
 // vfmsac: vd[i] = +(f[rs1] * vs2[i]) - vd[i]
+require(P.VU.vstart == 0);
+
 VI_VFP_VF_LOOP
 ({
   vd = f32_to_bf16( f32_mulAdd(bf16_to_f32(rs1), bf16_to_f32(vs2), bf16_to_f32(bf16(vd.v ^ BF16_SIGN))) );

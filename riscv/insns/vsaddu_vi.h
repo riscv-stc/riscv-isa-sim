@@ -1,4 +1,6 @@
 // vsaddu vd, vs2, zimm5
+require(P.VU.vstart == 0);
+
 VI_VI_ULOOP
 ({
   bool sat = false;

@@ -1,4 +1,6 @@
 // vfmv_vf vd, vs1
+require(P.VU.vstart == 0);
+
 require_align(insn.rd(), P.VU.vflmul);
 VI_VFP_COMMON
 switch(P.VU.vsew) {
