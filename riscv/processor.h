@@ -7,6 +7,7 @@
 #include "devices.h"
 #include "trap.h"
 #include "simif.h"
+#include "bankif.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -14,6 +15,7 @@
 #include <cassert>
 #include <functional>
 #include "debug_rom_defines.h"
+#include "atu.h"
 
 class processor_t;
 class mmu_t;
@@ -184,6 +186,9 @@ struct state_t
   reg_t mideleg;
   uint32_t mcounteren;
   uint32_t scounteren;
+  reg_t mcounterwen;
+  reg_t mhpmcounter[32];
+  reg_t mhpmevent[32];
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;
@@ -362,9 +367,9 @@ class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, hwsync_t *hs, uint32_t idx,
-              uint32_t id, bool halt_on_reset,
-              FILE *log_file);
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
+              const char *atuini,FILE *log_file);
   ~processor_t();
 
   void set_debug(bool value);
@@ -438,8 +443,10 @@ public:
   Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
+  bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();
-  uint32_t get_idx() {return idx; };
+  uint32_t get_idxinbank() {return idxinbank; };
+  uint32_t get_bank_id() {return bank_id;};
   uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
@@ -611,14 +618,25 @@ public:
 
   const char* get_symbol(uint64_t addr);
 
+  char* addr_to_mem(reg_t addr);
+  bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
+  bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
+  bool in_npc_mem(reg_t addr, local_device_type type);
+  bool in_npc_mmio(reg_t addr);
+
 private:
   simif_t* sim;
+  bankif_t* bank;
   hwsync_t *hwsync;
+  pcie_driver_t *pcie_driver = nullptr;
+  bus_t npc_bus;
+  atu_t *atu = nullptr;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
   state_t state;
-  uint32_t idx;
+  uint32_t idxinbank;
+  uint32_t bank_id;
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
@@ -632,9 +650,9 @@ private:
   FILE *log_file;
   bool halt_on_reset;
   mbox_device_t *mbox;
+  misc_device_t *misc_dev = nullptr;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
-  
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
@@ -662,9 +680,12 @@ private:
 
   friend class mmu_t;
   friend class clint_t;
+  friend class misc_device_t;
   friend class extension_t;
   friend class pcie_driver_t;
   friend class mbox_device_t;
+  friend class smmu_t;
+  friend class sysdma_device_t;
 
   void parse_varch_string(const char*);
   void parse_priv_string(const char*);

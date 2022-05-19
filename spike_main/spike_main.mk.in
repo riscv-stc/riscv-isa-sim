@@ -2,6 +2,7 @@ spike_main_subproject_deps = \
 	fdt \
 	fesvr \
 	softfloat \
+	iniparse \
     eigen3 \
 	disasm \
 	riscv \

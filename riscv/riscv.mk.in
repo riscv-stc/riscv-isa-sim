@@ -4,6 +4,7 @@ get_opcode = $(shell grep ^DECLARE_INSN.*\\\<$(2)\\\> $(1) | sed 's/DECLARE_INSN
 riscv_subproject_deps = \
 	fdt \
 	softfloat \
+	iniparse \
 
 riscv_install_prog_srcs = \
 
@@ -13,10 +14,14 @@ riscv_hdrs = \
 	common.h \
 	decode.h \
 	devices.h \
+	atu.h \
+	sysdma.h \
 	disasm.h \
 	dts.h \
 	mmu.h \
 	hwsync.h \
+	bank.h \
+	bankif.h \
 	processor.h \
 	sim.h \
 	simif.h \
@@ -48,7 +53,9 @@ riscv_srcs = \
 	interactive.cc \
 	trap.cc \
 	cachesim.cc \
+	atu.cc \
 	mmu.cc \
+	bank.cc \
 	hwsync.cc \
 	disasm.cc \
 	extension.cc \

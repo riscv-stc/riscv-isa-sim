@@ -9,8 +9,8 @@
 #include <thread>
 #include "devices.h"
 
-class processor_t;
 class simif_t;
+class bankif_t;
 
 #include <linux/netlink.h>
 #include <linux/socket.h>
@@ -33,18 +33,20 @@ struct command_head_t {
     unsigned short code;
     unsigned short len;
     unsigned long addr;
-    unsigned char data[4];
+    unsigned char data[16];
 };
+
+#define COMMAND_HEAD_SIZE (sizeof(command_head_t) - 16)
+#define PCIE_COMMAND_SEND_SIZE(cmd)  (sizeof(cmd)-sizeof(cmd.data)+cmd.len)
 
 class pcie_driver_t {
  public:
-  pcie_driver_t(simif_t* sim, std::vector<processor_t*>& procs, uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id);
+  pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id);
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);
   int get_sync_state();
  private:
-  std::vector<processor_t*>& procs;
   std::unique_ptr<std::thread> mDriverThread;
 
   struct sockaddr_nl mSrcAddr;
@@ -52,6 +54,7 @@ class pcie_driver_t {
   struct nlmsghdr *mSendBuffer;
   struct nlmsghdr *mRecvBuffer;
   simif_t* mPSim;
+  bankif_t *mBank;
 
   int mSockFd;
   int mStatus;

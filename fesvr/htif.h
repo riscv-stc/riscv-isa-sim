@@ -11,13 +11,14 @@
 #include <map>
 #include <vector>
 #include <assert.h>
+#include "simif.h"
 
 class htif_t : public chunked_memif_t
 {
  public:
   htif_t();
   htif_t(int argc, char** argv);
-  htif_t(const std::vector<std::string>& args);
+  htif_t(const std::vector<std::string>& args, simif_t *sim);
   virtual ~htif_t();
 
   virtual void start();
@@ -85,6 +86,7 @@ class htif_t : public chunked_memif_t
   void register_devices();
   void usage(const char * program_name);
 
+  simif_t *simif;
   memif_t mem;
   reg_t entry;
   bool writezeros;

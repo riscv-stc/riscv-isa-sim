@@ -23,15 +23,15 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-                         simif_t* sim, hwsync_t* hs, uint32_t idx,
-                         uint32_t id, bool halt_on_reset,
-                         FILE* log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), id(id), xlen(0),
-  histogram_enabled(false), log_commits_enabled(false),
-  hwsync(hs), idx(idx), mbox(NULL),
-  async_running(true), exit_request(false),
-  log_file(log_file), halt_on_reset(halt_on_reset),
-  extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
+              const char *atuini,FILE *log_file)
+  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs),
+  pcie_driver(pcie_driver),ext(NULL), 
+  idxinbank(idxinbank), bank_id(bank_id), id(id), xlen(0),histogram_enabled(false), 
+  log_commits_enabled(false),log_file(log_file), halt_on_reset(halt_on_reset),
+  mbox(NULL),extension_table(256, false), impl_table(256, false),async_running(true), 
+  exit_request(false),last_pc(1), executions(1)
 {
   VU.p = this;
 
@@ -40,7 +40,22 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   parse_varch_string(varch);
 
   register_base_instructions();
-  mmu = new mmu_t(sim, this);
+
+    npc_bus.add_device(l1_buffer_start, new mem_t(l1_buffer_size));
+    npc_bus.add_device(im_buffer_start, new mem_t(im_buffer_size));
+    npc_bus.add_device(sp_buffer_start, new mem_t(sp_buffer_size));
+    misc_dev = new misc_device_t(pcie_driver, this);
+    npc_bus.add_device(MISC_START, misc_dev);
+
+    mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , misc_dev, (pcie_driver) ? true : false);
+    npc_bus.add_device(MBOX_START, mbox);
+
+    /* atu */
+    atu = new atu_t(atuini, get_id());
+    npc_bus.add_device(NP_IOV_ATU_START, atu);
+    add_mbox(mbox);
+
+  mmu = new mmu_t(sim, bank, this,atu);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -109,6 +124,9 @@ processor_t::~processor_t()
 
   delete mmu;
   delete disassembler;
+  delete mbox;
+  delete misc_dev;
+  delete atu;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -367,6 +385,7 @@ void state_t::reset(reg_t max_isa)
   mideleg = 0;
   mcounteren = 0;
   scounteren = 0;
+  mcounterwen = 0;
   sepc = 0;
   stval = 0;
   sscratch = 0;
@@ -540,6 +559,8 @@ void processor_t::reset()
   if (ext)
     ext->reset(); // reset the extension
 
+  atu->reset();
+
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
 }
@@ -596,6 +617,101 @@ void processor_t::set_mmu_capability(int cap)
       set_impl(IMPL_MMU, false);
       break;
   }
+}
+
+
+char* processor_t::addr_to_mem(reg_t addr)
+{
+    auto desc = npc_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+        if (addr - desc.first < mem->size())
+            return mem->contents() + (addr - desc.first);
+        return NULL;
+    }
+
+    return NULL;
+}
+
+bool processor_t::in_npc_mmio(reg_t addr) {
+    auto desc = npc_bus.find_device(addr);
+
+    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<atu_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool processor_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    if (in_npc_mmio(addr)) {
+        return npc_bus.load(addr & 0xffffffff, len, bytes);
+    }
+    return false;
+}
+
+bool processor_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    if (in_npc_mmio(addr)) {
+        return npc_bus.store(addr & 0xffffffff, len, bytes);
+    }
+    return false;
+}
+
+bool processor_t::in_npc_mem(reg_t addr, local_device_type type) {
+  auto desc = npc_bus.find_device(addr);
+
+  if (type == IO_DEVICE) {
+    if (auto mem = dynamic_cast<misc_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+
+    if (auto mem = dynamic_cast<mbox_device_t *>(desc.second)) {
+      if (addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+    return false;
+  } else if (type == L1_BUFFER) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = l1_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  } else if (type == SP_BUFFER) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = sp_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  } else if (IM_BUFFER == type) {
+    if (auto mem = dynamic_cast<mem_t *>(desc.second)) {
+      reg_t start_addr = im_buffer_start;
+      if (desc.first == start_addr && addr - desc.first <= mem->size()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void processor_t::take_interrupt(reg_t pending_interrupts)
@@ -907,6 +1023,18 @@ reg_t processor_t::cal_satp(reg_t val) const
 }
 void processor_t::set_csr(int which, reg_t val)
 {
+  uint32_t ctr_en = -1;
+
+  ctr_en &= state.mcounterwen;
+  bool ctr_ok = (ctr_en >> (which & 31)) & 1;
+
+  if (which >= CSR_CYCLE && which <= CSR_HPMCOUNTER31) {
+    if (!ctr_ok) {
+    //   goto throw_illegal;
+      return ;
+    }
+  }
+
 #if defined(RISCV_ENABLE_COMMITLOG)
 #define LOG_CSR(rd) \
   STATE.log_reg_write[((which) << 4) | 4] = {get_csr(rd), 0};
@@ -1258,6 +1386,25 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_MCOUNTEREN:
       state.mcounteren = val;
+      break;
+    case CSR_MCOUNTERWEN:
+      state.mcounterwen = val;
+      break;
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+      state.mhpmcounter[which&0x1f] = val;
+      break;
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
+      state.mhpmevent[which&0x1f] = val;
       break;
     case CSR_SSTATUS: {
       reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_SPP | SSTATUS_FS
@@ -1662,6 +1809,19 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MCYCLEH:
     case CSR_SCOUNTEREN:
     case CSR_MCOUNTEREN:
+    case CSR_MCOUNTERWEN:
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
     case CSR_SATP:
     case CSR_SEPC:
     case CSR_STVEC:
@@ -1695,8 +1855,11 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
   uint32_t ctr_en = -1;
   if (state.prv < PRV_M)
     ctr_en &= state.mcounteren;
+#if 0
+  /* npuv2 不支持 S */
   if (state.prv < PRV_S)
     ctr_en &= state.scounteren;
+#endif
   bool ctr_ok = (ctr_en >> (which & 31)) & 1;
   if (state.v)
     ctr_en &= state.hcounteren;
@@ -1708,20 +1871,18 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     goto out; \
   } while (false)
 
-  if ((which >= CSR_HPMCOUNTER3 && which <= CSR_HPMCOUNTER31) ||
+  if ((which >= CSR_CYCLE && which <= CSR_HPMCOUNTER31) ||
       (xlen == 32 && which >= CSR_HPMCOUNTER3H && which <= CSR_HPMCOUNTER31H)) {
     if (!ctr_ok)
       goto throw_illegal;
     if (!ctr_v_ok)
       goto throw_virtual;
-    ret(0);
   }
-  if (which >= CSR_MHPMCOUNTER3 && which <= CSR_MHPMCOUNTER31)
-    ret(0);
-  if (xlen == 32 && which >= CSR_MHPMCOUNTER3H && which <= CSR_MHPMCOUNTER31H)
-    ret(0);
-  if (which >= CSR_MHPMEVENT3 && which <= CSR_MHPMEVENT31)
-    ret(0);
+  if ((which >= CSR_MCYCLE && which <= CSR_MHPMCOUNTER31) || 
+        (xlen == 32 && which >= CSR_MHPMCOUNTER3H && which <= CSR_MHPMCOUNTER31H)) {
+    if (!ctr_ok)
+      goto throw_illegal;
+  }
 
   if (which >= CSR_PMPADDR0 && which < CSR_PMPADDR0 + state.max_pmp) {
     // If n_pmp is zero, that means pmp is not implemented hence raise trap if it tries to access the csr
@@ -1997,6 +2158,33 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('U'))
         break;
       ret(state.mcounteren);
+    case CSR_MCOUNTERWEN:
+      if (!supports_extension('U'))
+        break;
+      ret(state.mcounterwen);
+    case CSR_MHPMCOUNTER3:
+    case CSR_MHPMCOUNTER4:
+    case CSR_MHPMCOUNTER5:
+    case CSR_MHPMCOUNTER6:
+    case CSR_HPMCOUNTER3:
+    case CSR_HPMCOUNTER4:
+    case CSR_HPMCOUNTER5:
+    case CSR_HPMCOUNTER6:
+    {
+      /* event仅支持 type=0, sel 1 and 2 */
+      reg_t event = state.mhpmevent[which&0x1f];
+      if ((1<<4 == event) || (2<<4 == event)) {
+          ret(state.minstret);
+      } else {
+          ret(0);
+      }
+    //   ret(state.mhpmcounter[which&0x1f]);
+    }
+    case CSR_MHPMEVENT3:
+    case CSR_MHPMEVENT4:
+    case CSR_MHPMEVENT5:
+    case CSR_MHPMEVENT6:
+      ret(state.mhpmevent[which&0x1f]);
     case CSR_MCOUNTINHIBIT: ret(0);
     case CSR_SSTATUS: {
       reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_UBE | SSTATUS_SPP
@@ -2417,6 +2605,12 @@ bool processor_t::async_done() {
     if (async_function == nullptr) {
       state.async_started = false;
       hwsync->hwsync_timer_clear(id);
+      if (state.pld) {
+          state.pld = false;
+          misc_dev->inst_done_cnt(MATCH_PLD);
+      } else {
+          misc_dev->inst_done_cnt(MATCH_SYNC);
+      }
       return true;
     }
   }
@@ -2478,9 +2672,9 @@ void processor_t::trigger_updated()
 /* 输入x86机器耗费的时钟数和riscv二进制指令，粗略计算在npc耗费时钟数 */
 uint64_t processor_t::host_clks_2_npc(uint64_t host_clks, uint64_t insn_b) {
     #define STAND_INSN_RATIO    5000
-    #define NPUV2_INSN_RATIO    5000
+    #define NPUV2_INSN_RATIO    5000ul
     #define STAND_INSN_CLKS_MAX 100
-    #define NPUV2_INSN_CLKS_MAX 1000000
+    #define NPUV2_INSN_CLKS_MAX 1000000ul
     uint64_t hs_clks = 0;
 
     switch((insn_b>>2) & 0x1f) {

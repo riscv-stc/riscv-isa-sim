@@ -5,10 +5,10 @@
 
 #include "debug_module.h"
 #include "devices.h"
-#include "pcie_driver.h"
 #include "log_file.h"
 #include "processor.h"
 #include "simif.h"
+#include "bank.h"
 
 #include <fesvr/htif.h>
 #include <fesvr/context.h>
@@ -24,14 +24,15 @@ class remote_bitbang_t;
 class sim_t : public htif_t, public simif_t
 {
 public:
-  sim_t(const char* isa, const char* priv, const char* varch, size_t _nprocs,
-        size_t bank_id, size_t die_id, char *hwsync_masks, uint32_t hwsync_timer_num, bool halted, bool real_time_clint,
+  sim_t(const char* isa, const char* priv, const char* varch, size_t _nprocs, int _nbanks,
+        size_t id_first_bank, size_t die_id, char *hwsync_masks, uint32_t hwsync_timer_num, bool halted, bool real_time_clint,
         reg_t initrd_start, reg_t initrd_end, const char* bootargs,
         reg_t start_pc, std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
-        bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask);
+        bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, 
+        size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini);
   ~sim_t();
 
   // run the simulation to completion
@@ -59,8 +60,16 @@ public:
     this->remote_bitbang = remote_bitbang;
   }
   const char* get_dts() { if (dts.empty()) reset(); return dts.c_str(); }
-  processor_t* get_core(size_t i) { return procs.at(i); }
-  unsigned nprocs() const { return procs.size(); }
+  
+  unsigned nprocs(void) const { return sim_nprocs; }
+  unsigned nbanks(void) const { return sim_nbanks; }
+
+  bank_t* get_bank(int idx) { return banks.at(idx); }
+  int get_bankid(int idxinsim) const { return  idxinsim/core_num_of_bank + id_first_bank;};
+  processor_t* get_core_by_idxinsim(int idxinsim);        /* index 从0开始 */
+  int get_idxinbank(int idxinsim) const { return  idxinsim%core_num_of_bank;};
+  int get_id_first_bank(void) const {return id_first_bank;};
+  int coreid_to_idxinsim(int coreid);
 
   void hart_reset(reg_t hart_map) {
     rst_mutex.lock();
@@ -83,8 +92,11 @@ private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
   mmu_t* debug_mmu;  // debug port into main memory
-  std::vector<processor_t*> procs;
-  size_t bank_id;
+  std::vector<bank_t *> banks;   /* 一个spike最多支持4个bank. bank id == bank index */
+  int core_num_of_bank;             /* 一个bank内的core数 */
+  size_t id_first_bank;             /* 多bank时第一个bank的id */
+  int sim_nprocs;
+  int sim_nbanks;
   size_t die_id;
   char *hwsync_masks;
   reg_t initrd_start;
@@ -97,23 +109,16 @@ private:
   bool dtb_enabled;
   std::unique_ptr<rom_device_t> boot_rom;
   std::unique_ptr<clint_t> clint;
-  bus_t bus;
   log_file_t log_file;
-
-  std::vector<bus_t*> local_bus;
-  std::vector<bus_t*> mem_bus;
-  pcie_driver_t *pcie_driver;
+  bus_t glb_bus;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
-
-  hwsync_t *hwsync;
-  share_mem_t *llb;
-  share_mem_t *l1;
 
   std::vector<std::string> exit_dump;
   std::string dump_path;
 
-  processor_t* get_core(const std::string& i);
+  processor_t* get_core_by_id(int procid);
+  processor_t* get_core_by_id(const std::string& i);
   void step(size_t n); // step through simulation
   static const size_t INTERLEAVE = 5000;
   static const size_t INSNS_PER_RTC_TICK = 100; // 10 MHz clock for 1 BIPS core
@@ -126,22 +131,31 @@ private:
   bool pcie_enabled;
   bool file_name_with_bank_id;
   remote_bitbang_t* remote_bitbang;
+  hwsync_t *hwsync;
 
   // memory-mapped I/O routines
+  bool is_upper_mem(reg_t addr);
+  int get_bankid_by_uppermem(reg_t addr);
+
+  bool is_bottom_ddr(reg_t addr) const ;
+  reg_t bottom_ddr_to_upper(reg_t addr,int bankid) const;
+
   char* addr_to_mem(reg_t addr);
-  char* local_addr_to_mem(reg_t addr, uint32_t idx);
-  char* local_addr_to_mem_by_id(reg_t addr, uint32_t id);
-  char* local_addr_to_mem_by_id_cluster(reg_t addr, uint32_t id);
-  bool in_local_mem(reg_t addr, local_device_type type);
+  char* bank_addr_to_mem(reg_t addr, uint32_t bank_id);
+  char* npc_addr_to_mem(reg_t addr, uint32_t bank_id, uint32_t idxinbank);
+
+  bool in_mmio(reg_t addr);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
-  bool local_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idx);
-  bool local_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idx);
+
+  bool bank_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t bank_id);
+  bool bank_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t bank_id);
+
+  bool npc_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t bank_id, uint32_t idx);
+  bool npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t bank_id, uint32_t idx);
+
   void make_dtb();
   void set_rom();
-
-  int get_target_glb_bank_id(reg_t addr);
-  char* mem_bus_addr_to_mem(reg_t addr, int id);
 
   const char* get_symbol(uint64_t addr);
 

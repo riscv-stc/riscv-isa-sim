@@ -396,7 +396,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define DMAE_STRIDE_D_X       (STATE.dmae_stride_d1)
 #define DMAE_STRIDE_D_Y       (STATE.dmae_stride_d2)
 
-#define DMAE_CHANNEL          (STATE.dmae_ctrl)
+#define DMAE_CHANNEL          (STATE.dmae_ctrl&0x07)
 
 #define SRC_CORE_ID           ((STATE.mte_icdest >> 16) & 0xFF)
 #define DST_CORE_ID           (STATE.mte_icdest & 0xFF)
@@ -496,10 +496,10 @@ static inline void clear_bit(int nr, unsigned long *addr)
 
 // throw trap if rvv inst access out of l1&im buffer
 #define check_rvv_access_without_exception(x, len) \
-        (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
-            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len-1, IM_BUFFER)))
+        (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len-1, L1_BUFFER)) && \
+            !(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len-1, IM_BUFFER)))
 
 
 //don't modify elment of big than vl
@@ -1016,31 +1016,31 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if cust inst access out of l1&im buffer
 #define check_cust_access(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
-            !(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER)) && \
+            !(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of l1 buffer
 #define check_cust_access_l1(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, L1_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of im buffer
 #define check_cust_access_im(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), IM_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), IM_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, IM_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
 // throw trap if cust inst access out of sp_idx buffer
 #define check_cust_access_sp(x, len) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER) && \
-              p->get_sim()->in_local_mem(zext_xlen(x) + len - 1, SP_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER) && \
+              p->in_npc_mem(zext_xlen(x) + len - 1, SP_BUFFER))) { \
             throw trap_ncp_cust_access(false, x, 0, 0); \
         }
 
@@ -1843,25 +1843,26 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_l1_with_IRAM(x) \
-        if ((!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) && \
-            (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER)))) { \
+        if ((!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
             throw trap_tcp_access_start(x); \
         }
 
+// throw trap if tcp source start address in L1Buffer
 #define check_tcp_access_start_l1(x) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
             throw trap_tcp_access_start(x); \
         }
 
 // throw trap if tcp source end address in L1Buffer
 #define check_tcp_access_end_l1_with_IRAM(x) \
-        if ((!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) && \
-            (!(p->get_sim()->in_local_mem(zext_xlen(x), SP_BUFFER)))) { \
+        if ((!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) && \
+            (!(p->in_npc_mem(zext_xlen(x), SP_BUFFER)))) { \
             throw trap_tcp_access_end_l1(x); \
         }
 
 #define check_tcp_access_end_l1(x) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
             throw trap_tcp_access_end_l1(x); \
         }
 
@@ -1883,13 +1884,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 // throw trap if dmae source start address in L1Buffer
 #define check_dmae_access_start_l1(x) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
             throw trap_dmae_access_addr_fault(x); \
         }
 
 // throw trap if dmae source end address in L1Buffer
 #define check_dmae_access_end_l1(x) \
-        if (!(p->get_sim()->in_local_mem(zext_xlen(x), L1_BUFFER))) { \
+        if (!(p->in_npc_mem(zext_xlen(x), L1_BUFFER))) { \
             throw trap_dmae_access_addr_fault(x); \
         }
 
@@ -3993,7 +3994,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   }
 
 #define DEBUG_START             (0x100)
-#define DEBUG_END               (0xc0501000 - 1)
+#define DEBUG_END               (0xc0501000)
 
 #define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \
@@ -4064,8 +4065,28 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     case 0x303: \
       esize = 1; \
       break; \
-    default: \
+    /*  \
+    case 0x2: {\
+      in_esize = 2; \
+      out_esize = 4; \
+    } \
       break; \
+    case 0x102: {\
+      in_esize = 2; \
+      out_esize = 4; \
+    } \
+      break; \
+    case 0x201: {\
+      in_esize = 4; \
+      out_esize = 2; \
+    } \
+      break; \
+    case 0x200: {\
+      in_esize = 4; \
+      out_esize = 2; \
+    } \
+      break; \
+    */ \
   }
 
 #endif

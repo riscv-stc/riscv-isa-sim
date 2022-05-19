@@ -776,9 +776,13 @@ void processor_t::step(size_t n)
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
+#ifdef MBOX_V1_ENABLE
       reg_t interrupts = (state.mip |
                           (state.mextip ?
                           (0x1 << IRQ_M_EXT) : 0));
+#else
+      reg_t interrupts = state.mip;
+#endif
       if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;
@@ -817,6 +821,7 @@ void processor_t::step(size_t n)
           /* core所在的grp在sync，该核运行时 hs_sync_timer_cnts 计数器累加 */
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {
             start_rdtsc = get_host_clks();
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
             endl_rdtsc = get_host_clks();
 
@@ -832,6 +837,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();
             }
           } else {
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
           }
 
@@ -874,6 +880,7 @@ void processor_t::step(size_t n)
           uint64_t riscv_clks = 0;    \
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {   \
             start_rdtsc = get_host_clks();   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
             endl_rdtsc = get_host_clks();    \
             if (likely(endl_rdtsc > start_rdtsc)) {   \
@@ -888,6 +895,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();  \
             }   \
           }else {   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
           }   \
           ic_entry = ic_entry->next; \
@@ -927,6 +935,7 @@ void processor_t::step(size_t n)
         // instructions are idempotent so restarting is safe.)
 
         insn_fetch_t fetch = mmu->load_insn(pc);
+        misc_dev->inst_cnt(fetch.insn.bits());
         pc = execute_insn(this, pc, fetch);
         advance_pc();
 

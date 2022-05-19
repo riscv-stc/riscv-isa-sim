@@ -24,6 +24,8 @@
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef FDT_ENABLED
 
+#undef INIPARSE_ENABLED
+
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef FESVR_ENABLED
 

@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <getopt.h>
+#include <sys/stat.h>
+#include "sim.h"
 
 /* Attempt to determine the execution prefix automatically.  autoconf
  * sets PREFIX, and pconfigure sets __PCONFIGURE__PREFIX. */
@@ -64,8 +66,9 @@ htif_t::htif_t(int argc, char** argv) : htif_t()
   register_devices();
 }
 
-htif_t::htif_t(const std::vector<std::string>& args) : htif_t()
+htif_t::htif_t(const std::vector<std::string>& args, simif_t *sim) : htif_t()
 {
+    simif = sim;
   int argc = args.size() + 1;
   char * argv[argc];
   argv[0] = (char *) "htif";
@@ -113,17 +116,32 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
   // that have already been preloaded through a sideband
   class preload_aware_memif_t : public memif_t {
    public:
-    preload_aware_memif_t(htif_t* htif) : memif_t(htif), htif(htif) {}
+    preload_aware_memif_t(htif_t* htif,simif_t *simif) : memif_t(htif), htif(htif), simif(simif) {}
 
     void write(addr_t taddr, size_t len, const void* src) override
     {
-      if (!htif->is_address_preloaded(taddr, len))
-        memif_t::write(taddr, len, src);
+        reg_t upaddr = 0;
+
+        if (!htif->is_address_preloaded(taddr, len)) {
+            if (simif->is_bottom_ddr(taddr)) {
+                for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
+                    upaddr = simif->bottom_ddr_to_upper((reg_t)taddr, i);
+                    if (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR <= upaddr) {
+                        memif_t::write(upaddr, len, src);
+                    } else {
+                        throw std::runtime_error("upaddr error");
+                    }
+                }
+            } else {
+                memif_t::write(taddr, len, src);
+            }
+        }
     }
 
    private:
     htif_t* htif;
-  } preload_aware_memif(this);
+    simif_t *simif;
+  } preload_aware_memif(this, simif);
 
   return load_elf(path.c_str(), &preload_aware_memif, entry);
 }
@@ -177,23 +195,79 @@ void htif_t::stop()
   if (!sig_file.empty() && sig_len) // print final torture test signature
   {
     std::vector<uint8_t> buf(sig_len);
-    mem.read(sig_addr, sig_len, &buf[0]);
 
-    std::ofstream sigs(sig_file);
-    assert(sigs && "can't open signature file!");
-    sigs << std::setfill('0') << std::hex;
+    if (simif->is_bottom_ddr(sig_addr)) {
+        addr_t bank_sig_addr = 0;
+        std::string bank_sig_file = {};
 
-    for (addr_t i = 0; i < sig_len; i += line_size)
-    {
-      for (addr_t j = line_size; j > 0; j--)
-          if (i+j <= sig_len)
-            sigs << std::setw(2) << (uint16_t)buf[i+j-1];
-          else
-            sigs << std::setw(2) << (uint16_t)0;
-      sigs << '\n';
+        /* begin_signature位于低端DDR时转换为高端地址,输出每个bank的sig文件并重命名添加 .bankx 后缀. */
+        for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
+            bank_sig_addr = simif->bottom_ddr_to_upper((reg_t)sig_addr, i);
+            if (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR > bank_sig_addr) {
+                throw std::runtime_error("bank begin_signature addr error");
+            }
+            buf.clear();
+            mem.read(bank_sig_addr, sig_len, &buf[0]);
+
+            bank_sig_file.assign(sig_file);
+            bank_sig_file.append(".bank");
+            bank_sig_file.append(1,(char)(i + '0'));
+
+            std::ofstream sigs(bank_sig_file);
+            assert(sigs && "can't open signature file!");
+            sigs << std::setfill('0') << std::hex;
+
+            for (addr_t i = 0; i < sig_len; i += line_size)
+            {
+                for (addr_t j = line_size; j > 0; j--) {
+                    if (i+j <= sig_len)
+                        sigs << std::setw(2) << (uint16_t)buf[i+j-1];
+                    else
+                        sigs << std::setw(2) << (uint16_t)0;
+                }
+                sigs << '\n';
+            }
+
+            sigs.close();
+        }
+        /* 只有1个bank时, 为这个sig文件创建一个不含 .bankx 后缀的软连接 */
+        if (1 == (int)simif->nbanks()) {
+            int pos = 0;
+            struct stat sig_file_stat = {};
+            std::string basename_bank_sig_file = {};
+
+            bank_sig_file.assign(sig_file);
+            bank_sig_file.append(".bank");
+            bank_sig_file.append(1,(char)(simif->get_id_first_bank() + '0'));
+            pos = bank_sig_file.rfind("/");
+            basename_bank_sig_file = bank_sig_file.substr(pos+1);
+
+            if (0 == stat(sig_file.c_str(), &sig_file_stat)) {
+                remove(sig_file.c_str());
+            }
+            int ret = symlink(basename_bank_sig_file.c_str(), sig_file.c_str());
+            if (0 != ret)
+                std::cerr << "symlink " << sig_file << strerror(errno) << std::endl; 
+        }
+    } else {
+        mem.read(sig_addr, sig_len, &buf[0]);
+
+        std::ofstream sigs(sig_file);
+        assert(sigs && "can't open signature file!");
+        sigs << std::setfill('0') << std::hex;
+
+        for (addr_t i = 0; i < sig_len; i += line_size)
+        {
+        for (addr_t j = line_size; j > 0; j--)
+            if (i+j <= sig_len)
+                sigs << std::setw(2) << (uint16_t)buf[i+j-1];
+            else
+                sigs << std::setw(2) << (uint16_t)0;
+        sigs << '\n';
+        }
+
+        sigs.close();
     }
-
-    sigs.close();
   }
 
   stopped = true;
@@ -230,25 +304,60 @@ int htif_t::run()
 
   while (!signal_exit && exitcode == 0)
   {
-    if (auto tohost = from_target(mem.read_uint64(tohost_addr))) {
-      mem.write_uint64(tohost_addr, target_endian<uint64_t>::zero);
-      command_t cmd(mem, tohost, fromhost_callback);
-      device_list.handle_command(cmd);
+    if (simif->is_bottom_ddr(tohost_addr)) {
+        bool is_all_to_host = true;
+        addr_t bank_tohost_addr = 0;
+        addr_t bank_fromhost_addr = 0;
+
+        for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
+            bank_tohost_addr = simif->bottom_ddr_to_upper(tohost_addr, bankid);
+
+            if (auto tohost = from_target(mem.read_uint64(bank_tohost_addr))) {
+                mem.write_uint64(bank_tohost_addr, target_endian<uint64_t>::zero);
+                command_t cmd(mem, tohost, fromhost_callback);
+                device_list.handle_command(cmd);
+            } else {
+                idle();
+            }
+        }
+
+        if (signal_dump) {
+            dump_mems();
+            signal_dump = false;
+            signal(SIGUSR1, &handle_dump_signal);
+        }
+
+        device_list.tick();
+
+        for (int bankid = simif->get_id_first_bank() ; bankid < simif->get_id_first_bank()+(int)simif->nbanks() ; bankid++) {
+            bank_fromhost_addr = simif->bottom_ddr_to_upper(fromhost_addr, bankid);
+
+            if (!fromhost_queue.empty() && !mem.read_uint64(bank_fromhost_addr)) {
+                mem.write_uint64(bank_fromhost_addr, to_target(fromhost_queue.front()));
+                fromhost_queue.pop();
+            }
+        }
     } else {
-      idle();
-    }
+        if (auto tohost = from_target(mem.read_uint64(tohost_addr))) {
+        mem.write_uint64(tohost_addr, target_endian<uint64_t>::zero);
+        command_t cmd(mem, tohost, fromhost_callback);
+        device_list.handle_command(cmd);
+        } else {
+        idle();
+        }
 
-    if (signal_dump) {
-      dump_mems();
-      signal_dump = false;
-      signal(SIGUSR1, &handle_dump_signal);
-    }
+        if (signal_dump) {
+        dump_mems();
+        signal_dump = false;
+        signal(SIGUSR1, &handle_dump_signal);
+        }
 
-    device_list.tick();
+        device_list.tick();
 
-    if (!fromhost_queue.empty() && !mem.read_uint64(fromhost_addr)) {
-      mem.write_uint64(fromhost_addr, to_target(fromhost_queue.front()));
-      fromhost_queue.pop();
+        if (!fromhost_queue.empty() && !mem.read_uint64(fromhost_addr)) {
+        mem.write_uint64(fromhost_addr, to_target(fromhost_queue.front()));
+        fromhost_queue.pop();
+        }
     }
   }
 

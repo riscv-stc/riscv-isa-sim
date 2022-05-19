@@ -1,9 +1,9 @@
 struct VmeShapeStride vss;
 vme_ss_fill(vss, 2);
 
-unsigned long rs1 = MMU.get_phy_addr(RS1);
-unsigned long rs2 = MMU.get_phy_addr(RS2);
-unsigned long rd = MMU.get_phy_addr(RD);
+unsigned long rs1 = MMU.npc_addr_to_mem(RS1);
+unsigned long rs2 = MMU.npc_addr_to_mem(RS2);
+unsigned long rd = MMU.npc_addr_to_mem(RD);
 
 VME_DTYPE_DECODING_TO_TYPE({
     check_traps_veconv_m(dtype_vd);

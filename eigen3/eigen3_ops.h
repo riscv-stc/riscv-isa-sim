@@ -498,6 +498,8 @@ struct DmaeShapeStride
     unsigned int stride_d_x;
     unsigned int stride_d_y;
 
+    unsigned int channel;
+
 };
 
 struct VmeShapeStride
@@ -3924,14 +3926,8 @@ extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 class processor_t;
-extern void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct DmaeShapeStride *dmae_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local);
-#if 0
-extern void mte_vm_mov(uint64_t src, uint64_t dst, uint32_t esize, const struct MteShapeStride *mte_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local);
-extern void icmov_vm(uint64_t src, uint64_t dst, uint32_t esize, uint32_t dst_core_id,
-        const struct MteShapeStride *mte_ss, processor_t *p);
-#endif
+extern void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, 
+        const struct DmaeShapeStride *dmae_ss, processor_t *p);
 extern uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 extern uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 
