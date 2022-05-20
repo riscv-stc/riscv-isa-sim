@@ -201,7 +201,6 @@ private:
 #define IS_EXECUTE_IN_DEBUGROM(pc) ((((DEBUG_ROM_BASE + 0x800) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
-//#define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
 #define CHECK_REG(reg) ((void) 0)
 #define READ_REG(reg) ({ CHECK_REG(reg); STATE.XPR[reg]; })
 #define READ_FREG(reg) STATE.FPR[reg]

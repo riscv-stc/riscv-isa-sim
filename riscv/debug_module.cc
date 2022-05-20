@@ -124,7 +124,6 @@ void debug_module_t::add_device(bus_t *bus) {
 
 bool debug_module_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  // addr = DEBUG_START + addr;
 
   if (addr >= DEBUG_ROM_ENTRY &&
       (addr + len) <= (DEBUG_ROM_ENTRY + debug_rom_raw_len)) {
@@ -190,8 +189,6 @@ bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     memcpy(id_bytes, bytes, 4);
     id = read32(id_bytes, 0);
   }
-
-  // addr = DEBUG_ROM_BASE + addr;
 
   if (addr >= debug_data_start && (addr + len) <= (debug_data_start + sizeof(dmdata))) {
     memcpy(dmdata + addr - debug_data_start, bytes, len);
@@ -611,7 +608,6 @@ bool debug_module_t::perform_abstract_command()
         write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH0));    
         // Save mstatus
         write32(debug_abstract, i++, csrr(S0, CSR_MSTATUS));
-        //write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH1));
         write32(debug_abstract, i++, sd(S0, T6, debug_tempbuf_start));
         // Set mstatus.fs
         assert((MSTATUS_FS & 0xfff) == 0);
