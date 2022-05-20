@@ -396,7 +396,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
     char *host_addr = nullptr;
 
     procid = which_npc(addr, &paddr);
-    if (0 < procid) {
+    if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
         idxinbank = mPSim->get_idxinbank(idxinsim);
@@ -429,7 +429,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     char *host_addr = nullptr;
 
     procid = which_npc(addr, &paddr);
-    if (0 < procid) {
+    if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
         idxinbank = mPSim->get_idxinbank(idxinsim);
