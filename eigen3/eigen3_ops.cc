@@ -13,6 +13,7 @@
  * 
  */
 
+#include <omp.h>    //We use "OMP_NUM_THREADS" environment variable to specify the number of threads to use for openmp parallel regions.
 #include "eigen3_ops.h"
 #include "fp16a.c"
 #include "fp16m.c"
@@ -8544,6 +8545,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, half *rd, struct ShapeStride *ss
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
+    #pragma omp parallel for default(shared) private(i,j,k,counter,first, second, third, forth, res_tmp, res12, res34)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             first.v = 0x80000000;
@@ -8592,6 +8594,7 @@ int CustomInsns::memul_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeStrid
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,counter,first, second, third, forth, res_tmp, res12, res34)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             first.v = 0x80000000;
@@ -8638,6 +8641,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Sha
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,counter,first, second, third, forth, res_tmp, res12, res34)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             first.x = 0x80000000;
@@ -8687,6 +8691,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct Shap
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_Float32 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,counter,first, second, third, forth, res_tmp, res12, res34)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             first.x = 0x80000000;
@@ -8733,6 +8738,7 @@ int CustomInsns::memul_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_float32_t rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
      
+    #pragma omp parallel for default(shared) private(i,j,k,counter,first, second, third, forth, res_tmp, res12, res34)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             first.v = 0x80000000;
@@ -8788,6 +8794,7 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStride
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -8824,6 +8831,7 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeStrid
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -8858,6 +8866,7 @@ int CustomInsns::memul_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeSt
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -8893,6 +8902,7 @@ int CustomInsns::memul_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ShapeS
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -8929,6 +8939,7 @@ int CustomInsns::memul_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStride *
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -8973,6 +8984,7 @@ int CustomInsns::memul_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Shape
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = -0;
@@ -9032,6 +9044,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
     k = 0;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9044,6 +9057,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd.v = 0x80000000;
@@ -9085,6 +9099,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9095,6 +9110,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
         }      
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd.v = 0x80000000;
@@ -9129,6 +9145,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, B
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9139,6 +9156,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, B
         }      
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd.x = 0x80000000;
@@ -9174,6 +9192,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, F
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9184,6 +9203,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, F
         }    
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd.x = 0x80000000;
@@ -9221,6 +9241,7 @@ int CustomInsns::memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx,
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
     k = 0;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9230,6 +9251,7 @@ int CustomInsns::memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx,
             k += (ss->stride_idx - ss->shape2_column);
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd.v = 0x80000000;
@@ -9275,6 +9297,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half 
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9284,6 +9307,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half 
             k += (ss->stride_idx - ss->shape2_column);
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd  = 0x80000000;
@@ -9329,6 +9353,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9339,6 +9364,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
         } 
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd = 0x80000000;
@@ -9383,6 +9409,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloa
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9393,6 +9420,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloa
         } 
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd = 0x80000000;
@@ -9437,6 +9465,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9447,6 +9476,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
         } 
     }
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd = 0x80000000;
@@ -9481,6 +9511,7 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9504,6 +9535,7 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd = 0x80000000;
@@ -9544,6 +9576,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9565,6 +9598,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_row; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             odd = 0x80000000;
@@ -9622,6 +9656,7 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, half *rd, struct ShapeStride 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
     float32_t even, odd;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             even.v = 0x80000000;
@@ -9653,6 +9688,7 @@ int CustomInsns::memul_ts_mm(half *rs1, half *rs2, float32_t *rd, struct ShapeSt
     Map_float32_t rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     float32_t even, odd;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             even.v = 0x80000000;
@@ -9683,6 +9719,7 @@ int CustomInsns::memul_ts_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct 
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_Bfloat16 rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             even.x = 0x80000000;
@@ -9712,6 +9749,7 @@ int CustomInsns::memul_ts_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct S
     SET_DEFAULT_STRIDE(ss->stride_rd, ss->shape2_column);
     Map_Float32 rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             even.x = 0x80000000;
@@ -9741,6 +9779,7 @@ int CustomInsns::memul_ts_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
     Map_float32_t rd_matrix(rd, ss->shape1_column, ss->shape2_column, DynStride(ss->stride_rd, 1));
 
     float32_t even, odd;
+    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             even.v = 0x80000000;
@@ -9782,6 +9821,7 @@ int CustomInsns::memul_ts_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ShapeStr
 
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -9818,6 +9858,7 @@ int CustomInsns::memul_ts_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ShapeSt
     }   
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -9852,6 +9893,7 @@ int CustomInsns::memul_ts_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct Shap
     }   
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -9886,6 +9928,7 @@ int CustomInsns::memul_ts_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct Sha
     }   
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -9922,6 +9965,7 @@ int CustomInsns::memul_ts_mm(half *rs1, int8_t *rs2, half *rd, struct ShapeStrid
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
     /* dot only support vector not support matrix, so we use '*' to do calculation */
     //rd_matrix = rs1_matrix * rs2_matrix;
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;
@@ -9963,6 +10007,7 @@ int CustomInsns::memul_ts_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Sh
     }   
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));    
 
+    #pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < ss->shape1_column; i++) {
         for (j = 0; j < ss->shape2_column; j++) {
             int32_t res = 0;

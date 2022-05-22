@@ -92,7 +92,7 @@ VPATH := $(addprefix $(src_dir)/, $(sprojs_enabled))
 # These all appear on the command line, from lowest precedence to
 # highest.
 
-default-CFLAGS   := -DPREFIX=\"$(prefix)\" -Wall -Wno-unused -g -O2
+default-CFLAGS   := -DPREFIX=\"$(prefix)\" -Wall -Wno-unused -g -O2 -fopenmp
 default-CXXFLAGS := $(default-CFLAGS) -std=c++11
 
 mcppbs-CPPFLAGS := @CPPFLAGS@
@@ -117,7 +117,7 @@ COMPILE_C     := $(CC) -MMD -MP $(all-c-flags) $(sprojs_include)
 #  - LDFLAGS : Flags for the linker (eg. -L)
 #  - LIBS    : Library flags (eg. -l)
 
-mcppbs-LDFLAGS := @LDFLAGS@
+mcppbs-LDFLAGS := @LDFLAGS@ -fopenmp
 all-link-flags := $(mcppbs-LDFLAGS) $(LDFLAGS)
 
 comma := ,
