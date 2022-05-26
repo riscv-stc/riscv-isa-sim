@@ -4,6 +4,8 @@
 #define T0      5
 #define S0      8
 #define S1      9
+#define T5      30
+#define T6      31
 
 static uint32_t bits(uint32_t value, unsigned int hi, unsigned int lo) {
   return (value >> lo) & ((1 << (hi+1-lo)) - 1);

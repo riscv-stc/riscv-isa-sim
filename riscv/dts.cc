@@ -75,7 +75,7 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
                    " 0x" << (m.second->size() >> 16 >> 16) << " 0x" << (m.second->size() & (uint32_t)-1) << ">;\n"
          "  };\n";
   }
-  s <<   "  soc {\n"
+  s << std::hex <<   "  soc {\n"
          "    #address-cells = <2>;\n"
          "    #size-cells = <2>;\n"
          "    compatible = \"ucbbar,spike-bare-soc\", \"simple-bus\";\n"
