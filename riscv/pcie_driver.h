@@ -29,14 +29,31 @@ enum NL_STATUS {
   STATUS_EXIT,
 };
 
+#define COMMAND_DATA_SIZE           16
 struct command_head_t {
     unsigned short code;
     unsigned short len;
     unsigned long addr;
-    unsigned char data[16];
+    unsigned char data[COMMAND_DATA_SIZE];
 };
 
-#define COMMAND_HEAD_SIZE (sizeof(command_head_t) - 16)
+/* spike和qemu通过消息队列通信 */
+#define SPIKE_QEMU_MSG_PATHNAME     "/proc/stc/stc_cluster_0"
+#define SPIKE_QEMU_MSG_S2Q_PROJ     's'
+#define SPIKE_QEMU_MSG_Q2S_PROJ     'q'
+
+/* spike to qemu msg type */
+#define SQ_MTYPE_REQ_BASE       0x1000
+#define SQ_MTYPE_RES_BASE       0x2000
+/* cmd: enum command_code */
+#define SQ_MTYPE_REQ(cmd)       (SQ_MTYPE_REQ_BASE + cmd)
+#define SQ_MTYPE_RES(cmd)       (SQ_MTYPE_RES_BASE + cmd)
+struct sq_msg_t {
+    long mtype;
+    struct command_head_t cmd_data;
+};
+
+#define COMMAND_HEAD_SIZE (sizeof(command_head_t) - COMMAND_DATA_SIZE)
 #define PCIE_COMMAND_SEND_SIZE(cmd)  (sizeof(cmd)-sizeof(cmd.data)+cmd.len)
 
 class pcie_driver_t {
@@ -46,6 +63,10 @@ class pcie_driver_t {
 
   int send(const uint8_t* data, size_t len);
   int get_sync_state();
+  
+  int sqmsg_spike_send(long recv_type, const struct command_head_t *cmd_data);
+  int sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data);
+ 
  private:
   std::unique_ptr<std::thread> mDriverThread;
 
@@ -76,6 +97,14 @@ class pcie_driver_t {
   int update_status(NL_STATUS status);
   void task_doing();
   std::mutex pcie_mutex;
+
+  int sq_s2q_msqid = -1;        /* spike send to qemu */
+  int sq_q2s_msqid = -1;        /* qemu send to spike */
+  std::unique_ptr<std::thread> sqmsg_spike_recv_thread_p;
+  int qemu_mems_read(reg_t addr, size_t length);
+  void sqmsg_req_recv_handle(void);
+  int spike_qemu_msg_init(void);
+  int spike_qemu_msg_destory(void);
 };
 
 #endif
