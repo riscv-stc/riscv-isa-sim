@@ -9,6 +9,7 @@
 #include "processor.h"
 #include "simif.h"
 #include "bank.h"
+#include "apifc.h"
 
 #include <fesvr/htif.h>
 #include <fesvr/context.h>
@@ -111,6 +112,7 @@ private:
   std::unique_ptr<clint_t> clint;
   log_file_t log_file;
   bus_t glb_bus;
+  sys_irq_t *sys_irq = nullptr;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
 
@@ -132,6 +134,7 @@ private:
   bool file_name_with_bank_id;
   remote_bitbang_t* remote_bitbang;
   hwsync_t *hwsync;
+  apifc_t *apifc = nullptr;
 
   // memory-mapped I/O routines
   bool is_upper_mem(reg_t addr);

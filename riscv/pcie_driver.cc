@@ -154,144 +154,6 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
     mStatus = ERROR_CONN;
 }
 
-/* 向qemu发送指定类型的消息，失败返回负数 */
-int pcie_driver_t::sqmsg_spike_send(long recv_type, const struct command_head_t *cmd_data)
-{
-    int send_len = 0;
-    struct sq_msg_t sq_msg = {};
-
-    if (NULL == cmd_data) {
-        return -1;
-    }
-
-    sq_msg.mtype = recv_type;
-    send_len = COMMAND_HEAD_SIZE + cmd_data->len;
-    if (send_len > sizeof(sq_msg.cmd_data)) {
-        send_len = sizeof(sq_msg.cmd_data);
-    }
-    memcpy(&(sq_msg.cmd_data), cmd_data, send_len);
-
-    return msgsnd(sq_s2q_msqid, &sq_msg, send_len, 0);
-}
-
-/* 从qemu接收指定类型的消息，失败返回负数 */
-int pcie_driver_t::sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data)
-{
-    int ret = 0;
-    int recv_len = 0;
-    struct sq_msg_t sq_msg = {};
-
-    if (NULL == cmd_data) {
-        return -1;
-    }
-
-    memset(cmd_data, 0, sizeof(*cmd_data));
-    ret = msgrcv(sq_q2s_msqid, &sq_msg, sizeof(sq_msg), recv_type, 0);
-    if (0 > ret) {
-        perror("sqmsg_req_recv_handle msgrcv() \r\n");
-        ret = -2;
-    } else {
-        recv_len = COMMAND_HEAD_SIZE + sq_msg.cmd_data.len;
-        if (recv_len > sizeof(*cmd_data)) {
-            recv_len = sizeof(*cmd_data);
-        }
-        memcpy(cmd_data, &(sq_msg.cmd_data), recv_len);
-    }
-    return ret;
-}
-
-void pcie_driver_t::sqmsg_req_recv_handle(void)
-{
-    int ret = 0;
-    struct command_head_t cmd_data = {};
-    long recv_type = 0;
-    
-    while(1) {
-        memset(&cmd_data, 0, sizeof(cmd_data));
-        // recv_type = SQ_MTYPE_Q2S_REQ(CODE_READ);
-        recv_type = 0;
-        ret = sqmsg_spike_recv(recv_type, &cmd_data);
-        if (0 > ret) {
-            perror("sqmsg_req_recv_handle msgrcv() ");
-            sleep(1);
-            continue;
-        }
-        switch(cmd_data.code) {
-        case CODE_READ:
-            ret = qemu_mems_read(cmd_data.addr, cmd_data.len);
-            if (0 > ret) {
-                printf("%s() qemu_mems_read ret %d error \r\n",__FUNCTION__,ret);
-            }
-            printf("ap r 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
-            break;
-        case CODE_WRITE:
-            store_data(cmd_data.addr, cmd_data.len, (const uint8_t*)cmd_data.data);
-            printf("ap w 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
-            break;
-        default:
-            printf("%s() unknow cmd 0x%x \r\n", __FUNCTION__, cmd_data.code);
-            break;
-        }
-    }
-}
-
-int pcie_driver_t::spike_qemu_msg_destory(void)
-{
-    msgctl(sq_s2q_msqid, IPC_RMID, NULL);
-    msgctl(sq_q2s_msqid, IPC_RMID, NULL);
-    sq_s2q_msqid = -1;
-    sq_q2s_msqid = -1;
-}
-
-/* 初始化消息队列，并创建线程接收请求，成功返回0 */
-int pcie_driver_t::spike_qemu_msg_init(void)
-{
-    int ret = 0;
-    key_t key = 0;
-    struct sq_msg_t sq_msg = {};
-
-    /* sq_s2q_msqid */
-    key = ftok(SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_S2Q_PROJ);
-    if (-1 == key) {
-        printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_S2Q_PROJ);
-        return -1;
-    }
-    sq_s2q_msqid = msgget(key, IPC_CREAT | 0666);
-    if (0 > sq_s2q_msqid) {
-        sq_s2q_msqid = -1;
-        printf("%s() msgget failed ret %d \r\n", __FUNCTION__, sq_s2q_msqid);
-        return -2;
-    }
-    do {
-        ret = msgrcv(sq_s2q_msqid, &sq_msg, sizeof(sq_msg), 0, IPC_NOWAIT);
-    } while(0 <= ret);
-
-    /* sq_q2s_msqid */
-    key = ftok(SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_Q2S_PROJ);
-    if (-1 == key) {
-        printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_Q2S_PROJ);
-        return -1;
-    }
-    sq_q2s_msqid = msgget(key, IPC_CREAT | 0666);
-    if (0 > sq_q2s_msqid) {
-        sq_q2s_msqid = -1;
-        printf("%s() msgget failed ret %d \r\n", __FUNCTION__, sq_q2s_msqid);
-        return -2;
-    }
-    do {
-        ret = msgrcv(sq_q2s_msqid, &sq_msg, sizeof(sq_msg), 0, IPC_NOWAIT);
-    } while(0 <= ret);
-
-    auto sq_req_task_loop = std::bind(&pcie_driver_t::sqmsg_req_recv_handle, this);
-    auto sq_req_thread = new std::thread(sq_req_task_loop);
-    sq_req_thread->detach();
-    sqmsg_spike_recv_thread_p.reset(sq_req_thread);
-
-    return 0;
-}
-
 int pcie_driver_t::initialize()
 {
   int rv = 0;
@@ -340,14 +202,6 @@ int pcie_driver_t::initialize()
   auto thread = new std::thread(mainloop);
   thread->detach();
   mDriverThread.reset(thread);
-
-  /* 初始化消息队列，创建线程处理qemu发送的请求 */
-  if (0 == mBankId) {
-    rv = spike_qemu_msg_init();
-    if (0 != rv) {
-        return PCIE_UNINIT;
-    }
-  }
 
   return PCIE_OK;
 }
@@ -473,31 +327,6 @@ int pcie_driver_t::read(reg_t addr, size_t length)
   }
 
   return count;
-}
-
-/* 访问bus读取内存，并向qemu发送应答消息 */
-int pcie_driver_t::qemu_mems_read(reg_t addr, size_t length)
-{
-    int count = 0;
-    int size = 0;
-    int block_size = 4;
-    struct command_head_t cmd_data = {};
-
-    for (size_t offset = 0; offset < length; offset += block_size) {
-        size = std::min(length - offset, (size_t)block_size);
-
-        memset(&cmd_data, 0, sizeof(cmd_data));
-        cmd_data.code = CODE_READ;
-        cmd_data.addr = addr + offset;
-        cmd_data.len = size;
-        load_data(cmd_data.addr, cmd_data.len, (uint8_t*)cmd_data.data);
-
-        sqmsg_spike_send(SQ_MTYPE_RES(CODE_READ), &cmd_data);
-
-        count += size;
-    }
-
-    return count;
 }
 
 /* recv data from PCIe port, recv data length
@@ -748,9 +577,6 @@ void pcie_driver_t::task_doing()
 pcie_driver_t::~pcie_driver_t()
 {
   update_status(STATUS_EXIT);
-  if (0 == mBankId) {
-    spike_qemu_msg_destory();
-  }
   if (mSockFd >= 0) {
     close(mSockFd);
     mSockFd = -1;

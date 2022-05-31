@@ -130,6 +130,7 @@ die_id(die_id),
                 log_file.get(), pcie_enabled, board_id, chip_id,core_num_of_bank, i,
                 hartids, halted, atuini);
     }
+    apifc = new apifc_t(this);
 
     debug_module.add_device(&glb_bus);
     debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL, nullptr);
@@ -220,6 +221,10 @@ sim_t::~sim_t()
     delete hwsync;
     for (int i = get_id_first_bank() ; i < (int)nbanks()+get_id_first_bank() ; i++) {
         delete banks[i];
+    }
+    
+    if (apifc) {
+        delete apifc;
     }
 
     delete debug_mmu;
@@ -716,6 +721,7 @@ bool sim_t::in_mmio(reg_t addr)
             return true;
         }
     }
+
     return false;
 }
 

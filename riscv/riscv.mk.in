@@ -39,6 +39,7 @@ riscv_hdrs = \
 	remote_bitbang.h \
 	jtag_dtm.h \
 	pcie_driver.h \
+	apifc.h \
 
 riscv_install_hdrs = mmio_plugin.h
 
@@ -68,6 +69,7 @@ riscv_srcs = \
 	mbox_device.cc \
 	sysdma.cc \
 	clint.cc \
+	apifc.cc \
 	debug_module.cc \
 	remote_bitbang.cc \
 	jtag_dtm.cc \
