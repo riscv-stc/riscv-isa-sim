@@ -686,6 +686,7 @@ private:
   friend class mbox_device_t;
   friend class smmu_t;
   friend class sysdma_device_t;
+  friend class sys_irq_t;
 
   void parse_varch_string(const char*);
   void parse_priv_string(const char*);

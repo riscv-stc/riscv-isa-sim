@@ -311,4 +311,25 @@ class mmio_plugin_device_t : public abstract_device_t {
   void* user_data;
 };
 
+#define SYSIRQ_BASE     0xd3e10000
+#define SYSIRQ_SIZE     0x10000
+
+#define BANK_SW_IRQ_IN_SET_ADDR     0x054       /* 1 generate irq */
+
+class sys_irq_t : public abstract_device_t {
+ public:
+  sys_irq_t(simif_t *sim);
+  ~sys_irq_t();
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  size_t size() { return SYSIRQ_SIZE; }
+  
+  int generate_irq_to_a53(int irq, int dir);
+
+ private:
+  simif_t *sim = nullptr;
+
+  uint8_t reg_base[SYSIRQ_SIZE];
+};
+
 #endif

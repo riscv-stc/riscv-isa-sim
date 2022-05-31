@@ -70,6 +70,7 @@ riscv_srcs = \
 	sysdma.cc \
 	clint.cc \
 	apifc.cc \
+	sys_irq.cc \
 	debug_module.cc \
 	remote_bitbang.cc \
 	jtag_dtm.cc \

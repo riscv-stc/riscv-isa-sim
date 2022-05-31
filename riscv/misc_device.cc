@@ -298,6 +298,7 @@ bool misc_device_t::ro_register_write(reg_t addr, uint64_t val)
     return true;
 }
 
+/* write MCU_IRQ_STATUS_ADDR, 0b1 irq, 0b0 noirq */
 void misc_device_t::set_mcu_irq_status(int mcu_irq_status_bit, bool val)
 {
     uint32_t irq_status = 0;

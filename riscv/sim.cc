@@ -130,6 +130,8 @@ die_id(die_id),
                 log_file.get(), pcie_enabled, board_id, chip_id,core_num_of_bank, i,
                 hartids, halted, atuini);
     }
+    sys_irq = new sys_irq_t(this);
+    glb_bus.add_device(SYSIRQ_BASE, sys_irq);
     apifc = new apifc_t(this);
 
     debug_module.add_device(&glb_bus);
@@ -225,6 +227,11 @@ sim_t::~sim_t()
     
     if (apifc) {
         delete apifc;
+        apifc = nullptr;
+    }
+    if (sys_irq) {
+        delete sys_irq;
+        sys_irq = nullptr;
     }
 
     delete debug_mmu;
@@ -717,6 +724,12 @@ bool sim_t::in_mmio(reg_t addr)
     }
 
     if (auto mem = dynamic_cast<hwsync_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<sys_irq_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }
