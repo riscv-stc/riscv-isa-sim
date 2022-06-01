@@ -13,7 +13,7 @@
 
 sys_irq_t::sys_irq_t(simif_t *sim) : sim(sim)
 {
-    ;
+    memset(reg_base, 0, sizeof(reg_base));
 }
 
 sys_irq_t::~sys_irq_t()
@@ -26,7 +26,7 @@ bool sys_irq_t::load(reg_t addr, size_t len, uint8_t* bytes)
     if ((nullptr==reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=size())) {
         return false;
     }
     memcpy(bytes, (char *)reg_base + addr, len);
@@ -41,7 +41,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     if ((nullptr==reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=size())) {
         return false;
     }
     memcpy((char *)reg_base + addr, bytes, len);
