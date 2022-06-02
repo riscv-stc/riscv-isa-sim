@@ -314,11 +314,22 @@ class mmio_plugin_device_t : public abstract_device_t {
 #define SYSIRQ_BASE     0xd3e10000
 #define SYSIRQ_SIZE     0x10000
 
-#define BANK_SW_IRQ_IN_SET_ADDR     0x054       /* 1 generate irq */
+/* Mask to CPU Register */
+#define CPU_IRQ_MASK_ADDR0          0x00        /* 0b1 屏蔽中断, 0b0不屏蔽 */
+#define CPU_IRQ_MASK_ADDR1          0x04
+
+/* BANK SW IRQ Register */
+#define BANK_SW_IRQ_IN_SET_ADDR     0x54        /* 0b1 在NPC产生中断 */
+#define BANK_NPC_SW_IRQ_LATCH_CLR_ADDR      0x58
+
+/* IRQ STATUS REGISTER */
+#define TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR      0x114   /* RO */
+
+class apifc_t;
 
 class sys_irq_t : public abstract_device_t {
  public:
-  sys_irq_t(simif_t *sim);
+  sys_irq_t(simif_t *sim, apifc_t *apifc);
   ~sys_irq_t();
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
@@ -328,6 +339,7 @@ class sys_irq_t : public abstract_device_t {
 
  private:
   simif_t *sim = nullptr;
+  apifc_t *apifc = nullptr;
 
   uint8_t reg_base[SYSIRQ_SIZE];
 };

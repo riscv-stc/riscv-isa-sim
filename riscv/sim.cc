@@ -130,9 +130,9 @@ die_id(die_id),
                 log_file.get(), pcie_enabled, board_id, chip_id,core_num_of_bank, i,
                 hartids, halted, atuini);
     }
-    sys_irq = new sys_irq_t(this);
-    glb_bus.add_device(SYSIRQ_BASE, sys_irq);
     apifc = new apifc_t(this);
+    sys_irq = new sys_irq_t(this, apifc);
+    glb_bus.add_device(SYSIRQ_BASE, sys_irq);
 
     debug_module.add_device(&glb_bus);
     debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL, nullptr);

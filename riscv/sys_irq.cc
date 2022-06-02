@@ -1,19 +1,25 @@
 #include <iostream>
 #include <assert.h>
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
-#include "devices.h"
 #include "simif.h"
+#include "apifc.h"
+#include "devices.h"
 #include "processor.h"
+#include "pcie_driver.h"
 
-sys_irq_t::sys_irq_t(simif_t *sim) : sim(sim)
+sys_irq_t::sys_irq_t(simif_t *sim, apifc_t *apifc) : sim(sim), apifc(apifc)
 {
+    uint32_t val32 = 0;
     memset(reg_base, 0, sizeof(reg_base));
+
+    val32 = 0xffffffff;
+    store(CPU_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
+    store(CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)(&val32));
 }
 
 sys_irq_t::~sys_irq_t()
@@ -47,7 +53,10 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     memcpy((char *)reg_base + addr, bytes, len);
 
     switch(addr) {
-    case BANK_SW_IRQ_IN_SET_ADDR:   /* 0b1 generate irq once*/
+    case CPU_IRQ_MASK_ADDR0:        /* 0b1 屏蔽中断, 0b0不屏蔽 */
+    case CPU_IRQ_MASK_ADDR1:
+        break;
+    case BANK_SW_IRQ_IN_SET_ADDR:   /* 0b1 产生中断 */
         val32 = *(uint32_t *)(reg_base+BANK_SW_IRQ_IN_SET_ADDR);
         for (i = 0 ; i < 32 ; i++) {
             if (val32 & (1<<i)) {
@@ -62,6 +71,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         }
         *(uint32_t *)(reg_base+BANK_SW_IRQ_IN_SET_ADDR) = 0;
         break;
+    case TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:    /* RO */
     default:
         printf("store addr sys_irq:0x%x no support \r\n",addr);
         throw trap_store_access_fault(false, addr, 0, 0);
@@ -78,5 +88,19 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
  */
 int sys_irq_t::generate_irq_to_a53(int irq, int dir)
 {
-    return 0;
+    int ret = 0;
+    struct command_head_t cmd_data = {};
+
+    /* data填中断号 */
+    cmd_data.code = CODE_INTERRUPT;
+    cmd_data.addr = 0;
+    cmd_data.len = 4;
+    if (dir) {
+        *((int *)(cmd_data.data)) = cmd_data_irq(irq);
+    } else {
+        *((int *)(cmd_data.data)) = cmd_data_clear_irq(irq);
+    }
+
+    ret = apifc->sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
+    return (0 > ret) ? ret : 0;
 }

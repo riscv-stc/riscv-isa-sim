@@ -16,10 +16,16 @@
 /* cmd: enum command_code */
 #define SQ_MTYPE_REQ(cmd)       (SQ_MTYPE_REQ_BASE + cmd)
 #define SQ_MTYPE_RES(cmd)       (SQ_MTYPE_RES_BASE + cmd)
+
 struct sq_msg_t {
     long mtype;
     struct command_head_t cmd_data;
 };
+
+#define cmd_data_irq(irq)           (irq)
+#define cmd_data_clear_irq(irq)     (irq | (1<<31))         /* 最高位1代表清除中断 */
+#define cmd_data_get_irq(data)      (data & (~(1<<31)))
+#define is_clear_irq(data)          (data & (1<<31))
 
 class apifc_t
 {
