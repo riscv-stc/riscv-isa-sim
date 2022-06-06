@@ -101,6 +101,10 @@ int sys_irq_t::generate_irq_to_a53(int irq, int dir)
         *((int *)(cmd_data.data)) = cmd_data_clear_irq(irq);
     }
 
-    ret = apifc->sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
+    if(apifc) {
+        ret = apifc->sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
+    } else {
+        ret = -1;
+    }
     return (0 > ret) ? ret : 0;
 }
