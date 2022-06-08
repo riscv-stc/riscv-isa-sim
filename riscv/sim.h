@@ -24,7 +24,7 @@ class sim_t : public htif_t, public simif_t
 {
 public:
   sim_t(const char* isa, size_t _nprocs, size_t bank_id,
-        char *hwsync_masks, bool halted, reg_t start_pc,
+        char *hwsync_masks, uint32_t hwsync_timer_num, bool halted, reg_t start_pc,
         std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         unsigned progsize, unsigned max_bus_master_bits,

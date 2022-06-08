@@ -70,7 +70,7 @@ static void handle_signal(int sig)
 }
 
 sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
-            char *hwsync_masks, bool halted, reg_t start_pc,
+            char *hwsync_masks, uint32_t hwsync_timer_num, bool halted, reg_t start_pc,
              std::vector<std::pair<reg_t, mem_t*>> mems, size_t ddr_size,
              const std::vector<std::string>& args,
              std::vector<int> const hartids, unsigned progsize,
@@ -114,7 +114,7 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
     shm_unlink(shm_llb_name);
   }
 
-  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, board_id, chip_id);
+  hwsync = new hwsync_t(nprocs, bank_id, hwsync_masks, hwsync_timer_num, board_id, chip_id);
   bus.add_device(0xd0080000, hwsync);
 
   core_reset_n = 0;
@@ -247,12 +247,12 @@ sim_t::sim_t(const char* isa, size_t nprocs, size_t bank_id,
 
 sim_t::~sim_t()
 {
-  delete hwsync;
-
+  hwsync->hwsync_clear();
   for (size_t i = 0; i < procs.size(); i++) {
     delete procs[i];
     delete local_bus[i];
   }
+  delete hwsync;
   delete debug_mmu;
   if(pcie_enabled)
 	  delete pcie_driver;

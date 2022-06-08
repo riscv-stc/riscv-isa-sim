@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 
 #include "processor.h"
+#include "hwsync.h"
 #include "mmu.h"
 #include <cassert>
 
@@ -195,8 +196,31 @@ void processor_t::step(size_t n)
           insn_fetch_t fetch = mmu->load_insn(pc);
           if (debug && !state.serialized)
             disasm(fetch.insn);
-          pc = execute_insn(this, pc, fetch);
 
+          uint64_t start_rdtsc = 0;
+          uint64_t endl_rdtsc = 0;
+          uint64_t riscv_clks = 0;
+
+          /* core所在的grp在sync，该核运行时 hs_sync_timer_cnts 计数器累加 */
+          if (hwsync->is_hs_group_sync(id) && (!state.pld)) {
+            start_rdtsc = get_host_clks();
+            pc = execute_insn(this, pc, fetch);
+            endl_rdtsc = get_host_clks();
+
+            if (likely(endl_rdtsc > start_rdtsc)) {
+              riscv_clks = host_clks_2_npc(endl_rdtsc-start_rdtsc, fetch.insn.bits());
+            } else {
+              riscv_clks = host_clks_2_npc(endl_rdtsc+(~(uint64_t)(0))-start_rdtsc, fetch.insn.bits());
+            }
+            hwsync->hwsync_timer_cnts_add(id, riscv_clks);
+            if (hwsync->is_hwsync_timeout(id)) {
+              //hwsync->hwsync_timer_clear(id);
+              hwsync->hwsync_clear();
+              throw trap_sync_timeout_trigger();
+            }
+          } else {
+            pc = execute_insn(this, pc, fetch);
+          }
           advance_pc();
         }
       }
@@ -231,7 +255,27 @@ void processor_t::step(size_t n)
         // is located within the execute_insn() function call.
         #define ICACHE_ACCESS(i) { \
           insn_fetch_t fetch = ic_entry->data; \
-          pc = execute_insn(this, pc, fetch); \
+          uint64_t start_rdtsc = 0;   \
+          uint64_t endl_rdtsc = 0;    \
+          uint64_t riscv_clks = 0;    \
+          if (hwsync->is_hs_group_sync(id) && (!state.pld)) {   \
+            start_rdtsc = get_host_clks();   \
+            pc = execute_insn(this, pc, fetch); \
+            endl_rdtsc = get_host_clks();    \
+            if (likely(endl_rdtsc > start_rdtsc)) {   \
+              riscv_clks = host_clks_2_npc(endl_rdtsc-start_rdtsc, fetch.insn.bits());    \
+            } else {    \
+              riscv_clks = host_clks_2_npc(endl_rdtsc+(~(uint64_t)(0))-start_rdtsc, fetch.insn.bits());   \
+            }   \
+            hwsync->hwsync_timer_cnts_add(id, riscv_clks);    \
+            if (hwsync->is_hwsync_timeout(id)) {   \
+              /* hwsync->hwsync_timer_clear(id); */   \
+              hwsync->hwsync_clear();   \
+              throw trap_sync_timeout_trigger();  \
+            }   \
+          }else {   \
+            pc = execute_insn(this, pc, fetch); \
+          }   \
           ic_entry = ic_entry->next; \
           if (i == mmu_t::ICACHE_ENTRIES-1) break; \
           if (unlikely(ic_entry->tag != pc)) break; \

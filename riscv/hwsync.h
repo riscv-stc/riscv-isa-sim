@@ -16,6 +16,7 @@ class hwsync_t: public abstract_device_t {
     uint32_t *req_sync;
     uint32_t *req_pld;
     int group_count;
+    int core_num_max;     /* 支持32个核 */
     int shm_id;
     int shm_size;
     char *shm_ptr;
@@ -32,9 +33,13 @@ class hwsync_t: public abstract_device_t {
     pthread_mutex_t * pmutex_sync;
     pthread_cond_t * pcond_pld;
     pthread_cond_t * pcond_sync;
+    
+    uint32_t *hs_sync_timer_num;  /* timeout阈值 HS_TIME_OUT_CNT，所有grp公用一个阈值 */
+    uint32_t *hs_sync_timer_cnt;  /* 为每个核分配一个sync timer(硬件只有一个timer) */
 
   public:
-    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, size_t board_id, size_t chip_id);
+    hwsync_t(size_t nprocs, size_t bank_id, char *hwsync_masks, 
+      uint32_t hwsync_timer_num,size_t board_id, size_t chip_id);
     virtual ~hwsync_t();
 
     bool enter(unsigned core_id);
@@ -42,7 +47,17 @@ class hwsync_t: public abstract_device_t {
 
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
+    bool is_hwsync_done(void);
+    bool is_hs_group_sync(int coreid);   /* coreid所在的sync组是否处于sync状态 */
+    bool is_hwsync_timeout(int coreid);
+    void hwsync_timer_cnts_add(int coreid, uint32_t clks);
+    void hwsync_timer_clear(int coreid);
+    void hwsync_clear(void);
+    uint32_t get_hwsync_timer_cnts(int coreid);
     uint32_t get_hwsync() { return *req_sync;}
+    uint32_t get_hwsync_timer_thresh(void) {
+      return (hs_sync_timer_num) ? *hs_sync_timer_num : 0xffffffff;
+    };
     void reset(uint32_t id) {
       *req_pld |= (0x1 << id);
       if (shm_start)

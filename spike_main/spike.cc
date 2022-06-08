@@ -68,6 +68,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --exit-dump=<m1,...>  Dump memory on exit\n");
   fprintf(stderr, "                          memory range could be: l1, llb, <start>:<len>\n");
   fprintf(stderr, "  --dump-path           Path for files to dump memory [default .]\n");
+  fprintf(stderr, "  --sync-timeout=<n>    Timeout ticks for sync throw trap [default 0x003fffff]\n");
 
   exit(exit_code);
 }
@@ -157,6 +158,8 @@ int main(int argc, char **argv)
   size_t chip_id = 0;
   size_t bank_id = 0;
   uint32_t coremask = 0xffffffff;
+  /* hs register HS_SYNC_REQ_THRESH, 此处给的默认值在host端大概是 2~3秒，以避免spike长时间卡住 */
+  uint32_t hwsync_timer_num = 0x003fffff;
   char masks_buf[178] = {'\0'};
   const char *hwsync_masks = masks_buf;
   reg_t start_pc = reg_t(-1);
@@ -253,6 +256,7 @@ int main(int argc, char **argv)
   parser.option(0, "init-dump", 1, [&](const char *s) { init_dump = make_strings(s); });
   parser.option(0, "exit-dump", 1, [&](const char *s) { exit_dump = make_strings(s); });
   parser.option(0, "dump-path", 1, [&](const char *s) { dump_path = s; });
+  parser.option(0, "sync-timeout", 1, [&](const char* s){hwsync_timer_num = strtoull(s, NULL, 0); });
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char *const *)argv + argc);
@@ -264,7 +268,8 @@ int main(int argc, char **argv)
   if (!*argv1)
     help();
 
-  sim_t s(isa, nprocs, bank_id, hwsync_masks, halted, start_pc, mems, ddr_size, htif_args, std::move(hartids),
+  sim_t s(isa, nprocs, bank_id, hwsync_masks, hwsync_timer_num, halted, 
+          start_pc, mems, ddr_size, htif_args, std::move(hartids),
           progsize, max_bus_master_bits, require_authentication,
           abstract_rti, support_hasel, support_abstract_csr_access, pcie_enabled, board_id, chip_id, coremask);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *)NULL);
