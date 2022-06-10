@@ -9044,7 +9044,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd,
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
     k = 0;
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9099,7 +9099,7 @@ int CustomInsns::memul_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_t
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9145,7 +9145,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, B
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9192,7 +9192,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, F
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9241,7 +9241,7 @@ int CustomInsns::memul_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx,
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
     k = 0;
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9297,7 +9297,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half 
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9353,7 +9353,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     }
     Map_half dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9409,7 +9409,7 @@ int CustomInsns::memul_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfloa
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9465,7 +9465,7 @@ int CustomInsns::memul_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, ss->shape2_column, DynStride(ss->shape2_column, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9511,7 +9511,7 @@ int CustomInsns::memul_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *r
     Map_half rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
@@ -9576,7 +9576,7 @@ int CustomInsns::memul_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     Map_Bfloat16 rd_matrix(rd, ss->shape1_row, ss->shape2_column, DynStride(ss->stride_rd, 1));
     uint8_t *sp_idx_data = (uint8_t *)malloc(ss->shape2_row * ss->shape2_column * sizeof(uint8_t));
     Map_uint8_t sp_matrix(sp_idx_data, ss->shape2_row, ss->shape2_column, DynStride(ss->shape2_column, 1));
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even)
     for (i = 0; i < ss->shape2_row; i++){
         for(j = 0; j < ss->shape2_column; j++){
             sp_matrix(i, j) = (tmp_matrix(0, k/4) >> (k%4 * 2)) &3;
