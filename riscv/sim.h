@@ -17,6 +17,7 @@
 #include <string>
 #include <memory>
 #include <sys/types.h>
+#include "ap_mbox.h"
 
 class mmu_t;
 class remote_bitbang_t;
@@ -113,6 +114,7 @@ private:
   log_file_t log_file;
   bus_t glb_bus;
   sys_irq_t *sys_irq = nullptr;
+  ap_mbox_device_t *ap_mbox = nullptr;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
 
