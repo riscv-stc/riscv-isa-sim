@@ -47,7 +47,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     misc_dev = new misc_device_t(pcie_driver, this);
     npc_bus.add_device(MISC_START, misc_dev);
 
-    mbox_device_t *mbox = new mbox_device_t(pcie_driver, this , misc_dev, (pcie_driver) ? true : false);
+    np_mbox_t *mbox = new np_mbox_t(sim, misc_dev);
     npc_bus.add_device(MBOX_START, mbox);
 
     /* atu */
@@ -2702,7 +2702,7 @@ uint64_t processor_t::host_clks_2_npc(uint64_t host_clks, uint64_t insn_b) {
     return hs_clks;
 }
 
-mbox_device_t* processor_t::add_mbox(mbox_device_t *box)
+np_mbox_t* processor_t::add_mbox(np_mbox_t *box)
 {
   mbox = box;
   return mbox;

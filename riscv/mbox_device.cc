@@ -3,289 +3,235 @@
 #include "devices.h"
 #include "processor.h"
 #include "pcie_driver.h"
+#include "mbox_device.h"
 
-mbox_device_t::mbox_device_t(pcie_driver_t *pcie, processor_t *p, misc_device_t *misc, bool pcie_enabled)
-  : pcie_driver(pcie), p(p), pcie_enabled(pcie_enabled), misc_dev(misc)
+mbox_device_t::mbox_device_t(simif_t *simif) : sim(simif)
 {
-  reset();
-}
-
-#ifdef MBOX_V1_ENABLE
-#define RX_CFIFO_VAL     0x2
-#define RX_EXT_CFIFO_VAL 0x4
-#define MBOX_MTXCFG         (0x0)
-#define MBOX_MTXCMD         (0x4)
-#define MBOX_MEXTTXCMD      (0x8)
-#define PCIE0_MBOX_MRXCMD    (0xE30A100C)
-#define PCIE0_MBOX_MRXCMDEXT    (0xE30A1010)
-#define MBOX_MRXCMD_ADDR     (0x0c)
-#define MBOX_MRXCMDEXT_ADDR  (0x10)
-#define MBOX_INT_PEND        (0x20)
-
-#else
-/* MBV2 Registers 64bit寄存器 */
-#define MBV2_TXCFG_L            (0x00)
-#define MBV2_TXCFG_H            (0x04)
-#define MBV2_TXDAT_L            (0x08)
-#define MBV2_TXDAT_H            (0x0C)
-#define MBV2_RXREG_L            (0x10)
-#define MBV2_RXREG_H            (0x14)
-#define MBV2_STATUS             (0x18)
-#define MBV2_INT_PEND           (0x20)
-#define MBV2_INT_MASK           (0x28)      /* 0使能中断,1屏蔽 */
-
-#define INT_REG_MASK            (0x1f)      /* 中断寄存器的有效位 */
-#define INT_BIT_TX_DONE         (0)
-#define INT_BIT_RX_VALID        (2)
-
-#endif  /* #define MBOX_V1_ENABLE */
-
-bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
-{
-    if (unlikely(!bytes || (size() <= addr+len))) {
-        std::cout << "mbox: unsupported load register offset: " << hex << addr
-            << " len: " << hex << len << std::endl;
-        return false;
-    }
-#ifdef MBOX_V1_ENABLE
-  if (MBOX_MRXCMD_ADDR == addr) {
-    if (cmd_value.empty())
-      return false;
-
-    uint32_t value = cmd_value.front();
-    cmd_value.pop();
-    cmd_count--;
-
-    memcpy(bytes, &value, 4);
-    // if (cmd_value.empty()) {
-      // p->state.mextip &= ~(1 << RX_CFIFO_VAL);
-      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_CFIFO_VAL);
-    // }
-    return true;
-  }
-
-  if (MBOX_MRXCMDEXT_ADDR == addr) {
-    if (cmdext_value.empty())
-      return false;
-
-    uint32_t value = cmdext_value.front();
-    cmdext_value.pop();
-    cmdext_count--;
-
-    memcpy(bytes, &value, 4);
-    // if (cmdext_value.empty()) {
-      // p->state.mextip &= ~(1 << RX_EXT_CFIFO_VAL);
-      // *(uint32_t *)(data + MBOX_INT_PEND) &= ~(1 << RX_EXT_CFIFO_VAL);
-    //}
-    return true;
-  }
-
-  memcpy(bytes, reg_base + addr, len);
-#else
-    switch(addr) {
-    case MBV2_RXREG_L:
-        if (cmd_value.empty())
-            return false;
-
-        for (int i = 0 ; i < len ; i+=4) {
-            uint32_t value = cmd_value.front();
-            cmd_value.pop();
-            memcpy(bytes+i, &value, 4);
-        }
-        break;
-    default:
-        memcpy(bytes, (uint8_t*)reg_base+addr, len);
-    }
-#endif  /* #define MBOX_V1_ENABLE */
-    return true;
-}
-
-bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
-{
-    if (unlikely(!bytes || (size() <= addr+len))) {
-        std::cout << "mbox: unsupported store register offset: " << hex << addr
-            << " len: " << hex << len << std::endl;
-        return false;
-    }
-#ifdef MBOX_V1_ENABLE
-  if (MBOX_INT_PEND == addr) {
-    uint32_t v = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
-    p->state.mextip &= ~v;
-    p->state.mextip |= ((cmd_value.empty() ? 0 : 1) << RX_CFIFO_VAL) |
-	    ((cmdext_value.empty() ? 0 : 1) << RX_EXT_CFIFO_VAL);
-    *(uint32_t *)(reg_base + MBOX_INT_PEND) = p->state.mextip;
-    return true;
-  }
-
-  memcpy(reg_base + addr, bytes, len);
-  if (((MBOX_MTXCMD == addr) | (MBOX_MEXTTXCMD == addr)) &&
-		((PCIE0_MBOX_MRXCMD == *(uint32_t *)reg_base) |
-		(PCIE0_MBOX_MRXCMDEXT == *(uint32_t *)reg_base))) {
-    command_head_t cmd;
-    cmd.code = CODE_INTERRUPT;
-    cmd.addr = addr;
-    cmd.len = 4;
-    *(uint32_t *)cmd.data = *(uint32_t *)bytes;
-    if(pcie_enabled)
-    	pcie_driver->send((const uint8_t *)&cmd, sizeof(cmd));
-  }
-
-  if (MBOX_MRXCMD_ADDR == addr) {
-    cmd_count++;
-    cmd_value.push(*(uint32_t*)bytes);
-    p->state.mextip = p->state.mextip | (1 << RX_CFIFO_VAL);
-    *(uint32_t *)(reg_base + MBOX_INT_PEND) |= 1 << RX_CFIFO_VAL;
-  }
-
-  if (MBOX_MRXCMDEXT_ADDR == addr) {
-    cmdext_count++;
-    cmdext_value.push(*(uint32_t*)bytes);
-    p->state.mextip = p->state.mextip | (1 << RX_EXT_CFIFO_VAL);
-    *(uint32_t *)(reg_base + MBOX_INT_PEND) |= 1 << RX_EXT_CFIFO_VAL;
-  }
-#else
-    switch(addr) {
-    case MBV2_TXCFG_L:
-        memcpy((uint8_t *)reg_base+addr, bytes, len);
-        break;
-    case MBV2_TXDAT_L:      /* 写入双字触发1次发送,发送CFG和DAT寄存器共16字节数据 */
-        memcpy((uint8_t *)reg_base+addr, bytes, len);
-        if (8 == len) {
-            command_head_t cmd;
-            cmd.code = CODE_INTERRUPT;
-            cmd.addr = MBV2_TXDAT_L;
-            cmd.len = 16;
-            memcpy(cmd.data, (uint8_t *)reg_base+MBV2_TXCFG_L, 16);
-            if(pcie_enabled) {
-                pcie_driver->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
-                uint32_t int_pend_val = 0;
-                load(MBV2_INT_PEND, 4, (uint8_t*)(&int_pend_val));
-                int_pend_val |= (1<<INT_BIT_TX_DONE);
-                ro_register_write(MBV2_INT_PEND, (uint32_t)int_pend_val);
-            }/*  */
-        }
-        break;
-    /** 
-     * 接收流程，pcie驱动端通过socket发起写操作，写16字节到RX寄存器
-     * 收到数据后置位 RX_VALID，如果中断 enable 则产生中断
-     */
-    case MBV2_RXREG_L:
-    {
-        for (int i = 0 ; i < len; i+=4) {
-            cmd_value.push(*(uint32_t*)((uint8_t *)bytes+i));
-        }
-        uint32_t int_pend_val = 0;
-        load(MBV2_INT_PEND, 4, (uint8_t*)(&int_pend_val));
-        int_pend_val |= (1<<INT_BIT_RX_VALID);
-        ro_register_write(MBV2_INT_PEND, (uint32_t)int_pend_val);
-    }
-        break;
-    case MBV2_INT_MASK:     /* 0是中断使能 */
-        ro_register_write(addr, *(uint32_t*)bytes);
-        break;
-    case MBV2_INT_PEND:     /* 写 1 清相应位同时清 MIP.MEIP */
-        {
-        uint32_t clear_pend = *(uint32_t *)(bytes);
-        uint32_t reg_int_pend = 0;
-        load(MBV2_INT_PEND, 4, (uint8_t *)(&reg_int_pend));
-        if (0 != reg_int_pend) {
-            for (int i = 0 ; (1<<i) <= INT_REG_MASK ; i++) {
-                if (((clear_pend & reg_int_pend & INT_REG_MASK)>>i) & 0x01) {
-                    reg_int_pend &= ~(1<<i);
-                }
-            }
-            *(uint32_t *)((uint8_t *)reg_base + MBV2_INT_PEND) = reg_int_pend;
-            if (0 == reg_int_pend) {
-                misc_dev->set_mcu_irq_status(MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ, false);
-            }
-        }
-        }
-        break;
-    case MBV2_TXCFG_H:
-    case MBV2_TXDAT_H:
-    case MBV2_RXREG_H:
-        return false;
-    default:
-        return false;
-        break;
-    }
-#endif  /* #define MBOX_V1_ENABLE */
-    return true;
-}
-
-void mbox_device_t::reset()
-{
-#ifdef MBOX_V1_ENABLE
-  cmd_count = 0;
-  cmdext_count = 0;
-  p->state.mextip = 0;
-  memset(reg_base, 0, 4096);
-
-  while (!cmd_value.empty())
-    cmd_value.pop();
-
-  while (!cmdext_value.empty())
-    cmdext_value.pop();
-#else
-    uint32_t val = 0;
-    memset(reg_base, 0, size());
-    val = INT_REG_MASK;
-    store(MBV2_INT_MASK, 4, (uint8_t *)&val);
-
-    while (!cmd_value.empty())
-        cmd_value.pop();
-#endif  /* #define MBOX_V1_ENABLE */
 }
 
 mbox_device_t::~mbox_device_t()
 {
 }
 
-#ifndef MBOX_V1_ENABLE
-bool mbox_device_t::ro_register_write(reg_t addr, uint32_t val)
+bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    if (addr > size()-sizeof(val))
-        return false;
-    
-    switch(addr) {
-    case MBV2_INT_MASK:     /* 0是中断使能 */
-    case MBV2_INT_PEND:     /* 1是中断产生 */
-        {
-        uint32_t reg_int_pend = 0;
-        uint32_t reg_int_mask = 0;
-        *(uint32_t *)((uint8_t *)reg_base+addr) = (val & INT_REG_MASK);
-        if (!cmd_value.empty()) {
-            *(uint32_t *)((uint8_t *)reg_base+MBV2_INT_PEND) |= (1<<INT_BIT_RX_VALID);
-        }
-        load(MBV2_INT_PEND, 4, (uint8_t *)(&reg_int_pend));
-        load(MBV2_INT_MASK, 4, (uint8_t *)(&reg_int_mask));
-        reg_int_mask = (~reg_int_mask) & INT_REG_MASK;
-        if (reg_int_pend & reg_int_mask) {
-            misc_dev->set_mcu_irq_status(MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ, true);
-        }
-        }
-        break;
-    default:
+    uint32_t val32 = 0;
+    uint64_t val64 = 0;
+    int fifo_size = 0;
+    bool isempty = true;
+
+    if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len) && (8!=len)))) {
+        std::cout << "mbox: unsupported load register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
         return false;
     }
-    
+
+    switch(addr) {
+    case MBOX_RX_CFG_DATA:
+    case MBOX_RX_CFG_DATA+4:
+        if (rx_fifo.empty()) {      /* 接收fifo空时读失败，中断置位 RX_FIFO_UDR */
+            load(MBOX_INT_PEND, 4, (uint8_t*)&val32);
+            *(uint32_t *)(reg_base+MBOX_INT_PEND) = val32 | MBOX_INT_RX_FIFO_UDR;
+            irq_update();
+            break;
+        }
+
+        val64 = rx_fifo.front();
+        if (MBOX_RX_CFG_DATA+4 == addr) {
+            val64 = val64 >> 32;
+        }
+        if (((8==len) && (MBOX_RX_CFG_DATA==addr)) || (MBOX_RX_CFG_DATA+4==addr)) {
+            rx_fifo.pop();
+        }
+        memcpy(bytes, &val64, len);
+        break;
+    default:
+        memcpy(bytes, reg_base+addr, len);
+        break;
+    }
+
     return true;
 }
 
-bool mbox_device_t::ro_register_write(reg_t addr, uint64_t val)
+bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    if (addr > size()-sizeof(val))
-        return false;
-    
-    switch(addr) {
-    case MBV2_INT_MASK:
-    case MBV2_INT_PEND:
-        return ro_register_write(addr, (uint32_t)(val&0xffffffff));
-        break;
-    default:
+    uint32_t val32 = 0;
+    uint64_t txcfg = 0;
+    uint64_t txdat = 0;
+    uint32_t irq_pend = 0;
+
+    if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len) && (8!=len)))) {
+        std::cout << "mbox: unsupported store register offset: " << hex << addr
+            << " len: " << hex << len << std::endl;
         return false;
     }
-    
+
+    switch(addr) {
+    case MBOX_TX_CFG:
+    case MBOX_TX_CFG+4:
+        memcpy(reg_base+addr, bytes, len);
+        break;
+    case MBOX_TX_DATA:
+    case MBOX_TX_DATA+4:
+        memcpy(reg_base+addr, bytes, len);
+        if (((MBOX_TX_DATA==addr)&&(8==len)) || (MBOX_TX_DATA+4==addr)&&(4==len)) {
+            load(MBOX_TX_CFG, 8, (uint8_t*)&txcfg);
+            load(MBOX_TX_DATA, 8, (uint8_t*)&txdat);
+            send_msg(txcfg, txdat);
+        }
+        break;
+    case MBOX_RX_CFG_DATA:
+    case MBOX_RX_CFG_DATA+4:
+        memcpy(reg_base+addr, bytes, len);
+        if (((8==len) && (MBOX_RX_CFG_DATA==addr)) || (MBOX_RX_CFG_DATA+4==addr)) {
+            uint64_t rx = 0;
+            uint32_t int_pend_val = 0;
+
+            rx = *(uint64_t*)(reg_base+MBOX_RX_CFG_DATA);
+            rx_fifo.push(rx);
+            load(MBOX_INT_PEND, 4, (uint8_t*)(&int_pend_val));
+            int_pend_val |= MBOX_INT_RX_VALID;
+            *(uint32_t*)(reg_base+MBOX_INT_PEND) = int_pend_val;
+            irq_update();
+        }
+        break;
+    case MBOX_INT_PEND:     /* R/W1TC */
+        memcpy(&val32, bytes, 4);
+        load(MBOX_INT_PEND, 4, (uint8_t *)(&irq_pend));
+        if (0 != irq_pend) {
+            irq_pend &= ~val32;
+            *(uint32_t *)(reg_base+addr) = irq_pend;
+            if (0 == irq_pend) {
+                irq_generate(false);
+            }
+        }
+        break;
+    case MBOX_INT_MASK:     /* 0是中断使能 */
+        memcpy(reg_base+addr, bytes, 4);
+        irq_update();
+        break;
+    case MBOX_STATUS:       /* RO */
+        return false;
+    default:
+        memcpy(reg_base+addr, bytes, len);
+        break;
+    }
+
     return true;
 }
-#endif  /* #define MBOX_V1_ENABLE */
+
+int mbox_device_t::send_msg(uint64_t txcfg, uint64_t txdat)
+{
+    int ret = 0;
+    int bank_id = 0;
+    int idx_in_bank = 0;
+    uint8_t func = 0;
+    uint8_t dst_id = 0;
+
+    processor_t *proc = nullptr;
+
+    dst_id = (txcfg >> 8) & 0xff;
+    if (dst_id & (1<<7)) {   /* mgmt, pcie and a53 */
+        func = dst_id & 0x1f;
+        switch(func) {
+        case 0x10:      /* pcie_mbox pf */
+        #if 0
+            command_head_t cmd;
+            cmd.code = CODE_INTERRUPT;
+            cmd.addr = MBV2_TXDAT_L;
+            cmd.len = 16;
+            memcpy(cmd.data, (uint8_t *)reg_base+MBV2_TXCFG_L, 16);
+            if(pcie_enabled) {
+                pcie_driver->send_msg((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+                uint32_t int_pend_val = 0;
+                load(MBV2_INT_PEND, 4, (uint8_t*)(&int_pend_val));
+                int_pend_val |= (1<<INT_BIT_TX_DONE);
+                ro_register_write(MBV2_INT_PEND, (uint32_t)int_pend_val);
+            }/*  */
+        #endif
+            printf("__sxs mbox send_msg to pcie_mbox \r\n");
+            break;
+        case 0x11:      /* p2ap_mbox */
+            printf("__sxs mbox send_msg to p2ap_mbox \r\n");
+            break;
+        case 0x12:      /* n2ap_mbox */
+            sim->mmio_store(N2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
+            sim->mmio_store(N2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
+            printf("__sxs mbox send_msg to n2ap_mbox \r\n");
+            break;
+        default:
+            printf("mbox: unsupported dst_id func 0x%x \r\n", func);
+            ret = -1;
+            break;
+        }
+    } else {        /* npc */
+        bank_id = (dst_id >> 3) & 0x03;
+        idx_in_bank = dst_id & 0x07;
+
+        proc = sim->get_core_by_idxinsim(sim->coreid_to_idxinsim(dst_id));
+        if (proc) {
+            sim->npc_mmio_store(MBOX_START+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg, bank_id, idx_in_bank);
+            sim->npc_mmio_store(MBOX_START+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat, bank_id, idx_in_bank);
+        } else {
+            printf("mbox send_msg error, core %d not found \r\n", dst_id);
+            ret = -2;
+        }
+        printf("__sxs mbox send_msg to npc bank %d core %d \r\n",bank_id, idx_in_bank);
+    }
+
+    return ret;
+}
+
+void mbox_device_t::irq_update(void)
+{
+    uint32_t reg_int_pend = 0;
+    uint32_t reg_int_mask = 0;
+
+    load(MBOX_INT_PEND, 4, (uint8_t *)(&reg_int_pend));
+    load(MBOX_INT_MASK, 4, (uint8_t *)(&reg_int_mask));
+    reg_int_mask = (~reg_int_mask) & MBOX_INT_ALL;
+    if (reg_int_pend & reg_int_mask) {
+        irq_generate(true);
+    }
+}
+
+void mbox_device_t::irq_generate(bool dir)
+{
+    printf("mbox_device_t::irq_generate \r\n");
+}
+
+np_mbox_t::np_mbox_t(simif_t *simif, misc_device_t *misc_dev) : 
+    sim(simif), misc(misc_dev), mbox_device_t(simif)
+{
+    reset();
+}
+
+np_mbox_t::~np_mbox_t()
+{
+}
+
+void np_mbox_t::reset(void)
+{
+    uint32_t val = 0;
+
+    while (!mbox_device_t::rx_fifo.empty())
+        mbox_device_t::rx_fifo.pop();
+
+    memset(reg_base, 0, size());
+
+    val = (1<<5) | (1<<6) | (0xf<<8) | (1<<13) | (1<<21);
+    *(uint32_t*)(reg_base+MBOX_STATUS) = val;
+
+    val = ~((uint32_t)0);
+    *(uint32_t*)(reg_base+MBOX_INT_MASK) = val;
+}
+
+void np_mbox_t::irq_generate(bool dir)
+{
+    if (misc) {
+        misc->set_mcu_irq_status(MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ, dir);
+    }
+    if (dir) {
+        printf("np_mbox_t::irq_generate \r\n");
+    }
+}

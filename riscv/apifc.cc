@@ -208,11 +208,11 @@ void apifc_t::sqmsg_req_recv_handle(void)
             if (0 > ret) {
                 printf("%s() qemu_mems_read ret %d error \r\n",__FUNCTION__,ret);
             }
-            printf("ap r 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
+            // printf("ap r 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         case CODE_WRITE:
             store_data(cmd_data.addr, cmd_data.len, (const uint8_t*)cmd_data.data);
-            printf("ap w 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
+            // printf("ap w 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         default:
             printf("%s() unknow cmd 0x%x \r\n", __FUNCTION__, cmd_data.code);
@@ -276,4 +276,29 @@ int apifc_t::spike_qemu_msg_init(void)
     sqmsg_spike_recv_thread_p.reset(sq_req_thread);
 
     return 0;
+}
+
+/**
+ * 功能: 向 qemu a53发送一个中断
+ * 参数: @irq: 中断号 0-1023
+ * 参数: @dir: 1产生，0清除
+ * 返回: 成功返回0
+ */
+int apifc_t::generate_irq_to_a53(int irq, int dir)
+{
+    int ret = 0;
+    struct command_head_t cmd_data = {};
+
+    /* data填中断号 */
+    cmd_data.code = CODE_INTERRUPT;
+    cmd_data.addr = 0;
+    cmd_data.len = 4;
+    if (dir) {
+        *((int *)(cmd_data.data)) = cmd_data_irq(irq);
+    } else {
+        *((int *)(cmd_data.data)) = cmd_data_clear_irq(irq);
+    }
+    ret = sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
+
+    return (0 > ret) ? ret : 0;
 }

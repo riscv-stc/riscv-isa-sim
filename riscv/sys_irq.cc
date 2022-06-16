@@ -79,32 +79,3 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     }
     return true;
 }
-
-/**
- * 功能: 向 qemu a53发送一个中断
- * 参数: @irq: 中断号 0-1023
- * 参数: @dir: 1产生，0清除
- * 返回: 成功返回0
- */
-int sys_irq_t::generate_irq_to_a53(int irq, int dir)
-{
-    int ret = 0;
-    struct command_head_t cmd_data = {};
-
-    /* data填中断号 */
-    cmd_data.code = CODE_INTERRUPT;
-    cmd_data.addr = 0;
-    cmd_data.len = 4;
-    if (dir) {
-        *((int *)(cmd_data.data)) = cmd_data_irq(irq);
-    } else {
-        *((int *)(cmd_data.data)) = cmd_data_clear_irq(irq);
-    }
-
-    if(apifc) {
-        ret = apifc->sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
-    } else {
-        ret = -1;
-    }
-    return (0 > ret) ? ret : 0;
-}

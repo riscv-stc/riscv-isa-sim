@@ -13,6 +13,11 @@
 #define MBOX_PCIE_REG_BASE		0xd3d04000
 #define MBOX_NPC_REG_BASE		0xd3d06000
 
+#define P2AP_MBOX_LOC_BASE        MBOX_PCIE_REG_BASE
+#define N2AP_MBOX_LOC_BASE        MBOX_NPC_REG_BASE
+#define P2AP_MBOX_IRQ             34
+#define N2AP_MBOX_IRQ             35
+
 /* mailbox registers */
 #define MBOX_TX_CFG				(0x0 ) 
 #define MBOX_TX_DATA			(0x8 )

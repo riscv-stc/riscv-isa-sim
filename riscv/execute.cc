@@ -776,13 +776,7 @@ void processor_t::step(size_t n)
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
-#ifdef MBOX_V1_ENABLE
-      reg_t interrupts = (state.mip |
-                          (state.mextip ?
-                          (0x1 << IRQ_M_EXT) : 0));
-#else
       reg_t interrupts = state.mip;
-#endif
       if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;

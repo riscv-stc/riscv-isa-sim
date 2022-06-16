@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include "devices.h"
+#include "mbox_device.h"
 
 class simif_t;
 class bankif_t;

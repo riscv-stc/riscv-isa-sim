@@ -32,6 +32,8 @@ class apifc_t
 public:
     apifc_t(simif_t *sim);
     ~apifc_t();
+
+    int generate_irq_to_a53(int irq, int dir);
   
     int sqmsg_spike_send(long recv_type, const struct command_head_t *cmd_data);
     int sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data);

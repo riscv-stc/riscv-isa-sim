@@ -182,34 +182,6 @@ class misc_device_t : public abstract_device_t {
   bool ro_register_write(reg_t addr, uint64_t val);
 };
 
-#define MBOX_V1_ENABLE
-class mbox_device_t : public abstract_device_t {
- public:
-  mbox_device_t(pcie_driver_t * pcie, processor_t* p, misc_device_t *misc, bool pcie_enabled);
-  bool load(reg_t addr, size_t len, uint8_t* bytes);
-  bool store(reg_t addr, size_t len, const uint8_t* bytes);
-  void reset();
-  size_t size() { return sizeof(reg_base); }
-  // const std::vector<char>& contents() { return data; }
-  ~mbox_device_t();
-
-  /* 只读寄存器的写操作不放在store中 */
-  bool ro_register_write(reg_t addr, uint32_t val);
-  bool ro_register_write(reg_t addr, uint64_t val);
- private:
-#ifdef MBOX_V1_ENABLE
-  uint32_t cmd_count;
-  uint32_t cmdext_count;
-  std::queue<uint32_t> cmdext_value;
-#endif
-  std::queue<uint32_t> cmd_value;
-  processor_t* p;
-  uint8_t reg_base[4096];
-  bool pcie_enabled;
-  pcie_driver_t *pcie_driver;
-  misc_device_t *misc_dev = nullptr;
-};
-
 class mem_t : public abstract_device_t {
  public:
   mem_t(size_t size) : len(size) {
@@ -334,8 +306,6 @@ class sys_irq_t : public abstract_device_t {
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   size_t size() { return SYSIRQ_SIZE; }
-  
-  int generate_irq_to_a53(int irq, int dir);
 
  private:
   simif_t *sim = nullptr;

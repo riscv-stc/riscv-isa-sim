@@ -16,6 +16,7 @@
 #include <functional>
 #include "debug_rom_defines.h"
 #include "atu.h"
+#include "mbox_device.h"
 
 class processor_t;
 class mmu_t;
@@ -307,9 +308,6 @@ struct state_t
   reg_t user7;
   reg_t mcache_ctl;
   reg_t wfi_flag;
-  /* mextip is ext interrupt pending status for mbox,
-   * just effect mip ext interrupt bit. */
-  volatile reg_t mextip;
   bool serialized; // whether timer CSRs are in a well-defined state
 
   bool async_started = false;
@@ -608,7 +606,7 @@ public:
   }
 
   void trigger_updated();
-  mbox_device_t* add_mbox(mbox_device_t *box);
+  np_mbox_t* add_mbox(np_mbox_t *box);
 
   void set_pmp_num(reg_t pmp_num);
   void set_pmp_granularity(reg_t pmp_granularity);
@@ -649,7 +647,7 @@ private:
   bool log_commits_enabled;
   FILE *log_file;
   bool halt_on_reset;
-  mbox_device_t *mbox;
+  np_mbox_t *mbox;
   misc_device_t *misc_dev = nullptr;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
@@ -683,7 +681,7 @@ private:
   friend class misc_device_t;
   friend class extension_t;
   friend class pcie_driver_t;
-  friend class mbox_device_t;
+  friend class np_mbox_t;
   friend class smmu_t;
   friend class sysdma_device_t;
   friend class sys_irq_t;

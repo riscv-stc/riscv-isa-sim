@@ -42,6 +42,7 @@ riscv_hdrs = \
 	apifc.h \
 	mailbox.h \
 	ap_mbox.h \
+	mbox_device.h \
 
 riscv_install_hdrs = mmio_plugin.h
 
