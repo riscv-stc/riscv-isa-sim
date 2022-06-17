@@ -455,12 +455,6 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     return true;
 }
 
-/* PCIe mbox address, send to txcmd or exttxcmd
- * data will write to cfg address. */
-#define PCIE_MBOX_CFG_ADDR      (0xE30A1000)
-#define PCIE_MBOX_TXCMD_ADDR    (0xE30A1004)
-#define PCIE_MBOX_EXTTXCMD_ADDR (0xE30A1008)
-
 /* core reset addr, just only write,
  * not realy phy_addr, just valid for PCIe dummy driver. */
 #define PCIE_CORE_RESET_ADDR    (0xc07f3500)
@@ -525,35 +519,6 @@ void pcie_driver_t::task_doing()
 
         case CODE_WRITE:
           switch (pCmd->addr) {
-            /* PCIe mbox cfg addr. */
-                  case PCIE_MBOX_CFG_ADDR:
-              {
-                      value = *(uint32_t *)pCmd->data;
-                      mTxCfgAddr = value;
-                      std::cout << "cfg tx dst addr " << value << std::endl;
-                    }
-              break;
-
-            case PCIE_MBOX_TXCMD_ADDR:
-            case PCIE_MBOX_EXTTXCMD_ADDR:
-              {
-                      /* PCIe mbox txcmd or exttxcmd. */
-                      value = *(uint32_t *)pCmd->data;
-                      if (PCIE_MBOX_TXCMD_ADDR == pCmd->addr)
-                        mTxCmd = value;
-                      else
-                        mTxExtCmd = value;
-
-                      store_data(mTxCfgAddr, pCmd->len, pCmd->data);
-                      std::cout << "pcie mbox send addr:0x"
-                  << hex
-                  << mTxCfgAddr
-                  << " value:0x"
-                  << value
-                  << std::endl;
-                    }
-              break;
-
             case PCIE_CORE_RESET_ADDR:
               value = *(uint32_t *)pCmd->data;
               /* each bank in spike core_id is start at 0. */

@@ -10,13 +10,13 @@
  * are designed to cop with messages originating from pcie and npcs
  * respectively, in the sake of responsiveness.
  */
-#define MBOX_PCIE_REG_BASE		0xd3d04000
-#define MBOX_NPC_REG_BASE		0xd3d06000
 
-#define P2AP_MBOX_LOC_BASE        MBOX_PCIE_REG_BASE
-#define N2AP_MBOX_LOC_BASE        MBOX_NPC_REG_BASE
+#define P2AP_MBOX_LOC_BASE        0xd3d04000
+#define N2AP_MBOX_LOC_BASE        0xd3d06000
 #define P2AP_MBOX_IRQ             34
 #define N2AP_MBOX_IRQ             35
+
+#define PCIE_MBOX_LOC_PF_BASE		0xE30B0000
 
 /* mailbox registers */
 #define MBOX_TX_CFG				(0x0 ) 

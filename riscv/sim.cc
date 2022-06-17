@@ -137,10 +137,15 @@ die_id(die_id),
       glb_bus.add_device(SYSIRQ_BASE, sys_irq);
 
       /* AP_MBOX寄存器放在spike中实现，npc不可访问，只由qemu a53访问 */
-      p2ap_mbox = new ap_mbox_t(this, apifc);
+      p2ap_mbox = new ap_mbox_t(this, apifc, P2AP_MBOX_IRQ);
       glb_bus.add_device(P2AP_MBOX_LOC_BASE, p2ap_mbox);
-      n2ap_mbox = new ap_mbox_t(this, apifc);
+      n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ);
       glb_bus.add_device(N2AP_MBOX_LOC_BASE, n2ap_mbox);
+
+      /* pcie_mbox */
+      pcie_driver_t *pcie_driver = banks[get_id_first_bank()]->get_pcie_driver();
+      pcie_mbox = new pcie_mbox_t(this, pcie_driver);
+      glb_bus.add_device(PCIE_MBOX_LOC_PF_BASE, pcie_mbox);
     }
 
     debug_module.add_device(&glb_bus);
@@ -753,6 +758,12 @@ bool sim_t::in_mmio(reg_t addr)
     }
 
     if (auto mem = dynamic_cast<ap_mbox_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<pcie_mbox_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }

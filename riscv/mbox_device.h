@@ -47,4 +47,18 @@ private:
     void irq_generate(bool dir) override;
 };
 
+class pcie_mbox_t : public mbox_device_t {
+public:
+    pcie_mbox_t(simif_t *simif, pcie_driver_t *pcie_driver);
+    ~pcie_mbox_t();
+
+    void reset(void);
+
+private:
+    simif_t *sim = nullptr;
+    pcie_driver_t *pcie = nullptr;
+
+    void irq_generate(bool dir) override;
+};
+
 #endif  /* __MBOX_DEVICE_H__ */

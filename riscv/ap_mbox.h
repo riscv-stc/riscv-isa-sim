@@ -16,7 +16,7 @@
 */
 class ap_mbox_t : public mbox_device_t {
  public:
-  ap_mbox_t(simif_t *simif, apifc_t *apifc);
+  ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num);
   ~ap_mbox_t();
 
   void reset(void);
@@ -24,6 +24,7 @@ class ap_mbox_t : public mbox_device_t {
 private:
     simif_t *sim = nullptr;
     apifc_t *apifc = nullptr;
+    int irq = N2AP_MBOX_IRQ;
 
     void irq_generate(bool dir) override;
 };

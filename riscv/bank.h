@@ -51,6 +51,8 @@ public:
 
     char* npc_addr_to_mem(reg_t addr, uint32_t idxinbank);
     char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
+
+    pcie_driver_t *get_pcie_driver(void) {return pcie_driver; };
 };
 
 #endif // __BANK_H__

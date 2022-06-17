@@ -89,10 +89,12 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
             rx = *(uint64_t*)(reg_base+MBOX_RX_CFG_DATA);
             rx_fifo.push(rx);
-            load(MBOX_INT_PEND, 4, (uint8_t*)(&int_pend_val));
-            int_pend_val |= MBOX_INT_RX_VALID;
-            *(uint32_t*)(reg_base+MBOX_INT_PEND) = int_pend_val;
-            irq_update();
+            if (0 == rx_fifo.size()%2) {
+                load(MBOX_INT_PEND, 4, (uint8_t*)(&int_pend_val));
+                int_pend_val |= MBOX_INT_RX_VALID;
+                *(uint32_t*)(reg_base+MBOX_INT_PEND) = int_pend_val;
+                irq_update();
+            }
         }
         break;
     case MBOX_INT_PEND:     /* R/W1TC */
@@ -135,23 +137,13 @@ int mbox_device_t::send_msg(uint64_t txcfg, uint64_t txdat)
         func = dst_id & 0x1f;
         switch(func) {
         case 0x10:      /* pcie_mbox pf */
-        #if 0
-            command_head_t cmd;
-            cmd.code = CODE_INTERRUPT;
-            cmd.addr = MBV2_TXDAT_L;
-            cmd.len = 16;
-            memcpy(cmd.data, (uint8_t *)reg_base+MBV2_TXCFG_L, 16);
-            if(pcie_enabled) {
-                pcie_driver->send_msg((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
-                uint32_t int_pend_val = 0;
-                load(MBV2_INT_PEND, 4, (uint8_t*)(&int_pend_val));
-                int_pend_val |= (1<<INT_BIT_TX_DONE);
-                ro_register_write(MBV2_INT_PEND, (uint32_t)int_pend_val);
-            }/*  */
-        #endif
+            sim->mmio_store(PCIE_MBOX_LOC_PF_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
+            sim->mmio_store(PCIE_MBOX_LOC_PF_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
             printf("__sxs mbox send_msg to pcie_mbox \r\n");
             break;
         case 0x11:      /* p2ap_mbox */
+            sim->mmio_store(P2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
+            sim->mmio_store(P2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
             printf("__sxs mbox send_msg to p2ap_mbox \r\n");
             break;
         case 0x12:      /* n2ap_mbox */
@@ -233,5 +225,59 @@ void np_mbox_t::irq_generate(bool dir)
     }
     if (dir) {
         printf("np_mbox_t::irq_generate \r\n");
+    }
+}
+
+pcie_mbox_t::pcie_mbox_t(simif_t *simif, pcie_driver_t *pcie_driver) : 
+    sim(simif), pcie(pcie_driver), mbox_device_t(simif)
+{
+    reset();
+}
+
+pcie_mbox_t::~pcie_mbox_t()
+{
+}
+
+void pcie_mbox_t::reset(void)
+{
+    uint32_t val = 0;
+
+    while (!mbox_device_t::rx_fifo.empty())
+        mbox_device_t::rx_fifo.pop();
+
+    memset(reg_base, 0, size());
+
+    val = (1<<5) | (1<<6) | (0xf<<8) | (1<<13) | (1<<21);
+    *(uint32_t*)(reg_base+MBOX_STATUS) = val;
+
+    val = ~((uint32_t)0);
+    *(uint32_t*)(reg_base+MBOX_INT_MASK) = val;
+}
+
+void pcie_mbox_t::irq_generate(bool dir)
+{
+    uint64_t txcfg = 0;
+    uint64_t txdat = 0;
+    if (pcie) {
+        /**
+         * 这部分逻辑还需要和驱动联调
+         * 1. 收到消息如何通知驱动
+         * 2. 驱动如何获取数据，驱动读寄存器还是spike发中断时携带消息
+         * 3. 驱动是否会配置masks寄存器，不配置寄存器无法产生中断
+         */
+        command_head_t cmd;
+        cmd.code = CODE_INTERRUPT;
+        cmd.addr = MBOX_RX_CFG_DATA;
+        cmd.len = 16;
+
+        load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
+        load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
+        memcpy(cmd.data, (uint8_t *)&txcfg, 8);
+        memcpy(&(cmd.data[8]), (uint8_t *)&txdat, 8);
+        
+        pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+    }
+    if (dir) {
+        printf("pcie_mbox_t::irq_generate \r\n");
     }
 }
