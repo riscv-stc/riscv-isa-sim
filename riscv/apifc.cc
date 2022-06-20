@@ -43,8 +43,10 @@ bool apifc_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
                 (host_addr=sim->bank_addr_to_mem(paddr, bankid))) {
             memcpy(bytes, host_addr, len);
             return true;
-        } else if (!((sim->npc_mmio_load(paddr, len, bytes, bankid, idxinbank)) || 
-                (sim->bank_mmio_load(addr, len, bytes, bankid)))) {
+        } else if (sim->npc_mmio_load(paddr, len, bytes, bankid, idxinbank) || 
+                sim->bank_mmio_load(addr, len, bytes, bankid)) {
+            return true;
+        } else {
             std::cout << "apifc driver load addr: 0x"
                 << hex
                 << addr
@@ -88,8 +90,10 @@ bool apifc_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
                 (host_addr=sim->bank_addr_to_mem(paddr, bankid))) {
             memcpy(host_addr, bytes, len);
             return true;
-        } else if (!((sim->npc_mmio_store(paddr, len, bytes, bankid, idxinbank)) || 
-                (sim->bank_mmio_store(addr, len, bytes, bankid)))) {
+        } else if (sim->npc_mmio_store(paddr, len, bytes, bankid, idxinbank) || 
+                sim->bank_mmio_store(addr, len, bytes, bankid)) {
+            return true;
+        } else {
             std::cout << "apifc driver store addr: 0x"
                 << hex
                 << addr
