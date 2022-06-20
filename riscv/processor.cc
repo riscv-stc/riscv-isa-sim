@@ -1335,10 +1335,11 @@ void processor_t::set_csr(int which, reg_t val)
       state.mte_stride_d = val;
       break;
     case CSR_DMAE_DATA_TYPE:
-      if ((val == 0x0) || (val == 0x202) || (val == 0x303) || (val == 0x101))
+      if (((val&0xffff) == 0x0) || ((val & 0xffff) == 0x202) ||
+		((val & 0xffff) == 0x303) || ((val & 0xffff) == 0x101))
         state.dmae_data_type = val;
       else
-         throw trap_tcp_icmov_invalid_core();
+         throw trap_dmae_invalid_param();
       break;
     case CSR_MTE_DATA_TYPE:
       state.mte_data_type = val;
