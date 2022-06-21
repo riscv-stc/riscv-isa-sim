@@ -303,7 +303,7 @@ void hwsync_t::hwsync_clear(void)
 
 bool hwsync_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  if (unlikely(!bytes || addr >= 4 * 16))
+  if (unlikely(!bytes || (addr+len>size())))
     return false;
 
   *((uint32_t*)bytes) = masks[addr / 4];
@@ -313,7 +313,7 @@ bool hwsync_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool hwsync_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (unlikely(!bytes || addr >= 4 * 16))
+  if (unlikely(!bytes || (addr+len>size())))
     return false;
 
   masks[addr / 4] = *((uint32_t*)bytes);

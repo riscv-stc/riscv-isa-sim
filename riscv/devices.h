@@ -25,7 +25,7 @@
 #include "bankif.h"
 #include "iniparser.h"
 
-#define HWSYNC_START          (0xd0080000)
+#define HWSYNC_START          (0xd3e80000)
 
 /* NPUV2 The lower 3GB region (0x00_0000_0000 ~ 0x00_BFFF_FFFF) is the remapping target region of DDR space */
 #define ddr_mem_start        (0x00000000)
