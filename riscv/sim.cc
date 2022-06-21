@@ -133,8 +133,8 @@ die_id(die_id),
 
     if (pcie_enabled) {
       apifc = new apifc_t(this);
-      sys_irq = new sys_irq_t(this, apifc);
-      glb_bus.add_device(SYSIRQ_BASE, sys_irq);
+      soc_apb = new soc_apb_t(this, apifc);
+      glb_bus.add_device(SOC_APB_BASE, soc_apb);
 
       /* AP_MBOX寄存器放在spike中实现，npc不可访问，只由qemu a53访问 */
       p2ap_mbox = new ap_mbox_t(this, apifc, P2AP_MBOX_IRQ);
@@ -243,9 +243,9 @@ sim_t::~sim_t()
         delete apifc;
         apifc = nullptr;
     }
-    if (sys_irq) {
-        delete sys_irq;
-        sys_irq = nullptr;
+    if (soc_apb) {
+        delete soc_apb;
+        soc_apb = nullptr;
     }
     if (p2ap_mbox) {
         delete p2ap_mbox;
@@ -751,7 +751,7 @@ bool sim_t::in_mmio(reg_t addr)
         }
     }
 
-    if (auto mem = dynamic_cast<sys_irq_t *>(desc.second)) {
+    if (auto mem = dynamic_cast<soc_apb_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }

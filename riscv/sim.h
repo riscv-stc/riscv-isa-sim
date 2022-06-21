@@ -18,6 +18,7 @@
 #include <memory>
 #include <sys/types.h>
 #include "ap_mbox.h"
+#include "soc_apb.h"
 
 class mmu_t;
 class remote_bitbang_t;
@@ -113,7 +114,7 @@ private:
   std::unique_ptr<clint_t> clint;
   log_file_t log_file;
   bus_t glb_bus;
-  sys_irq_t *sys_irq = nullptr;
+  soc_apb_t *soc_apb = nullptr;
   ap_mbox_t *p2ap_mbox = nullptr;
   ap_mbox_t *n2ap_mbox = nullptr;
   pcie_mbox_t *pcie_mbox = nullptr;
