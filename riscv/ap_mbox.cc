@@ -1,14 +1,17 @@
 #include "ap_mbox.h"
 
-ap_mbox_t::ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num) :
-        sim(simif), apifc(apifc), irq(irq_num), mbox_device_t(simif)
+ap_mbox_t::ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num, sys_irq_t *sys_irq) :
+        sim(simif), apifc(apifc), sys_irq(sys_irq), irq(irq_num), mbox_device_t(simif)
 {
     reset();
 }
 
 ap_mbox_t::~ap_mbox_t()
 {
-
+    sim = nullptr;
+    apifc = nullptr;
+    sys_irq = nullptr;
+    irq = 0;
 }
 
 void ap_mbox_t::reset(void)
@@ -32,9 +35,9 @@ void ap_mbox_t::reset(void)
 void ap_mbox_t::irq_generate(bool dir)
 {
     if (apifc) {
-        apifc->generate_irq_to_a53(irq, dir);
-    }
-    if (dir) {
-        printf("ap_mbox_t::irq_generate \r\n");
+        if (((N2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_n2apmbox()) ||
+            ((P2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_p2apmbox())) {
+            apifc->generate_irq_to_a53(irq, dir);
+        }
     }
 }

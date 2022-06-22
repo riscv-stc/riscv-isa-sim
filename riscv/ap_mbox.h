@@ -9,14 +9,11 @@
 #include "mailbox.h"
 #include "mbox_device.h"
 #include "apifc.h"
+#include "soc_apb.h"
 
-/**
- * pcie_driver成员还未赋值
- * 可以考虑ap npc pcie mbox代码部分重用 
-*/
 class ap_mbox_t : public mbox_device_t {
  public:
-  ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num);
+  ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num, sys_irq_t *sys_irq);
   ~ap_mbox_t();
 
   void reset(void);
@@ -24,7 +21,8 @@ class ap_mbox_t : public mbox_device_t {
 private:
     simif_t *sim = nullptr;
     apifc_t *apifc = nullptr;
-    int irq = N2AP_MBOX_IRQ;
+    sys_irq_t *sys_irq = nullptr;
+    int irq = 0;    /* N2AP_MBOX_IRQ / P2AP_MBOX_IRQ*/
 
     void irq_generate(bool dir) override;
 };

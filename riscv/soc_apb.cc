@@ -19,10 +19,10 @@ sys_apb_decoder_t::sys_apb_decoder_t(uint64_t base, uint8_t *reg_ptr)
     uint32_t val32 = 0;
 
     val32 = 0x20200102;
-    store(SOC_CHIP_VERSION_ADDR, 4, (uint8_t *)&val32);
+    store(DECODER_SOC_CHIP_VERSION_ADDR, 4, (uint8_t *)&val32);
 
     val32 = 0x00;
-    store(SOC_DIE_SEL_ADDR, 4, (uint8_t *)&val32);
+    store(DECODER_SOC_DIE_SEL_ADDR, 4, (uint8_t *)&val32);
 }
 
 sys_apb_decoder_t::~sys_apb_decoder_t()
@@ -63,8 +63,8 @@ sys_irq_t::sys_irq_t(simif_t *sim, apifc_t *apifc, uint8_t *reg_ptr) :
     uint32_t val32 = 0;
     
     val32 = 0xffffffff;
-    store(CPU_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
-    store(CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)(&val32));
+    store(SYSIRQ_CPU_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
+    store(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)(&val32));
 }
 
 sys_irq_t::~sys_irq_t()
@@ -74,12 +74,10 @@ sys_irq_t::~sys_irq_t()
 
 bool sys_irq_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-    if ((nullptr==reg_base) || (nullptr==bytes)) {
+    if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=size())) {
-        return false;
-    }
+
     memcpy(bytes, (char *)reg_base + addr, len);
     return true;
 }
@@ -89,20 +87,20 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     int i = 0;
     uint32_t val32 = 0;
 
-    if ((nullptr==reg_base) || (nullptr==bytes)) {
+    if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=size())) {
-        return false;
-    }
+    
     memcpy((char *)reg_base + addr, bytes, len);
-
     switch(addr) {
-    case CPU_IRQ_MASK_ADDR0:        /* 0b1 屏蔽中断, 0b0不屏蔽 */
-    case CPU_IRQ_MASK_ADDR1:
+    /* npcx-->A53中断mask, 0b1屏蔽, 0b0不屏蔽 */
+    case SYSIRQ_CPU_IRQ_MASK_ADDR0:
         break;
-    case BANK_SW_IRQ_IN_SET_ADDR:   /* 0b1 产生中断 */
-        val32 = *(uint32_t *)(reg_base+BANK_SW_IRQ_IN_SET_ADDR);
+    /* A53中断mask, [29]:p2ap_mbox， [30]:n2ap_mbox， 0b0中断可以发送到A53 */
+    case SYSIRQ_CPU_IRQ_MASK_ADDR1:
+        break;
+    case SYSIRQ_BANK_SW_IRQ_IN_SET_ADDR:   /* 0b1 产生中断 */
+        val32 = *(uint32_t *)(reg_base+addr);
         for (i = 0 ; i < 32 ; i++) {
             if (val32 & (1<<i)) {
                 processor_t *proc = nullptr;
@@ -114,15 +112,40 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
                 }
             }
         }
-        *(uint32_t *)(reg_base+BANK_SW_IRQ_IN_SET_ADDR) = 0;
+        *(uint32_t *)(reg_base+addr) = 0;
         break;
-    case TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:    /* RO */
+    case SYSIRQ_BANK_NPC_SW_IRQ_LATCH_CLR_ADDR:     /* W1TC */
+        break;
+    case SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:     /* RO */
+        break;
+    case SYSIRQ_TO_CPU_REMOTE_DIR_SW_IRQ_LATCH_CLR_ADDR:
+    case SYSIRQ_TO_CPU_REMOTE_DIE_NPC_IRQ_MASK_ADDR:
+    case SYSIRQ_TO_CPU_REMOTE_DIE_NPC_IRQ_STS_ADDR:
+        break;
     default:
         printf("store addr sys_irq:0x%lx no support \r\n",addr);
         throw trap_store_access_fault(false, addr, 0, 0);
         return false;
     }
     return true;
+}
+
+bool sys_irq_t::is_irq_ena_p2apmbox(void)
+{
+    uint32_t val32 = 0;
+
+    load(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)&val32);
+
+    return ((val32>>29)&0x01) ? false : true; 
+}
+
+bool sys_irq_t::is_irq_ena_n2apmbox(void)
+{
+    uint32_t val32 = 0;
+
+    load(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)&val32);
+
+    return ((val32>>30)&0x01) ? false : true; 
 }
 
 soc_apb_t::soc_apb_t(simif_t *sim, apifc_t *apifc) : sim(sim), apifc(apifc)
@@ -180,7 +203,7 @@ bool soc_apb_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         return false;
     }
 
-    switch((addr+SOC_APB_BASE)&0xfff80000) {
+    switch((addr+SOC_APB_BASE)&0xffff0000) {
     case SYS_APB_DECODER_WEST_BASE:
         sys_apb_decoder_west->store(addr&(SYS_APB_DECODER_SIZE-1), len, bytes);
         break;
@@ -192,7 +215,7 @@ bool soc_apb_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     default:
         memcpy((char *)reg_base + addr, bytes, len);
-        printf("soc_apb_t w 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+SOC_APB_BASE);
+        printf("soc_apb_t unknow addr w 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+SOC_APB_BASE);
     }
 
     return true;

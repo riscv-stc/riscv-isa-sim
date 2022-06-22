@@ -137,9 +137,9 @@ die_id(die_id),
       glb_bus.add_device(SOC_APB_BASE, soc_apb);
 
       /* AP_MBOX寄存器放在spike中实现，npc不可访问，只由qemu a53访问 */
-      p2ap_mbox = new ap_mbox_t(this, apifc, P2AP_MBOX_IRQ);
+      p2ap_mbox = new ap_mbox_t(this, apifc, P2AP_MBOX_IRQ, soc_apb->sys_irq);
       glb_bus.add_device(P2AP_MBOX_LOC_BASE, p2ap_mbox);
-      n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ);
+      n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ, soc_apb->sys_irq);
       glb_bus.add_device(N2AP_MBOX_LOC_BASE, n2ap_mbox);
 
       /* pcie_mbox */

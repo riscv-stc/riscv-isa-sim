@@ -139,17 +139,14 @@ int mbox_device_t::send_msg(uint64_t txcfg, uint64_t txdat)
         case 0x10:      /* pcie_mbox pf */
             sim->mmio_store(PCIE_MBOX_LOC_PF_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
             sim->mmio_store(PCIE_MBOX_LOC_PF_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
-            printf("__sxs mbox send_msg to pcie_mbox \r\n");
             break;
         case 0x11:      /* p2ap_mbox */
             sim->mmio_store(P2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
             sim->mmio_store(P2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
-            printf("__sxs mbox send_msg to p2ap_mbox \r\n");
             break;
         case 0x12:      /* n2ap_mbox */
             sim->mmio_store(N2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
             sim->mmio_store(N2AP_MBOX_LOC_BASE+MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
-            printf("__sxs mbox send_msg to n2ap_mbox \r\n");
             break;
         default:
             printf("mbox: unsupported dst_id func 0x%x \r\n", func);
@@ -168,7 +165,6 @@ int mbox_device_t::send_msg(uint64_t txcfg, uint64_t txdat)
             printf("mbox send_msg error, core %d not found \r\n", dst_id);
             ret = -2;
         }
-        printf("__sxs mbox send_msg to npc bank %d core %d \r\n",bank_id, idx_in_bank);
     }
 
     return ret;
