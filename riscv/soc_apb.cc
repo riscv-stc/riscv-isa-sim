@@ -65,6 +65,7 @@ sys_irq_t::sys_irq_t(simif_t *sim, apifc_t *apifc, uint8_t *reg_ptr) :
     val32 = 0xffffffff;
     store(SYSIRQ_CPU_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
     store(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)(&val32));
+    store(SYSIRQ_PCIE_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
 }
 
 sys_irq_t::~sys_irq_t()
@@ -86,20 +87,25 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
     int i = 0;
     uint32_t val32 = 0;
+    uint32_t mask = 0;
+    uint32_t sts_old = 0;
+    uint32_t sts_new = 0;
+    int irq = 0;
 
     if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
         return false;
     }
     
-    memcpy((char *)reg_base + addr, bytes, len);
     switch(addr) {
     /* npcx-->A53中断mask, 0b1屏蔽, 0b0不屏蔽 */
     case SYSIRQ_CPU_IRQ_MASK_ADDR0:
-        break;
     /* A53中断mask, [29]:p2ap_mbox， [30]:n2ap_mbox， 0b0中断可以发送到A53 */
     case SYSIRQ_CPU_IRQ_MASK_ADDR1:
+    case SYSIRQ_PCIE_IRQ_MASK_ADDR0:
+        memcpy((char *)reg_base + addr, bytes, len);
         break;
     case SYSIRQ_BANK_SW_IRQ_IN_SET_ADDR:   /* 0b1 产生中断 */
+        memcpy((char *)reg_base + addr, bytes, len);
         val32 = *(uint32_t *)(reg_base+addr);
         for (i = 0 ; i < 32 ; i++) {
             if (val32 & (1<<i)) {
@@ -114,13 +120,70 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         }
         *(uint32_t *)(reg_base+addr) = 0;
         break;
-    case SYSIRQ_BANK_NPC_SW_IRQ_LATCH_CLR_ADDR:     /* W1TC */
+    case SYSIRQ_BANK_NPC_SW_IRQ_LATCH_CLR_ADDR:     /* 写1清除STS对应位 */
+        val32 = *(uint32_t *)bytes;
+        sts_old = *(uint32_t *)(reg_base+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR);
+        sts_new = sts_old & (~val32);
+        *(uint32_t *)(reg_base+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR) = sts_new;
+        if ((sts_new ^ sts_old) & 0x000000ff) {
+            irq = A53_NPC_CLUSTER0_IRQ;
+        } else if ((sts_new ^ sts_old) & 0x0000ff00) {
+            irq = A53_NPC_CLUSTER1_IRQ;
+        } else if ((sts_new ^ sts_old) & 0x00ff0000) {
+            irq = A53_NPC_CLUSTER2_IRQ;
+        } else if ((sts_new ^ sts_old) & 0xff000000) {
+            irq = A53_NPC_CLUSTER3_IRQ;
+        }
+        if (0 != irq) {
+            apifc->generate_irq_to_a53(irq, false);
+        }
+
+        sts_old = *(uint32_t *)(reg_base+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR);
+        sts_new = sts_old & (~val32);
+        *(uint32_t *)(reg_base+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR) = sts_new;
+        /* 清除pcie中断 */
         break;
-    case SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:     /* RO */
+    /**
+     * 两个STS寄存器对用户是RO的， 此处由misc发起写操作
+     * 对应mask为0， 修改STS同时发送中断
+     * 对应mask为1， 不会修改STS
+     */
+    case SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:
+        irq = 0;
+        mask = *(uint32_t *)(reg_base+SYSIRQ_CPU_IRQ_MASK_ADDR0);
+        sts_old = *(uint32_t *)(reg_base+addr);
+        sts_new = *(uint32_t *)bytes;
+        sts_new = sts_old | (sts_new & (~mask));
+        if ((sts_new ^ sts_old) & 0x000000ff) {
+            irq = A53_NPC_CLUSTER0_IRQ;
+        } else if ((sts_new ^ sts_old) & 0x0000ff00) {
+            irq = A53_NPC_CLUSTER1_IRQ;
+        } else if ((sts_new ^ sts_old) & 0x00ff0000) {
+            irq = A53_NPC_CLUSTER2_IRQ;
+        } else if ((sts_new ^ sts_old) & 0xff000000) {
+            irq = A53_NPC_CLUSTER3_IRQ;
+        }
+        if (0 != irq) {
+            memcpy(reg_base+addr, (uint8_t*)&sts_new, 4);
+            apifc->generate_irq_to_a53(irq, true);
+        }
         break;
+    case SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR:
+        irq = 0;
+        mask = *(uint32_t *)(reg_base+SYSIRQ_PCIE_IRQ_MASK_ADDR0);
+        sts_old = *(uint32_t *)(reg_base+addr);
+        sts_new = *(uint32_t *)bytes;
+        sts_new = sts_old | (sts_new & (~mask));
+        if (sts_new ^ sts_old) {
+            memcpy(reg_base+addr, (uint8_t*)&sts_new, 4);
+            /* 向pcie发送中断 */
+        }
+        break;
+    /* die1的功能逻辑后续按需补充 */
     case SYSIRQ_TO_CPU_REMOTE_DIR_SW_IRQ_LATCH_CLR_ADDR:
     case SYSIRQ_TO_CPU_REMOTE_DIE_NPC_IRQ_MASK_ADDR:
     case SYSIRQ_TO_CPU_REMOTE_DIE_NPC_IRQ_STS_ADDR:
+        memcpy((char *)reg_base + addr, bytes, len);
         break;
     default:
         printf("store addr sys_irq:0x%lx no support \r\n",addr);
@@ -179,7 +242,7 @@ bool soc_apb_t::load(reg_t addr, size_t len, uint8_t* bytes)
         return false;
     }
 
-    switch((addr+SOC_APB_BASE)&0xfff80000) {
+    switch((addr+SOC_APB_BASE)&0xffff0000) {
     case SYS_APB_DECODER_WEST_BASE:
         sys_apb_decoder_west->load(addr&(SYS_APB_DECODER_SIZE-1), len, bytes);
         break;

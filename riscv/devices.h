@@ -148,7 +148,7 @@ class rom_device_t : public abstract_device_t {
 
 class misc_device_t : public abstract_device_t {
  public:
-  misc_device_t(pcie_driver_t * pcie, processor_t* proc);
+  misc_device_t(pcie_driver_t * pcie, processor_t* proc, simif_t *sim);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
@@ -169,6 +169,7 @@ class misc_device_t : public abstract_device_t {
   size_t buf_len;
   uint8_t *reg_base = nullptr;  /* 寄存器地址空间 */
   processor_t* proc;
+  simif_t *sim = nullptr;
   bool inst_start = false;
 
   uint32_t dump_addr;

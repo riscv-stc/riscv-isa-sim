@@ -3,6 +3,7 @@
 #include "devices.h"
 #include "processor.h"
 #include "pcie_driver.h"
+#include "soc_apb.h"
 
 #define UART_BASE  0x100
 #define EXIT_BASE  0x500
@@ -16,8 +17,8 @@
 #define MCU_IRQ_ENABLE_MASK     MCU_IRQ_STATUS_MASK
 #define MCU_IRQ_CLEAR_MASK      0x1ffe
 
-misc_device_t::misc_device_t(pcie_driver_t * pcie, processor_t* proc)
-  : proc(proc), buf_len(0x4000), dump_count(0), pcie_driver(pcie)
+misc_device_t::misc_device_t(pcie_driver_t * pcie, processor_t* proc,  simif_t *sim)
+  : proc(proc), buf_len(0x4000), dump_count(0), pcie_driver(pcie), sim(sim)
 {
     reg_base = new uint8_t[MISC_SIZE];
     memset(reg_base, 0, MISC_SIZE);
@@ -86,22 +87,21 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case (DUMP_BASE + DUMP_LEN_OFFSET):
         dump_len = *((uint32_t*)bytes);
         break;
-    /**
-     * 写 0x01,spike根据当前 coreid 向驱动端写 TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR，从而在驱动端产生中断
-     */
-    case NP_IRQ_OUT_CTRL:
+    case NP_IRQ_OUT_CTRL:       /* 写1向 a53/pcie发中断 */
         {
         uint32_t val = *(uint32_t *)bytes;
         memcpy((uint8_t *)reg_base+addr, bytes, len);
-        if ((0x01==val) && pcie_driver) {
-            uint32_t tdata = 0;
-            command_head_t cmd;
-            cmd.code = CODE_WRITE;
-            cmd.addr = 0xd3e10118;  /* TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR */
-            cmd.len = 4;
-            tdata |= (1<<proc->get_id());
-            memcpy(cmd.data, (uint8_t *)(&tdata), sizeof(tdata));
-            pcie_driver->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+
+        if (1 == val&0x01) {
+            val = 0;
+            sim->mmio_load(SYSIRQ_BASE+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
+            val |= (1<<proc->get_id());
+            sim->mmio_store(SYSIRQ_BASE+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
+
+            val = 0;
+            sim->mmio_load(SYSIRQ_BASE+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
+            val |= (1<<proc->get_id());
+            sim->mmio_store(SYSIRQ_BASE+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
         }
         }
         break;
