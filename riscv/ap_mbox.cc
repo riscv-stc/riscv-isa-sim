@@ -28,8 +28,6 @@ void ap_mbox_t::reset(void)
 
     val = ~((uint32_t)0);
     *(uint32_t*)(reg_base+MBOX_INT_MASK) = val;
-
-    printf("ap_mbox_t::reset \r\n");
 }
 
 void ap_mbox_t::irq_generate(bool dir)

@@ -36,8 +36,18 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
         return false;
     }
 
-    memcpy(bytes, (char *)reg_base + addr, len);
-    printf("sys_apb_decoder r 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+base);
+    switch(addr) {
+    case DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR:
+    case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
+    case DECODER_SOC_CHIP_VERSION_ADDR:
+    case DECODER_SOC_DIE_SEL_ADDR:
+        memcpy(bytes, (char *)reg_base + addr, len);
+        break;
+    default:
+        printf("sys_apb_decoder r 0x%x 0x%lx unsupport \r\n", *(uint32_t*)bytes, addr+base);
+        throw trap_load_access_fault(false, addr, 0, 0);
+        break;
+    }
 
     return true;
 }
@@ -51,8 +61,18 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         return false;
     }
 
-    memcpy((char *)reg_base + addr, bytes, len);
-    printf("sys_apb_decoder w 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+base);
+    switch(addr) {
+    case DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR:
+    case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
+    case DECODER_SOC_CHIP_VERSION_ADDR:
+    case DECODER_SOC_DIE_SEL_ADDR:
+        memcpy((char *)reg_base + addr, bytes, len);
+        break;
+    default:
+        printf("sys_apb_decoder w 0x%x 0x%lx unsupport \r\n", *(uint32_t*)bytes, addr+base);
+        throw trap_store_access_fault(false, addr, 0, 0);
+        break;
+    }
 
     return true;
 }
@@ -277,8 +297,8 @@ bool soc_apb_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         sys_irq->store(addr&(SYSIRQ_SIZE-1), len, bytes);
         break;
     default:
-        memcpy((char *)reg_base + addr, bytes, len);
-        printf("soc_apb_t unknow addr w 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+SOC_APB_BASE);
+        printf("soc_apb_t unsupport addr w 0x%x 0x%lx \r\n", *(uint32_t*)bytes, addr+SOC_APB_BASE);
+        throw trap_store_access_fault(false, addr, 0, 0);
     }
 
     return true;
