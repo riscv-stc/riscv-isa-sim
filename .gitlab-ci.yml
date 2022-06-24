@@ -20,6 +20,7 @@ build:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
+    - printenv
     - mkdir -p build_v2
     - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --with-varch=vlen:256,elen:32,slen:256 --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
