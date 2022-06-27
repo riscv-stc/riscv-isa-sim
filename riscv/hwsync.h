@@ -69,7 +69,7 @@ class hwsync_t: public abstract_device_t {
     void hwsync_timer_clear(int coreid);
     void hwsync_clear(void);
     uint32_t get_hwsync_timer_cnts(int coreid);
-    uint32_t get_hwsync() { return *sync_status;}
+    uint32_t get_hwsync() { return ~(*sync_status);}
     uint32_t get_hwsync_timer_thresh(void) {
       return (hs_sync_timer_num) ? *hs_sync_timer_num : 0xffffffff;
     };

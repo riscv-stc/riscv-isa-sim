@@ -36,6 +36,7 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
     memset(hs_sync_timer_cnt, 0, core_num);
     memset(sync_masks, MASK_INITIAL_VALUE, group_count * sizeof(uint32_t));
 
+    // initial sync_masks register visa console
     if (hwsync_masks[0] != 0)
     {
         uint8_t index = 0;
@@ -47,11 +48,14 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
         {
             while (p)
             {
-                sync_masks[index++] = std::stoul(p, nullptr, 16);
+                sync_masks[index] = std::stoul(p, nullptr, 16);
+                setBitValue(*group_valid,index,1);
+                index++;
                 p = std::strtok(NULL, delim);
                 if (index >= group_count)
                     break;
             }
+            
         }
         else
         {
