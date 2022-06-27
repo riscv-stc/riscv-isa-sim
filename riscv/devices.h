@@ -25,7 +25,19 @@
 #include "bankif.h"
 #include "iniparser.h"
 
-#define HWSYNC_START          (0xd3e80000)
+/* NPUV2 Hardware Synchronization Buffer (512KB)  begin at 0xd3e80000*/
+#define HWSYNC_START         (0xd3e80000)
+#define HWSYNC_SIZE          (0x00080000)
+
+#define GROUP_MASK_OFFSET    (0x00000000)
+#define GROUP_DONE_OFFSET    (0x00000044)
+#define GROUP_VALID_OFFSET   (0x00000048)
+#define GROUP_VALID_3_0      (0x00000100)
+#define GROUP_VALID_7_4      (0x00000200)
+#define GROUP_VALID_11_8     (0x00000300)
+#define GROUP_VALID_15_11    (0x00000400)
+#define SYNC_STATUS_OFFSET   (0x00000050)
+
 
 /* NPUV2 The lower 3GB region (0x00_0000_0000 ~ 0x00_BFFF_FFFF) is the remapping target region of DDR space */
 #define ddr_mem_start        (0x00000000)
