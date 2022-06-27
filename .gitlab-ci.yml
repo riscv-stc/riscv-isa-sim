@@ -44,9 +44,9 @@ test:
     - virtualenv -p python3 .env
     - source .env/bin/activate
     #- pip install tensorflow
-    - pip3 -r install requirements.txt
-    - pip3 install -U pip
-    - pip3 install --editable rvpvp
+    - pip -r install requirements.txt
+    - pip install -U pip
+    - pip install --editable rvpvp
     - rvpvp gen --basic --nproc `nproc`
     - rvpvp run --nproc `nproc`
 
