@@ -8,27 +8,40 @@
 #include "arith.h"
 
 // offset of dma registers
-#define DMA_CTLR_OFFSET 0X000
-#define DMA_CENB_OFFSET 0X004
-#define DMA_CDIS_OFFSET 0X008
+#define DMA_CTLR_OFFSET   0X000
+#define DMA_C0_ENB_OFFSET 0x004
+#define DMA_C1_ENB_OFFSET 0x008
 #define DMA_CPRI_OFFSET 0X00C
 #define DMA_CSTAT_OFFSET 0X010
 #define DMA_CISR_OFFSET 0X014
 #define DMA_CIER_OFFSET 0X018
-#define DMA_CABR_OFFSET 0X01C
+#define DMA_C0_CABR_OFFSET  0x01c
+#define DMA_C1_CABR_OFFSET  0x020  
 #define DMA_BUF_OFFSET 0X1000
-#define DMA_C0_CTLR_OFFSET 0X100
-#define DMA_C0_DSAR_OFFSET 0X104
+
+#define DMA_C0_CTLR_OFFSET  0X100
+#define DMA_C0_DSAR_OFFSET  0X104
+#define DMA_C0_DDAR_OFFSET  0x108
 #define DMA_C0_BKMR0_OFFSET 0X10C
 #define DMA_C0_BKMR1_OFFSET 0X110
-#define DMA_C0_LLPR_OFFSET 0X114
-#define DMA_C0_PCNT_OFFSET 0X118
-#define DMA_C1_CTLR_OFFSET 0X200
-#define DMA_C1_DSAR_OFFSET 0X204
+#define DMA_C0_BKMR2_OFFSET 0X114
+#define DMA_C0_BKMR3_OFFSET 0X118
+#define DMA_C0_BKMR4_OFFSET 0X11c
+#define DMA_C0_BKMR5_OFFSET 0X120
+#define DMA_C0_LLPR_OFFSET  0x124
+#define DMA_C0_PCNT_OFFSET  0x128
+
+#define DMA_C1_CTLR_OFFSET  0X200
+#define DMA_C1_DSAR_OFFSET  0X204
+#define DMA_C1_DDAR_OFFSET  0x208
 #define DMA_C1_BKMR0_OFFSET 0X20C
 #define DMA_C1_BKMR1_OFFSET 0X210
-#define DMA_C1_LLPR_OFFSET 0X214
-#define DMA_C1_PCNT_OFFSET 0X218
+#define DMA_C1_BKMR2_OFFSET 0X214
+#define DMA_C1_BKMR3_OFFSET 0X218
+#define DMA_C1_BKMR4_OFFSET 0X21c
+#define DMA_C1_BKMR5_OFFSET 0X220
+#define DMA_C1_LLPR_OFFSET  0x224
+#define DMA_C1_PCNT_OFFSET  0x228
 
 #define SYS_DMAX_C0_SMMU_OFFSET            0x2000
 #define SYS_DMAX_C1_SMMU_OFFSET            0x3000
@@ -72,6 +85,7 @@ sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, cons
     dma_channel_[i].llp = 0;
     dma_channel_[i].ddr_base[DDR_DIR_SRC] = 0;
     dma_channel_[i].ddr_base[DDR_DIR_DST] = 0;
+    dma_channel_[i].ddr_base[DDR_DIR_EA] = 0;
   }
 
   // create thread for each dma channel
@@ -106,6 +120,17 @@ sysdma_device_t::~sysdma_device_t()
  * @brief dma core function to transfer data between LLB and DDR
  */
 void sysdma_device_t::dma_core(int ch) {
+  int i = 0;
+  int j = 0;
+  int ele_size = 0;
+  uint32_t width = 0;
+  uint32_t high = 0;
+  uint32_t depth = 0;
+  uint32_t stride_s1 = 0;
+  uint32_t stride_s2 = 0;
+  uint32_t stride_d1 = 0;
+  uint32_t stride_d2 = 0;
+
   while (1) {
     std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
     while (!dma_channel_[ch].enabled)
@@ -126,39 +151,71 @@ void sysdma_device_t::dma_core(int ch) {
         dma_channel_[ch].llp = desc->llpr;
         continue;
       }
-
-      // for linear mode, row is 1, col is xfer len, stride is 0
-      // xfer_len 0 for 4M Bytes, width 0 for 4M Bytes, bkmr0.bits.height 0 for 65536 rows
-      unsigned int col = 0, width = 0;
-
-      if (desc->ctlr.bits.blk_en) {
-        width = desc->bkmr1.bits.width_high<<16 | desc->bkmr0.bits.width;
-        col = width ? width : 0x400000;
-      } else {
-        col = desc->ctlr.bits.xfer_len ? desc->ctlr.bits.xfer_len : 0x400000;
+      /* unsupport remote_desc */
+      if (1 == desc->ctlr.bits.remote_desc_en) {
+        std::cout << "sysdma: unsupport remote desc" << std::endl;
+        continue;
       }
 
-      unsigned int row =  desc->ctlr.bits.blk_en? (desc->bkmr0.bits.height ? desc->bkmr0.bits.height : 65536) : 1;
-      unsigned int stride =  desc->ctlr.bits.blk_en? desc->bkmr1.bits.stride : 0;
+      /* element size */
+      if (desc->ctlr.bits.src_data_type != desc->ctlr.bits.dst_data_type) {
+        throw std::runtime_error("sysdma: DST_DATA_TYPE must be the same as SRC_DATA_TYPE.");
+      }
+      switch(desc->ctlr.bits.src_data_type) {
+      case 0x00:
+      case 0x01:
+        ele_size = 2;
+        break;
+      case 0x02:
+        ele_size = 4;
+        break;
+      case 0x03:
+        ele_size = 1;
+        break;
+      default:
+        throw std::runtime_error("sysdma: unknow DATA_TYPE");
+      }
 
-      if(stride && stride < col)
-        throw std::runtime_error("stride is smaller than col");
+      /* 22'h0: 4M elements */
+      width = (desc->bkmr0.bits.width) ? desc->bkmr0.bits.width : 0x400000;
+
+      /* 16'h0: 65536 rows */
+      high = (desc->bkmr1.bits.high) ? desc->bkmr1.bits.high : 0x10000;
+
+      /* 16'h0: 65536 blocks */
+      depth = (desc->bkmr1.bits.depth) ? desc->bkmr1.bits.depth : 0x10000;
+
+      /* 24'h0: linear mode */
+      stride_s1 = (desc->bkmr2.bits.stride_s1) ? desc->bkmr2.bits.stride_s1 : width;
+      stride_d1 = (desc->bkmr4.bits.stride_d1) ? desc->bkmr4.bits.stride_d1 : width;
+      if ((stride_s1<width) || (stride_d1<width)) {
+        throw std::runtime_error("stride1 is smaller than width");
+      }
+
+      width *= ele_size;
+      stride_s1 *= ele_size;
+      stride_d1 *= ele_size;
+
+      /* 32'h0: linear mode */
+      stride_s2 = (desc->bkmr3.stride_s2) ? desc->bkmr3.stride_s2 : (stride_s1*high);
+      stride_d2 = (desc->bkmr5.stride_d2) ? desc->bkmr5.stride_d2 : (stride_d1*high);
+      if ((stride_s2<(stride_s1*high)) || (stride_d2<(stride_d1*high))) {
+        throw std::runtime_error("stride2 is smaller than stride1*high");
+      }
 
       char *dst = nullptr;
       char *src = nullptr;
 
       if (!((dst=bank->bank_addr_to_mem(desc->ddar)) || (dst=sim->addr_to_mem(desc->ddar)))) {
-        throw std::runtime_error("dma_core() addr error");
+        throw std::runtime_error("dma_core() ddar error");
       }
       if (!((src=bank->bank_addr_to_mem(desc->dsar)) || (src=sim->addr_to_mem(desc->dsar)))) {
-        throw std::runtime_error("dma_core() addr error");
+        throw std::runtime_error("dma_core() dsar error");
       }
 
-      if (stride == 0) {
-        memcpy(dst, src, col * row);
-      } else {
-        for (int i = 0; i < row; i++) {
-          memcpy(dst + i * col, src + i * stride, col);
+      for (i = 0 ; i < depth ; i++) {
+        for (j = 0 ; j < high ; j++) {
+          memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
         }
       }
 
@@ -177,6 +234,8 @@ void sysdma_device_t::dma_core(int ch) {
  * @brief device load func
  */
 bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
+  int ch = 0;
+
   if (((SYS_DMAX_DMMY_END)<addr) || ((SYS_DMAX_C1_ATU_END<addr) && (SYS_DMAX_DMMY_OFFSET>addr))) {
     std::cout << "sysdma: unsupported load register offset: " << addr
             << std::endl;
@@ -236,12 +295,16 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
       *((uint32_t*)bytes) = 0;
       return true;
 
-    case DMA_CABR_OFFSET:
-      *((uint32_t*)bytes) = (dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] >> 32) & 0xff;
-      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] >> 24) & 0xff00;
-      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] >> 16) & 0xff0000;
-      *((uint32_t*)bytes) |= (dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] >> 8) & 0xff000000;
-
+    case DMA_C0_CABR_OFFSET:
+    case DMA_C1_CABR_OFFSET:
+      if (DMA_C0_CABR_OFFSET == addr) {
+        ch = SYSDMA_CHAN0;
+      } else {
+        ch = SYSDMA_CHAN1;
+      }
+      *((uint32_t*)bytes) = (dma_channel_[ch].ddr_base[DDR_DIR_SRC] >> 32) & 0xff;
+      *((uint32_t*)bytes) |= (dma_channel_[ch].ddr_base[DDR_DIR_DST] >> 24) & 0xff00;
+      *((uint32_t*)bytes) |= (dma_channel_[ch].ddr_base[DDR_DIR_EA] >> 16) & 0xff0000;
       break;
 
     default:
@@ -280,34 +343,23 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
         case DMA_CTLR_OFFSET:
         if (val & 0x1) dma_enabled_ = true;
         break;
-
-        // dma channel enabled
-        case DMA_CENB_OFFSET: {
-        // start xfer in channnel 0
-        if (val & 0x1) {
+        case DMA_C0_ENB_OFFSET:
+        case DMA_C1_ENB_OFFSET:
+          if (DMA_C0_ENB_OFFSET == addr) {
             ch = 0;
-            std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
-            if (lock.try_lock()) {
-            dma_channel_[ch].enabled = true;
-            dma_channel_[ch].busy = true;
-            thread_cond_[ch].notify_all();
-            } else
-            std::cout << "sysdma: enable chanel 0 in working state" << std::endl;
-        }
-
-        // start xfer in channel 1
-        if (val & 0x2) {
+          } else {
             ch = 1;
+          }
+          if (val & 0x01) {   /* start xfer in channnel 0 */
             std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
             if (lock.try_lock()) {
             dma_channel_[ch].enabled = true;
             dma_channel_[ch].busy = true;
             thread_cond_[ch].notify_all();
             } else
-            std::cout << "sysdma: enable chanel 1 in working state" << std::endl;
-        }
-        break;
-        }
+            std::cout << "sysdma: enable chanel " << ch << " in working state" << std::endl;
+          }
+          break;
 
         // DMA Channel Interrupt Enable Register
         case DMA_CIER_OFFSET:
@@ -329,14 +381,17 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
             dma_channel_[ch].xfer_complete = false;
         }
         break;
-
-        case DMA_CABR_OFFSET:
-        // don't set ddr base address, since local address is enough
-        dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
-        dma_channel_[SYSDMA_CHAN0].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
-        dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff0000) << 16;
-        dma_channel_[SYSDMA_CHAN1].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff000000) << 8;
-        break;
+        case DMA_C0_CABR_OFFSET:
+        case DMA_C1_CABR_OFFSET:
+          if (DMA_C0_CABR_OFFSET == addr) {
+            ch = SYSDMA_CHAN0;
+          } else {
+            ch = SYSDMA_CHAN1;
+          }
+          dma_channel_[ch].ddr_base[DDR_DIR_SRC] = (uint64_t)(val&0xff) << 32;
+          dma_channel_[ch].ddr_base[DDR_DIR_DST] = (uint64_t)(val&0xff00) << 24;
+          dma_channel_[ch].ddr_base[DDR_DIR_EA] = (uint64_t)(val&0xff0000) << 16;
+          break;
 
         // DMA Channel x Control Register
         case DMA_C1_CTLR_OFFSET:
