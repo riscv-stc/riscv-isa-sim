@@ -70,7 +70,7 @@ class trigger_matched_t
 class mmu_t
 {
 public:
-  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *np_atu);
+  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *np_atu, atu_t *mte_atu);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -539,6 +539,7 @@ private:
   bankif_t* bank;
   processor_t* proc;
   atu_t *np_atu = nullptr;
+  atu_t *mte_atu = nullptr;
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;

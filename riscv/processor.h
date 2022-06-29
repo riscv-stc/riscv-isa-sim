@@ -631,6 +631,7 @@ private:
   pcie_driver_t *pcie_driver = nullptr;
   bus_t npc_bus;
   atu_t *np_atu = nullptr;
+  atu_t *mte_atu = nullptr;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;

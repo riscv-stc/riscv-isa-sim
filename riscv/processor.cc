@@ -51,11 +51,18 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     npc_bus.add_device(MBOX_START, mbox);
 
     /* np_atu */
-    np_atu = new atu_t(atuini, get_id());
+    np_atu = new atu_t(atuini, get_id(), NP_ATU);
+    np_atu->set_atu_size(NP_IOV_ATU_SIZE);
     npc_bus.add_device(NP_IOV_ATU_START, np_atu);
+
+    /* mte_atu */
+    mte_atu = new atu_t(atuini, get_id(), MTE_ATU);
+    mte_atu->set_atu_size(MTE_IOV_ATU_SIZE);
+    npc_bus.add_device(MTE_IOV_ATU_START, mte_atu);
+
     add_mbox(mbox);
 
-  mmu = new mmu_t(sim, bank, this, np_atu);
+  mmu = new mmu_t(sim, bank, this, np_atu, mte_atu);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -127,6 +134,7 @@ processor_t::~processor_t()
   delete mbox;
   delete misc_dev;
   delete np_atu;
+  delete mte_atu;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -560,6 +568,7 @@ void processor_t::reset()
     ext->reset(); // reset the extension
 
   np_atu->reset();
+  mte_atu->reset();
 
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception

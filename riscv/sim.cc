@@ -149,7 +149,7 @@ die_id(die_id),
     }
 
     debug_module.add_device(&glb_bus);
-    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL, nullptr);
+    debug_mmu = new mmu_t(this, get_bank(get_id_first_bank()), NULL, nullptr, nullptr);
 
     for (auto& x : mems)
         glb_bus.add_device(x.first, x.second);

@@ -6,8 +6,8 @@
 #include "bankif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *np_atu)
- : sim(sim), bank(bank), proc(proc), np_atu(np_atu),
+mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *np_atu, atu_t *mte_atu)
+ : sim(sim), bank(bank), proc(proc), np_atu(np_atu), mte_atu(mte_atu),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   target_big_endian(false),
 #endif
@@ -308,7 +308,7 @@ char * mmu_t::mte_addr_to_mem_llb(reg_t paddr)
     if (proc->get_xlen() == 32) {
         paddr &= 0xffffffff;
     }
-#if 0
+
     if(mte_atu && mte_atu->is_ipa_enabled()) {
         if (!mte_atu->pmp_ok(paddr, len)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
@@ -318,7 +318,6 @@ char * mmu_t::mte_addr_to_mem_llb(reg_t paddr)
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
     }
-#endif
 
     host_addr = sim->addr_to_mem(paddr);
 

@@ -43,10 +43,16 @@ struct ipa_at_t {
     reg_t ipa_end;          /* 不包含该地址 */
 };
 
+enum atu_type_t {
+    NP_ATU,
+    SYSDMA_ATU,
+    MTE_ATU
+};
+
 class atu_t : public abstract_device_t
 {
 public:
-    atu_t(const char *atuini, int procid);      /* npc */
+    atu_t(const char *atuini, int procid, enum atu_type_t type);      /* npc */
     atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base);    /* sysdma */
     ~atu_t();
 
@@ -58,6 +64,7 @@ public:
     size_t size(void) {return len;};
     int reset(void);
     bool is_ipa_enabled(void) const {return at_enabled;};
+    void set_atu_size(uint32_t size) {len = size;}   /* 修改atu 寄存器空间的size */
 
 private:
     int procid;
@@ -67,8 +74,9 @@ private:
     int ipa_entry_max = IPA_ENTRY_TOTAL;
     uint8_t *at_reg_base = nullptr;
     size_t len = 4096;
+    enum atu_type_t atu_type;
+
     /* sysdma atu */
-    bool is_sysdma_atu;
     int dma_id;
     int ch_id;
 

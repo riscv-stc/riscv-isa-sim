@@ -9,8 +9,17 @@ using namespace std;
 #define IPA_DEBUG
 
 /* npc atu， 每个proc包含一个,根据 procid 解析 ini 配置 */
-atu_t::atu_t(const char *atuini,int procid) : procid(procid), is_sysdma_atu(false)
+atu_t::atu_t(const char *atuini,int procid, enum atu_type_t type) : procid(procid)
 {
+    switch(type) {
+    case NP_ATU:
+    case MTE_ATU:
+        atu_type = type;
+        break;
+    case SYSDMA_ATU:
+    default:
+        throw std::runtime_error("error atu type");
+    }
     at_reg_base = (uint8_t *)new uint8_t[len];
     memset(at_reg_base, 0, len);
     
@@ -25,9 +34,10 @@ atu_t::atu_t(const char *atuini,int procid) : procid(procid), is_sysdma_atu(fals
  * 参数: dma_id 0-7，4个bank共8个sysdma控制器
  * 参数: ch_id 0-1, 每个控制器2个channel
  */
-atu_t::atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base) : at_reg_base((uint8_t *)reg_base),
-        is_sysdma_atu(true), dma_id(dma_id), ch_id(ch_id)
+atu_t::atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base) : 
+        at_reg_base((uint8_t *)reg_base), dma_id(dma_id), ch_id(ch_id)
 {
+    atu_type = SYSDMA_ATU;
     memset(at_reg_base, 0, len);
     
     if (nullptr != atuini) {
@@ -40,8 +50,17 @@ atu_t::~atu_t()
     if (atini)
         iniparser_freedict(atini);
 
-    if ((!is_sysdma_atu) && at_reg_base)
-        delete at_reg_base;
+    switch(atu_type) {
+    case NP_ATU:
+    case MTE_ATU:
+        if (at_reg_base) {
+            delete at_reg_base;
+        }
+        break;
+    case SYSDMA_ATU:
+    default:
+        break;
+    }
 }
 
 /* 启用了ipa但地址不在映射范围内则报trap(0xc0000000的8MB空间除外) */
@@ -96,7 +115,7 @@ bool atu_t::load(reg_t addr, size_t len, uint8_t* bytes)
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=size())) {
         return false;
     }
     memcpy(bytes, (char *)at_reg_base + addr, len);
@@ -108,7 +127,7 @@ bool atu_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     if ((nullptr==at_reg_base) || (nullptr==bytes)) {
         return false;
     }
-    if (/* (addr<0) ||  */(addr+len>=NP_IOV_ATU_SIZE)) {
+    if (/* (addr<0) ||  */(addr+len>=size())) {
         return false;
     }
     memcpy((char *)at_reg_base + addr, bytes, len);
@@ -157,7 +176,17 @@ int atu_t::at_update(dictionary *ini, int procid)
     if (nullptr == ini)
         return -1;
 
-    section_name.assign("ipa-trans-core");
+    switch(atu_type) {
+    case NP_ATU:
+        section_name.assign("ipa-trans-core");
+        break;
+    case MTE_ATU:
+        section_name.assign("ipa-trans-mte-core");
+        break;
+    case SYSDMA_ATU:
+    default:
+        throw std::runtime_error("at_update() atu type error");
+    }
     section_name.append(to_string(procid));
 
     nkeys = iniparser_getsecnkeys(ini, section_name.c_str());
@@ -288,10 +317,16 @@ int atu_t::at_update(dictionary *ini, int dma_id, int ch_id)
 int atu_t::reset(void)
 {
     if (atini) {
-        if (is_sysdma_atu) {
-            at_update(atini, dma_id, ch_id);
-        } else {
+        switch(atu_type) {
+        case NP_ATU:
+        case MTE_ATU:
             at_update(atini,procid);
+            break;
+        case SYSDMA_ATU:
+            at_update(atini, dma_id, ch_id);
+            break;
+        default:
+            throw std::runtime_error("reset() atu type error");
         }
     } else {
         at_update(at_reg_base);
