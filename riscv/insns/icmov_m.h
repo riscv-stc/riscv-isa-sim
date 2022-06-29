@@ -46,8 +46,8 @@ uint16_t row = MTE_SHAPE_ROW;
 uint32_t copy_stride_rs1 = (MTE_STRIDE_RS1 ? MTE_STRIDE_RS1 : col) * e_size;
 uint32_t copy_stride_rd = (MTE_STRIDE_RD ? MTE_STRIDE_RD : col) * e_size;
 
-auto src = (uint8_t*)MMU.mte_addr_to_mem_l1(RS1);
-auto dst = (uint8_t*)MMU.mte_addr_to_mem_l1(zext_xlen(RD),dst_coreId);
+auto src = (uint8_t*)MMU.mte_addr_to_mem(RS1);
+auto dst = (uint8_t*)MMU.mte_addr_to_mem(zext_xlen(RD),dst_coreId);
 assert(dst != nullptr && src != nullptr);
 
 if ((MTE_STRIDE_RD == 0) && (MTE_STRIDE_RS1 == 0)) {

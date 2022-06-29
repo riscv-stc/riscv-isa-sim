@@ -486,9 +486,9 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   size_t npc_addr_to_mem(reg_t paddr);
 
-  char * mte_addr_to_mem_l1(reg_t paddr, int procid);
-  char * mte_addr_to_mem_l1(reg_t paddr);
-  char * mte_addr_to_mem_llb(reg_t paddr);
+  char * mte_addr_to_mem(reg_t paddr, int procid);
+  char * mte_addr_to_mem(reg_t paddr);
+  reg_t mte_atu_trans(reg_t ipa_addr);
 
   void register_memtracer(memtracer_t*);
 

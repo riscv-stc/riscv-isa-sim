@@ -270,7 +270,7 @@ size_t mmu_t::npc_addr_to_mem(reg_t paddr)
  * 1) 访问范围, l1
  * 2) l1访存会跨核跨bank
 */
-char * mmu_t::mte_addr_to_mem_l1(reg_t paddr, int procid)
+char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
 {
     int len = 1;
     char *host_addr = nullptr;
@@ -281,11 +281,16 @@ char * mmu_t::mte_addr_to_mem_l1(reg_t paddr, int procid)
         paddr &= 0xffffffff;
     }
 
-    host_addr = sim->npc_addr_to_mem(paddr, bankid, idxinbank);
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = sim->npc_addr_to_mem(paddr, bankid, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
     return host_addr;
 }
 
-char * mmu_t::mte_addr_to_mem_l1(reg_t paddr)
+char * mmu_t::mte_addr_to_mem(reg_t paddr)
 {
     int len = 1;
     char *host_addr = nullptr;
@@ -295,36 +300,33 @@ char * mmu_t::mte_addr_to_mem_l1(reg_t paddr)
         paddr &= 0xffffffff;
     }
 
-    host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
     return host_addr;
 }
 
-char * mmu_t::mte_addr_to_mem_llb(reg_t paddr)
+reg_t mmu_t::mte_atu_trans(reg_t ipa_addr)
 {
-    int len = 1;
-    char *host_addr = nullptr;
-    int idxinbank = proc ? proc->get_idxinbank() : 0;
+  int len = 1;
+  reg_t paddr = 0;
+  
+  if(mte_atu && mte_atu->is_ipa_enabled()) {
+      if (!mte_atu->pmp_ok(ipa_addr, len)) {
+          throw_access_exception((proc) ? proc->state.v : false, ipa_addr, LOAD);
+      }
+      paddr = mte_atu->translate(ipa_addr, len);
+      if (IPA_INVALID_ADDR == paddr) {
+          throw_access_exception((proc) ? proc->state.v : false, ipa_addr, LOAD);
+      }
+  } else {
+    paddr = ipa_addr;
+  }
 
-    if (proc->get_xlen() == 32) {
-        paddr &= 0xffffffff;
-    }
-
-    if(mte_atu && mte_atu->is_ipa_enabled()) {
-        if (!mte_atu->pmp_ok(paddr, len)) {
-            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
-        }
-        paddr = mte_atu->translate(paddr, len);
-        if (IPA_INVALID_ADDR == paddr) {
-            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
-        }
-    }
-
-    host_addr = sim->addr_to_mem(paddr);
-
-    // if (nullptr==host_addr) {
-    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
-    // }
-    return host_addr;
+  return paddr;
 }
 
 /* 执行dmae指令产生的mmu问题和ipa at问题报中断，而不是trap */
