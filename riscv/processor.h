@@ -190,6 +190,8 @@ struct state_t
   reg_t mcounterwen;
   reg_t mhpmcounter[32];
   reg_t mhpmevent[32];
+  reg_t mdcause;
+  reg_t mmisc_ctl;
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;

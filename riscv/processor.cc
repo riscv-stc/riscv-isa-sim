@@ -1390,6 +1390,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MCOUNTERWEN:
       state.mcounterwen = val;
       break;
+    case CSR_MDCAUSE:
+      state.mdcause = val;
+      break;
+    case CSR_MMISC_CTL:
+      state.mmisc_ctl = val;
+      break;
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:
@@ -1810,6 +1816,8 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_SCOUNTEREN:
     case CSR_MCOUNTEREN:
     case CSR_MCOUNTERWEN:
+    case CSR_MDCAUSE:
+    case CSR_MMISC_CTL:
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:
@@ -2162,6 +2170,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('U'))
         break;
       ret(state.mcounterwen);
+    case CSR_MDCAUSE:
+      ret(state.mdcause);
+    case CSR_MMISC_CTL:
+      ret(state.mmisc_ctl);
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:
