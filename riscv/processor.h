@@ -624,6 +624,7 @@ public:
   bool in_npc_mem(reg_t addr, local_device_type type);
   bool in_npc_mmio(reg_t addr);
 
+  idtu_t *idtu = nullptr;
 private:
   simif_t* sim;
   bankif_t* bank;

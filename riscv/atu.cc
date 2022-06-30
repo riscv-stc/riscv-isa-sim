@@ -376,7 +376,7 @@ int atu_t::reg_at_enable(bool enabled, uint32_t *at_base)
     if (nullptr == at_base)
         return -1;
     
-    *(uint32_t *)((uint8_t *)at_base + AT_CTL_REG_OFFSET) = (enabled) ? 1 : 0;
+    *(uint32_t *)((uint8_t *)at_base + AT_CTL_REG_OFFSET) = (enabled) ? (1<<VFCFG_BIT_AT_EN) : 0;
 }
 
 /* 调试接口,编辑寄存器区域 写 ENTRY_IPA_EN_ADDR. (at_update()后才能生效) */
@@ -390,4 +390,80 @@ int atu_t::reg_at_entry_enable(int entry_id, bool enabled, uint32_t *at_base)
         *(uint32_t *)((uint8_t *)at_base + ENTRY_IPA_EN_OFFSET) |= (1<<entry_id);
     else
         *(uint32_t *)((uint8_t *)at_base + ENTRY_IPA_EN_OFFSET) &= ~(1<<entry_id);
+}
+
+idtu_t::idtu_t(void)
+{
+    memset(reg_base, 0, sizeof(reg_base));
+}
+
+idtu_t::~idtu_t(void)
+{
+    ;
+}
+
+int idtu_t::reset(void)
+{
+    memset(reg_base, 0, sizeof(reg_base));
+}
+
+bool idtu_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
+        return false;
+    }
+
+    memcpy(bytes, (char *)reg_base + addr, len);
+    return true;
+}
+
+bool idtu_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
+        return false;
+    }
+
+    switch(addr) {
+    case IDTU_VF_CTRL:
+        memcpy((char *)reg_base + addr, bytes, len);
+        break;
+    default:
+        memcpy((char *)reg_base + addr, bytes, len);
+        break;
+    }
+    return true;
+}
+
+uint32_t idtu_t::idtu_coreid_trans(uint32_t logi_core_id)
+{
+    uint32_t cnt = 0;
+    uint32_t base = 0;
+    uint32_t phy_core_id = 0;
+
+    if (IS_IDTU_ENABLE(reg_base)) {
+        cnt = (*(uint32_t*)(reg_base+IDTU_VF_CTRL) & VFCFG_VF_NR_CLUSTERS_MASK) >> VFCFG_BIT_NR_CLUSTERS;
+        base = (*(uint32_t*)(reg_base+IDTU_VF_CTRL) & VFCFG_VF_PHY_CID_BASE_MASK) >> VFCFG_BIT_PHY_CID_BASE;
+
+        phy_core_id = logi_core_id + base * 8;
+    } else {
+        phy_core_id = logi_core_id;
+    }
+    return phy_core_id;
+}
+
+uint32_t idtu_t::idtu_coremap_trans(uint32_t logi_coremap)
+{
+    uint32_t cnt = 0;
+    uint32_t base = 0;
+    uint32_t phy_coremap = 0;
+
+    if (IS_IDTU_ENABLE(reg_base)) {
+        cnt = (*(uint32_t*)(reg_base+IDTU_VF_CTRL) & VFCFG_VF_NR_CLUSTERS_MASK) >> VFCFG_BIT_NR_CLUSTERS;
+        base = (*(uint32_t*)(reg_base+IDTU_VF_CTRL) & VFCFG_VF_PHY_CID_BASE_MASK) >> VFCFG_BIT_PHY_CID_BASE;
+
+        phy_coremap = logi_coremap << (base * 8);
+    } else {
+        phy_coremap = logi_coremap;
+    }
+    return phy_coremap;
 }

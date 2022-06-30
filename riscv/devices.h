@@ -112,6 +112,9 @@
 #define MTE_IOV_ATU_START   (0xc07f8000)    /* mte address trans unit */
 #define MTE_IOV_ATU_SIZE    (0xc00)
 
+#define MTE_IOV_IDTU_START  (0xc07f8c00)
+#define MTE_IOV_IDTU_SIZE   (0x400)
+
 #define NPC_LOCAL_ADDR_START (l1_buffer_start)
 #define NPC_LOCAL_REGIN_SIZE (0x800000)
 

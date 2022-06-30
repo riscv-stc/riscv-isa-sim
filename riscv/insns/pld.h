@@ -8,6 +8,7 @@ else
     e_size = 1;
 
 WRITE_RS1(MMU.mte_atu_trans(RS1));
+WRITE_RS2(p->idtu->idtu_coremap_trans((uint32_t)RS2));
 check_traps_pld(e_size);
 check_tcp_pld_invalid_coremap(p->get_id(), RS2);
 
