@@ -14,8 +14,17 @@
 #define MASK_INITIAL_VALUE (~0)
 
 #define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))
-#define clearBitMap(var, fromBit, toBit) (var) = ((var) & ~(((0x1 << ((toBit) + 1 - (fromBit))) - 1) << (fromBit)))
 #define getBitValue(var, idx) ((var >> (idx)) & 1)
+
+template<typename T>
+void free_set(T* point)
+{
+  if(point != nullptr)
+  {
+    free(point);
+    point=nullptr;
+  }
+}
 
 class hwsync_t : public abstract_device_t
 {
@@ -44,7 +53,6 @@ private:
 
   std::mutex mutex_sync;
   std::mutex mutex_pld;
-  std::condition_variable_any cond_sync;
 
   std::condition_variable_any cond_pld;
 

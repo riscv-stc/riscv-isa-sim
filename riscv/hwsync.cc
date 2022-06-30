@@ -70,11 +70,19 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
 hwsync_t::~hwsync_t()
 {
     *sync_status = 0;
-    cond_sync.notify_all();
     for (int i = 0; i < group_count; i++)
     {
         group_locks[i].notify_all();
     }
+    /*TODO: when free those variables,there will be a error that
+    the process is still load the variables.
+    This problem should be solved.
+    */
+    // free_set(hwsync_base_addr);
+    // free_set(group_locks);
+    // free_set(req_pld);
+    // free_set(hs_sync_timer_num);
+    // free_set(hs_sync_timer_cnt);
 }
 
 bool hwsync_t::enter(unsigned core_id)
@@ -225,7 +233,6 @@ void hwsync_t::hwsync_clear(void)
     int i = 0;
 
     *sync_status = 0;
-    cond_sync.notify_all();
 
     for (int i = 0; i < group_count; i++)
     {
