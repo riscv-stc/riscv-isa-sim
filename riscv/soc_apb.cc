@@ -77,6 +77,24 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     return true;
 }
 
+bool sys_apb_decoder_t::in_state_reset(size_t relative_bankid,size_t idxinbank)
+{
+    uint16_t npc_state = 0;
+    load(DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR,2,(uint8_t*)&npc_state);
+    uint8_t bank_npc_state= ((uint8_t*)(&npc_state))[relative_bankid];
+    bool res = getBitValue(bank_npc_state,idxinbank);
+    return res;
+}
+
+bool sys_apb_decoder_t::in_state_disarm_reset(size_t relative_bankid,size_t idxinbank)
+{
+    uint16_t npc_state = 0;
+    load(DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR,2,(uint8_t*)&npc_state);
+    uint8_t bank_npc_state= ((uint8_t*)(&npc_state))[relative_bankid];
+    bool res = getBitValue(bank_npc_state,idxinbank);
+    return res;
+}
+
 sys_irq_t::sys_irq_t(simif_t *sim, apifc_t *apifc, uint8_t *reg_ptr) :
         sim(sim), apifc(apifc), reg_base(reg_ptr)
 {
@@ -302,4 +320,24 @@ bool soc_apb_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     }
 
     return true;
+}
+
+void soc_apb_t::disarm_sys_apb(processor_t* processor)
+{
+    sys_apb_decoder_t * current_sys_apb;
+    int bankid = processor->get_bank_id();
+    int idxinbank = processor->get_idxinbank();
+    if(bankid / 2 == 0)
+        current_sys_apb = sys_apb_decoder_west;
+    else
+        current_sys_apb = sys_apb_decoder_east;
+    int relative_bankid = bankid % 2;
+    uint16_t npc_state = 0;
+    current_sys_apb->load(DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR,2,(uint8_t*)&npc_state);
+    setBitValue(npc_state,relative_bankid * 8 + idxinbank,0);
+    current_sys_apb->store(DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR,2,(uint8_t*)&npc_state);
+
+    current_sys_apb->load(DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR,2,(uint8_t*)&npc_state);
+    setBitValue(npc_state,relative_bankid * 8 + idxinbank,0);
+    current_sys_apb->store(DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR,2,(uint8_t*)&npc_state);
 }

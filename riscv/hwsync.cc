@@ -18,7 +18,7 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
     hwsync_base_addr = new uint8_t[HWSYNC_SIZE];
     memset(hwsync_base_addr, 0, HWSYNC_SIZE);
     sync_masks = (uint32_t *)(hwsync_base_addr + GROUP_MASK_OFFSET);
-    group_done = (uint32_t *)(hwsync_base_addr + GROUP_DONE_OFFSET);
+    //group_done = (uint32_t *)(hwsync_base_addr + GROUP_DONE_OFFSET);
     group_valid = (uint32_t *)(hwsync_base_addr + GROUP_VALID_OFFSET);
     sync_status = (uint32_t *)(hwsync_base_addr + SYNC_STATUS_OFFSET);
     group_locks = new std::condition_variable_any[group_count];
@@ -49,13 +49,12 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
             while (p)
             {
                 sync_masks[index] = std::stoul(p, nullptr, 16);
-                setBitValue(*group_valid,index,1);
+                setBitValue(*group_valid, index, 1);
                 index++;
                 p = std::strtok(NULL, delim);
                 if (index >= group_count)
                     break;
             }
-            
         }
         else
         {
@@ -72,6 +71,10 @@ hwsync_t::~hwsync_t()
 {
     *sync_status = 0;
     cond_sync.notify_all();
+    for (int i = 0; i < group_count; i++)
+    {
+        group_locks[i].notify_all();
+    }
 }
 
 bool hwsync_t::enter(unsigned core_id)
@@ -224,7 +227,7 @@ void hwsync_t::hwsync_clear(void)
     *sync_status = 0;
     cond_sync.notify_all();
 
-    for(int i = 0; i < group_count; i++)
+    for (int i = 0; i < group_count; i++)
     {
         group_locks[i].notify_all();
     }
@@ -237,7 +240,7 @@ void hwsync_t::hwsync_clear(void)
 
 bool hwsync_t::load(reg_t addr, size_t len, uint8_t *bytes)
 {
-    if (unlikely(!bytes || addr + len >= HWSYNC_SIZE))
+    if (unlikely(!bytes || addr + len >= size()))
         return false;
 
     uint8_t *now_addr = (uint8_t *)(hwsync_base_addr + addr);
@@ -258,7 +261,7 @@ bool hwsync_t::load(reg_t addr, size_t len, uint8_t *bytes)
 
 bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
 {
-    if (unlikely(!bytes || addr + len >= HWSYNC_SIZE))
+    if (unlikely(!bytes || addr + len >= size()))
         return false;
 
     uint8_t *now_addr = (uint8_t *)(hwsync_base_addr + addr);

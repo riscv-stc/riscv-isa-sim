@@ -4,6 +4,7 @@
 #include "hwsync.h"
 #include "mmu.h"
 #include "disasm.h"
+#include "soc_apb.h"
 #include <cassert>
 
 #ifdef RISCV_ENABLE_COMMITLOG
@@ -713,6 +714,13 @@ bool processor_t::slow_path()
 // fetch/decode/execute loop
 void processor_t::step(size_t n)
 {
+  if(this->is_in_disarm_reset_state(this->soc_apb))
+  {
+    soc_apb->disarm_sys_apb(this);
+    this->reset();
+    return;
+  }
+  
   if (!state.debug_mode) {
     if (halt_request == HR_REGULAR) {
       enter_debug_mode(DCSR_CAUSE_DEBUGINT);
@@ -728,7 +736,7 @@ void processor_t::step(size_t n)
     }
   }
 
-  while (n > 0) {
+  while (n > 0 && !this->is_in_reset_state(this->soc_apb)) {
     size_t instret = 0;
     reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;
     mmu_t* _mmu = mmu;
