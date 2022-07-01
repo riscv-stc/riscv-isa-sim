@@ -9,7 +9,7 @@ else
 
 check_traps_icmov_m(e_size);
 
-auto dst_coreId = DST_CORE_ID;
+auto dst_coreId = p->idtu->idtu_coreid_trans(DST_CORE_ID);
 
 //src shape
 // #define ICMOV_OUTPUT_MSG

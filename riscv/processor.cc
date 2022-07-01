@@ -60,6 +60,10 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     mte_atu->set_atu_size(MTE_IOV_ATU_SIZE);
     npc_bus.add_device(MTE_IOV_ATU_START, mte_atu);
 
+    /* mte idtu */
+    idtu = new idtu_t();
+    npc_bus.add_device(MTE_IOV_IDTU_START, idtu);
+
     add_mbox(mbox);
 
   mmu = new mmu_t(sim, bank, this, np_atu, mte_atu);
@@ -135,6 +139,7 @@ processor_t::~processor_t()
   delete misc_dev;
   delete np_atu;
   delete mte_atu;
+  delete idtu;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -569,6 +574,7 @@ void processor_t::reset()
 
   np_atu->reset();
   mte_atu->reset();
+  idtu->reset();
 
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
@@ -708,6 +714,12 @@ bool processor_t::in_npc_mmio(reg_t addr) {
     }
 
     if (auto mem = dynamic_cast<atu_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<idtu_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }
