@@ -41,6 +41,9 @@
 #define DECODER_SOC_CHIP_VERSION_ADDR 	      (0x1004)
 #define DECODER_SOC_DIE_SEL_ADDR              (0x19b4)
 
+#define getBitValue(var, idx) ((var >> (idx)) & 1)
+#define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))
+
 class apifc_t;
 
 class sys_apb_decoder_t : public abstract_device_t {
@@ -50,7 +53,9 @@ public:
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return SYS_APB_DECODER_SIZE; }
-
+    bool in_state_reset(size_t relative_bankid,size_t idxinbank);
+    bool in_state_disarm_reset(size_t relative_bankid,size_t idxinbank);
+    
 private:
     uint64_t base = 0x00;
     uint8_t *reg_base = nullptr;
@@ -80,7 +85,9 @@ public:
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return sizeof(reg_base); }
-
+    sys_apb_decoder_t * get_sys_apb_decoder_west(){return sys_apb_decoder_west;}
+    sys_apb_decoder_t * get_sys_apb_decoder_east(){return sys_apb_decoder_east;}
+    void disarm_sys_apb(processor_t* processor);
     sys_irq_t *sys_irq = nullptr;
 private:
     simif_t *sim = nullptr;

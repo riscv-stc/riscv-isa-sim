@@ -17,6 +17,7 @@
 #include "debug_rom_defines.h"
 #include "atu.h"
 #include "mbox_device.h"
+#include "soc_apb.h"
 
 class processor_t;
 class mmu_t;
@@ -613,8 +614,14 @@ public:
   void set_pmp_num(reg_t pmp_num);
   void set_pmp_granularity(reg_t pmp_granularity);
   void set_mmu_capability(int cap);
+  void set_soc_apb(soc_apb_t* soc_apb){this->soc_apb = soc_apb;}
 
   void set_pma_num(reg_t pma_num);
+
+  void set_reset_state(soc_apb_t* soc_apb);
+  void set_disarm_reset_state(soc_apb_t* soc_apb);
+  bool is_in_reset_state(soc_apb_t* soc_apb);
+  bool is_in_disarm_reset_state(soc_apb_t* soc_apb);
 
   const char* get_symbol(uint64_t addr);
 
@@ -629,6 +636,7 @@ private:
   bankif_t* bank;
   hwsync_t *hwsync;
   pcie_driver_t *pcie_driver = nullptr;
+  soc_apb_t *soc_apb = nullptr;
   bus_t npc_bus;
   atu_t *np_atu = nullptr;
   atu_t *mte_atu = nullptr;
@@ -665,6 +673,9 @@ private:
   std::condition_variable async_cond;
   bool async_running;
   bool exit_request;
+
+  bool in_reset_state;
+  bool in_disarm_reset_state;
 
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];

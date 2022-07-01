@@ -647,8 +647,9 @@ void sim_t::step(size_t n)
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
-    get_core_by_idxinsim(current_proc)->step(steps);     /* procs[current_proc] */
-
+    processor_t *current_processor = get_core_by_idxinsim(current_proc);     /* procs[current_proc] */
+    current_processor->set_soc_apb(soc_apb);
+    current_processor->step(steps);
     current_step += steps;
     if (current_step == INTERLEAVE)
     {
