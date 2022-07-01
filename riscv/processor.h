@@ -190,6 +190,8 @@ struct state_t
   reg_t mcounterwen;
   reg_t mhpmcounter[32];
   reg_t mhpmevent[32];
+  reg_t mdcause;
+  reg_t mmisc_ctl;
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;
@@ -628,7 +630,8 @@ private:
   hwsync_t *hwsync;
   pcie_driver_t *pcie_driver = nullptr;
   bus_t npc_bus;
-  atu_t *atu = nullptr;
+  atu_t *np_atu = nullptr;
+  atu_t *mte_atu = nullptr;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;

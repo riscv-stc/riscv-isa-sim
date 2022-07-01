@@ -12,6 +12,8 @@ MTE_DTYPE_DECODING_TO_TYPE({
   uint8_t esize = 2;
 
   esize = sizeof(dtype_lut);
+
+  WRITE_RS1(MMU.mte_atu_trans(RS1));
   check_traps_mov_l1_llb(dtype_lut);
 
   uint8_t* src = (uint8_t*)MMU.mte_addr_to_mem(zext_xlen(RS1));

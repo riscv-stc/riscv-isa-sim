@@ -440,7 +440,7 @@ smmu_t::~smmu_t()
 }
 
 smmu_t::smmu_t(simif_t *sim, bankif_t *bank, uint8_t *sysdma_smmu_base) : sim(sim),
-        bank(bank),reg_base(sysdma_smmu_base), mmu_t(sim, bank, nullptr, nullptr)
+        bank(bank),reg_base(sysdma_smmu_base), mmu_t(sim, bank, nullptr, nullptr, nullptr)
 {
     *(uint64_t*)((uint8_t*)reg_base+SMMU_TLB_FL_REG) = 1ull<<48;
 }

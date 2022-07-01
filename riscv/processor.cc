@@ -50,12 +50,19 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     np_mbox_t *mbox = new np_mbox_t(sim, misc_dev);
     npc_bus.add_device(MBOX_START, mbox);
 
-    /* atu */
-    atu = new atu_t(atuini, get_id());
-    npc_bus.add_device(NP_IOV_ATU_START, atu);
+    /* np_atu */
+    np_atu = new atu_t(atuini, get_id(), NP_ATU);
+    np_atu->set_atu_size(NP_IOV_ATU_SIZE);
+    npc_bus.add_device(NP_IOV_ATU_START, np_atu);
+
+    /* mte_atu */
+    mte_atu = new atu_t(atuini, get_id(), MTE_ATU);
+    mte_atu->set_atu_size(MTE_IOV_ATU_SIZE);
+    npc_bus.add_device(MTE_IOV_ATU_START, mte_atu);
+
     add_mbox(mbox);
 
-  mmu = new mmu_t(sim, bank, this,atu);
+  mmu = new mmu_t(sim, bank, this, np_atu, mte_atu);
 
   disassembler = new disassembler_t(max_xlen);
   if (ext)
@@ -126,7 +133,8 @@ processor_t::~processor_t()
   delete disassembler;
   delete mbox;
   delete misc_dev;
-  delete atu;
+  delete np_atu;
+  delete mte_atu;
 }
 
 static void bad_option_string(const char *option, const char *value,
@@ -559,7 +567,8 @@ void processor_t::reset()
   if (ext)
     ext->reset(); // reset the extension
 
-  atu->reset();
+  np_atu->reset();
+  mte_atu->reset();
 
   if (sim)
     sim->proc_reset(0); //reset args is id  when bank-id > 2  cause heap exception
@@ -1390,6 +1399,12 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_MCOUNTERWEN:
       state.mcounterwen = val;
       break;
+    case CSR_MDCAUSE:
+      state.mdcause = val;
+      break;
+    case CSR_MMISC_CTL:
+      state.mmisc_ctl = val;
+      break;
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:
@@ -1810,6 +1825,8 @@ void processor_t::set_csr(int which, reg_t val)
     case CSR_SCOUNTEREN:
     case CSR_MCOUNTEREN:
     case CSR_MCOUNTERWEN:
+    case CSR_MDCAUSE:
+    case CSR_MMISC_CTL:
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:
@@ -2162,6 +2179,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('U'))
         break;
       ret(state.mcounterwen);
+    case CSR_MDCAUSE:
+      ret(state.mdcause);
+    case CSR_MMISC_CTL:
+      ret(state.mmisc_ctl);
     case CSR_MHPMCOUNTER3:
     case CSR_MHPMCOUNTER4:
     case CSR_MHPMCOUNTER5:

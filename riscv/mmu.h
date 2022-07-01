@@ -70,7 +70,7 @@ class trigger_matched_t
 class mmu_t
 {
 public:
-  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *atu);
+  mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *np_atu, atu_t *mte_atu);
   ~mmu_t();
 
   inline reg_t misaligned_load(reg_t addr, size_t size)
@@ -359,11 +359,11 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     int idxinbank = proc ? proc->get_idxinbank() : 0;
 
     reg_t paddr = translate(vaddr, 1, LOAD, RISCV_XLATE_AMO_FLAG);
-    if(atu && atu->is_ipa_enabled()) {
-        if (!atu->pmp_ok(paddr, 1)) {
+    if(np_atu && np_atu->is_ipa_enabled()) {
+        if (!np_atu->pmp_ok(paddr, 1)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
-        paddr = atu->translate(paddr, 1);
+        paddr = np_atu->translate(paddr, 1);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
         }
@@ -407,11 +407,11 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
       store_conditional_address_misaligned(vaddr);
 
     reg_t paddr = translate(vaddr, 1, STORE, RISCV_XLATE_AMO_FLAG);
-    if(atu && atu->is_ipa_enabled()) {
-        if (!atu->pmp_ok(paddr, 1)) {
+    if(np_atu && np_atu->is_ipa_enabled()) {
+        if (!np_atu->pmp_ok(paddr, 1)) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
-        paddr = atu->translate(paddr, 1);
+        paddr = np_atu->translate(paddr, 1);
         if (IPA_INVALID_ADDR == paddr) {
             throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
         }
@@ -488,6 +488,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
 
   char * mte_addr_to_mem(reg_t paddr, int procid);
   char * mte_addr_to_mem(reg_t paddr);
+  reg_t mte_atu_trans(reg_t ipa_addr);
 
   void register_memtracer(memtracer_t*);
 
@@ -537,7 +538,8 @@ private:
   simif_t* sim;
   bankif_t* bank;
   processor_t* proc;
-  atu_t *atu = nullptr;
+  atu_t *np_atu = nullptr;
+  atu_t *mte_atu = nullptr;
   memtracer_list_t tracer;
   reg_t load_reservation_address;
   uint16_t fetch_temp;

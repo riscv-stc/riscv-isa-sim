@@ -7,6 +7,7 @@ else if (MTE_DATA_TYPE == 0x202)
 else
     e_size = 1;
 
+WRITE_RS1(MMU.mte_atu_trans(RS1));
 check_traps_pld(e_size);
 check_tcp_pld_invalid_coremap(p->get_id(), RS2);
 

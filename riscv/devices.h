@@ -106,8 +106,11 @@
 
 #define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
 
-#define NP_IOV_ATU_START    (0xc07f7000)    /* ipa address trans unit */
+#define NP_IOV_ATU_START    (0xc07f7000)    /* np address trans unit */
 #define NP_IOV_ATU_SIZE     (0x1000)
+
+#define MTE_IOV_ATU_START   (0xc07f8000)    /* mte address trans unit */
+#define MTE_IOV_ATU_SIZE    (0xc00)
 
 #define NPC_LOCAL_ADDR_START (l1_buffer_start)
 #define NPC_LOCAL_REGIN_SIZE (0x800000)
