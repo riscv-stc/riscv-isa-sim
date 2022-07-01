@@ -10402,7 +10402,17 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     maxRow = j;
                     maxCol = i;
                 } else {
-                    if(max < tmp) {
+                    if (max == tmp) {
+                        if (maxCol == i) {
+                            maxRow = maxRow > j ? j : maxRow;
+                        } else {
+                            if (maxCol > i) {
+                                maxRow = j;
+                                maxCol = i;
+                            }
+                        }
+                    }
+                    else if(max < tmp) {
                         max = tmp;
                         maxRow = j;
                         maxCol = i;
@@ -10444,7 +10454,17 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     maxRow = j;
                     maxCol = i;
                 } else {
-                    if(max < tmp) {
+                    if (max == tmp) {
+                        if (maxCol == i) {
+                            maxRow = maxRow > j ? j : maxRow;
+                        } else {
+                            if (maxCol > i) {
+                                maxRow = j;
+                                maxCol = i;
+                            }
+                        }
+                    }
+                    else if(max < tmp) {
                         max = tmp;
                         maxRow = j;
                         maxCol = i;
@@ -10485,7 +10505,17 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     maxRow = j;
                     maxCol = i;
                 } else {
-                    if(Float32(max) < Float32(tmp)) {
+                    if (Float32(max) == Float32(tmp)) {
+                        if (maxCol == i) {
+                            maxRow = maxRow > j ? j : maxRow;
+                        } else {
+                            if (maxCol > i) {
+                                maxRow = j;
+                                maxCol = i;
+                            }
+                        }
+                    }
+                    else if(Float32(max) < Float32(tmp)) {
                         max = tmp;
                         maxRow = j;
                         maxCol = i;
@@ -11192,7 +11222,17 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
                     minRow = j;
                     minCol = i;
                 } else {
-                    if(min > tmp) {
+                    if (min == tmp) {
+                        if (minCol == i) {
+                            minRow = minRow > j ? j : minRow;
+                        } else {
+                            if (minCol > i) {
+                                minRow = j;
+                                minCol = i;
+                            }
+                        }
+                    }
+                    else if(min > tmp) {
                         min = tmp;
                         minRow = j;
                         minCol = i;
@@ -11235,7 +11275,17 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
                     minRow = j;
                     minCol = i;
                 } else {
-                    if(min > tmp) {
+                    if (min == tmp) {
+                        if (minCol == i) {
+                            minRow = minRow > j ? j : minRow;
+                        } else {
+                            if (minCol > i) {
+                                minRow = j;
+                                minCol = i;
+                            }
+                        }
+                    }
+                    else if(min > tmp) {
                         min = tmp;
                         minRow = j;
                         minCol = i;
@@ -11276,7 +11326,17 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
                     minRow = j;
                     minCol = i;
                 } else {
-                    if(Float32(min) > Float32(tmp)) {
+                    if (Float32(min) == Float32(tmp)) {
+                        if (minCol == i) {
+                            minRow = minRow > j ? j : minRow;
+                        } else {
+                            if (minCol > i) {
+                                minRow = j;
+                                minCol = i;
+                            }
+                        }
+                    }
+                    else if(Float32(min) > Float32(tmp)) {
                         min = tmp;
                         minRow = j;
                         minCol = i;

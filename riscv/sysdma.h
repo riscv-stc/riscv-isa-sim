@@ -37,12 +37,15 @@ class sysdma_device_t : public abstract_device_t {
   struct dma_desc_t {
     union {
       struct {
-        uint32_t xfer_len : 22;   // transfer length
-        uint32_t burst_len : 4;   // burst length
-        uint32_t burst_size : 3;  // burst size
-        uint32_t blk_en : 1;      // block mode enabled
-        uint32_t reserved : 1;
-        uint32_t desc_en : 1;  // descriptor mode enabled
+        uint32_t src_data_type : 4;
+        uint32_t reserved3 : 4;
+        uint32_t dst_data_type : 4;
+        uint32_t reserved2 : 10;
+        uint32_t burst_len : 4;   /* Maximum AXI burst length, init 0xf */
+        uint32_t burst_size : 3;  /* AXI burst size, init 0x7 */
+        uint32_t reserved1 : 1;
+        uint32_t remote_desc_en : 1;    /* Remote Descriptor Fetch Enable */
+        uint32_t desc_en : 1;     /* descriptor mode enabled */
       } bits;
       uint32_t full;
     } ctlr;
@@ -52,21 +55,46 @@ class sysdma_device_t : public abstract_device_t {
 
     union {
       struct {
-        uint32_t width : 16;   // block Width low 16-bits in bytes
-        uint32_t height : 16;  // block Height in rows
+        uint32_t width : 22;
+        uint32_t reserved : 10;
       } bits;
       uint32_t full;
     } bkmr0;
 
     union {
       struct {
-        uint32_t stride : 24;  // block stride in bytes
-        uint32_t width_high : 6; // block Width high 6 bits in bytes
-        uint32_t width_high_reserved : 2;
+        uint32_t high : 16;
+        uint32_t depth : 16;
       } bits;
       uint32_t full;
     } bkmr1;
 
+    union {
+      struct {
+        uint32_t stride_s1 : 24;    /* src stride width */
+        uint32_t reserved : 8;
+      } bits;
+      uint32_t full;
+    } bkmr2;
+
+    union {
+      uint32_t stride_s2;           /* src stride high */
+      uint32_t full;
+    } bkmr3;
+
+    union {
+      struct {
+        uint32_t stride_d1 : 24;    /* dst stride witth */
+        uint32_t reserved : 8;
+      } bits;
+      uint32_t full;
+    } bkmr4;
+
+    union {
+      uint32_t stride_d2;           /* dst stride hight */
+      uint32_t full;
+    } bkmr5;
+    
     uint32_t llpr;  // next llp addr
   };
 
@@ -97,12 +125,13 @@ class sysdma_device_t : public abstract_device_t {
   int dma_idx_;
   // size of dma buffer
   #define DMA_BUF_SIZE 0x1000
-  #define DMA_REGION_SIZE 0x10000       /* 64kB */
+  #define DMA_REGION_SIZE 0x8000       /* 32kB */
 
   char sys_dma_reg[DMA_REGION_SIZE];
   enum {
     DDR_DIR_SRC = 0,
     DDR_DIR_DST,
+    DDR_DIR_EA,   /*  It takes effect only if DMA_C0_CTLR.REMOTE_DESC_EN=1 */
     DDR_DIR_MAX,
   };
 
