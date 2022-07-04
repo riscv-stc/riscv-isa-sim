@@ -33,8 +33,14 @@ void ap_mbox_t::reset(void)
 void ap_mbox_t::irq_generate(bool dir)
 {
     if (apifc) {
-        if (((N2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_n2apmbox()) ||
-            ((P2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_p2apmbox())) {
+        if ((N2AP_MBOX_IRQ!=irq) && (P2AP_MBOX_IRQ!=irq)) {
+            return ;
+        }
+        if (false == dir) {     /* 取消中断 */
+            apifc->generate_irq_to_a53(irq, dir);
+        } else if ((N2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_n2apmbox()) {
+            apifc->generate_irq_to_a53(irq, dir);
+        } else if ((P2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_p2apmbox()) {
             apifc->generate_irq_to_a53(irq, dir);
         }
     }
