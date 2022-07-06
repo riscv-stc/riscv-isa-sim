@@ -327,11 +327,11 @@ void soc_apb_t::disarm_sys_apb(processor_t* processor)
     sys_apb_decoder_t * current_sys_apb;
     int bankid = processor->get_bank_id();
     int idxinbank = processor->get_idxinbank();
-    if(bankid / 2 == 0)
+    if(bankid % 2 == 0)
         current_sys_apb = sys_apb_decoder_west;
     else
         current_sys_apb = sys_apb_decoder_east;
-    int relative_bankid = bankid % 2;
+    int relative_bankid = bankid / 2;
     uint16_t npc_state = 0;
     current_sys_apb->load(DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR,2,(uint8_t*)&npc_state);
     setBitValue(npc_state,relative_bankid * 8 + idxinbank,0);
