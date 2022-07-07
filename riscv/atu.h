@@ -74,7 +74,7 @@ public:
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size(void) {return len;};
-    int reset(void);
+    void reset(void);
     bool is_ipa_enabled(void) const {return at_enabled;};
     void set_atu_size(uint32_t size) {len = size;}   /* 修改atu 寄存器空间的size */
 
@@ -115,7 +115,7 @@ public:
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size(void) {return sizeof(reg_base);};
-    int reset(void);
+    void reset(void);
 
     uint32_t idtu_coreid_trans(uint32_t logi_core_id);    /* icmov */
     uint32_t idtu_coremap_trans(uint32_t logi_coremap);   /* pld */

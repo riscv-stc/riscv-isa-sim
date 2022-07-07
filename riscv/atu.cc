@@ -314,7 +314,7 @@ int atu_t::at_update(dictionary *ini, int dma_id, int ch_id)
     return 0;
 }
 
-int atu_t::reset(void)
+void atu_t::reset(void)
 {
     if (atini) {
         switch(atu_type) {
@@ -331,7 +331,6 @@ int atu_t::reset(void)
     } else {
         at_update(at_reg_base);
     }
-    return 0;
 }
 
 /* 调试接口,编辑寄存器区域添加 at 表项. (at_update()后才能生效) */
@@ -402,7 +401,7 @@ idtu_t::~idtu_t(void)
     ;
 }
 
-int idtu_t::reset(void)
+void idtu_t::reset(void)
 {
     memset(reg_base, 0, sizeof(reg_base));
 }
