@@ -45,20 +45,26 @@
 #define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))
 
 class apifc_t;
+enum direction{WEST,EAST};
 
 class sys_apb_decoder_t : public abstract_device_t {
 public:
-    sys_apb_decoder_t(uint64_t base, uint8_t *reg_ptr);
+    sys_apb_decoder_t(simif_t *sim,uint64_t base, uint8_t *reg_ptr);
     ~sys_apb_decoder_t();
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return SYS_APB_DECODER_SIZE; }
-    bool in_state_reset(size_t relative_bankid,size_t idxinbank);
-    bool in_state_disarm_reset(size_t relative_bankid,size_t idxinbank);
+    void set_position(direction position){this->position=position;}
+    void set_processor_reset(simif_t *sim, int processor_id);
+    void set_processor_disarm_reset(simif_t *sim, int processor_id);
+    void set_reset_state(simif_t *sim, const uint8_t *flag);
+    void set_disarm_reset_state(simif_t *sim,const uint8_t *flag);
     
 private:
     uint64_t base = 0x00;
     uint8_t *reg_base = nullptr;
+    direction position;
+    simif_t *sim;
 };
 
 
@@ -85,8 +91,6 @@ public:
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return sizeof(reg_base); }
-    sys_apb_decoder_t * get_sys_apb_decoder_west(){return sys_apb_decoder_west;}
-    sys_apb_decoder_t * get_sys_apb_decoder_east(){return sys_apb_decoder_east;}
     void disarm_sys_apb(processor_t* processor);
     sys_irq_t *sys_irq = nullptr;
 private:

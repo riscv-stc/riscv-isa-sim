@@ -540,6 +540,8 @@ void processor_t::enable_log_commits()
 
 void processor_t::reset()
 {
+  this->in_disarm_reset_state = false;
+  this->in_reset_state = false;
   bool pld = state.pld;
   if (pld) {
     if (hwsync)
@@ -597,56 +599,6 @@ void processor_t::set_pma_num(reg_t n)
     abort();
   }
   n_pma = n;
-}
-
-void processor_t::set_reset_state(soc_apb_t* soc_apb)
-{
-  if(soc_apb == nullptr)
-  {
-    this->in_reset_state = false;
-    return;
-  }
-  int bankid = get_bank_id();
-  int idxinbank = get_idxinbank();
-  int relative_bankid = bankid / 2;
-  sys_apb_decoder_t* sys_apb;
-  if(bankid % 2 == 0)
-    sys_apb = soc_apb->get_sys_apb_decoder_west();
-  else
-    sys_apb = soc_apb->get_sys_apb_decoder_east();
-  
-  this->in_reset_state = sys_apb->in_state_reset(relative_bankid, idxinbank);
-}
-
-void processor_t::set_disarm_reset_state(soc_apb_t* soc_apb)
-{
-  if(soc_apb == nullptr)
-  {
-    this->in_disarm_reset_state = false;
-    return;
-  } 
-  int bankid = get_bank_id();
-  int idxinbank = get_idxinbank();
-  int relative_bankid = bankid / 2;
-  sys_apb_decoder_t* sys_apb;
-  if(bankid % 2 == 0)
-    sys_apb = soc_apb->get_sys_apb_decoder_west();
-  else
-    sys_apb = soc_apb->get_sys_apb_decoder_east();
-
-  this->in_disarm_reset_state = sys_apb->in_state_disarm_reset(relative_bankid, idxinbank);
-}
-
-bool processor_t::is_in_reset_state(soc_apb_t* soc_apb)
-{
-  this->set_reset_state(soc_apb);
-  return this->in_reset_state;
-}
-
-bool processor_t::is_in_disarm_reset_state(soc_apb_t* soc_apb)
-{
-  this->set_disarm_reset_state(soc_apb);
-  return this->in_disarm_reset_state;
 }
 
 void processor_t::set_pmp_granularity(reg_t gran) {

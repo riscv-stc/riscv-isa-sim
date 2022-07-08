@@ -618,10 +618,8 @@ public:
 
   void set_pma_num(reg_t pma_num);
 
-  void set_reset_state(soc_apb_t* soc_apb);
-  void set_disarm_reset_state(soc_apb_t* soc_apb);
-  bool is_in_reset_state(soc_apb_t* soc_apb);
-  bool is_in_disarm_reset_state(soc_apb_t* soc_apb);
+  void set_reset_state(bool val){this->in_reset_state = val;}
+  void set_disarm_reset_state(bool val){this->in_disarm_reset_state = val;}
 
   const char* get_symbol(uint64_t addr);
 

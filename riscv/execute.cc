@@ -714,9 +714,8 @@ bool processor_t::slow_path()
 // fetch/decode/execute loop
 void processor_t::step(size_t n)
 {
-  if(this->is_in_disarm_reset_state(this->soc_apb))
+  if(this->in_reset_state)
   {
-    soc_apb->disarm_sys_apb(this);
     this->reset();
     return;
   }
@@ -736,7 +735,7 @@ void processor_t::step(size_t n)
     }
   }
 
-  while (n > 0 && !this->is_in_reset_state(this->soc_apb)) {
+  while (n > 0 && !this->in_disarm_reset_state) {
     size_t instret = 0;
     reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;
     mmu_t* _mmu = mmu;
