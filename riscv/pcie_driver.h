@@ -80,7 +80,5 @@ class pcie_driver_t {
   std::mutex pcie_mutex;
 };
 
-int which_npc(reg_t addr, reg_t *paddr);
-
 #endif
 

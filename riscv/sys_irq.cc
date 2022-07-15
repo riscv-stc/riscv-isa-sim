@@ -73,7 +73,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     case TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:    /* RO */
     default:
-        printf("store addr sys_irq:0x%x no support \r\n",addr);
+        printf("store addr sys_irq:0x%lx no support \r\n",addr);
         throw trap_store_access_fault(false, addr, 0, 0);
         return false;
     }

@@ -13,6 +13,7 @@
 #include "processor.h"
 #include "pcie_driver.h"
 #include "simif.h"
+#include "noc_addr.h"
 
 #define PCIE_OK          (0)
 #define PCIE_UNINIT      (-1)
@@ -42,77 +43,6 @@
 #define NL_NETLINK_START_PORT(board_id,chip_id) (NL_BOARD_ADDR(board_id)|NL_CHIP_ADDR(chip_id) + NL_START_PORT)
 /* netlink groups */
 #define NL_GROUPS        (0)
-
-#define DDR_SIZE       (0xc0000000)
-#define NOC_NPC0_BASE  (0xDC000000)
-#define NOC_NPC1_BASE  (0xD8000000)
-#define NOC_NPC2_BASE  (0xD4000000)
-#define NOC_NPC3_BASE  (0xD4800000)
-#define NOC_NPC4_BASE  (0xD5000000)
-#define NOC_NPC5_BASE  (0xD5800000)
-#define NOC_NPC6_BASE  (0xD8800000)
-#define NOC_NPC7_BASE  (0xDC800000)
-#define NOC_NPC8_BASE  (0xEC000000)
-#define NOC_NPC9_BASE  (0xE8000000)
-#define NOC_NPC10_BASE (0xE4000000)
-#define NOC_NPC11_BASE (0xE4800000)
-#define NOC_NPC12_BASE (0xE5000000)
-#define NOC_NPC13_BASE (0xE5800000)
-#define NOC_NPC14_BASE (0xE8800000)
-#define NOC_NPC15_BASE (0xEC800000)
-
-#define NOC_NPC16_BASE (0xC8000000)
-#define NOC_NPC17_BASE (0xC8800000)
-#define NOC_NPC18_BASE (0xCA000000)
-#define NOC_NPC19_BASE (0xCA800000)
-#define NOC_NPC20_BASE (0xCC000000)
-#define NOC_NPC21_BASE (0xCC800000)
-#define NOC_NPC22_BASE (0xCE000000)
-#define NOC_NPC23_BASE (0xCE800000)
-#define NOC_NPC24_BASE (0xF0000000)
-#define NOC_NPC25_BASE (0xF0800000)
-#define NOC_NPC26_BASE (0xF2000000)
-#define NOC_NPC27_BASE (0xF2800000)
-#define NOC_NPC28_BASE (0xF4000000)
-#define NOC_NPC29_BASE (0xF4800000)
-#define NOC_NPC30_BASE (0xF6000000)
-#define NOC_NPC31_BASE (0xF6800000)
-
-/* NPC local space in soc view. */
-static const uint32_t noc_npc_base[] = {
-        NOC_NPC0_BASE,
-        NOC_NPC1_BASE,
-        NOC_NPC2_BASE,
-        NOC_NPC3_BASE,
-        NOC_NPC4_BASE,
-        NOC_NPC5_BASE,
-        NOC_NPC6_BASE,
-        NOC_NPC7_BASE,
-        NOC_NPC8_BASE,
-        NOC_NPC9_BASE,
-        NOC_NPC10_BASE,
-        NOC_NPC11_BASE,
-        NOC_NPC12_BASE,
-        NOC_NPC13_BASE,
-        NOC_NPC14_BASE,
-        NOC_NPC15_BASE,
-	      NOC_NPC16_BASE,
-	      NOC_NPC17_BASE,
-	      NOC_NPC18_BASE,
-	      NOC_NPC19_BASE,
-	      NOC_NPC20_BASE,
-	      NOC_NPC21_BASE,
-	      NOC_NPC22_BASE,
-	      NOC_NPC23_BASE,
-	      NOC_NPC24_BASE,
-	      NOC_NPC25_BASE,
-	      NOC_NPC26_BASE,
-	      NOC_NPC27_BASE,
-	      NOC_NPC28_BASE,
-	      NOC_NPC29_BASE,
-	      NOC_NPC30_BASE,
-	      NOC_NPC31_BASE
-};
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, 
         size_t board_id, size_t chip_id) : mPSim(sim), mBank(bank), mBankId(bank_id),
@@ -358,36 +288,6 @@ int pcie_driver_t::recv()
 #define CORE_NUM_OF_BANK (0x8)
 #define CORE_ID_MASK     (0x7)
 #define IGNORE_BANKID(core_id) ((core_id) & CORE_ID_MASK)
-#define NOC_NPC_TOTAL \
-	(sizeof(noc_npc_base) / \
-	sizeof(noc_npc_base[0]))
-
-/* current address is which npc */
-#define IS_NPC(addr, id) \
-	(((addr) >= noc_npc_base[id]) && \
-	((addr) < noc_npc_base[id] + NPC_LOCAL_REGIN_SIZE))
-
-/* change soc address to local address */
-#define soc_to_local(addr, id) \
-	((addr) - noc_npc_base[id] + NPC_LOCAL_ADDR_START)
-
-/* adjust which npc from addr. */
-int which_npc(reg_t addr, reg_t *paddr)
-{
-  int core_id = -1;
-  int mbox_num;
-
-  mbox_num = NOC_NPC_TOTAL;
-  for (int i = 0; i < mbox_num; i++) {
-    if (IS_NPC(addr, i)) {
-      core_id = i;
-      *paddr = soc_to_local(addr, i);
-      break;
-    }
-  }
-
-  return core_id;
-}
 
 /* get data from npc addr, data will fill to buffer bytes. */
 bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
