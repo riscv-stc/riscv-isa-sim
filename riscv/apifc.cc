@@ -57,7 +57,7 @@ bool apifc_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
         }
     }
 
-    if (host_addr=sim->addr_to_mem(addr)) {
+    if (nullptr != (host_addr=sim->addr_to_mem(addr))) {
         memcpy(bytes, host_addr, len);
     } else if (!sim->mmio_load(addr, len, bytes)) {
         std::cout << "apifc driver load addr: 0x"
@@ -104,7 +104,7 @@ bool apifc_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
         }
     }
 
-    if (host_addr=sim->addr_to_mem(addr)) {
+    if (nullptr != (host_addr=sim->addr_to_mem(addr))) {
         memcpy(host_addr, bytes, len);
     } else if (!sim->mmio_store(addr, len, bytes)) {
         std::cout << "apifc driver store addr: 0x"
@@ -131,8 +131,8 @@ int apifc_t::sqmsg_spike_send(long recv_type, const struct command_head_t *cmd_d
 
     sq_msg.mtype = recv_type;
     send_len = COMMAND_HEAD_SIZE + cmd_data->len;
-    if (send_len > sizeof(sq_msg.cmd_data)) {
-        send_len = sizeof(sq_msg.cmd_data);
+    if (send_len > (int)sizeof(sq_msg.cmd_data)) {
+        send_len = (int)sizeof(sq_msg.cmd_data);
     }
     memcpy(&(sq_msg.cmd_data), cmd_data, send_len);
 
@@ -157,8 +157,8 @@ int apifc_t::sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data)
         ret = -2;
     } else {
         recv_len = COMMAND_HEAD_SIZE + sq_msg.cmd_data.len;
-        if (recv_len > sizeof(*cmd_data)) {
-            recv_len = sizeof(*cmd_data);
+        if (recv_len > (int)sizeof(*cmd_data)) {
+            recv_len = (int)sizeof(*cmd_data);
         }
         memcpy(cmd_data, &(sq_msg.cmd_data), recv_len);
     }
@@ -225,7 +225,7 @@ void apifc_t::sqmsg_req_recv_handle(void)
     }
 }
 
-int apifc_t::spike_qemu_msg_destory(void)
+void apifc_t::spike_qemu_msg_destory(void)
 {
     msgctl(sq_s2q_msqid, IPC_RMID, NULL);
     msgctl(sq_q2s_msqid, IPC_RMID, NULL);

@@ -24,26 +24,10 @@
 #include <sys/mman.h>
 #include "bankif.h"
 #include "iniparser.h"
-
-/* NPUV2 Hardware Synchronization Buffer (512KB)  begin at 0xd3e80000*/
-#define HWSYNC_START         (0xd3e80000)
-#define HWSYNC_SIZE          (0x00080000)
-
-#define GROUP_MASK_OFFSET    (0x00000000)
-#define GROUP_DONE_OFFSET    (0x00000044)
-#define GROUP_VALID_OFFSET   (0x00000048)
-#define GROUP_VALID_3_0      (0x00000100)
-#define GROUP_VALID_7_4      (0x00000200)
-#define GROUP_VALID_11_8     (0x00000300)
-#define GROUP_VALID_15_11    (0x00000400)
-#define SYNC_STATUS_OFFSET   (0x00000050)
-
-
-/* NPUV2 The lower 3GB region (0x00_0000_0000 ~ 0x00_BFFF_FFFF) is the remapping target region of DDR space */
-#define ddr_mem_start        (0x00000000)
+#include "noc_addr.h"
 
 /* NPUV2 L1 Buffer (1024KB+288KB) */
-#define l1_buffer_start      (0xc0000000)
+#define l1_buffer_start      NPC_LOCAL_ADDR_START
 #define l1_buffer_size       (0x00148000)
 
 /* NPUV2 Intermediate Buffer(256KB) */
@@ -56,6 +40,18 @@
 
 #define MISC_START           (0xc07f3000)   /* NPUV2 NP_MISC 4KB */
 #define MISC_SIZE            (0x1000)
+
+#define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
+
+#define NP_IOV_ATU_START    (0xc07f7000)    /* ipa address trans unit */
+#define NP_IOV_ATU_SIZE     (0x1000)
+
+#define MTE_IOV_ATU_START   (0xc07f8000)    /* mte address trans unit */
+#define MTE_IOV_ATU_SIZE    (0xc00)
+
+#define MTE_IOV_IDTU_START  (0xc07f8c00)
+#define MTE_IOV_IDTU_SIZE   (0x400)
+
 
 /* 64bit RO 指令计数寄存器 */
 #define NCP_VME_INST_CNT        (0x000)     
@@ -103,20 +99,6 @@
 #define IS_DMAE_INST(bits)      (((bits&MASK_MOV_L1_GLB) >= MATCH_MOV_L1_GLB) && \
             ((bits&MASK_MOV_LLB_LLB) <= MATCH_MOV_LLB_LLB))
 
-
-#define MBOX_START           (0xc07f4000)   /* NPUV2 NP_MBOX_LOC 4KB */
-
-#define NP_IOV_ATU_START    (0xc07f7000)    /* np address trans unit */
-#define NP_IOV_ATU_SIZE     (0x1000)
-
-#define MTE_IOV_ATU_START   (0xc07f8000)    /* mte address trans unit */
-#define MTE_IOV_ATU_SIZE    (0xc00)
-
-#define MTE_IOV_IDTU_START  (0xc07f8c00)
-#define MTE_IOV_IDTU_SIZE   (0x400)
-
-#define NPC_LOCAL_ADDR_START (l1_buffer_start)
-#define NPC_LOCAL_REGIN_SIZE (0x800000)
 
 //ddr high 1G address, just accessed by pcie and sysdma
 //range is 0xc0800000 ~ 0xf8000000

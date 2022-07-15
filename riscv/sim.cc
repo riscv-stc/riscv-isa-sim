@@ -900,6 +900,8 @@ void sim_t::set_rom()
 char* sim_t::addr_to_mem(reg_t addr)
 {
     int bankid = 0;
+    int procid = 0;
+    reg_t paddr = 0;
 
     if (!paddr_ok(addr))
         return NULL;
@@ -909,6 +911,11 @@ char* sim_t::addr_to_mem(reg_t addr)
         if (0 <= bankid) {
             return bank_addr_to_mem(addr, bankid);
         }
+    } else if (0 <= (procid=which_npc(addr, &paddr))) {  /* noc NPC 地址转换为npc view地址 */
+        int idxinsim =coreid_to_idxinsim(procid);
+        int bankid = get_bankid(idxinsim);
+        int idxinbank = get_idxinbank(idxinsim);
+        return npc_addr_to_mem(paddr, bankid, idxinbank);
     } else {
         auto desc = glb_bus.find_device(addr);
         if (auto mem = dynamic_cast<mem_t *>(desc.second)) {

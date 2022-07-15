@@ -3,6 +3,7 @@
 
 #include <thread>
 #include "simif.h"
+#include "noc_addr.h"
 #include "pcie_driver.h"
 
 /* spike和qemu通过消息队列通信 */
@@ -47,7 +48,7 @@ private:
     int qemu_mems_read(reg_t addr, size_t length);
     void sqmsg_req_recv_handle(void);
     int spike_qemu_msg_init(void);
-    int spike_qemu_msg_destory(void);
+    void spike_qemu_msg_destory(void);
 
     bool load_data(reg_t addr, size_t len, uint8_t* bytes);
     bool store_data(reg_t addr, size_t len, const uint8_t* bytes);

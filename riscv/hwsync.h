@@ -13,6 +13,15 @@
 
 #define MASK_INITIAL_VALUE (~0)
 
+#define GROUP_MASK_OFFSET    (0x00000000)
+#define GROUP_DONE_OFFSET    (0x00000044)
+#define GROUP_VALID_OFFSET   (0x00000048)
+#define GROUP_VALID_3_0      (0x00000100)
+#define GROUP_VALID_7_4      (0x00000200)
+#define GROUP_VALID_11_8     (0x00000300)
+#define GROUP_VALID_15_11    (0x00000400)
+#define SYNC_STATUS_OFFSET   (0x00000050)
+
 #define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))
 #define getBitValue(var, idx) ((var >> (idx)) & 1)
 
