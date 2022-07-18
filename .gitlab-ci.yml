@@ -7,7 +7,6 @@ variables:
 
 stages:
   - build
-  - test
   - package
 
 cache:
