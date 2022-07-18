@@ -267,8 +267,8 @@ void pcie_mbox_t::irq_generate(bool dir)
         cmd.len = 16;
 
         load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);
-        load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
         memcpy(cmd.data, (uint8_t *)&txcfg, 8);
+        load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txdat);
         memcpy(&(cmd.data[8]), (uint8_t *)&txdat, 8);
         
         pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
