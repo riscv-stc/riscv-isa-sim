@@ -15,15 +15,6 @@
 #include "simif.h"
 #include "noc_addr.h"
 
-#define PCIE_OK          (0)
-#define PCIE_UNINIT      (-1)
-#define ERROR_SOCK       (-2)
-#define ERROR_BIND       (-3)
-#define ERROR_CONN       (-4)
-#define ERROR_LOCK       (-5)
-
-#define NETLINK_FAULT    (-1)
-
 /* maximum payload size */
 #define MAX_PAYLOAD      (1280)
 /* socket protacol type */
@@ -79,9 +70,12 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
   }
 
   memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
+  
+  #if 0 /* 因为引入了pcie_mbox,sys_soc等, 此处需向后调整 */
   /* Recheck netlink status */
   if (NETLINK_FAULT == update_status(STATUS_OK))
     mStatus = ERROR_CONN;
+  #endif
 }
 
 int pcie_driver_t::initialize()

@@ -146,6 +146,10 @@ die_id(die_id),
       pcie_driver_t *pcie_driver = banks[get_id_first_bank()]->get_pcie_driver();
       pcie_mbox = new pcie_mbox_t(this, pcie_driver);
       glb_bus.add_device(PCIE_MBOX_LOC_PF_BASE, pcie_mbox);
+
+      if (NETLINK_FAULT == pcie_driver->update_status(STATUS_OK)) {
+        pcie_driver->set_mStatus(ERROR_CONN);
+      }
     }
 
     debug_module.add_device(&glb_bus);

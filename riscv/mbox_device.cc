@@ -263,7 +263,7 @@ void pcie_mbox_t::irq_generate(bool dir)
          */
         command_head_t cmd;
         cmd.code = CODE_INTERRUPT;
-        cmd.addr = MBOX_RX_CFG_DATA;
+        cmd.addr = PCIE_MBOX_LOC_PF_BASE + MBOX_RX_CFG_DATA;
         cmd.len = 16;
 
         load(MBOX_RX_CFG_DATA, 8, (uint8_t *)&txcfg);

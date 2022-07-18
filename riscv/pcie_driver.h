@@ -16,6 +16,15 @@ class bankif_t;
 #include <linux/netlink.h>
 #include <linux/socket.h>
 
+#define PCIE_OK          (0)
+#define PCIE_UNINIT      (-1)
+#define ERROR_SOCK       (-2)
+#define ERROR_BIND       (-3)
+#define ERROR_CONN       (-4)
+#define ERROR_LOCK       (-5)
+
+#define NETLINK_FAULT    (-1)
+
 enum command_code {
     CODE_READ = 0,
     CODE_WRITE = 1,
@@ -48,6 +57,9 @@ class pcie_driver_t {
 
   int send(const uint8_t* data, size_t len);
   int get_sync_state();
+
+  void set_mStatus(int status) {mStatus = status;};
+  int update_status(NL_STATUS status);
  
  private:
   std::unique_ptr<std::thread> mDriverThread;
@@ -76,7 +88,6 @@ class pcie_driver_t {
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
   bool lock_channel(void);
-  int update_status(NL_STATUS status);
   void task_doing();
   std::mutex pcie_mutex;
 };
