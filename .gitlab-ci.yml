@@ -21,7 +21,7 @@ build:
   script:
     - echo "#define SPIKE_VERSION \"1.0.1-$CI_PIPELINE_ID\"" > VERSION
     - mkdir -p build
-    - cd build && ../configure --with-isa=rv32imafcv --prefix=$PWD/../install && make -j`nproc` && cd -
+    - cd build && ../configure --with-isa=rv32imafcv --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
