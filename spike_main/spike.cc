@@ -68,7 +68,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --exit-dump=<m1,...>  Dump memory on exit\n");
   fprintf(stderr, "                          memory range could be: l1, llb, <start>:<len>\n");
   fprintf(stderr, "  --dump-path           Path for files to dump memory [default .]\n");
-  fprintf(stderr, "  --sync-timeout=<n>    Timeout ticks for sync throw trap [default 0x00c00000]\n");
+  fprintf(stderr, "  --sync-timeout=<n>    Timeout ticks for sync throw trap [default 0x2c000000]\n");
 
   exit(exit_code);
 }
@@ -158,8 +158,8 @@ int main(int argc, char **argv)
   size_t chip_id = 0;
   size_t bank_id = 0;
   uint32_t coremask = 0xffffffff;
-  /* hs register HS_SYNC_REQ_THRESH, 此处给的默认值在host端大概是 5秒，以避免spike长时间卡住 */
-  uint32_t hwsync_timer_num = 0x00c00000;
+  /* hs register HS_SYNC_REQ_THRESH, 此处给的默认值在host端大概是 -p2 50秒，-p8 350秒 ,避免spike长时间卡住 */
+  uint32_t hwsync_timer_num = 0x2c000000;
   char masks_buf[178] = {'\0'};
   const char *hwsync_masks = masks_buf;
   reg_t start_pc = reg_t(-1);
