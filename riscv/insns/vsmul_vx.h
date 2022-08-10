@@ -1,4 +1,6 @@
 // vsmul.vx vd, vs2, rs1
+require(P.VU.vstart == 0);
+
 VRM xrm = P.VU.get_vround_mode();
 int64_t int_max = INT64_MAX >> (64 - P.VU.vsew);
 int64_t int_min = INT64_MIN >> (64 - P.VU.vsew);

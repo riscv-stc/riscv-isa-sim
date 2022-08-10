@@ -211,22 +211,40 @@ typedef Stride<Dynamic, Dynamic> DynStride;
                 } \
             } else { \
                 if ((_row % 4) == 0) {\
-                    acc0.x += 0x80000000; \
+                    acc0.x += 0x0; \
                 } \
                 if ((_row % 4) == 1) {\
-                    acc1.x += 0x80000000; \
+                    acc1.x += 0x0; \
                 } \
                 if ((_row % 4) == 2) {\
-                    acc2.x += 0x80000000; \
+                    acc2.x += 0x0; \
                 } \
                 if ((_row % 4) == 3) {\
-                    acc3.x += 0x80000000; \
+                    acc3.x += 0x0; \
                 } \
             } \
         } \
         acc2 += acc0; \
         acc3 += acc1; \
         dest(0, _col) = acc2 + acc3; \
+    } \
+} while(0);
+
+#define MATRIX_ACC_DIMH_2PART(src, dest, dtype, row, column) do { \
+    for (int _col = 0; _col < column; _col++) { \
+        Float32 acc0, acc1; \
+        acc0.x = 0x80000000; \
+        acc1.x = 0x80000000; \
+        for (int _row = 0; _row < row; _row++) { \
+            \
+            if ((_row % 2) == 0) {\
+                acc0 += src(_row, _col); \
+            } \
+            if ((_row % 2) == 1) {\
+                acc1 += src(_row, _col); \
+            } \
+        } \
+        dest(0, _col) = acc0 + acc1; \
     } \
 } while(0);
 
@@ -480,6 +498,8 @@ struct DmaeShapeStride
     unsigned int stride_d_x;
     unsigned int stride_d_y;
 
+    unsigned int channel;
+
 };
 
 struct VmeShapeStride
@@ -543,7 +563,7 @@ enum {
 
 
 template <typename DType>
-int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int veadd_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -572,7 +592,7 @@ int veadd_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veadd_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -622,7 +642,7 @@ int veadd_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int veadd_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -654,7 +674,7 @@ int veadd_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int vesub_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -686,7 +706,7 @@ int vesub_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int vesub_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -736,7 +756,7 @@ int vesub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim)
+int versub_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -787,7 +807,7 @@ int versub_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
 }
 
 template <typename DType>
-int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vesub_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -822,7 +842,7 @@ int vesub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int versub_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss)
+int versub_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1053,7 +1073,7 @@ int verand_m(DType *rd, struct ShapeStride *ss, DType **rand_value, bool verand_
 
 
 template <typename DType>
-int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vediv_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1117,7 +1137,7 @@ int vediv_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int vediv_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1235,7 +1255,7 @@ int vediv_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim,
 }
 
 template <typename DType>
-int vediv_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vediv_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1387,6 +1407,16 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
+    int new_row = (ss->shape1_row + 1) / 2;
+    int row_is_odd = ss->shape1_row % 2;
+    int new_column = ss->shape1_column * 2;
+    InDType *new_rs1_buf = (InDType *)malloc(new_row * new_column * sizeof(InDType));
+    Map_InDType new_rs1_matrix_inner(new_rs1_buf, new_row, new_column, DynStride(new_column, 1));
+
+    InDType *new_pcol_sum = (InDType *)malloc(new_column * sizeof(InDType));
+    Map_InDType new_rd_col_sum(new_pcol_sum, 1, new_column, DynStride(1, 1));
+    Matrix_InDType rd_acc(1, 1);
+
     uint32_t MAX_COLUMN;
     if(is_same< OutDType, Float32 >::value)
         MAX_COLUMN = 32;
@@ -1396,18 +1426,23 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
     //rd_col_sum = rs1_matrix_inner.colwise().sum();
     if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
             && ss->stride_rs1 == ss->shape1_column) {
-        MATRIX_ACC_DIMH_4PART(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+        for (int row = 0; row < new_row; row++) {
+            for (int col = 0; col < new_column; col++) {
+                if (col >= new_column / 2) {
+                    if ((row_is_odd == 1) && (row == new_row - 1) && (col > new_column / 2 -1))
+                        new_rs1_matrix_inner(row, col).x =  0x0;
+                    else
+                        new_rs1_matrix_inner(row, col) = rs1_matrix_inner(row *2 + 1, col -ss->shape1_column);
+                }
+                else
+                    new_rs1_matrix_inner(row, col) = rs1_matrix_inner(row * 2, col);
+            }
+        }
+        MATRIX_ACC_DIMH_2PART(new_rs1_matrix_inner, new_rd_col_sum, InDType, new_row, new_column);
+        MATRIX_ACC_DIMW(new_rd_col_sum, rd_acc, OutDType, 1, new_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(rs1_matrix_inner, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
-    }
-
-    //InDType rd_tmp = rd_col_sum.sum();
-    Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
-    //*rd = OutDType(rd_tmp);
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+        MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
     }
 
     *rd = rd_acc(0, 0);
@@ -1417,12 +1452,14 @@ int veacc_m(OutDType *rs1, InDType *rd, struct ShapeStride *ss, bool relu)
 
     free(pcol_sum);
     free(rs1_buf);
+    free(new_rs1_buf);
+    free(new_pcol_sum);
 
     return 0;
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1497,7 +1534,7 @@ int veemacc_mm(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss, bool relu)
+int veemacc_mm(OutDType *rs1, OutDType *rs2, InDType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1518,6 +1555,17 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
     InDType *pcol_sum = (InDType *)malloc(ss->shape1_column * sizeof(InDType));
     Map_InDType rd_col_sum(pcol_sum, 1, ss->shape1_column, DynStride(1, 1));
 
+    int new_row = (ss->shape1_row + 1) / 2;
+    int row_is_odd = ss->shape1_row % 2;
+    int new_column = ss->shape1_column * 2;
+
+    InDType *new_mul_buf = (InDType *)malloc(new_row * new_column * sizeof(InDType));
+    Map_InDType new_mul_result(new_mul_buf, new_row, new_column, DynStride(new_column, 1));
+    InDType *new_pcol_sum = (InDType *)malloc(new_column * sizeof(InDType));
+    Map_InDType new_rd_col_sum(new_pcol_sum, 1, new_column, DynStride(1, 1));
+
+    Matrix_InDType rd_acc(1, 1);
+
     uint32_t MAX_COLUMN;
     if (is_same< OutDType, Float32 >::value) {
         MAX_COLUMN = 32;
@@ -1527,16 +1575,23 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
 
     if (ss->shape1_column <= MAX_COLUMN  && ss->shape1_row >= 2
             && ss->stride_rs1 == ss->shape1_column && ss->stride_rs2 == ss->shape1_column) {
-        MATRIX_ACC_DIMH_4PART(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
+        for (int row = 0; row < new_row; row++) {
+            for (int col = 0; col < new_column; col++) {
+                if (col >= new_column / 2) {
+                    if ((row_is_odd == 1) && (row == new_row - 1) && (col > new_column / 2 -1))
+                        new_mul_result(row, col).x =  0x0;
+                    else
+                        new_mul_result(row, col) = mul_result(row *2 + 1, col -ss->shape1_column);
+                }
+                else
+                    new_mul_result(row, col) = mul_result(row * 2, col);
+            }
+        }
+        MATRIX_ACC_DIMH_2PART(new_mul_result, new_rd_col_sum, InDType, new_row, new_column);
+        MATRIX_ACC_DIMW(new_rd_col_sum, rd_acc, OutDType, 1, new_column);
     } else {
         MATRIX_ACC_DIMH_PARITY(mul_result, rd_col_sum, InDType, ss->shape1_row, ss->shape1_column);
-    }
-
-    Matrix_InDType rd_acc(1, 1);
-    MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
-
-    if (relu) {
-        MATRIX_RELU_THRESHHOLD(rd_acc, rd_acc, 1, 1, InDType, ss->relu_threshhold);
+        MATRIX_ACC_DIMW(rd_col_sum, rd_acc, OutDType, 1, ss->shape1_column);
     }
 
     *rd = rd_acc(0, 0);
@@ -1546,12 +1601,14 @@ int veemacc_mm(OutDType *rs1, InDType *rd, OutDType *rs2, struct ShapeStride *ss
 
     free(pcol_sum);
     free(mul_buf);
+    free(new_mul_buf);
+    free(new_pcol_sum);
 
     return 0;
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mv(OutDType *rs1, OutDType *rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1630,7 +1687,7 @@ int veemacc_mv(OutDType *rs1, OutDType *rd, OutDType *rs2, struct ShapeStride *s
 }
 
 template <typename OutDType, typename InDType>
-int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemacc_mf(OutDType *rs1, OutDType rs2, OutDType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -1760,7 +1817,7 @@ int veemacc_mf(OutDType *rs1, OutDType *rd, OutDType rs2, struct ShapeStride *ss
 // }
 
 template <typename DType>
-int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int veemul_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1788,7 +1845,7 @@ int veemul_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool re
 }
 
 template <typename DType>
-int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int veemul_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1830,7 +1887,7 @@ int veemul_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim
 }
 
 template <typename DType>
-int veemul_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int veemul_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1880,7 +1937,7 @@ int vemin_m(DType *rs1, DType *rd, struct ShapeStride *ss, bool relu)
 }
 
 template <typename DType>
-int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool relu)
+int vemin_mm(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1908,7 +1965,7 @@ int vemin_mm(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemin_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemin_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -1956,7 +2013,7 @@ int velkrelu_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool r
 }   
 
 template <typename DType>
-int velkrelu_mv(DType *rs1, DType *rd, DType *rs2, struct ShapeStride *ss, int dim, bool relu)
+int velkrelu_mv(DType *rs1, DType *rs2, DType *rd, struct ShapeStride *ss, int dim, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2042,7 +2099,7 @@ int velut_m(AddrDType *rs1, unsigned long rs2, DType *rd, struct ShapeStride *ss
 #define isNaNF32UI( a ) (((~(a) & 0x7F800000) == 0) && ((a) & 0x007FFFFF))
 
 template <typename DType>
-int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemgt_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2111,7 +2168,7 @@ int vemgt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemeq_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2174,7 +2231,7 @@ int vemeq_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool relu)
+int vemlt_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2237,7 +2294,7 @@ int vemlt_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss, bool rel
 }
 
 template <typename DType>
-int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemgt_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2303,7 +2360,7 @@ int vemgt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemeq_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2363,7 +2420,7 @@ int vemeq_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu
 }
 
 template <typename DType>
-int vemlt_mf(DType *rs1, DType *rd, DType rs2, struct ShapeStride *ss, bool relu)
+int vemlt_mf(DType *rs1, DType rs2, DType *rd, struct ShapeStride *ss, bool relu)
 {
     DEFINE_MAP_DTYPE(DType)
 
@@ -2873,7 +2930,7 @@ int vedwconv_mm(OutDType *rs1, OutDType *rs2, OutDType *rd, struct VmeShapeStrid
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss)
+int veemul_xx_xx_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2904,7 +2961,7 @@ int veemul_xx_xx_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_x8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_x8_hf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2937,7 +2994,7 @@ int veemul_x8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xu8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_xu8_hf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -2970,7 +3027,7 @@ int veemul_xu8_hf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride
 }
 
 template <typename OutDType, typename InDType>
-int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_x8_bf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -3004,7 +3061,7 @@ int veemul_x8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride 
 }
 
 template <typename OutDType, typename InDType>
-int veemul_xu8_bf_mf(InDType *rs1, OutDType *rd, InDType rs2, struct ShapeStride *ss, uint32_t rounding_mode)
+int veemul_xu8_bf_mf(InDType *rs1, InDType rs2, OutDType *rd, struct ShapeStride *ss, uint32_t rounding_mode)
 {
     DEFINE_MAP_DTYPE(OutDType)
     DEFINE_MAP_DTYPE(InDType)
@@ -3869,14 +3926,8 @@ extern int vecvt_f32_x32_m(int32_t *rs1, Float32 *rd, struct ShapeStride *ss);
 extern int vecvt_x32_f32_m(Float32 *rs1, int32_t *rd, struct ShapeStride *ss, uint32_t rounding_mode);
 extern void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 class processor_t;
-extern void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct DmaeShapeStride *dmae_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local);
-#if 0
-extern void mte_vm_mov(uint64_t src, uint64_t dst, uint32_t esize, const struct MteShapeStride *mte_ss, 
-        processor_t *p, bool is_rs1_local, bool is_rd_local);
-extern void icmov_vm(uint64_t src, uint64_t dst, uint32_t esize, uint32_t dst_core_id,
-        const struct MteShapeStride *mte_ss, processor_t *p);
-#endif
+extern void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, 
+        const struct DmaeShapeStride *dmae_ss, processor_t *p);
 extern uint64_t dmae_src_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 extern uint64_t dmae_dst_len(uint32_t data_type, struct DmaeShapeStride *dmae_ss);
 
@@ -4057,10 +4108,10 @@ public:
     int medeconv_sp_mm(Bfloat16  *rs1, int8_t    *rs2, uint8_t *sparseidx, Bfloat16  *rd, ConvShapeStride *ss, bool isSign, Bfloat16 *deq_addr=nullptr);
     
 
-    int medwconv_mm(half *rs1, half *rd, half *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(half *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(int8_t *rs1, half *rd, int8_t *rs2, struct ConvShapeStride *ss);
-    int medwconv_mm(float32_t *rs1, float32_t *rd, float32_t *rs2, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeStride *ss);
+    int medwconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct ConvShapeStride *ss);
     
 };
 
@@ -7238,7 +7289,7 @@ class Vfexp
  * @return 执行结果
  */
 template <typename DType>
-int vemaskmov_mm(DType* rs1, DType* rd, DType* rs2, struct ShapeStride *ss)
+int vemaskmov_mm(DType* rs1, DType* rs2, DType* rd, struct ShapeStride *ss)
 {
     DEFINE_MAP_DTYPE(DType)
 

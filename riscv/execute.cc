@@ -96,7 +96,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         int pad = SHAPE1_COLUMN >= STRIDE_RD ? SHAPE1_COLUMN : STRIDE_RD ; 
         int xx  = SHAPE1_COLUMN;
         int yy  = SHAPE1_ROW;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int row=0; row < yy; row++) {
             for(int col=0; col < xx; col++) {
@@ -105,7 +105,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
               fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));
             }         
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int row=0; row < yy; row++) {
             for(int col=0; col < xx; col++) {
@@ -128,14 +128,14 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
         
         int xx  = SHAPE1_COLUMN;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int col=0; col < xx; col++)  {
             int idx = col;
             fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
             fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));       
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int col=0; col < xx; col++) {
             int idx = col;
@@ -156,14 +156,14 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         fprintf(log_file, " vme_data_type: 0x%08" PRIx32, VME_DTYPE);
 
         int yy  = SHAPE1_ROW;        
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) { 
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16(0x0) or bfloat16
           for(int row=0; row < yy; row++) {
             int idx = row;
             fprintf(log_file, " mem 0x%016" PRIx64, (addr+idx*size));
             fprintf(log_file, " 0x%04" PRIx16, *((uint16_t *)paddr+idx));        
           } 
-        } else if (0x20202 == VME_DTYPE) {          
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int row=0; row < yy; row++) {
             int idx = row;
@@ -201,7 +201,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
         int xx  = VME_WOUT;
         int yy  = VME_HOUT;
         int zz  = VME_CIN;
-        if (0x0 == VME_DTYPE || 0x10101 == VME_DTYPE) {  
+        if (0x0 == VME_DTYPE || 0x01 == VME_DTYPE) {
           size = 2;   //float16, float16
           for(int out=0; out < zz; out++) { 
             for(int row=0; row < yy; row++) { 
@@ -212,7 +212,7 @@ static void commit_log_print_stc_mem_info(processor_t *p)
               }         
             } 
           }
-        } else if (0x20202 == VME_DTYPE) {
+        } else if (0x02 == VME_DTYPE) {
           size = 4;   //float32
           for(int out=0; out < zz; out++) { 
             for(int row=0; row < yy; row++) { 
@@ -776,9 +776,13 @@ void processor_t::step(size_t n)
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
+#ifdef MBOX_V1_ENABLE
       reg_t interrupts = (state.mip |
                           (state.mextip ?
                           (0x1 << IRQ_M_EXT) : 0));
+#else
+      reg_t interrupts = state.mip;
+#endif
       if (unlikely(interrupts & state.mie)) {
         if (unlikely(state.wfi_flag)) {
           pc = state.pc;
@@ -817,6 +821,7 @@ void processor_t::step(size_t n)
           /* core所在的grp在sync，该核运行时 hs_sync_timer_cnts 计数器累加 */
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {
             start_rdtsc = get_host_clks();
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
             endl_rdtsc = get_host_clks();
 
@@ -832,6 +837,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();
             }
           } else {
+            misc_dev->inst_cnt(fetch.insn.bits());
             pc = execute_insn(this, pc, fetch);
           }
 
@@ -874,6 +880,7 @@ void processor_t::step(size_t n)
           uint64_t riscv_clks = 0;    \
           if (hwsync->is_hs_group_sync(id) && (!state.pld)) {   \
             start_rdtsc = get_host_clks();   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
             endl_rdtsc = get_host_clks();    \
             if (likely(endl_rdtsc > start_rdtsc)) {   \
@@ -888,6 +895,7 @@ void processor_t::step(size_t n)
               throw trap_sync_timeout_trigger();  \
             }   \
           }else {   \
+            misc_dev->inst_cnt(fetch.insn.bits());     \
             pc = execute_insn(this, pc, fetch); \
           }   \
           ic_entry = ic_entry->next; \
@@ -927,6 +935,7 @@ void processor_t::step(size_t n)
         // instructions are idempotent so restarting is safe.)
 
         insn_fetch_t fetch = mmu->load_insn(pc);
+        misc_dev->inst_cnt(fetch.insn.bits());
         pc = execute_insn(this, pc, fetch);
         advance_pc();
 

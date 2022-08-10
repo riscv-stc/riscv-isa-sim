@@ -21,6 +21,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "usage: spike [host options] <target program> [target options]\n");
   fprintf(stderr, "Host Options:\n");
   fprintf(stderr, "  -p<n>                 Simulate <n> processors [default 1]\n");
+  fprintf(stderr, "  -b<n>                 Simulate <n> banks [default 1]. 0 == nprocs %% nbanks \n");
   fprintf(stderr, "  -m<n>                 Provide <n> MiB of target memory [default 2048]\n");
   fprintf(stderr, "  -m<a:m,b:n,...>       Provide memory regions of size m and n bytes\n");
   fprintf(stderr, "                          at base addresses a and b (with 4 KiB alignment)\n");
@@ -52,13 +53,14 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
   fprintf(stderr, "  --dump-dts            Print device tree string and exit\n");
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
-  fprintf(stderr, "  --bank-id=<n>         NPU Bank ID [default 0]\n");
+  fprintf(stderr, "  --bank-id=<n>         Single bank(-b=1):NPU Bank ID [default 0]. Multi bank(-b>1): id of the first bank [default 0].\n");
   fprintf(stderr, "  --board-id=<n>        Indicates the number of boards in a rack [default 0]\n");
   fprintf(stderr, "  --chip-id=<n>         Several chips per board [default 0]\n");
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --session-id=<n>      HWsync shared memory id [default 0]\n");
   fprintf(stderr, "  --core-mask=<n>         set core mask, bit0-bit31 for core0-core31 [default 0xffffffff all unmask]\n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
+  fprintf(stderr, "  --atuini=<path>       Address translation configuration file for virtualization\n");
   fprintf(stderr, "  --kernel=<path>       Load kernel flat image into memory\n");
   fprintf(stderr, "  --initrd=<path>       Load kernel initrd into memory\n");
   fprintf(stderr, "  --bootargs=<args>     Provide custom bootargs for kernel [default: console=hvc0 earlycon=sbi]\n");
@@ -242,17 +244,19 @@ int main(int argc, char** argv)
   bool real_time_clint = false;
   bool pcie_enabled = false;
   bool file_name_with_bank_id = false;
+  int nbanks = 1;
   size_t nprocs = 1;
   uint64_t ddr_size = 0x100000000; //4G ddr
   size_t board_id = 0;
   size_t chip_id = 0;
-  size_t bank_id = 0;
+  size_t id_first_bank = 0;
   size_t die_id = 0;
   size_t session_id = 0;
   uint32_t coremask = 0xffffffff;
   uint32_t hwsync_timer_num = 0xffffffff;    /* hs register HS_SYNC_REQ_ THRESH */
   char masks_buf[178]={'\0'};
-  const char *hwsync_masks = masks_buf;
+  char *hwsync_masks = masks_buf;
+  const char* atuini = nullptr;         /* 地址转换单元的配置文件 */
 
   const char* kernel = NULL;
   reg_t kernel_offset, kernel_size;
@@ -355,16 +359,17 @@ int main(int argc, char** argv)
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoul_nonzero_safe(s);});
+  parser.option('b', 0, 1, [&](const char* s){nbanks = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
   parser.option(0, "output-ddr-id-enabled", 0, [&](const char *s) { file_name_with_bank_id = true; });
-  parser.option(0, "bank-id", 1, [&](const char* s){ bank_id = atoi(s);});
+  parser.option(0, "bank-id", 1, [&](const char* s){ id_first_bank = atoi(s);});
   parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
   parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
   parser.option(0, "session-id", 1, [&](const char *s) { session_id = atoi(s); });
   parser.option(0, "core-mask", 1, [&](const char *s) { coremask = strtoull(s, NULL, 0); });
-  parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = s; });
+  parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = (char *)s; });
   parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
   // I wanted to use --halted, but for some reason that doesn't work.
   parser.option('H', 0, 0, [&](const char* s){halted = true;});
@@ -383,6 +388,7 @@ int main(int argc, char** argv)
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "dtb", 1, [&](const char *s){dtb_file = s;});
+  parser.option(0, "atuini", 1, [&](const char* s){atuini = s;});
   parser.option(0, "kernel", 1, [&](const char* s){kernel = s;});
   parser.option(0, "initrd", 1, [&](const char* s){initrd = s;});
   parser.option(0, "bootargs", 1, [&](const char* s){bootargs = s;});
@@ -461,9 +467,15 @@ int main(int argc, char** argv)
     }
   }
 
-  sim_t s(isa, priv, varch, nprocs, bank_id, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
+  if (((int)(nbanks)>(int)(nprocs)) || (0!=nprocs%nbanks)) {
+        std::cerr << "error " << "-p" << nprocs
+                << " -b" << nbanks << ".\n";
+        exit(1);
+  }
+  sim_t s(isa, priv, varch, nprocs, nbanks, id_first_bank, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
-      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file, pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask);
+      htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
+      pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask, atuini);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
@@ -481,11 +493,11 @@ int main(int argc, char** argv)
   if (dc && l2) dc->set_miss_handler(&*l2);
   if (ic) ic->set_log(log_cache);
   if (dc) dc->set_log(log_cache);
-  for (size_t i = 0; i < nprocs; i++)
+  for (int i = 0; i < (int)nprocs; i++)
   {
-    if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
-    if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
-    if (extension) s.get_core(i)->register_extension(extension());
+    if (ic) s.get_core_by_idxinsim(i)->get_mmu()->register_memtracer(&*ic);
+    if (dc) s.get_core_by_idxinsim(i)->get_mmu()->register_memtracer(&*dc);
+    if (extension) s.get_core_by_idxinsim(i)->register_extension(extension());
   }
 
   s.set_debug(debug);

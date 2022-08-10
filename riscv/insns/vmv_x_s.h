@@ -1,4 +1,6 @@
 // vmv_x_s: rd = vs2[rs1]
+require(P.VU.vstart == 0);
+
 require_vector(true);
 require(insn.v_vm() == 1);
 uint64_t xmask = UINT64_MAX >> (64 - P.get_max_xlen());

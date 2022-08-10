@@ -1,4 +1,6 @@
 // vfredmin vd, vs2, vs1
+require(P.VU.vstart == 0);
+
 bool is_propagate = true;
 VI_VFP_VV_LOOP_REDUCTION
 ({

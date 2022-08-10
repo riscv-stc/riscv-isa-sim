@@ -1,4 +1,6 @@
 // vmfeq.vv vd, vs2, vs1
+require(P.VU.vstart == 0);
+
 VI_VFP_LOOP_CMP
 ({
   res = bf16_eq(vs2, vs1);

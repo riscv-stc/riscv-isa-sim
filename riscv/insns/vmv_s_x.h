@@ -1,4 +1,6 @@
 // vmv_s_x: vd[0] = rs1
+require(P.VU.vstart == 0);
+
 require_vector(true);
 require(insn.v_vm() == 1);
 require(P.VU.vsew >= e8 && P.VU.vsew <= e64);

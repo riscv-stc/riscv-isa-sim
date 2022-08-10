@@ -37,6 +37,7 @@ debug_module_t::debug_module_t(sim_t *sim, const debug_module_config_t &config) 
   program_buffer_bytes((config.support_impebreak ? 4 : 0) + 4*config.progbufsize),
   debug_progbuf_start(debug_data_start - program_buffer_bytes),
   debug_abstract_start(debug_progbuf_start - debug_abstract_size*4),
+  debug_tempbuf_start(debug_abstract_start - 8),
   custom_base(0),
   hartsellen(field_width(sim->nprocs())),
   sim(sim),
@@ -49,7 +50,7 @@ debug_module_t::debug_module_t(sim_t *sim, const debug_module_config_t &config) 
   D(fprintf(stderr, "debug_data_start=0x%x\n", debug_data_start));
   D(fprintf(stderr, "debug_progbuf_start=0x%x\n", debug_progbuf_start));
   D(fprintf(stderr, "debug_abstract_start=0x%x\n", debug_abstract_start));
-
+  D(fprintf(stderr, "debug_tempbuf_start=0x%x\n", debug_tempbuf_start));
   assert(nprocs <= 1024);
 
   program_buffer = new uint8_t[program_buffer_bytes];
@@ -82,7 +83,7 @@ void debug_module_t::reset()
 {
   assert(sim->nprocs() > 0);
   for (unsigned i = 0; i < sim->nprocs(); i++) {
-    processor_t *proc = sim->get_core(i);
+    processor_t *proc = sim->get_core_by_idxinsim((int)i);
     if (proc)
       proc->halt_request = proc->HR_NONE;
   }
@@ -118,12 +119,11 @@ void debug_module_t::reset()
 }
 
 void debug_module_t::add_device(bus_t *bus) {
-  bus->add_device(DEBUG_BASE + DEBUG_START, this);
+  bus->add_device(DEBUG_BASE , this);
 }
 
 bool debug_module_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  addr = DEBUG_START + addr;
 
   if (addr >= DEBUG_ROM_ENTRY &&
       (addr + len) <= (DEBUG_ROM_ENTRY + debug_rom_raw_len)) {
@@ -156,6 +156,11 @@ bool debug_module_t::load(reg_t addr, size_t len, uint8_t* bytes)
     return true;
   }
 
+  if (addr >= debug_tempbuf_start && ((addr + len) <= (debug_tempbuf_start + sizeof(debug_rom_tempbuf)))) {
+    memcpy(bytes, debug_rom_tempbuf + addr - debug_tempbuf_start, len);
+    return true;
+  }
+
   D(fprintf(stderr, "ERROR: invalid load from debug module: %zd bytes at 0x%016"
           PRIx64 "\n", len, addr));
 
@@ -165,18 +170,18 @@ bool debug_module_t::load(reg_t addr, size_t len, uint8_t* bytes)
 bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
   D(
-      switch (len) {
-        case 4:
-          fprintf(stderr, "store(addr=0x%lx, len=%d, bytes=0x%08x); "
-              "hartsel=0x%x\n", addr, (unsigned) len, *(uint32_t *) bytes,
-              dmcontrol.hartsel);
-          break;
-        default:
-          fprintf(stderr, "store(addr=0x%lx, len=%d, bytes=...); "
-              "hartsel=0x%x\n", addr, (unsigned) len, dmcontrol.hartsel);
-          break;
-      }
-   );
+    switch (len) {
+    case 4:
+      fprintf(stderr, "store(addr=0x%lx, len=%d, bytes=0x%08x); "
+          "hartsel=0x%x\n", addr, (unsigned) len, *(uint32_t *) bytes,
+          dmcontrol.hartsel);
+      break;
+    default:
+      fprintf(stderr, "store(addr=0x%lx, len=%d, bytes=...); "
+          "hartsel=0x%x\n", addr, (unsigned) len, dmcontrol.hartsel);
+      break;
+  }
+  );
 
   uint8_t id_bytes[4];
   uint32_t id = 0;
@@ -185,8 +190,6 @@ bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     id = read32(id_bytes, 0);
   }
 
-  addr = DEBUG_START + addr;
-
   if (addr >= debug_data_start && (addr + len) <= (debug_data_start + sizeof(dmdata))) {
     memcpy(dmdata + addr - debug_data_start, bytes, len);
     return true;
@@ -194,7 +197,11 @@ bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
   if (addr >= debug_progbuf_start && ((addr + len) <= (debug_progbuf_start + program_buffer_bytes))) {
     memcpy(program_buffer + addr - debug_progbuf_start, bytes, len);
+    return true;
+  }
 
+  if (addr >= debug_tempbuf_start && ((addr + len) <= (debug_tempbuf_start + sizeof(debug_rom_tempbuf)))) {
+    memcpy(debug_rom_tempbuf + addr - debug_tempbuf_start, bytes, len);
     return true;
   }
 
@@ -206,7 +213,7 @@ bool debug_module_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         for (unsigned i = 0; i < nprocs; i++) {
           if (!hart_state[i].halted &&
               hart_state[i].haltgroup == hart_state[id].haltgroup) {
-            processor_t *proc = sim->get_core(i);
+            processor_t *proc = sim->get_core_by_idxinsim((int)i);
             proc->halt_request = proc->HR_GROUP;
             // TODO: What if the debugger comes and writes dmcontrol before the
             // halt occurs?
@@ -273,7 +280,7 @@ processor_t *debug_module_t::processor(unsigned hartid) const
 {
   processor_t *proc = NULL;
   try {
-    proc = sim->get_core(hartid);
+    proc = sim->get_core_by_idxinsim((int)hartid);
   } catch (const std::out_of_range&) {
   }
   return proc;
@@ -592,11 +599,16 @@ bool debug_module_t::perform_abstract_command()
     if (get_field(command, AC_ACCESS_REGISTER_TRANSFER)) {
 
       if (is_fpu_reg(regno)) {
-        // Save S0
-        write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH0));
+        // Save T6       
+        write32(debug_abstract, i++, csrw(T6, CSR_DSCRATCH1));
+        write32(debug_abstract, i++, 0x0000cfb7);
+        write32(debug_abstract, i++, 0x07ff8f9b);
+        write32(debug_abstract, i++, 0x010f9f93);
+        //Save S0
+        write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH0));    
         // Save mstatus
         write32(debug_abstract, i++, csrr(S0, CSR_MSTATUS));
-        write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH1));
+        write32(debug_abstract, i++, sd(S0, T6, debug_tempbuf_start));
         // Set mstatus.fs
         assert((MSTATUS_FS & 0xfff) == 0);
         write32(debug_abstract, i++, lui(S0, MSTATUS_FS >> 12));
@@ -606,15 +618,19 @@ bool debug_module_t::perform_abstract_command()
       if (regno < 0x1000 && config.support_abstract_csr_access) {
         if (!is_fpu_reg(regno)) {
           write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH0));
+          write32(debug_abstract, i++, csrw(T6, CSR_DSCRATCH1));
+          write32(debug_abstract, i++, 0x0000cfb7);
+          write32(debug_abstract, i++, 0x07ff8f9b);
+          write32(debug_abstract, i++, 0x010f9f93);
         }
 
         if (write) {
           switch (size) {
             case 2:
-              write32(debug_abstract, i++, lw(S0, ZERO, debug_data_start));
+              write32(debug_abstract, i++, lw(S0, T6, debug_data_start));
               break;
             case 3:
-              write32(debug_abstract, i++, ld(S0, ZERO, debug_data_start));
+              write32(debug_abstract, i++, ld(S0, T6, debug_data_start));
               break;
             default:
               abstractcs.cmderr = CMDERR_NOTSUP;
@@ -626,10 +642,10 @@ bool debug_module_t::perform_abstract_command()
           write32(debug_abstract, i++, csrr(S0, regno));
           switch (size) {
             case 2:
-              write32(debug_abstract, i++, sw(S0, ZERO, debug_data_start));
+              write32(debug_abstract, i++, sw(S0, T6, debug_data_start));
               break;
             case 3:
-              write32(debug_abstract, i++, sd(S0, ZERO, debug_data_start));
+              write32(debug_abstract, i++, sd(S0, T6, debug_data_start));
               break;
             default:
               abstractcs.cmderr = CMDERR_NOTSUP;
@@ -638,29 +654,38 @@ bool debug_module_t::perform_abstract_command()
         }
         if (!is_fpu_reg(regno)) {
           write32(debug_abstract, i++, csrr(S0, CSR_DSCRATCH0));
+          write32(debug_abstract, i++, csrr(T6, CSR_DSCRATCH1));
         }
 
       } else if (regno >= 0x1000 && regno < 0x1020) {
         unsigned regnum = regno - 0x1000;
-
+        write32(debug_abstract, i++, csrw(T5, CSR_DSCRATCH0));
+        write32(debug_abstract, i++, csrw(T6, CSR_DSCRATCH1));
+        write32(debug_abstract, i++, 0x0000cfb7);
+        write32(debug_abstract, i++, 0x07ff8f9b);
+        write32(debug_abstract, i++, 0x010f9f93);
+        if(regnum == T6){
+          write32(debug_abstract, i++, csrr(T5, CSR_DSCRATCH1));
+          regnum --;
+        }
         switch (size) {
           case 2:
             if (write)
-              write32(debug_abstract, i++, lw(regnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, lw(regnum, T6, debug_data_start));
             else
-              write32(debug_abstract, i++, sw(regnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, sw(regnum, T6, debug_data_start));
             break;
           case 3:
             if (write)
-              write32(debug_abstract, i++, ld(regnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, ld(regnum, T6, debug_data_start));
             else
-              write32(debug_abstract, i++, sd(regnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, sd(regnum, T6, debug_data_start));
             break;
           default:
             abstractcs.cmderr = CMDERR_NOTSUP;
             return true;
         }
-
+        // write32(debug_abstract, i++, csrr(S1, CSR_DSCRATCH1));
         if (regno == 0x1000 + S0 && write) {
           /*
            * The exception handler starts out be restoring dscratch to s0,
@@ -669,7 +694,16 @@ bool debug_module_t::perform_abstract_command()
            * dscratch in case an exception occurs in a program buffer that
            * might be executed later.
            */
+          write32(debug_abstract, i++, csrr(T6, CSR_DSCRATCH1));
           write32(debug_abstract, i++, csrw(S0, CSR_DSCRATCH0));
+        }else if (regno == 0x1000 + T6 && write) {
+          //Todo: The logic of writing to the T6 register needs further verification
+          write32(debug_abstract, i++, csrw(T5, CSR_DSCRATCH1));
+          write32(debug_abstract, i++, addi(T6, T5, 0));
+          write32(debug_abstract, i++, csrr(T5, CSR_DSCRATCH0));
+        }else{
+          write32(debug_abstract, i++, csrr(T5, CSR_DSCRATCH0));
+          write32(debug_abstract, i++, csrr(T6, CSR_DSCRATCH1));
         }
 
       } else if (regno >= 0x1020 && regno < 0x1040) {
@@ -678,10 +712,10 @@ bool debug_module_t::perform_abstract_command()
         if (write) {
           switch (size) {
             case 2:
-              write32(debug_abstract, i++, flw(fprnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, flw(fprnum, T6, debug_data_start));
               break;
             case 3:
-              write32(debug_abstract, i++, fld(fprnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, fld(fprnum, T6, debug_data_start));
               break;
             default:
               abstractcs.cmderr = CMDERR_NOTSUP;
@@ -691,10 +725,10 @@ bool debug_module_t::perform_abstract_command()
         } else {
           switch (size) {
             case 2:
-              write32(debug_abstract, i++, fsw(fprnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, fsw(fprnum, T6, debug_data_start));
               break;
             case 3:
-              write32(debug_abstract, i++, fsd(fprnum, ZERO, debug_data_start));
+              write32(debug_abstract, i++, fsd(fprnum, T6, debug_data_start));
               break;
             default:
               abstractcs.cmderr = CMDERR_NOTSUP;
@@ -723,10 +757,12 @@ bool debug_module_t::perform_abstract_command()
 
       if (is_fpu_reg(regno)) {
         // restore mstatus
-        write32(debug_abstract, i++, csrr(S0, CSR_DSCRATCH1));
+        // write32(debug_abstract, i++, csrr(S0, CSR_DSCRATCH1));
+         write32(debug_abstract, i++, ld(S0, T6, debug_tempbuf_start));
         write32(debug_abstract, i++, csrw(S0, CSR_MSTATUS));
         // restore s0
         write32(debug_abstract, i++, csrr(S0, CSR_DSCRATCH0));
+        write32(debug_abstract, i++, csrr(T6, CSR_DSCRATCH1));
       }
     }
 
@@ -829,7 +865,7 @@ bool debug_module_t::dmi_write(unsigned address, uint32_t value)
 
           if (dmcontrol.ndmreset) {
             for (size_t i = 0; i < sim->nprocs(); i++) {
-              processor_t *proc = sim->get_core(i);
+              processor_t *proc = sim->get_core_by_idxinsim((int)i);
               proc->reset();
             }
           }

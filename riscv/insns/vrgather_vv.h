@@ -1,4 +1,6 @@
 // vrgather.vv vd, vs2, vs1, vm # vd[i] = (vs1[i] >= VLMAX) ? 0 : vs2[vs1[i]];
+require(P.VU.vstart == 0);
+
 require_align(insn.rd(), P.VU.vflmul);
 require_align(insn.rs2(), P.VU.vflmul);
 require_align(insn.rs1(), P.VU.vflmul);

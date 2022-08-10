@@ -5,8 +5,8 @@ require_extension('V');
   struct ShapeStride sst;
 
   bc_sst_fill(sst, 2, 2);
-  unsigned long rs1 = MMU.get_phy_addr(RS1);
-  unsigned long rd = MMU.get_phy_addr(RD);
+  unsigned long rs1 = MMU.npc_addr_to_mem(RS1);
+  unsigned long rd = MMU.npc_addr_to_mem(RD);
 
   switch (p->get_csr(CSR_MME_DATA_TYPE)){
   case 0x0: // f16*f16 = f16
@@ -35,7 +35,6 @@ require_extension('V');
 
   default:
     check_cust_invalid_mme_tran_data_type(p->get_csr(CSR_MME_DATA_TYPE));
-    check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break;    
   }
 //});

@@ -1,4 +1,6 @@
 // vssra.vv vd, vs2, vs1
+require(P.VU.vstart == 0);
+
 VRM xrm = P.VU.get_vround_mode();
 VI_VV_LOOP
 ({

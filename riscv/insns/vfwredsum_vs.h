@@ -16,6 +16,7 @@
     (vs2[8k+1])= vs2[1] + vs2[9] + … + vs2[8k+1], k=0-vl/8
   vd = ((g0+g1) + (g2+g3)) + ((g4+g5) + (g6+g7))
 ######################*/
+require(P.VU.vstart == 0);
 
 #define SET  (8)
 #define GET_W16_UNORDER_VS2_VALUE(vs2, idx, zero)\

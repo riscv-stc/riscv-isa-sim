@@ -8,10 +8,15 @@ else
     e_size = 1;
 
 check_traps_pld(e_size);
+check_tcp_pld_invalid_coremap(p->get_id(), RS2);
 
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
+p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
+  uint8_t* src = (uint8_t*)MMU.mte_addr_to_mem(addr);
+  uint8_t* dst = (uint8_t*)MMU.mte_addr_to_mem(dst_addr);
+  uint32_t core_map = (uint32_t)rs2;
 
 // #define PLD_OUTPUT_MSG
 
@@ -42,11 +47,6 @@ reg_t rs2 = RS2;
   std::cout << "dst addr: 0x" << std::hex << dst_addr  << std::endl;
   std::cout << " " << std::endl;
 #endif
-
-p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
-  uint8_t* src = (uint8_t*)p->get_sim()->addr_to_mem(addr);
-  uint8_t* dst = (uint8_t*)MMU.get_phy_addr(dst_addr);
-  uint32_t core_map = (uint32_t)rs2;
 
   // do sync for pld
   p->pld(core_map);

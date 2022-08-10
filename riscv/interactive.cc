@@ -21,13 +21,20 @@
 
 DECLARE_TRAP(-1, interactive)
 
-processor_t *sim_t::get_core(const std::string& i)
+processor_t *sim_t::get_core_by_id(const std::string& i)
 {
   char *ptr;
+  processor_t *proc = nullptr;
+
   unsigned long p = strtoul(i.c_str(), &ptr, 10);
-  if (*ptr || p >= procs.size())
+  if (*ptr)
     throw trap_interactive();
-  return get_core(p);
+
+  proc = get_core_by_id(p);
+  if (!proc)
+    throw trap_interactive();
+    
+  return proc;
 }
 
 static std::string readline(int fd)
@@ -175,7 +182,7 @@ reg_t sim_t::get_pc(const std::vector<std::string>& args)
   if(args.size() != 1)
     throw trap_interactive();
 
-  processor_t *p = get_core(args[0]);
+  processor_t *p = get_core_by_id(args[0]);
   return p->get_state()->pc;
 }
 
@@ -189,7 +196,7 @@ reg_t sim_t::get_reg(const std::vector<std::string>& args)
   if(args.size() != 2)
     throw trap_interactive();
 
-  processor_t *p = get_core(args[0]);
+  processor_t *p = get_core_by_id(args[0]);
 
   unsigned long r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
   if (r == NXPR) {
@@ -214,7 +221,7 @@ freg_t sim_t::get_freg(const std::vector<std::string>& args)
   if(args.size() != 2)
     throw trap_interactive();
 
-  processor_t *p = get_core(args[0]);
+  processor_t *p = get_core_by_id(args[0]);
   int r = std::find(fpr_name, fpr_name + NFPR, args[1]) - fpr_name;
   if (r == NFPR)
     r = atoi(args[1].c_str());
@@ -238,7 +245,7 @@ void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::stri
   }
 
   // Show all the regs!
-  processor_t *p = get_core(args[0]);
+  processor_t *p = get_core_by_id(args[0]);
   const int vlen = (int)(p->VU.get_vlen()) >> 3;
   const int elen = (int)(p->VU.get_elen()) >> 3;
   const int num_elem = vlen/elen;
@@ -276,7 +283,7 @@ void sim_t::interactive_reg(const std::string& cmd, const std::vector<std::strin
 {
   if (args.size() == 1) {
     // Show all the regs!
-    processor_t *p = get_core(args[0]);
+    processor_t *p = get_core_by_id(args[0]);
 
     for (int r = 0; r < NXPR; ++r) {
       fprintf(stderr, "%-4s: 0x%016" PRIx64 "  ", xpr_name[r], p->get_state()->XPR[r]);
@@ -330,7 +337,7 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
   mmu_t* mmu = debug_mmu;
   if(args.size() == 2)
   {
-    processor_t *p = get_core(args[0]);
+    processor_t *p = get_core_by_id(args[0]);
     mmu = p->get_mmu();
     addr_str = args[1];
   }
@@ -372,7 +379,7 @@ void sim_t::interactive_str(const std::string& cmd, const std::vector<std::strin
   mmu_t* mmu = debug_mmu;
   if(args.size() == 2)
   {
-    processor_t *p = get_core(args[0]);
+    processor_t *p = get_core_by_id(args[0]);
     mmu = p->get_mmu();
     addr_str = args[1];
   }

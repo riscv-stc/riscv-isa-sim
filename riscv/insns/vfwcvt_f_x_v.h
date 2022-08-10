@@ -1,4 +1,6 @@
 // vfwcvt.f.x.v vd, vs2, vm
+require(P.VU.vstart == 0);
+
 VI_VFP_CVT_SCALE
 ({
   auto vs2 = P.VU.elt<int8_t>(rs2_num, i);

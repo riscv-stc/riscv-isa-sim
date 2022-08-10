@@ -24,6 +24,7 @@
 
   f32 vfredsum ==> f16 vfwredsum
 ######################*/
+require(P.VU.vstart == 0);
 
 #define SET  (16)
 #define GET_UNORDER_VS2_VALUE(vs2, idx, width, zero)\

@@ -3,10 +3,11 @@
 #include "mmu.h"
 #include "arith.h"
 #include "simif.h"
+#include "bankif.h"
 #include "processor.h"
 
-mmu_t::mmu_t(simif_t* sim, processor_t* proc)
- : sim(sim), proc(proc),
+mmu_t::mmu_t(simif_t* sim, bankif_t *bank, processor_t* proc, atu_t *atu)
+ : sim(sim), bank(bank), proc(proc), atu(atu),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
   target_big_endian(false),
 #endif
@@ -38,7 +39,7 @@ void mmu_t::flush_tlb()
   flush_icache();
 }
 
-static void throw_access_exception(bool virt, reg_t addr, access_type type)
+void mmu_t::throw_access_exception(bool virt, reg_t addr, access_type type)
 {
   switch (type) {
     case FETCH: throw trap_instruction_access_fault(virt, addr, 0, 0);
@@ -70,8 +71,9 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
       }
     }
   }
-
-  reg_t paddr = walk(addr, type, mode, virt, mxr) | (addr & (PGSIZE-1));
+  
+  reg_t satp = (virt) ? proc->get_state()->vsatp : proc->get_state()->satp;
+  reg_t paddr = walk(addr, type, mode, virt, mxr, satp) | (addr & (PGSIZE-1));
   if (!pma_ok(paddr, len, type,!!(xlate_flags&RISCV_XLATE_AMO_FLAG)))
     throw_access_exception(virt, addr, type);
   if (!pmp_ok(paddr, len, type, mode))
@@ -81,15 +83,33 @@ reg_t mmu_t::translate(reg_t addr, reg_t len, access_type type, uint32_t xlate_f
 
 tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(vaddr, sizeof(fetch_temp), FETCH, 0);
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
-    return refill_tlb(vaddr, paddr, host_addr, FETCH);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, sizeof(fetch_temp))) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
+        }
+        paddr = atu->translate(paddr, sizeof(fetch_temp));
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, FETCH);
+        }
+    }
+
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     return refill_tlb(vaddr, paddr, host_addr, FETCH);
   } else {
-    if (!mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp))
+    if (!(((proc&&bank) && bank->npc_mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp,idxinbank)) ||
+        (bank && bank->bank_mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp)) ||
+        (sim->mmio_load(paddr, sizeof fetch_temp, (uint8_t*)&fetch_temp)))) {
+
       throw trap_instruction_access_fault(proc->state.v, vaddr, 0, 0);
+    }
     tlb_entry_t entry = {(char*)&fetch_temp - vaddr, paddr - vaddr};
     return entry;
   }
@@ -124,7 +144,7 @@ reg_t reg_from_bytes(size_t len, const uint8_t* bytes)
 bool mmu_t::mmio_ok(reg_t addr, access_type type)
 {
   // Disallow access to debug region when not in debug mode
-  if (addr >= DEBUG_START && addr <= DEBUG_END && proc && !proc->state.debug_mode)
+  if (addr >= DEBUG_START && addr < DEBUG_END && proc && !proc->state.debug_mode)
     return false;
 
   return true;
@@ -132,44 +152,56 @@ bool mmu_t::mmio_ok(reg_t addr, access_type type)
 
 bool mmu_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  if (!mmio_ok(addr, LOAD))
-    return false;
+    if (!mmio_ok(addr, LOAD))
+        return false;
 
-  return sim->mmio_load(addr, len, bytes);
+    if ((bank->bank_mmio_load(addr, len, bytes)) || (sim->mmio_load(addr, len, bytes))) {
+        return true;
+    }
+    return false;
 }
 
 bool mmu_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (!mmio_ok(addr, STORE))
+    if (!mmio_ok(addr, STORE))
+        return false;
+        
+    if ((bank->bank_mmio_store(addr, len, bytes)) || (sim->mmio_store(addr, len, bytes))) {
+        return true;
+    }
     return false;
-
-  return sim->mmio_store(addr, len, bytes);
 }
 
 void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate_flags)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, LOAD, xlate_flags);
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+        paddr = atu->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+    }
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     memcpy(bytes, host_addr, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
       tracer.trace(paddr, len, LOAD);
     else
       refill_tlb(addr, paddr, host_addr, LOAD);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
-    memcpy(bytes, host_addr, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
-      tracer.trace(paddr, len, LOAD);
-    else
-      refill_tlb(addr, paddr, host_addr, LOAD);
-  } else if (sim->in_local_mem(paddr, IO_DEVICE)) {
-    if (!sim->local_mmio_load(paddr, len, bytes, proc? proc->get_idx(): 0)) {
-      throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
-  } else {
-    if (!sim->mmio_load(paddr, len, bytes)) {
-		throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
+  } else if (!(((proc&&bank) && bank->npc_mmio_load(paddr, len, bytes,idxinbank)) ||
+        (bank && bank->bank_mmio_load(paddr, len, bytes)) ||
+        (sim->mmio_load(paddr, len, bytes)))) {
+
+    throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }
 
   if (!matched_trigger) {
@@ -182,7 +214,19 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
 
 void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_t xlate_flags)
 {
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+        }
+        paddr = atu->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+        }
+    }
 
   if (!matched_trigger) {
     reg_t data = reg_from_bytes(len, bytes);
@@ -191,35 +235,130 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
       throw *matched_trigger;
   }
 
-  if (auto host_addr = sim->addr_to_mem(paddr)) {
+  if ((host_addr = (proc&&bank) ? bank->npc_addr_to_mem(paddr,idxinbank) : nullptr) ||
+        (host_addr = bank ? bank->bank_addr_to_mem(paddr) : nullptr) ||
+        (host_addr = sim->addr_to_mem(paddr))) {
+
     memcpy(host_addr, bytes, len);
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
       tracer.trace(paddr, len, STORE);
     else
       refill_tlb(addr, paddr, host_addr, STORE);
-  } else if (auto host_addr = sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0)) {
-    memcpy(host_addr, bytes, len);
-    if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
-      tracer.trace(paddr, len, STORE);
-    else
-      refill_tlb(addr, paddr, host_addr, STORE);
-  } else if (sim->in_local_mem(paddr, IO_DEVICE)) {
-      if (!sim->local_mmio_store(paddr, len, bytes, proc? proc->get_idx(): 0)) {
-        throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-      }
-  } else {
-    if (!sim->mmio_store(paddr, len, bytes)) {
-      throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
-    }
+  } else if (!(((proc&&bank) && bank->npc_mmio_store(paddr, len, bytes,idxinbank)) ||
+        (bank && bank->bank_mmio_store(paddr, len, bytes)) ||
+        (sim->mmio_store(paddr, len, bytes)))) {
+
+    throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }
 }
 
-size_t mmu_t::get_phy_addr(reg_t paddr)
+/* 访问npc核内的 8M npc local region,不经过mmu和ipa */
+size_t mmu_t::npc_addr_to_mem(reg_t paddr)
 {
   if (proc->get_xlen() == 32) {
     paddr &= 0xffffffff;
   }
-  return (size_t)sim->local_addr_to_mem(paddr, proc? proc->get_idx(): 0);
+  if (proc) {
+      return (size_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank());
+  } else {
+      return 0;
+  }
+}
+
+/**
+ * mte访存特点:
+ * 1) 访问范围, llb, l1
+ * 2) 不经过 mmu , 经过 atu 转换 
+ * 3) l1访存会跨核跨bank
+*/
+char * mmu_t::mte_addr_to_mem(reg_t paddr, int procid)
+{
+    int len = 1;
+    char *host_addr = nullptr;
+    int bankid = sim->get_bankid(sim->coreid_to_idxinsim(procid));
+    int idxinbank = sim->get_idxinbank(sim->coreid_to_idxinsim(procid));
+
+    if (proc->get_xlen() == 32) {
+        paddr &= 0xffffffff;
+    }
+
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+        paddr = atu->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+    }
+
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = sim->npc_addr_to_mem(paddr, bankid, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
+    // if (nullptr) {
+    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
+    // }
+    return host_addr;
+}
+
+char * mmu_t::mte_addr_to_mem(reg_t paddr)
+{
+    int len = 1;
+    char *host_addr = nullptr;
+    int idxinbank = proc ? proc->get_idxinbank() : 0;
+
+    if (proc->get_xlen() == 32) {
+        paddr &= 0xffffffff;
+    }
+
+    if(atu && atu->is_ipa_enabled()) {
+        if (!atu->pmp_ok(paddr, len)) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+        paddr = atu->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            throw_access_exception((proc) ? proc->state.v : false, paddr, LOAD);
+        }
+    }
+
+    if(IS_NPC_LOCAL_REGION(paddr)) {
+        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+    } else {
+        host_addr = sim->addr_to_mem(paddr);
+    }
+
+    // if (nullptr==host_addr) {
+    //     throw trap_load_access_fault((proc) ? proc->state.v : false, paddr, 0, 0);
+    // }
+    return host_addr;
+}
+
+/* 执行dmae指令产生的mmu问题和ipa at问题报中断，而不是trap */
+void mmu_t::dmae_smmu_trap(reg_t paddr, int channel)
+{
+    uint32_t mcu_irq_bit = 0;
+
+    mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_SMMU0;
+    if (MCU_IRQ_STATUS_BIT_DMA3_SMMU0 < mcu_irq_bit) {
+        return ;
+    }
+
+    proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
+}
+
+void mmu_t::dmae_atu_trap(reg_t paddr, int channel)
+{
+    uint32_t mcu_irq_bit = 0;
+
+    mcu_irq_bit = channel + MCU_IRQ_STATUS_BIT_DMA0_ATU0;
+    if (MCU_IRQ_STATUS_BIT_DMA3_ATU0 < mcu_irq_bit) {
+       return ;
+    }
+
+    proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
 tlb_entry_t mmu_t::refill_tlb(reg_t vaddr, reg_t paddr, char* host_addr, access_type type)
@@ -387,6 +526,7 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     return gpa;
 
   reg_t base = vm.ptbase;
+  reg_t mmio_ppte_val = 0;
   for (int i = vm.levels - 1; i >= 0; i--) {
     int ptshift = i * vm.idxbits;
     int idxbits = (i == (vm.levels - 1)) ? vm.idxbits + vm.widenbits : vm.idxbits;
@@ -394,7 +534,13 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
 
     // check that physical address of PTE is legal
     auto pte_paddr = base + idx * vm.ptesize;
-    auto ppte = sim->addr_to_mem(pte_paddr);
+    char *ppte = nullptr;
+    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
+        ppte = sim->addr_to_mem(pte_paddr);
+    } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
+                (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
+        ppte = (char *)(&mmio_ppte_val);
+    }
     
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD)) {
       throw_access_exception(virt, gva, trap_type);
@@ -456,10 +602,9 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
   }
 }
 
-reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
+reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr, reg_t satp)
 {
   reg_t page_mask = (reg_t(1) << PGSHIFT) - 1;
-  reg_t satp = (virt) ? proc->get_state()->vsatp : proc->get_state()->satp;
   vm_info vm = decode_vm_info(proc->max_xlen, false, mode, satp);
   if (vm.levels == 0)
     return s2xlate(addr, addr & ((reg_t(2) << (proc->xlen-1))-1), type, type, virt, mxr) & ~page_mask; // zero-extend from xlen
@@ -475,13 +620,20 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr)
     vm.levels = 0;
 
   reg_t base = vm.ptbase;
+  reg_t mmio_ppte_val = 0;
   for (int i = vm.levels - 1; i >= 0; i--) {
     int ptshift = i * vm.idxbits;
     reg_t idx = (addr >> (PGSHIFT + ptshift)) & ((1 << vm.idxbits) - 1);
 
     // check that physical address of PTE is legal
     auto pte_paddr = s2xlate(addr, base + idx * vm.ptesize, LOAD, type, virt, false);
-    auto ppte = sim->addr_to_mem(pte_paddr);
+    char *ppte = nullptr;
+    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
+        ppte = sim->addr_to_mem(pte_paddr);
+    } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
+                (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
+        ppte = (char *)(&mmio_ppte_val);
+    }
     if (!ppte || !pma_ok(pte_paddr, vm.ptesize, LOAD))
       throw_access_exception(virt, addr, type);
     if (!ppte || !pmp_ok(pte_paddr, vm.ptesize, LOAD, PRV_S))

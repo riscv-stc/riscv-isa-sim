@@ -7,6 +7,7 @@
 #include "devices.h"
 #include "trap.h"
 #include "simif.h"
+#include "bankif.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -14,6 +15,7 @@
 #include <cassert>
 #include <functional>
 #include "debug_rom_defines.h"
+#include "atu.h"
 
 class processor_t;
 class mmu_t;
@@ -184,6 +186,29 @@ struct state_t
   reg_t mideleg;
   uint32_t mcounteren;
   uint32_t scounteren;
+  reg_t mcounterwen;
+  reg_t mhpmcounter[32];
+  reg_t mhpmevent[32];
+
+  reg_t mdcause;
+  reg_t mmisc_ctl;
+  reg_t mxstatus; 
+  reg_t milmb;
+  reg_t mdlmb;
+  reg_t mecc_code;
+  reg_t mnvec;
+  reg_t mpft_ctl;
+  reg_t mmic_ctl;
+  reg_t mclk_ctl;
+  reg_t mcounterinten;
+  reg_t mcountermask_m;
+  reg_t mcountermask_u;
+  reg_t mcounterovf;
+  reg_t micm_cfg;
+  reg_t mdcm_cfg;
+  reg_t mmsc_cfg;
+  reg_t mvec_cfg;
+
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;
@@ -211,10 +236,21 @@ struct state_t
   reg_t dpc;
   reg_t dscratch0, dscratch1;
   dcsr_t dcsr;
+  reg_t ddcause;
+  reg_t dexc2dbg;
+
   reg_t mhsp_ctl;
   reg_t msp_bound;
   reg_t msp_base;
+
   reg_t tselect;
+  reg_t tinfo;
+  reg_t tcontrol;
+  reg_t mcontext;
+  
+  reg_t pmacfg0;
+  reg_t pmacfg2;
+
   mcontrol_t mcontrol[num_triggers];
   reg_t tdata2[num_triggers];
   bool debug_mode;
@@ -300,12 +336,26 @@ struct state_t
   reg_t user5;
   reg_t user6;
   reg_t user7;
-
+  reg_t mcache_ctl;
   reg_t wfi_flag;
   /* mextip is ext interrupt pending status for mbox,
    * just effect mip ext interrupt bit. */
   volatile reg_t mextip;
   bool serialized; // whether timer CSRs are in a well-defined state
+
+  // User mode csr
+  reg_t ustatus;
+  reg_t ucause;
+  reg_t udcause;
+  reg_t ucctlbeginaddr;
+  reg_t ucctlcommand;
+  reg_t uitd;
+  reg_t ucode;
+  reg_t uie;
+  reg_t utvec;
+  reg_t uscratch;
+  reg_t uepc;
+  reg_t uip;
 
   bool async_started = false;
   bool pld = false;
@@ -362,9 +412,9 @@ class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, hwsync_t *hs, uint32_t idx,
-              uint32_t id, bool halt_on_reset,
-              FILE *log_file);
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
+              const char *atuini,FILE *log_file);
   ~processor_t();
 
   void set_debug(bool value);
@@ -406,7 +456,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_Bfloat16( (i*col+j) % 32 ).x;
+                rand_value[i][j].x = rand_Bfloat16( j % 32 ).x;
               }
           }
       }
@@ -416,7 +466,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_half( (i*col+j) % 32 ).x;
+                rand_value[i][j].x = rand_half( j % 32 ).x;
               }
           }
       }
@@ -426,7 +476,7 @@ public:
           {
               for(int j = 0; j < col; j++)
               {
-                rand_value[i][j].x = rand_Float32( (i*col+j) % 16 ).x;
+                rand_value[i][j].x = rand_Float32( j % 16 ).x;
               }
           }          
       }
@@ -438,8 +488,10 @@ public:
   Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
   simif_t* get_sim() { return sim; };
+  bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();
-  uint32_t get_idx() {return idx; };
+  uint32_t get_idxinbank() {return idxinbank; };
+  uint32_t get_bank_id() {return bank_id;};
   uint32_t get_id() {return id; };
   state_t* get_state() { return &state; }
   unsigned get_xlen() { return xlen; }
@@ -611,14 +663,25 @@ public:
 
   const char* get_symbol(uint64_t addr);
 
+  char* addr_to_mem(reg_t addr);
+  bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
+  bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
+  bool in_npc_mem(reg_t addr, local_device_type type);
+  bool in_npc_mmio(reg_t addr);
+
 private:
   simif_t* sim;
+  bankif_t* bank;
   hwsync_t *hwsync;
+  pcie_driver_t *pcie_driver = nullptr;
+  bus_t npc_bus;
+  atu_t *atu = nullptr;
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
   state_t state;
-  uint32_t idx;
+  uint32_t idxinbank;
+  uint32_t bank_id;
   uint32_t id;
   unsigned max_xlen;
   unsigned xlen;
@@ -632,9 +695,9 @@ private:
   FILE *log_file;
   bool halt_on_reset;
   mbox_device_t *mbox;
+  misc_device_t *misc_dev = nullptr;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
-  
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
@@ -662,9 +725,13 @@ private:
 
   friend class mmu_t;
   friend class clint_t;
+  friend class misc_device_t;
   friend class extension_t;
   friend class pcie_driver_t;
   friend class mbox_device_t;
+  friend class smmu_t;
+  friend class sysdma_device_t;
+  friend class sys_irq_t;
 
   void parse_varch_string(const char*);
   void parse_priv_string(const char*);

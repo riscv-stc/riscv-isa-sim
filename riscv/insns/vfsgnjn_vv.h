@@ -1,4 +1,6 @@
 // vfsgnn
+require(P.VU.vstart == 0);
+
 VI_VFP_VV_LOOP
 ({
   vd = fsgnj16bf(vs2.v, vs1.v, true, false);

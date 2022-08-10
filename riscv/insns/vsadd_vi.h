@@ -1,4 +1,6 @@
 // vsadd.vi vd, vs2 simm5
+require(P.VU.vstart == 0);
+
 VI_CHECK_SSS(false);
 VI_LOOP_BASE
 bool sat = false;

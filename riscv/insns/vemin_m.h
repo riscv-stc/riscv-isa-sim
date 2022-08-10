@@ -1,8 +1,8 @@
 struct ShapeStride sst;
 class CustomInsns CusIns;
 sst_fill(sst, 1, 1);
-unsigned long rs1 = MMU.get_phy_addr(RS1);
-unsigned long rd  = MMU.get_phy_addr(RD);
+unsigned long rs1 = MMU.npc_addr_to_mem(RS1);
+unsigned long rd  = MMU.npc_addr_to_mem(RD);
 
 switch (VME_DTYPE) {
   case 0x0:         // f16
@@ -23,7 +23,7 @@ switch (VME_DTYPE) {
         } 
     }
     break;
-  case 0x10101:     // bf16
+  case 0x01:     // bf16
     if (DIM == 0) {
         check_traps_vexxx_m_reduce_all(uint16_t);
         Bfloat16 res;
@@ -41,7 +41,7 @@ switch (VME_DTYPE) {
         } 
     }
     break;
-  case 0x020202:    // f32
+  case 0x02:    // f32
     if (DIM == 0) {
         check_traps_vexxx_m_reduce_all(uint32_t);
         float32_t res;
@@ -58,7 +58,7 @@ switch (VME_DTYPE) {
     }
     break; 
   default:
-    trap_ncp_cust_invalid_param(); 
+    break;
 }
 
 // VME_DTYPE_DECODING_TO_TYPE({
@@ -71,7 +71,7 @@ switch (VME_DTYPE) {
 //         WRITE_FRD_STC(f32res);  //WRITE_FRD(f32res);
 //     } else{
 //         check_traps_vexxx_m_reduce_vector(dtype_lut);
-//         unsigned long rd = MMU.get_phy_addr(RD);
+//         unsigned long rd = MMU.npc_addr_to_mem(RD);
 //         vemin_m<dtype_vd>((dtype_vd*)rs1, (dtype_vd*)rd, &sst, DIM_DM, relu);
 //         if(DIM_DM){
 //             WRITE_MEM_STC(RD, (dtype_vd*)rd, CMT_LOG_VME_COM_W);

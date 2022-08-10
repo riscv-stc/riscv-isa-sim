@@ -1,4 +1,6 @@
 //vfslide1up.vf vd, vs2, rs1
+require(P.VU.vstart == 0);
+
 VI_CHECK_SLIDE(true);
 
 VI_VFP_LOOP_BASE

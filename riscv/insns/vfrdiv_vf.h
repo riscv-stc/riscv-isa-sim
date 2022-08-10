@@ -1,4 +1,6 @@
 // vfrdiv.vf vd, vs2, rs1, vm  # scalar-vector, vd[i] = f[rs1]/vs2[i]
+require(P.VU.vstart == 0);
+
 VI_VFP_VF_LOOP
 ({
   check_tcp_csr_bf16(STATE.bf16);

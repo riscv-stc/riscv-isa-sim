@@ -8,11 +8,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include "simif.h"
 
 std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
                      reg_t initrd_start, reg_t initrd_end,
                      const char* bootargs,
-                     std::vector<processor_t*> procs,
+                     class simif_t *sim,
                      std::vector<std::pair<reg_t, mem_t*>> mems)
 {
   std::stringstream s;
@@ -47,14 +48,14 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "    #address-cells = <1>;\n"
          "    #size-cells = <0>;\n"
          "    timebase-frequency = <" << (cpu_hz/insns_per_rtc_tick) << ">;\n";
-  for (size_t i = 0; i < procs.size(); i++) {
+  for (size_t i = 0; i < sim->nprocs(); i++) {
     s << "    CPU" << i << ": cpu@" << i << " {\n"
          "      device_type = \"cpu\";\n"
          "      reg = <" << i << ">;\n"
          "      status = \"okay\";\n"
          "      compatible = \"riscv\";\n"
-         "      riscv,isa = \"" << procs[i]->get_isa_string() << "\";\n"
-         "      mmu-type = \"riscv," << (procs[i]->get_max_xlen() <= 32 ? "sv32" : "sv48") << "\";\n"
+         "      riscv,isa = \"" << sim->get_core_by_idxinsim(i)->get_isa_string() << "\";\n"
+         "      mmu-type = \"riscv," << (sim->get_core_by_idxinsim(i)->get_max_xlen() <= 32 ? "sv32" : "sv48") << "\";\n"
          "      riscv,pmpregions = <16>;\n"
          "      riscv,pmpgranularity = <4>;\n"
          "      clock-frequency = <" << cpu_hz << ">;\n"
@@ -74,7 +75,7 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
                    " 0x" << (m.second->size() >> 16 >> 16) << " 0x" << (m.second->size() & (uint32_t)-1) << ">;\n"
          "  };\n";
   }
-  s <<   "  soc {\n"
+  s << std::hex <<   "  soc {\n"
          "    #address-cells = <2>;\n"
          "    #size-cells = <2>;\n"
          "    compatible = \"ucbbar,spike-bare-soc\", \"simple-bus\";\n"
@@ -82,7 +83,7 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "    clint@" << CLINT_BASE << " {\n"
          "      compatible = \"riscv,clint0\";\n"
          "      interrupts-extended = <" << std::dec;
-  for (size_t i = 0; i < procs.size(); i++)
+  for (size_t i = 0; i < sim->nprocs(); i++)
     s << "&CPU" << i << "_intc 3 &CPU" << i << "_intc 7 ";
   reg_t clintbs = CLINT_BASE;
   reg_t clintsz = CLINT_SIZE;

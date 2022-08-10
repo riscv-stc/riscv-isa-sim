@@ -2,7 +2,7 @@ require_extension('V');
 
 class CustomInsns CusIns;
 struct ShapeStride sst;
-unsigned long rd = MMU.get_phy_addr(RD);
+unsigned long rd = MMU.npc_addr_to_mem(RD);
 uint8_t e_size = 2;
 
 switch (VME_DTYPE)
@@ -17,7 +17,7 @@ switch (VME_DTYPE)
         WRITE_MEM_STC(RD, (half*)rd, CMT_LOG_VME_COM);
         break;
     }
-    case 0x10101:
+    case 0x01:
     {
         e_size = 2;
         check_traps_mov_f(e_size);
@@ -27,7 +27,7 @@ switch (VME_DTYPE)
         WRITE_MEM_STC(RD, (Bfloat16*)rd, CMT_LOG_VME_COM);
         break;
     }
-    case 0x20202:
+    case 0x02:
     {
         e_size = 4;
         check_traps_mov_f(e_size);

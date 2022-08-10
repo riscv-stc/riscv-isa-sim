@@ -1,0 +1,3 @@
+PARENT_REPO=simulator/riscv-tools
+PARENT_PATH=riscv-isa-sim
+PARENT_BRANCH=2.x-dev

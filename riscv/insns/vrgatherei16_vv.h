@@ -1,4 +1,6 @@
 // vrgatherei16.vv vd, vs2, vs1, vm # vd[i] = (vs1[i] >= VLMAX) ? 0 : vs2[vs1[i]];
+require(P.VU.vstart == 0);
+
 float vemul = (16.0 / P.VU.vsew * P.VU.vflmul);
 require(vemul >= 0.125 && vemul <= 8);
 require_align(insn.rd(), P.VU.vflmul);

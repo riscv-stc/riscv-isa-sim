@@ -1,4 +1,6 @@
 // vsbc.vxm vd, vs2, rs1, v0
+require(P.VU.vstart == 0);
+
 VI_XI_LOOP_WITH_CARRY
 ({
   auto &v0 = P.VU.elt<uint64_t>(0, midx);

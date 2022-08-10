@@ -5,8 +5,8 @@ reg_t t_rd  = RD;
 //p->run_async([p, t_rs1, t_rs2, t_rd, pc]() {
   struct ShapeStride sst;
   class CustomInsns CusIns;
-  unsigned long rs1 = MMU.get_phy_addr(t_rs1);
-  unsigned long rd  = MMU.get_phy_addr(t_rd);
+  unsigned long rs1 = MMU.npc_addr_to_mem(t_rs1);
+  unsigned long rd  = MMU.npc_addr_to_mem(t_rd);
 
   switch (p->get_csr(CSR_MME_DATA_TYPE)){
   case 0x0: // f16 = uint16_t
@@ -30,7 +30,6 @@ reg_t t_rd  = RD;
 
   default:
     check_cust_invalid_vme_or_reduce_data_type(p->get_csr(CSR_MME_DATA_TYPE));
-    check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break;     
   }
 //});

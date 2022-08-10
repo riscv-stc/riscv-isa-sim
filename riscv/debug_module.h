@@ -111,6 +111,7 @@ class debug_module_t : public abstract_device_t
 
     void add_device(bus_t *bus);
 
+    size_t size(void) {return DEBUG_END - (DEBUG_BASE+DEBUG_START);};
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
@@ -135,9 +136,9 @@ class debug_module_t : public abstract_device_t
     unsigned program_buffer_bytes;
     static const unsigned debug_data_start = 0x380;
     unsigned debug_progbuf_start;
-
-    static const unsigned debug_abstract_size = 12;
+    static const unsigned debug_abstract_size = 25;
     unsigned debug_abstract_start;
+    unsigned debug_tempbuf_start;
     // R/W this through custom registers, to allow debuggers to test that
     // functionality.
     unsigned custom_base;
@@ -147,7 +148,7 @@ class debug_module_t : public abstract_device_t
     unsigned hartsellen = 10;
 
     sim_t *sim;
-
+    uint8_t debug_rom_tempbuf[8];
     uint8_t debug_rom_whereto[4];
     uint8_t debug_abstract[debug_abstract_size * 4];
     uint8_t *program_buffer;

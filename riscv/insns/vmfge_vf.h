@@ -1,4 +1,6 @@
 // vmfge.vf vd, vs2, rs1
+require(P.VU.vstart == 0);
+
 VI_VFP_LOOP_CMP
 ({
   res = bf16_le(rs1, vs2);

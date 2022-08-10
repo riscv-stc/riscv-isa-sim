@@ -977,7 +977,7 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R3TYPE(versub_mv);
   DEFINE_CV2TYPE(versub_mf);
   DEFINE_R1TYPE(verot180_m);
-  DEFINE_FR2TYPE(verev_m);
+  DEFINE_R1TYPE(verev_m);
   DEFINE_R1TYPE(verand_v)
   DEFINE_R4TYPE(verand_m)
 
@@ -1056,6 +1056,7 @@ disassembler_t::disassembler_t(int xlen)
   DISASM_INSN("vsetivli", vsetivli, 0, {&xrd, &zimm5, &v_vtype});
   DISASM_INSN("vsetvli", vsetvli, 0, {&xrd, &xrs1, &v_vtype});
   DISASM_INSN("vsetvl", vsetvl, 0, {&xrd, &xrs1, &xrs2});
+  DISASM_INSN("vln8.v", vln8_v, 0, {&vd, &xrs1, &vm});
 
   #define DISASM_VMEM_INSN(name, fmt, ff) \
     add_insn(new disasm_insn_t(#name "8"    #ff ".v",  match_##name##8##ff##_v,     mask_##name##8##ff##_v    | mask_nf, fmt)); \
@@ -1082,6 +1083,8 @@ disassembler_t::disassembler_t(int xlen)
   add_insn(new disasm_insn_t("vse32pi.v", match_vse32pi_v, mask_vse32pi_v, v_st_unit));
 
   add_insn(new disasm_insn_t("vle1.v",  match_vle1_v,     mask_vle1_v, v_ld_unit));
+  add_insn(new disasm_insn_t("vse1.v",  match_vse1_v,     mask_vse1_v, v_st_unit));
+  add_insn(new disasm_insn_t("vln8.v",  match_vle1_v,     mask_vle1_v, v_ld_unit));
   add_insn(new disasm_insn_t("vse1.v",  match_vse1_v,     mask_vse1_v, v_st_unit));
 
   DISASM_VMEM_INSN(vle,    v_ld_unit,   );
@@ -1112,9 +1115,6 @@ disassembler_t::disassembler_t(int xlen)
       {match_vsoxei8_v, mask_vsoxei8_v, "vsoxseg%dei%d.v", v_st_index},
 
       {match_vle8ff_v, mask_vle8ff_v, "vlseg%de%dff.v", v_ld_unit},
-
-      {match_vln8_v,   mask_vln8_v,   "vlseg%de%d.v",   v_ld_unit},
-      {match_vlnu8_v,   mask_vlnu8_v,   "vlseg%de%d.v",   v_ld_unit},
     };
 
     reg_t elt_map[] = {0x00000000, 0x00005000, 0x00006000, 0x00007000,

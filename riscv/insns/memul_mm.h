@@ -10,10 +10,10 @@ reg_t t_deq = MME_DEQUANT_COEFF;
   struct ShapeStride sst;
 
 
-  unsigned long rs1 = MMU.get_phy_addr(t_rs1);
-  unsigned long rs2 = MMU.get_phy_addr(t_rs2);
-  unsigned long rd  = MMU.get_phy_addr(t_rd);
-  unsigned long dequant = MMU.get_phy_addr(t_deq);
+  unsigned long rs1 = MMU.npc_addr_to_mem(t_rs1);
+  unsigned long rs2 = MMU.npc_addr_to_mem(t_rs2);
+  unsigned long rd  = MMU.npc_addr_to_mem(t_rd);
+  unsigned long dequant = MMU.npc_addr_to_mem(t_deq);
   
 
   switch (p->get_csr(CSR_MME_DATA_TYPE)){
@@ -156,7 +156,6 @@ reg_t t_deq = MME_DEQUANT_COEFF;
 
   default:
     check_cust_invalid_mme_matrix_conv_data_type(p->get_csr(CSR_MME_DATA_TYPE));
-    check_cust_invalid_npu_data_type(p->get_csr(CSR_MME_DATA_TYPE));
     break;  
   }
 //});

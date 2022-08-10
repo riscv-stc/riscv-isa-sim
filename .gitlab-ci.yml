@@ -7,25 +7,53 @@ variables:
 
 stages:
   - build
+  - test
   - package
 
 cache:
   paths:
     - .cache
     - .env
+    - build
 
 build:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
     - mkdir -p build_v2
-    - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
+    - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --with-varch=vlen:256,elen:32,slen:256 --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
       - build_v2
       - VERSION
     name: build_output
+
+test:
+  stage : test
+  script:
+    - export PATH=$CI_PROJECT_DIR/build_v2:$RISCV/bin:$PATH
+    - export LC_ALL=C.UTF-8
+    - export LANG=C.UTF-8
+    - curl http://releases.streamcomputing.com/host-sdk/hpe/hpe2.x-latest | bash
+    - curl http://releases.streamcomputing.com/toolchain/llvm-12/latest | bash
+    - git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/rvpvp-npuv2.git
+    - which spike
+    - python3 -m pip install --upgrade pip && pip install virtualenv
+    - cd rvpvp-npuv2
+    - virtualenv -p python3 .env
+    - source .env/bin/activate
+    - pip install tensorflow
+    - pip install -U pip
+    - pip install --editable rvpvp
+    - rvpvp gen --basic --nproc `nproc`
+    - rvpvp run --nproc `nproc`
+
+  artifacts:
+    paths:
+      - build_v2
+      - VERSION
+    name: test_output
 
 package:
   stage : package
