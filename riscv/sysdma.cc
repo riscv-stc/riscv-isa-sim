@@ -197,8 +197,8 @@ void sysdma_device_t::dma_core(int ch) {
       stride_d1 *= ele_size;
 
       /* 32'h0: linear mode */
-      stride_s2 = (desc->bkmr3.stride_s2) ? desc->bkmr3.stride_s2 : (stride_s1*high);
-      stride_d2 = (desc->bkmr5.stride_d2) ? desc->bkmr5.stride_d2 : (stride_d1*high);
+      stride_s2 = (desc->bkmr3.stride_s2) ? desc->bkmr3.stride_s2*ele_size : (stride_s1*high);
+      stride_d2 = (desc->bkmr5.stride_d2) ? desc->bkmr5.stride_d2*ele_size : (stride_d1*high);
       if ((stride_s2<(stride_s1*high)) || (stride_d2<(stride_d1*high))) {
         throw std::runtime_error("stride2 is smaller than stride1*high");
       }
