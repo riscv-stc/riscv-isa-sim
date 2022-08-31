@@ -51,6 +51,8 @@ test:
     - pip install --editable rvpvp
     - rvpvp gen --basic --nproc `nproc`
     - rvpvp run --nproc `nproc`
+  after_script:
+    - grep FAIL rvpvp-npuv2/log/runner_report.log
 
   artifacts:
     paths:
