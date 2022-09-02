@@ -53,12 +53,12 @@ test:
     - rvpvp run --nproc `nproc`
   after_script:
     - grep FAIL rvpvp-npuv2/log/runner_report.log
-
   artifacts:
     paths:
       - build_v2
       - VERSION
     name: test_output
+  timeout: 3h
 
 package:
   stage : package
