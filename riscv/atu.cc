@@ -217,14 +217,14 @@ int atu_t::at_update(dictionary *ini, int procid)
 
         if ((LONGINT_INVALID!=at.pa_base) && (LONGINT_INVALID!=at.ipa_start) &&(LONGINT_INVALID!=at.ipa_end)) {
             if ((at.ipa_end < at.ipa_start)) {
-                cerr << section_name << ":entry" << i
+                cerr << section_name << ":entry" << dec << i
                     << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
                     << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
                     << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;
                 throw std::range_error("ipa range error");
             } else {
                 #ifdef IPA_DEBUG
-                cout << section_name << ":entry" << i
+                cout << section_name << ":entry" << dec << i
                     << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
                     << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
                     << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;
@@ -288,14 +288,14 @@ int atu_t::at_update(dictionary *ini, int dma_id, int ch_id)
 
         if ((LONGINT_INVALID!=at.pa_base) && (LONGINT_INVALID!=at.ipa_start) &&(LONGINT_INVALID!=at.ipa_end)) {
             if ((at.ipa_end < at.ipa_start)) {
-                cerr << section_name << ":entry" << i
+                cerr << section_name << ":entry" << dec << i
                     << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
                     << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
                     << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;
                 throw std::range_error("ipa range error");
             } else {
                 #ifdef IPA_DEBUG
-                cout << section_name << ":entry" << i
+                cout << section_name << ":entry" << dec << i
                     << "  pa.base: 0x" << hex << setw(10) << left << at.pa_base
                     << "  ipa.start: 0x" << hex << setw(10) << left << at.ipa_start
                     << "  ipa.end: 0x" << hex << setw(10) << left << at.ipa_end << endl;

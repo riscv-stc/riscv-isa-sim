@@ -97,8 +97,8 @@ sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, cons
   smmu[0] = new smmu_t(sim, bank, (uint8_t *)sys_dma_reg + SYS_DMAX_C0_SMMU_OFFSET);
   smmu[1] = new smmu_t(sim, bank, (uint8_t *)sys_dma_reg + SYS_DMAX_C1_SMMU_OFFSET);
 
-  atu[0] = new atu_t(atuini, bank->get_bankid()*2 + dma_idx_, 0, (uint8_t *)sys_dma_reg + SYS_DMAX_C0_ATU_OFFSET);
-  atu[1] = new atu_t(atuini, bank->get_bankid()*2 + dma_idx_, 1, (uint8_t *)sys_dma_reg + SYS_DMAX_C1_ATU_OFFSET);
+  atu[0] = new atu_t(atuini, dma_idx_, 0, (uint8_t *)sys_dma_reg + SYS_DMAX_C0_ATU_OFFSET);
+  atu[1] = new atu_t(atuini, dma_idx_, 1, (uint8_t *)sys_dma_reg + SYS_DMAX_C1_ATU_OFFSET);
 
   atu[0]->reset();
   atu[1]->reset();
