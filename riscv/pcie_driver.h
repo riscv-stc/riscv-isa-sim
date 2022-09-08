@@ -92,5 +92,24 @@ class pcie_driver_t {
   std::mutex pcie_mutex;
 };
 
+#define PCIE_AXI_SLAVE      0x00011000
+#define PCIE_AXI_SLAVE_SIZE 0x1000
+
+#define AXI_ADDR0   (PCIE_AXI_SLAVE+0x120)
+#define AXI_ADDR1   (PCIE_AXI_SLAVE+0x124)
+
+class pcie_ctl_device_t : public abstract_device_t {
+ public:
+  pcie_ctl_device_t(void);
+  ~pcie_ctl_device_t();
+
+  size_t size(void) {return len;};
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+ private:
+  size_t len = PCIE_CTL_CFG_SIZE;
+  uint8_t *reg_base = nullptr;
+};
+
 #endif
 

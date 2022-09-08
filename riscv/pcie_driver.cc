@@ -456,3 +456,41 @@ pcie_driver_t::~pcie_driver_t()
     mRecvBuffer = NULL;
   }
 }
+
+
+pcie_ctl_device_t::pcie_ctl_device_t(void)
+{
+  reg_base = (uint8_t *)malloc(len);
+}
+
+pcie_ctl_device_t::~pcie_ctl_device_t(void)
+{
+  delete reg_base;
+  reg_base = nullptr;
+}
+
+bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+    std::cout << "pcie_ctl_cfg: unsupported load register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  memcpy(bytes, (uint8_t*)reg_base+addr, len);
+
+  return true;
+}
+
+bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+    std::cout << "pcie_ctl_cfg: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  memcpy((uint8_t*)reg_base+addr, bytes, len);
+
+  return true;
+}

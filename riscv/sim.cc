@@ -142,6 +142,10 @@ die_id(die_id),
       n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ, soc_apb->sys_irq);
       glb_bus.add_device(N2AP_MBOX_LOC_BASE, n2ap_mbox);
 
+      /* PCIE_CTL_CFG (128KB) */
+      pcie_ctl = new pcie_ctl_device_t();
+      glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_ctl);
+
       /* pcie_mbox */
       pcie_driver_t *pcie_driver = banks[get_id_first_bank()]->get_pcie_driver();
       pcie_mbox = new pcie_mbox_t(this, pcie_driver);
@@ -258,6 +262,14 @@ sim_t::~sim_t()
     if (n2ap_mbox) {
         delete n2ap_mbox;
         n2ap_mbox = nullptr;
+    }
+    if (pcie_mbox) {
+        delete pcie_mbox;
+        pcie_mbox = nullptr;
+    }
+    if (pcie_ctl) {
+        delete pcie_ctl;
+        pcie_ctl = nullptr;
     }
 
     delete debug_mmu;
@@ -763,6 +775,12 @@ bool sim_t::in_mmio(reg_t addr)
     }
 
     if (auto mem = dynamic_cast<ap_mbox_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<pcie_ctl_device_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }
