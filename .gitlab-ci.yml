@@ -1,4 +1,4 @@
-image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+image: 'code.streamcomputing.com/ubuntu:20.04-stc'
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -20,21 +20,24 @@ build:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
-    - mkdir -p build_v2
-    - cd build_v2 && ../configure --with-isa=rv64gcv_zfh --with-varch=vlen:256,elen:32,slen:256 --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
+    - mkdir -p build_v2_ipa
+    - cd build_v2_ipa && ../configure --with-isa=rv64gcv_zfh --with-varch=vlen:256,elen:32,slen:256 --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
 
   artifacts:
     paths:
-      - build_v2
+      - build_v2_ipa
       - VERSION
     name: build_output
 
 test:
   stage : test
   script:
-    - export PATH=$CI_PROJECT_DIR/build_v2:$RISCV/bin:$PATH
+    - export PATH=$CI_PROJECT_DIR/build_v2_ipa:$RISCV/bin:$PATH
     - export LC_ALL=C.UTF-8
     - export LANG=C.UTF-8
+    - export PIP_INDEX_URL=https://nexus3.in/repository/pypi-aliyun/simple/
+    - export PIP_TRUSTED_HOST=nexus3.in
+    - export JAX_PLATFORM_NAME=cpu
     - curl http://releases.streamcomputing.com/host-sdk/hpe/hpe2.x-latest | bash
     - curl http://releases.streamcomputing.com/toolchain/llvm-12/latest | bash
     - git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/rvpvp-npuv2.git
@@ -43,23 +46,24 @@ test:
     - cd rvpvp-npuv2
     - virtualenv -p python3 .env
     - source .env/bin/activate
-    - pip install tensorflow
     - pip install -U pip
-    #- pip install -r requirements.txt
+    - pip install -r requirements.txt
     - pip install --editable rvpvp
     - rvpvp gen --basic --nproc `nproc`
     - rvpvp run --nproc `nproc`
-
+  after_script:
+    - grep FAIL rvpvp-npuv2/log/runner_report.log
   artifacts:
     paths:
-      - build_v2
+      - build_v2_ipa
       - VERSION
     name: test_output
+  timeout: 3h
 
 package:
   stage : package
   script:
-    - cd build_v2 && make install && cd -
+    - cd build_v2_ipa && make install && cd -
     - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
     - export LINK=latest
     - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
