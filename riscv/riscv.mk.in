@@ -922,6 +922,223 @@ riscv_insn_priv = \
 	sret \
 	wfi \
 
+riscv_insn_ext_matrix = \
+	msettypei \
+	msettilemi \
+	msettileki \
+	msettileni \
+	msettsidxi \
+	msettype \
+	msettilem \
+	msettilek \
+	msettilen \
+	msettsidx \
+	mle8_xa_r_c \
+	mle8_xa_c_c \
+	mle8_tr_r_c \
+	mle8_tr_c_c \
+	mle8_xa_r_a \
+	mle8_xa_c_a \
+	mle8_tr_r_a \
+	mle8_tr_c_a \
+	mle8_xa_r_b \
+	mle8_xa_c_b \
+	mle8_tr_r_b \
+	mle8_tr_c_b \
+	mle16_xa_r_c \
+	mle16_xa_c_c \
+	mle16_tr_r_c \
+	mle16_tr_c_c \
+	mle16_xa_r_a \
+	mle16_xa_c_a \
+	mle16_tr_r_a \
+	mle16_tr_c_a \
+	mle16_xa_r_b \
+	mle16_xa_c_b \
+	mle16_tr_r_b \
+	mle16_tr_c_b \
+	mle32_xa_r_c \
+	mle32_xa_c_c \
+	mle32_tr_r_c \
+	mle32_tr_c_c \
+	mle32_xa_r_a \
+	mle32_xa_c_a \
+	mle32_tr_r_a \
+	mle32_tr_c_a \
+	mle32_xa_r_b \
+	mle32_xa_c_b \
+	mle32_tr_r_b \
+	mle32_tr_c_b \
+	mle64_xa_r_c \
+	mle64_xa_c_c \
+	mle64_tr_r_c \
+	mle64_tr_c_c \
+	mle64_xa_r_a \
+	mle64_xa_c_a \
+	mle64_tr_r_a \
+	mle64_tr_c_a \
+	mle64_xa_r_b \
+	mle64_xa_c_b \
+	mle64_tr_r_b \
+	mle64_tr_c_b \
+	\
+	mfle16_xa_r_c \
+	mfle16_xa_c_c \
+	mfle32_xa_r_c \
+	mfle32_xa_c_c \
+	\
+	mse8_xa_r_c \
+	mse8_xa_c_c \
+	mse8_tr_r_c \
+	mse8_tr_c_c \
+	mse8_xa_r_a \
+	mse8_xa_c_a \
+	mse8_tr_r_a \
+	mse8_tr_c_a \
+	mse8_xa_r_b \
+	mse8_xa_c_b \
+	mse8_tr_r_b \
+	mse8_tr_c_b \
+	mse16_xa_r_c \
+	mse16_xa_c_c \
+	mse16_tr_r_c \
+	mse16_tr_c_c \
+	mse16_xa_r_a \
+	mse16_xa_c_a \
+	mse16_tr_r_a \
+	mse16_tr_c_a \
+	mse16_xa_r_b \
+	mse16_xa_c_b \
+	mse16_tr_r_b \
+	mse16_tr_c_b \
+	mse32_xa_r_c \
+	mse32_xa_c_c \
+	mse32_tr_r_c \
+	mse32_tr_c_c \
+	mse32_xa_r_a \
+	mse32_xa_c_a \
+	mse32_tr_r_a \
+	mse32_tr_c_a \
+	mse32_xa_r_b \
+	mse32_xa_c_b \
+	mse32_tr_r_b \
+	mse32_tr_c_b \
+	mse64_xa_r_c \
+	mse64_xa_c_c \
+	mse64_tr_r_c \
+	mse64_tr_c_c \
+	mse64_xa_r_a \
+	mse64_xa_c_a \
+	mse64_tr_r_a \
+	mse64_tr_c_a \
+	mse64_xa_r_b \
+	mse64_xa_c_b \
+	mse64_tr_r_b \
+	mse64_tr_c_b \
+	\
+	mfse16_xa_r_c \
+	mfse16_xa_c_c \
+	mfse32_xa_r_c \
+	mfse32_xa_c_c \
+	\
+	mopa_mm \
+	mwopa_mm \
+	mqopa_mm \
+	mfopa_mm \
+	mfwopa_mm \
+	\
+	madd_mm \
+	mfadd_mm \
+	mwadd_mm \
+	mfwadd_mm \
+	mqadd_mm \
+	\
+	msub_mm \
+	mfsub_mm \
+	mwsub_mm \
+	mfwsub_mm \
+	mqsub_mm \
+	\
+	mrsub_mm \
+	mfrsub_mm \
+	mwrsub_mm \
+	mfwrsub_mm \
+	mqrsub_mm \
+	\
+	mclracc \
+	mfncvt_f_f_w \
+	\
+	mmv_v_tr_r_m \
+	mmv_v_tr_r_k \
+	mmv_v_tr_r_n \
+	mmv_v_tr_c_m \
+	mmv_v_tr_c_k \
+	mmv_v_tr_c_n \
+	mmv_v_xa_r_m \
+	mmv_v_xa_r_k \
+	mmv_v_xa_r_n \
+	mmv_v_xa_c_m \
+	mmv_v_xa_c_k \
+	mmv_v_xa_c_n \
+	\
+	mwmv_v_xa_r_k \
+	mwmv_v_xa_c_k \
+	mwmv_v_xa_r_m \
+	mwmv_v_xa_c_m \
+	mwmv_v_xa_r_n \
+	mwmv_v_xa_c_n \
+	\
+	mqmv_v_xa_r_k \
+	mqmv_v_xa_c_k \
+	mqmv_v_xa_r_m \
+	mqmv_v_xa_c_m \
+	mqmv_v_xa_r_n \
+	mqmv_v_xa_c_n \
+	\
+	mfmv_v_xa_r_m \
+	mfmv_v_xa_r_k \
+	mfmv_v_xa_r_n \
+	mfmv_v_xa_c_m \
+	mfmv_v_xa_c_k \
+	mfmv_v_xa_c_n \
+	\
+	mfwmv_v_xa_r_k \
+	mfwmv_v_xa_c_k \
+	mfwmv_v_xa_r_m \
+	mfwmv_v_xa_c_m \
+	mfwmv_v_xa_r_n \
+	mfwmv_v_xa_c_n \
+	\
+	mfqmv_v_xa_r_k \
+	mfqmv_v_xa_c_k \
+	mfqmv_v_xa_r_m \
+	mfqmv_v_xa_c_m \
+	mfqmv_v_xa_r_n \
+	mfqmv_v_xa_c_n \
+	\
+	mmv_tr_v_r_m \
+	mmv_tr_v_r_k \
+	mmv_tr_v_r_n \
+	mmv_tr_v_c_m \
+	mmv_tr_v_c_k \
+	mmv_tr_v_c_n \
+	mmv_xa_v_r_m \
+	mmv_xa_v_r_k \
+	mmv_xa_v_r_n \
+	mmv_xa_v_c_m \
+	mmv_xa_v_c_k \
+	mmv_xa_v_c_n \
+	\
+	mwmv_xa_v_r_k \
+	mwmv_xa_v_c_k \
+	mwmv_xa_v_r_m \
+	mwmv_xa_v_c_m \
+	mwmv_xa_v_r_n \
+	mwmv_xa_v_c_n \
+	\
+	mqmv_xa_v_r_m \
+	mqmv_xa_v_c_m \
+
 
 riscv_insn_list = \
 	$(riscv_insn_ext_a) \
@@ -937,6 +1154,7 @@ riscv_insn_list = \
 	$(if $(HAVE_INT128),$(riscv_insn_ext_v),) \
 	$(riscv_insn_ext_h) \
 	$(riscv_insn_priv) \
+	$(riscv_insn_ext_matrix) \
 
 riscv_gen_srcs = \
 	$(addsuffix .cc,$(riscv_insn_list))

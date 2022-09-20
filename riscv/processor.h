@@ -444,7 +444,7 @@ private:
   bool halt_on_reset;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
-  
+
   entropy_source es; // Crypto ISE Entropy source.
 
   std::vector<insn_desc_t> instructions;
@@ -544,6 +544,89 @@ public:
   };
 
   vectorUnit_t VU;
+
+  class matrixUnit_t {
+    public:
+      processor_t* p;
+      void *tr_file;
+      void *acc_file;
+
+      reg_t tile_m, tile_k, tile_n;
+      reg_t MLEN, mlenb;
+      reg_t mtype;
+      reg_t mlmul;
+      reg_t tsidx, sidx, sdim; // 0-10: idx;   11-12: idx dim
+      reg_t mill, maccq;
+      reg_t msew, mltr, mrtr;
+      reg_t mbf16, mtf32;
+      reg_t mrows, mcols;
+
+      /* matrix element for varies eew
+        td: tile reg num
+        tt: read row 6 or col 7
+        slice: slice
+        n: index in slice
+        is_write: write or read
+      */
+      template<class T>
+        T& tr_elt(reg_t td, reg_t tt, reg_t slice, reg_t n, bool is_write = false) {
+          assert(msew != 0);
+          assert((mcols >> 3)/sizeof(T) > 0);
+          reg_t elts_per_slice = (mcols>> 3) / (sizeof(T));
+
+          T *regStart = ((T*)tr_file) + td * elts_per_slice * mrows;
+          if (tt & 1) { // col
+            reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
+            return regStart[elts_per_slice * n + new_slice];
+          } else { //row
+            reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
+            return regStart[elts_per_slice * new_slice + n];
+          }
+        }
+
+      template<class T>
+        T& acc_elt(reg_t td, reg_t tt, reg_t slice, reg_t n, bool is_write = false) {
+          assert(msew != 0);
+          assert((mcols >> 3)/sizeof(T) > 0);
+          reg_t elts_per_slice;
+          if (maccq) {
+            elts_per_slice = (mcols * 4 >> 3) / (sizeof(T));
+          } else {
+            elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
+          }
+
+          T *regStart = ((T*)acc_file) + td * elts_per_slice * mrows;
+          if (tt & 1) { // col
+            reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
+            return regStart[elts_per_slice * n + slice];
+          } else { //row
+            reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
+            return regStart[elts_per_slice * slice + n];
+          }
+        }
+
+    public:
+
+      void reset();
+
+      matrixUnit_t() {
+        tr_file = 0;
+        acc_file = 0;
+      }
+      ~matrixUnit_t(){
+        free(tr_file);
+        free(acc_file);
+        tr_file = 0;
+        acc_file = 0;
+      }
+
+      reg_t set_mtype(int rd, reg_t newType);
+      reg_t set_ml(int rd, int rs1, reg_t newMlen, char dim);
+      reg_t set_tsidx(int rd, reg_t newIdx, bool imm);
+
+  };
+
+  matrixUnit_t MU;
 };
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);

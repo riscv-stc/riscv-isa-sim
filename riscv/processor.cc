@@ -126,6 +126,8 @@ void processor_t::parse_varch_string(const char* s)
   int vlen = 0;
   int elen = 0;
   int slen = 0;
+  int mlen = 0;
+  int maccq = 1;
   int vstart_alu = 1;
 
   while (pos < len) {
@@ -141,6 +143,10 @@ void processor_t::parse_varch_string(const char* s)
       elen = get_int_token(str, ',', pos);
     else if (attr == "vstartalu")
       vstart_alu = get_int_token(str, ',', pos);
+    else if (attr == "mlen")
+      mlen = get_int_token(str, ',', pos);
+    else if (attr == "maccq")
+      maccq = get_int_token(str, ',', pos);
     else
       bad_varch_string(s, "Unsupported token");
 
@@ -169,6 +175,11 @@ void processor_t::parse_varch_string(const char* s)
   VU.ELEN = elen;
   VU.vlenb = vlen / 8;
   VU.vstart_alu = vstart_alu;
+  MU.MLEN = mlen;
+  MU.mlenb = mlen / 8;
+  MU.mrows = MU.MLEN / VU.VLEN;
+  MU.mcols = VU.VLEN;
+  MU.maccq = maccq;
 }
 
 static std::string strtolower(const char* str)
@@ -420,6 +431,92 @@ reg_t processor_t::vectorUnit_t::set_vl(int rd, int rs1, reg_t reqVL, reg_t newT
   return vl;
 }
 
+void processor_t::matrixUnit_t::reset(){
+  free(tr_file);
+  free(acc_file);
+  tr_file = malloc(mlenb * 8);
+  memset(tr_file, 0, mlenb * 8);
+  if (maccq) {
+    acc_file = malloc(mlenb * 4 * 8);
+    memset(acc_file, 0, mlenb * 4 * 8);
+  } else {
+    acc_file = malloc(mlenb * 2 * 8);
+    memset(acc_file, 0, mlenb * 2 * 8);
+  }
+
+  mtype = 0;
+  tile_m = 0;
+  tile_n = 0;
+  tile_k = 0;
+}
+
+reg_t processor_t::matrixUnit_t::set_mtype(int rd, reg_t newType) {
+  mtype = newType;
+  msew = 1 << (extract64(newType, 0, 3) + 3);
+  mrtr = extract64(newType, 3, 1);
+  mltr = extract64(newType, 4, 1);
+  mbf16 = extract64(newType, 5, 1);
+  mtf32 = extract64(newType, 6, 1);
+
+  return mtype;
+}
+
+
+reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
+  reg_t MMAX = mrows;
+  reg_t NMAX = mcols / msew;
+  reg_t KMAX = std::min(MMAX, NMAX);
+  if (mrtr) { // transpos right matrix
+    KMAX = mrows;
+  }
+
+  if (dim == 'm' || dim == 'M') {
+    if (rs1 != 0 && rd != 0) {
+      tile_m = newMlen > MMAX? MMAX : newMlen;
+    } else if (rs1 == 0 && rd != 0) {
+      tile_m = MMAX;
+    }
+    return tile_m;
+  } else if (dim == 'k' || dim == 'K') {
+    if (rs1 != 0 && rd != 0) {
+      tile_k = newMlen > KMAX? KMAX : newMlen;
+    } else if (rs1 == 0 && rd != 0) {
+      tile_k = KMAX;
+    }
+    return tile_k;
+  } else if (dim == 'n' || dim == 'N') {
+    if (rs1 != 0 && rd != 0) {
+      tile_n = newMlen > NMAX? NMAX : newMlen;
+    } else if (rs1 == 0 && rd != 0) {
+      tile_n = NMAX;
+    }
+    return tile_n;
+  } else {
+    return 0;
+  }
+
+}
+
+reg_t processor_t::matrixUnit_t::set_tsidx(int rd, reg_t newIdx, bool imm) {
+  tsidx = newIdx;
+  int sidx_end, sdim_start;
+  if (imm) {
+    sidx_end = 10;
+    sdim_start = 11;
+  } else {
+    sidx_end = 32 - 3;
+    sdim_start = 32 - 2;
+  }
+
+  sidx = extract64(tsidx, 0, sidx_end);
+
+  sdim = extract64(tsidx, sdim_start, 2);
+
+  return tsidx;
+
+}
+
+
 void processor_t::set_debug(bool value)
 {
   debug = value;
@@ -463,6 +560,7 @@ void processor_t::reset()
   state.vsstatus = state.mstatus & SSTATUS_VS_MASK;  // set UXL
   set_csr(CSR_HSTATUS, state.hstatus);  // set VSXL
   VU.reset();
+  MU.reset();
 
   if (n_pmp > 0) {
     // For backwards compatibility with software that is unaware of PMP,
@@ -1716,6 +1814,26 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret(VU.vlenb);
+    case CSR_TILE_M:
+      require_vector_vs;
+      if (!supports_extension('V'))
+        break;
+      ret(MU.tile_m);
+    case CSR_TILE_K:
+      require_vector_vs;
+      if (!supports_extension('V'))
+        break;
+      ret(MU.tile_k);
+    case CSR_TILE_N:
+      require_vector_vs;
+      if (!supports_extension('V'))
+        break;
+      ret(MU.tile_n);
+    case CSR_MTYPE:
+      require_vector_vs;
+      if (!supports_extension('V'))
+        break;
+      ret(MU.mtype);
   }
 
 #undef ret
