@@ -58,7 +58,7 @@ test:
       - build_v2_ipa
       - VERSION
     name: test_output
-  timeout: 3h
+  timeout: 6h
 
 package:
   stage : package
