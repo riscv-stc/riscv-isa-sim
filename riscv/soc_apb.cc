@@ -19,6 +19,9 @@ sys_apb_decoder_t::sys_apb_decoder_t(simif_t* sim,uint64_t base, uint8_t *reg_pt
     this->sim = sim;
     uint32_t val32 = 0;
 
+    val32 = 0x53544321;
+    store(DECODER_SOC_CHIP_NAME_ADDR, 4, (uint8_t *)&val32);
+
     val32 = 0x20200102;
     store(DECODER_SOC_CHIP_VERSION_ADDR, 4, (uint8_t *)&val32);
 
@@ -40,6 +43,7 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
     switch(addr) {
     case DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR:
     case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
+    case DECODER_SOC_CHIP_NAME_ADDR:
     case DECODER_SOC_CHIP_VERSION_ADDR:
     case DECODER_SOC_DIE_SEL_ADDR:
         memcpy(bytes, (char *)reg_base + addr, len);
@@ -69,6 +73,7 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
         this->set_disarm_reset_state(this->sim,bytes);
         break;
+    case DECODER_SOC_CHIP_NAME_ADDR:
     case DECODER_SOC_CHIP_VERSION_ADDR:
     case DECODER_SOC_DIE_SEL_ADDR:
         memcpy((char *)reg_base + addr, bytes, len);
@@ -176,6 +181,7 @@ sys_irq_t::sys_irq_t(simif_t *sim, apifc_t *apifc, uint8_t *reg_ptr) :
     val32 = 0xffffffff;
     store(SYSIRQ_CPU_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
     store(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)(&val32));
+    store(SYSIRQ_CPU_IRQ_MASK_ADDR2, 4, (uint8_t*)(&val32));
     store(SYSIRQ_PCIE_IRQ_MASK_ADDR0, 4, (uint8_t*)(&val32));
 }
 
@@ -209,9 +215,10 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     
     switch(addr) {
     /* npcx-->A53中断mask, 0b1屏蔽, 0b0不屏蔽 */
-    case SYSIRQ_CPU_IRQ_MASK_ADDR0:
+    case SYSIRQ_CPU_IRQ_MASK_ADDR0:     /* 0x00 */
     /* A53中断mask, [29]:p2ap_mbox， [30]:n2ap_mbox， 0b0中断可以发送到A53 */
-    case SYSIRQ_CPU_IRQ_MASK_ADDR1:
+    case SYSIRQ_CPU_IRQ_MASK_ADDR1:     /* 0x04 */
+    case SYSIRQ_CPU_IRQ_MASK_ADDR2:     /* 0x08 */
     case SYSIRQ_PCIE_IRQ_MASK_ADDR0:
         memcpy((char *)reg_base + addr, bytes, len);
         break;
@@ -288,6 +295,25 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         if (sts_new ^ sts_old) {
             memcpy(reg_base+addr, (uint8_t*)&sts_new, 4);
             /* 向pcie发送中断 */
+        }
+        break;
+    case SYSIRQ_INGRESS_IRQ_STS_ADDR2:
+        irq = 0;
+        mask = *(uint32_t *)(reg_base+SYSIRQ_CPU_IRQ_MASK_ADDR2);
+        sts_old = *(uint32_t *)(reg_base+addr);
+        sts_new = *(uint32_t *)bytes;
+        // sts_new = sts_old | (sts_new & (~mask));
+        sts_new = (sts_new & (~mask));
+        memcpy(reg_base+addr, (uint8_t*)&sts_new, 4);
+        for (i = 0 ; i < PCIE_DMA_CH_TOTAL ; i++) {
+            if ((sts_new ^ sts_old) & (1<<STS_ADDR2_PCIE_DMA_BIT_CH(i))) {
+                irq = A53_PCIE_DMA_IRQ_CH(i);
+                if (sts_new & (1<<STS_ADDR2_PCIE_DMA_BIT_CH(i))) {
+                    apifc->generate_irq_to_a53(irq, true);  
+                } else {
+                    apifc->generate_irq_to_a53(irq, false);
+                }
+            }
         }
         break;
     /* die1的功能逻辑后续按需补充 */

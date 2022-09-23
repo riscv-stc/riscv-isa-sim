@@ -45,6 +45,9 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
   if(!pcie_enabled)
   	return;
 
+  /* pcie_dma */
+  sem_init(&read_host_sem, 0, 0);
+
   if (initialize() != PCIE_OK) {
     std::cout << "PCIe driver init fail." << std::endl;
     return;
@@ -424,6 +427,10 @@ void pcie_driver_t::task_doing()
           }
           break;
 
+        case CODE_READ_HOST:    /* CODE_READ_HOST resp */
+          read_host_notify_ok(pCmd);
+          break;
+
         default:
           std::cout << "unknow cmd." << std::endl;
       }
@@ -457,10 +464,47 @@ pcie_driver_t::~pcie_driver_t()
   }
 }
 
+/* 成功返回0 */
+int pcie_driver_t::read_host_ready_to(struct command_head_t *cmd)
+{
+  int i = 0;
+  int sem_val = 0;
 
-pcie_ctl_device_t::pcie_ctl_device_t(void)
+  if (!read_host_mutex.try_lock()) {
+    return -1;
+  }
+
+  read_host_cmd = cmd;
+
+  sem_getvalue(&read_host_sem, &sem_val);
+  if (0 < sem_val) {
+    for (i = 0 ; i < sem_val ; i++) {
+      sem_trywait(&read_host_sem);
+    }
+  }
+
+  return 0;
+}
+
+int pcie_driver_t::read_host_wait(void)
+{
+  sem_wait(&read_host_sem);
+  read_host_mutex.unlock();
+
+  return 0;
+}
+
+void pcie_driver_t::read_host_notify_ok(struct command_head_t *cmd)
+{
+  memcpy(read_host_cmd, cmd, sizeof(*cmd));
+  sem_post(&read_host_sem);
+}
+
+pcie_ctl_device_t::pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie) : sim(_sim), pcie(_pcie)
 {
   reg_base = (uint8_t *)malloc(len);
+
+  pcie_dma = new pcie_dma_dev_t((uint8_t *)reg_base + PCIE_DMA_OFFSET, sim, pcie);
 }
 
 pcie_ctl_device_t::~pcie_ctl_device_t(void)
@@ -477,7 +521,12 @@ bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     return false;
   }
 
-  memcpy(bytes, (uint8_t*)reg_base+addr, len);
+  /* pcie_dma */
+  if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
+    pcie_dma->load(addr-PCIE_DMA_OFFSET, len, bytes);
+  } else {
+    memcpy(bytes, (uint8_t*)reg_base+addr, len);
+  }
 
   return true;
 }
@@ -490,7 +539,332 @@ bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     return false;
   }
 
-  memcpy((uint8_t*)reg_base+addr, bytes, len);
+  /* pcie_dma */
+  if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
+    pcie_dma->store(addr-PCIE_DMA_OFFSET, len, bytes);
+  } else {
+    memcpy((uint8_t*)reg_base+addr, bytes, len);
+  }
 
   return true;
 }
+
+pcie_dma_dev_t::pcie_dma_dev_t(uint8_t *pcie_dma_regs, simif_t *_sim,
+    pcie_driver_t *_pcie) : sim(_sim), pcie(_pcie), reg_base(pcie_dma_regs)
+{
+  int i = 0;
+
+  if (NULL == reg_base) {
+    throw std::invalid_argument("error! pcie_dma reg_base is nullptr");
+  }
+
+  for (i = 0 ; i < PCIE_DMA_CH_TOTAL ; i++) {
+    PCIEDMA_CTL(reg_base, i) |= (1<<PCIEDMA_CTL_READY);
+  }
+}
+
+pcie_dma_dev_t::~pcie_dma_dev_t(void)
+{
+  reg_base = nullptr;
+}
+
+bool pcie_dma_dev_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+  int ch = 0;
+  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+    std::cout << "pcie_dma_dev_t: unsupported load register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  ch = addr / 0x20;
+  if (PCIE_DMA_CH_TOTAL <= ch) {
+    std::cout << "pcie_dma_dev_t: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+  switch(addr%0x20) {
+  case PCIEDMA_VERSION:
+  case PCIEDMA_FEATURES:
+  case PCIEDMA_DESC_L:
+  case PCIEDMA_DESC_U:
+  case PCIEDMA_ATTIBUTES:
+  case PCIEDMA_CONTROL:
+    memcpy(bytes, (uint8_t*)reg_base+addr, len);
+    break;
+  default:
+    std::cout << "pcie_dma_dev_t: unsupported load register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+bool pcie_dma_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+  int ch = 0;
+  uint32_t val32 = 0;
+
+  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+    std::cout << "pcie_dma_dev_t: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  ch = addr / 0x20;
+  if (PCIE_DMA_CH_TOTAL <= ch) {
+    std::cout << "pcie_dma_dev_t: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+  switch(addr%0x20) {
+  /*
+  case PCIEDMA_VERSION:
+  case PCIEDMA_FEATURES:
+  */
+  case PCIEDMA_DESC_L:
+  case PCIEDMA_DESC_U:
+  case PCIEDMA_ATTIBUTES:
+    memcpy((uint8_t*)reg_base+addr, bytes, len);
+    break;
+  case PCIEDMA_CONTROL:
+    {
+      bool clear_irq = false;
+      val32 = *(uint32_t*)bytes;
+      if (val32 & (1<<PCIEDMA_CTL_DONE_STAT)) {   /* done_status */
+        val32 &= (~(1<<PCIEDMA_CTL_DONE_STAT));
+        clear_irq = true;
+      }
+      if (val32 & (1<<PCIEDMA_CTL_ERR_STAT)) {    /* error_status */
+        val32 &= (~(1<<PCIEDMA_CTL_ERR_STAT));
+        clear_irq = true;
+      }
+
+      PCIEDMA_CTL(reg_base, ch) &= 0x81F00000;    /* mask */
+      PCIEDMA_CTL(reg_base, ch) |= val32;
+
+      if (clear_irq) {
+        sim->mmio_load(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
+        val32 &= (~(1<<STS_ADDR2_PCIE_DMA_BIT_CH(ch)));
+        sim->mmio_store(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
+      }
+
+      if (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_GO)) {    /* go */
+        pcie_dma_go(ch);
+      }
+    }
+    break;
+  default:
+    std::cout << "pcie_dma_dev_t: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+/* 写DDR, 成功返回0 */
+int pcie_dma_dev_t::write_soc(uint64_t addr, uint8_t *data, int len)
+{
+  uint8_t *maddr = nullptr;
+
+  maddr = (uint8_t*)sim->addr_to_mem((reg_t)addr);
+  if (nullptr == maddr) {
+    return -1;
+  }
+  memcpy(maddr, data, len);
+
+  return 0;
+}
+
+/* 读DDR, 成功返回0 */
+int pcie_dma_dev_t::read_soc(uint64_t addr, uint8_t *data, int len)
+{
+  uint8_t *maddr = nullptr;
+
+  maddr = (uint8_t*)sim->addr_to_mem((reg_t)addr);
+  if (nullptr == maddr) {
+    return -1;
+  }
+  memcpy(data, maddr, len);
+
+  return 0;
+}
+
+/* 通过netlink通信写drv内存, 成功返回0 */
+int pcie_dma_dev_t::write_host(uint64_t addr, uint8_t *data, int len)
+{
+  int ret = 0;
+  command_head_t cmd = {};
+
+  cmd.code = CODE_WRITE_HOST;
+  cmd.addr = addr;
+  cmd.len = len;
+  memcpy(cmd.data, data, len);
+  ret = pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+  if (0 < ret)
+    return 0;
+  else 
+    return ret;
+}
+
+/* 通过netlink通信读drv内存, 成功返回0 */
+int pcie_dma_dev_t::read_host(uint64_t addr, uint8_t *data, int len)
+{
+  int ret = 0;
+  command_head_t cmd = {};
+
+  cmd.code = CODE_READ_HOST;
+  cmd.addr = addr;
+  cmd.len = len;
+
+  pcie->read_host_ready_to(&cmd);
+  ret = pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+  if (0 < ret) {
+    pcie->read_host_wait();
+    if ((addr==cmd.addr) && (len==cmd.len) && (CODE_READ_HOST==cmd.code)) {
+      memcpy(data, cmd.data, len);
+      ret = 0;
+    } else {
+      ret = -2;
+    }
+  }
+
+  return ret;
+}
+
+/* 成功返回0 */
+int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_not_ib)
+{
+  int i = 0;
+  int ret = 0;
+  int is_finish = 0;
+  int len_once = 0;
+  uint64_t soc_addr = 0;
+  uint64_t pcie_addr = 0;
+  uint8_t *buf = nullptr;
+
+  printf("%s src %lx dst %lx len %d dir %d \n", __FUNCTION__, soc, pcie, len, ob_not_ib);
+
+  buf = (uint8_t*)malloc(XFER_LEN_ONCE_MAX);
+  if (nullptr == buf) {
+    return -1;
+  }
+
+  for (i = 0 ; i < len ; i += XFER_LEN_ONCE_MAX) {
+    soc_addr = soc + i;
+    pcie_addr = pcie + i;
+    len_once = (i+XFER_LEN_ONCE_MAX > len) ? len-i : XFER_LEN_ONCE_MAX;
+    memset(buf, 0, XFER_LEN_ONCE_MAX);
+
+    ret = -1;
+    if (XFER_DIR_H2D == ob_not_ib) {
+        ret = read_host(pcie_addr, buf, len_once);
+        if (0 == ret) {
+          ret = write_soc(soc_addr, buf, len_once);
+        }
+    } else if (XFER_DIR_D2H == ob_not_ib) {
+        ret = read_soc(soc_addr, buf, len_once);
+        if (0 == ret) {
+          ret = write_host(pcie_addr, buf, len_once);
+        }
+    }
+
+    if (0 != ret) {
+      goto copy_failed;
+    }
+  }
+  is_finish = 1;
+
+copy_failed:
+  free(buf);
+  if (1 != is_finish)
+    return -2;
+  return 0;
+}
+
+/* 解析寄存器和desc, 执行数据搬运 */
+void pcie_dma_dev_t::pcie_dma_go(int ch)
+{
+  int i = 0;
+  int ret = 0;
+  int desc_len = 0;
+  int ob_not_ib = 0;
+  uint32_t val32 = 0;
+  uint64_t desc_addr_reg = 0;
+  uint8_t *desc_addr = nullptr;
+
+  int xfer_len = 0;
+  uint64_t soc_addr = 0;
+  uint64_t pcie_addr = 0;
+
+  /* control.go = 0 */
+  PCIEDMA_CTL(reg_base, ch) &= (~(1<<PCIEDMA_CTL_GO));
+
+  /* control.ready = 0 */
+  PCIEDMA_CTL(reg_base, ch) &= (~(1<<PCIEDMA_CTL_READY));
+
+  /* control.error_status = 0 */
+  PCIEDMA_CTL(reg_base, ch) &= (~(1<<PCIEDMA_CTL_ERR_STAT));
+
+  /* control.done_status = 0 */
+  PCIEDMA_CTL(reg_base, ch) &= (~(1<<PCIEDMA_CTL_DONE_STAT));
+
+  /* control.status_code = Running  */
+  // PCIEDMA_CTL(reg_base, ch) &= (~(0x1f<<PCIEDMA_CTL_STATUS));
+  // PCIEDMA_CTL(reg_base, ch) |= (2<<PCIEDMA_CTL_STATUS);
+
+  desc_addr_reg = PCIEDMA_DESC(reg_base, ch);
+  desc_len = PCIEDMA_CTL(reg_base, ch) & 0x1fff;
+  ob_not_ib = (PCIEDMA_CTL(reg_base, ch) >> PCIEDMA_CTL_OB_NOT_IB) & 0x01;
+  
+  printf("%s ch %d desc_len %d start ... \n", __FUNCTION__, ch, desc_len);
+
+  if ((0==desc_len) || (0 != desc_len%PDD_ONE_DESC_LEN)) {
+    std::cout << "pcie_dma: control.length " << desc_len << " is error"  << std::endl;
+    return;
+  }
+
+  for (i = 0 ; i < desc_len/PDD_ONE_DESC_LEN ; i++,desc_addr_reg+=PDD_ONE_DESC_LEN) {
+    desc_addr = (uint8_t*)sim->addr_to_mem((reg_t)desc_addr_reg);
+    if (nullptr == desc_addr) {
+      std::cout << "pcie_dma_dev_t: desc addr %lx error " << hex << desc_addr_reg << std::endl;
+      throw std::runtime_error("");
+    }
+
+    xfer_len = PDD_CTL_LEN(desc_addr) & 0xffffff;
+    soc_addr = PDD_SOC_ADDR(desc_addr);
+    pcie_addr = PDD_PCIE_ADDR(desc_addr);
+
+    ret = pcie_dma_xfer(soc_addr, pcie_addr, xfer_len, ob_not_ib);
+    if (0 != ret) {
+      break;
+    }
+  }
+
+  /* control.ready = 1 */
+  PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_READY);
+
+  // /* status code idle */
+  // PCIEDMA_CTL(reg_base, ch) &= (~(0x1f<<PCIEDMA_CTL_STATUS));
+
+  if (0 == ret) {
+    PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_DONE_STAT);    /* control.done_status = 1 */
+    printf("%s ch %d desc_len %d done \n", __FUNCTION__, ch, desc_len);
+  } else {
+    PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_ERR_STAT);     /* control.error_status = 1 */
+    printf("%s ch %d desc_len %d error \n", __FUNCTION__, ch, desc_len);
+  }
+
+  /* raise irq */
+  if (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_DONE_IRQ_ENA) ||
+      (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_ERR_IRQ_ENA))) {
+    printf("pcie_dma raise interrupt ch %d \n", ch);
+    sim->mmio_load(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
+    val32 |= (1<<STS_ADDR2_PCIE_DMA_BIT_CH(ch));
+    sim->mmio_store(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
+  }
+}
+
+

@@ -142,14 +142,14 @@ die_id(die_id),
       n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ, soc_apb->sys_irq);
       glb_bus.add_device(N2AP_MBOX_LOC_BASE, n2ap_mbox);
 
-      /* PCIE_CTL_CFG (128KB) */
-      pcie_ctl = new pcie_ctl_device_t();
-      glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_ctl);
-
       /* pcie_mbox */
       pcie_driver_t *pcie_driver = banks[get_id_first_bank()]->get_pcie_driver();
       pcie_mbox = new pcie_mbox_t(this, pcie_driver);
       glb_bus.add_device(PCIE_MBOX_LOC_PF_BASE, pcie_mbox);
+
+      /* PCIE_CTL_CFG (128KB) */
+      pcie_ctl = new pcie_ctl_device_t(this, pcie_driver);
+      glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_ctl);
 
       if (NETLINK_FAULT == pcie_driver->update_status(STATUS_OK)) {
         pcie_driver->set_mStatus(ERROR_CONN);
