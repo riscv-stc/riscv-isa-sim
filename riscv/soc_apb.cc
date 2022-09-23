@@ -16,10 +16,26 @@
 sys_apb_decoder_t::sys_apb_decoder_t(simif_t* sim,uint64_t base, uint8_t *reg_ptr) 
     : base(base), reg_base(reg_ptr)
 {
+    int i = 0;
     this->sim = sim;
     uint32_t val32 = 0;
+    uint32_t tmp = 0;
 
-    val32 = 0x53544321;
+    /* CHIP_NAME_ADDR，表征仿真平台包括哪些资源 */
+    val32 = 0;
+    for (i = 0 ; i < sim->nbanks() ; i++) {
+        tmp = 0x03;     /* 支持该bank, 支持ddr */
+        switch(sim->nprocs()/sim->nbanks()) {   /* 核心数 */
+        case 2: tmp |= 1<<2; break;
+        case 4: tmp |= 2<<2; break;
+        case 8: tmp |= 3<<2; break;
+        case 1:
+        default:
+            tmp |= 0<<2; break;
+        }
+        tmp = tmp << (i*4);
+        val32 |= tmp;
+    }
     store(DECODER_SOC_CHIP_NAME_ADDR, 4, (uint8_t *)&val32);
 
     val32 = 0x20200102;
