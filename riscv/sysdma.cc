@@ -436,9 +436,11 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
     }
   } else if (((SYS_DMAX_C0_SMMU_OFFSET<=addr) && (SYS_DMAX_C1_SMMU_OFFSET>addr+len)) ||
         ((SYS_DMAX_C1_SMMU_OFFSET<=addr) && (SYS_DMAX_C0_ATU_OFFSET>addr+len))) {   /* SMMU */
+        memcpy((uint8_t*)sys_dma_reg + addr, bytes, len);
     ;
   } else if (((SYS_DMAX_C0_ATU_OFFSET<=addr) && (SYS_DMAX_C1_ATU_OFFSET>addr+len)) ||
         ((SYS_DMAX_C1_ATU_OFFSET<=addr) && (SYS_DMAX_C1_ATU_END>addr+len))) {       /* ATU */
+        memcpy((uint8_t*)sys_dma_reg + addr, bytes, len);
     ;
   } else {
     std::cout << "sysdma: unsupport store address 0x" << hex << addr << std::endl;
