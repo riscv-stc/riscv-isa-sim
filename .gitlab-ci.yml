@@ -1,4 +1,5 @@
-image: 'code.streamcomputing.com/ubuntu:20.04-stc'
+default:
+  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -16,67 +17,88 @@ cache:
     - .env
     - build
 
-build:
+build_ubuntu_2004:
+  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
-    - mkdir -p build_v2_ipa
-    - cd build_v2_ipa && ../configure --with-isa=rv64gcv_zfh --with-varch=vlen:256,elen:32,slen:256 --enable-commitlog --enable-misaligned --prefix=$PWD/../install && make -j`nproc` && cd -
-
+    - bash -x scripts/build_spike.sh build_v2_ubuntu_2004
   artifacts:
     paths:
-      - build_v2_ipa
+      - build_v2_ubuntu_2004
       - VERSION
-    name: build_output
+    name: build_output_ubuntu_2004
 
-test:
+build_ubuntu_1804:
+  image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+  stage : build
+  script:
+    - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
+    - bash -x scripts/build_spike.sh build_v2_ubuntu_1804
+  artifacts:
+    paths:
+      - build_v2_ubuntu_1804
+      - VERSION
+    name: build_output_ubuntu_1804
+
+build_centos_7:
+  image: 'code.streamcomputing.com/centos:7-stc'
+  stage : build
+  script:
+    - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
+    - bash -x scripts/build_spike.sh build_v2_centos_7
+  artifacts:
+    paths:
+      - build_v2_centos_7
+      - VERSION
+    name: build_output_centos_7
+
+# Run rvpvp tests on ubuntu 20.04
+# tensorflow can't be installed on ubuntu 18.04 and centos 7
+test_ubuntu_2004:
+  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
   stage : test
   script:
-    - export PATH=$CI_PROJECT_DIR/build_v2_ipa:$RISCV/bin:$PATH
-    - export LC_ALL=C.UTF-8
-    - export LANG=C.UTF-8
-    - export PIP_INDEX_URL=https://nexus3.in/repository/pypi-aliyun/simple/
-    - export PIP_TRUSTED_HOST=nexus3.in
-    - export JAX_PLATFORM_NAME=cpu
-    - curl http://releases.streamcomputing.com/host-sdk/hpe/hpe2.x-latest | bash
-    - curl http://releases.streamcomputing.com/toolchain/llvm-12/latest | bash
-    - git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/verification/rvpvp-npuv2.git
-    - which spike
-    - python3 -m pip install --upgrade pip && pip install virtualenv
-    - cd rvpvp-npuv2
-    - virtualenv -p python3 .env
-    - source .env/bin/activate
-    - pip install -U pip
-    - pip install -r requirements.txt
-    - pip install --editable rvpvp
-    - rvpvp gen --basic --nproc `nproc`
-    - rvpvp run --nproc `nproc`
-  after_script:
-    - grep FAIL rvpvp-npuv2/log/runner_report.log
+    - bash -x scripts/test_spike.sh build_v2_ubuntu_2004
   artifacts:
     paths:
-      - build_v2_ipa
+      - build_v2_ubuntu_2004
       - VERSION
-    name: test_output
+      - log
+    name: test_output_ubuntu_2004
+  dependencies:
+    - build_ubuntu_2004
   timeout: 6h
 
-package:
+package_ubuntu_2004:
+  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
   stage : package
   script:
-    - cd build_v2_ipa && make install && cd -
-    - export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
-    - export LINK=latest
-    - test $CI_COMMIT_REF_NAME = "master" || export LINK=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`
-    - mkdir -p archive
-    - ./scripts/package.sh $PWD/install archive/spike-installer-$VER.sh
-    - ln -sf archive/spike-installer-$VER.sh $LINK
-    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
-    - eval $(ssh-agent -s)
-    - echo "$DEPLOY_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
-    - tar -jc archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xjC ~/files/simulator/spike"
+    - bash -x scripts/release_spike.sh -b build_v2_ubuntu_2004 -v ubuntu20.04
+  dependencies:
+    - build_ubuntu_2004
+  only:
+    - 2.x-dev-ipa
+    - tags
+
+package_ubuntu_1804:
+  image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+  stage : package
+  script:
+    - bash -x scripts/release_spike.sh -b build_v2_ubuntu_1804 -v ubuntu18.04
+  dependencies:
+    - build_ubuntu_1804
+  only:
+    - 2.x-dev-ipa
+    - tags
+
+package_centos_7:
+  image: 'code.streamcomputing.com/centos:7-stc'
+  stage : package
+  script:
+    - bash -x scripts/release_spike.sh -b build_v2_centos_7 -v centos7
+  dependencies:
+    - build_centos_7
   only:
     - 2.x-dev-ipa
     - tags
