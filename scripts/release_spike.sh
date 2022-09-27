@@ -37,8 +37,7 @@ if [ -z "$BUILD_DIR" -o -z "$OS_VERSION" ]; then
 fi
 
 export VER=`echo $CI_COMMIT_REF_NAME | sed 's#/#-#g'`-`date +%Y%m%d`.$CI_PIPELINE_ID
-cd $BUILD_DIR
-make install
+cd $BUILD_DIR && make install && cd -
 mkdir -p archive
 `dirname $0`/package.sh `pwd`/install archive/spike-installer-$VER.sh
 ln -sf archive/spike-installer-$VER.sh $LINK
