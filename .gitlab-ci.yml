@@ -22,7 +22,7 @@ build_ubuntu_2004:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
-    - bash -x scripts/build_spike.sh build_v2_ubuntu_2004
+    - bash -xe scripts/build_spike.sh build_v2_ubuntu_2004
   artifacts:
     paths:
       - build_v2_ubuntu_2004
@@ -34,7 +34,7 @@ build_ubuntu_1804:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
-    - bash -x scripts/build_spike.sh build_v2_ubuntu_1804
+    - bash -xe scripts/build_spike.sh build_v2_ubuntu_1804
   artifacts:
     paths:
       - build_v2_ubuntu_1804
@@ -46,7 +46,7 @@ build_centos_7:
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
-    - bash -x scripts/build_spike.sh build_v2_centos_7
+    - bash -xe scripts/build_spike.sh build_v2_centos_7
   artifacts:
     paths:
       - build_v2_centos_7
@@ -59,7 +59,7 @@ test_ubuntu_2004:
   image: 'code.streamcomputing.com/ubuntu:20.04-stc'
   stage : test
   script:
-    - bash -x scripts/test_spike.sh build_v2_ubuntu_2004
+    - bash -xe scripts/test_spike.sh build_v2_ubuntu_2004
   artifacts:
     paths:
       - build_v2_ubuntu_2004
@@ -74,7 +74,7 @@ package_ubuntu_2004:
   image: 'code.streamcomputing.com/ubuntu:20.04-stc'
   stage : package
   script:
-    - bash -x scripts/release_spike.sh -b build_v2_ubuntu_2004 -v ubuntu20.04
+    - bash -xe scripts/release_spike.sh -b build_v2_ubuntu_2004 -v ubuntu20.04
   dependencies:
     - build_ubuntu_2004
   only:
@@ -85,7 +85,7 @@ package_ubuntu_1804:
   image: 'code.streamcomputing.com/ubuntu:18.04-stc'
   stage : package
   script:
-    - bash -x scripts/release_spike.sh -b build_v2_ubuntu_1804 -v ubuntu18.04
+    - bash -xe scripts/release_spike.sh -b build_v2_ubuntu_1804 -v ubuntu18.04
   dependencies:
     - build_ubuntu_1804
   only:
@@ -96,7 +96,7 @@ package_centos_7:
   image: 'code.streamcomputing.com/centos:7-stc'
   stage : package
   script:
-    - bash -x scripts/release_spike.sh -b build_v2_centos_7 -v centos7
+    - bash -xe scripts/release_spike.sh -b build_v2_centos_7 -v centos7
   dependencies:
     - build_centos_7
   only:
