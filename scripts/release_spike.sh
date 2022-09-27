@@ -50,4 +50,5 @@ mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
 chmod 644 ~/.ssh/known_hosts
 
+ssh $DEPLOY_USER@$DEPLOY_SERVER "if [ ! -d ~/files/simulator/spike/$OS_VERSION ]; then mkdir -p ~/files/simulator/spike/$OS_VERSION; fi"
 tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike/$OS_VERSION"
