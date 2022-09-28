@@ -1,0 +1,1 @@
+MMU.store_uint16(RDGP + (insn.ade_shimm()), RS2 & 0xFFFF);
