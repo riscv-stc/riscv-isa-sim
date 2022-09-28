@@ -821,12 +821,12 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   
   printf("%s ch %d desc_len %d start ... \n", __FUNCTION__, ch, desc_len);
 
-  if ((0==desc_len) || (0 != desc_len%PDD_ONE_DESC_LEN)) {
+  if ( 0 == desc_len) {
     std::cout << "pcie_dma: control.length " << desc_len << " is error"  << std::endl;
     return;
   }
 
-  for (i = 0 ; i < desc_len/PDD_ONE_DESC_LEN ; i++,desc_addr_reg+=PDD_ONE_DESC_LEN) {
+  for (i = 0 ; i < desc_len ; i++,desc_addr_reg+=PDD_ONE_DESC_LEN) {
     desc_addr = (uint8_t*)sim->addr_to_mem((reg_t)desc_addr_reg);
     if (nullptr == desc_addr) {
       std::cout << "pcie_dma_dev_t: desc addr %lx error " << hex << desc_addr_reg << std::endl;
