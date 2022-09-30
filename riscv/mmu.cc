@@ -253,13 +253,13 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
 }
 
 /* 访问npc核内的 8M npc local region,不经过mmu和ipa */
-size_t mmu_t::npc_addr_to_mem(reg_t paddr)
+reg_t mmu_t::npc_addr_to_mem(reg_t paddr)
 {
   if (proc->get_xlen() == 32) {
     paddr &= 0xffffffff;
   }
   if (proc) {
-      return (size_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank());
+      return (reg_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank());
   } else {
       return 0;
   }
@@ -528,8 +528,11 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     // check that physical address of PTE is legal
     auto pte_paddr = base + idx * vm.ptesize;
     char *ppte = nullptr;
-    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
-        ppte = sim->addr_to_mem(pte_paddr);
+
+    if ((ppte = (proc&&bank) ? (char *)npc_addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = bank ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = sim->addr_to_mem(pte_paddr))) {
+      ;
     } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
                 (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
         ppte = (char *)(&mmio_ppte_val);
@@ -621,8 +624,11 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr,
     // check that physical address of PTE is legal
     auto pte_paddr = s2xlate(addr, base + idx * vm.ptesize, LOAD, type, virt, false);
     char *ppte = nullptr;
-    if (!(bank && (ppte=bank->bank_addr_to_mem(pte_paddr)))) {
-        ppte = sim->addr_to_mem(pte_paddr);
+
+    if ((ppte = (proc&&bank) ? (char *)npc_addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = bank ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = sim->addr_to_mem(pte_paddr))) {
+      ;
     } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
                 (sim->mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val))) {
         ppte = (char *)(&mmio_ppte_val);

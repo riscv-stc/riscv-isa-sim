@@ -484,7 +484,7 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
   void flush_tlb();
   void flush_icache();
 
-  size_t npc_addr_to_mem(reg_t paddr);
+  reg_t npc_addr_to_mem(reg_t paddr);
 
   char * mte_addr_to_mem(reg_t paddr, int procid);
   char * mte_addr_to_mem(reg_t paddr);
