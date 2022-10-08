@@ -67,7 +67,7 @@ atu_t::~atu_t()
 bool atu_t:: pmp_ok(reg_t addr, reg_t len) const
 {
     reg_t check_addr = addr;
-    reg_t check_end = addr + len;
+    reg_t check_end = addr + len - 1;
 
     if (!is_ipa_enabled()) {
         return true;
@@ -376,6 +376,7 @@ int atu_t::reg_at_enable(bool enabled, uint32_t *at_base)
         return -1;
     
     *(uint32_t *)((uint8_t *)at_base + AT_CTL_REG_OFFSET) = (enabled) ? (1<<VFCFG_BIT_AT_EN) : 0;
+    return 0;
 }
 
 /* 调试接口,编辑寄存器区域 写 ENTRY_IPA_EN_ADDR. (at_update()后才能生效) */
@@ -389,6 +390,7 @@ int atu_t::reg_at_entry_enable(int entry_id, bool enabled, uint32_t *at_base)
         *(uint32_t *)((uint8_t *)at_base + ENTRY_IPA_EN_OFFSET) |= (1<<entry_id);
     else
         *(uint32_t *)((uint8_t *)at_base + ENTRY_IPA_EN_OFFSET) &= ~(1<<entry_id);
+    return 0;
 }
 
 idtu_t::idtu_t(void)
