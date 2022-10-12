@@ -453,10 +453,9 @@ void processor_t::matrixUnit_t::reset(){
 reg_t processor_t::matrixUnit_t::set_mtype(int rd, reg_t newType) {
   mtype = newType;
   msew = 1 << (extract64(newType, 0, 3) + 3);
-  mrtr = extract64(newType, 3, 1);
-  mltr = extract64(newType, 4, 1);
-  mbf16 = extract64(newType, 5, 1);
-  mtf32 = extract64(newType, 6, 1);
+  maccq = extract64(newType, 3, 1);
+  mbf16 = extract64(newType, 4, 1);
+  mtf32 = extract64(newType, 5, 1);
 
   return mtype;
 }
@@ -466,9 +465,6 @@ reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim
   reg_t MMAX = mrows;
   reg_t NMAX = mcols / msew;
   reg_t KMAX = std::min(MMAX, NMAX);
-  if (mrtr) { // transpos right matrix
-    KMAX = mrows;
-  }
 
   if (dim == 'm' || dim == 'M') {
     if (rs1 != 0 && rd != 0) {
@@ -497,24 +493,6 @@ reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim
 
 }
 
-reg_t processor_t::matrixUnit_t::set_tsidx(int rd, reg_t newIdx, bool imm) {
-  tsidx = newIdx;
-  int sidx_end, sdim_start;
-  if (imm) {
-    sidx_end = 10;
-    sdim_start = 11;
-  } else {
-    sidx_end = 32 - 3;
-    sdim_start = 32 - 2;
-  }
-
-  sidx = extract64(tsidx, 0, sidx_end);
-
-  sdim = extract64(tsidx, sdim_start, 2);
-
-  return tsidx;
-
-}
 
 
 void processor_t::set_debug(bool value)
@@ -1834,6 +1812,11 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!supports_extension('V'))
         break;
       ret(MU.mtype);
+    case CSR_MLENB:
+      require_vector_vs;
+      if (!supports_extension('V'))
+        break;
+      ret(MU.mlenb);
   }
 
 #undef ret

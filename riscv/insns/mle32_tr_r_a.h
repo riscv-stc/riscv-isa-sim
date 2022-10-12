@@ -1,1 +1,0 @@
-MTU_TR_LD(2, 'a', uint32);

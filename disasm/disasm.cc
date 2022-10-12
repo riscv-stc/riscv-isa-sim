@@ -343,7 +343,7 @@ struct : public arg_t {
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
-    return acc_name[insn.rd()];
+    return acc_name[insn.rs1()];
   }
 } acc1;
 
@@ -359,6 +359,11 @@ struct : public arg_t {
   }
 } accd;
 
+struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    return std::to_string((int)insn.m_simm5());
+  }
+} mimm5;
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
@@ -1370,183 +1375,102 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_LTYPE2(msettilemi);
   DEFINE_LTYPE2(msettileki);
   DEFINE_LTYPE2(msettileni);
-  DEFINE_LTYPE2(msettsidxi);
   DEFINE_R1TYPE(msettype);
   DEFINE_R1TYPE(msettilem);
   DEFINE_R1TYPE(msettilek);
   DEFINE_R1TYPE(msettilen);
-  DEFINE_R1TYPE(msettsidx);
 
   #define DISASM_MMEM_TR_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name "8.tr.r."   #abc,  match_##name##8_tr_r_##abc,    mask_##name##8_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "8.tr.c."   #abc,  match_##name##8_tr_c_##abc,    mask_##name##8_tr_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.tr.r."  #abc,  match_##name##16_tr_r_##abc,   mask_##name##16_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.tr.c."  #abc,  match_##name##16_tr_c_##abc,   mask_##name##16_tr_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.tr.r."  #abc,  match_##name##32_tr_r_##abc,   mask_##name##32_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.tr.c."  #abc,  match_##name##32_tr_c_##abc,   mask_##name##32_tr_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "64.tr.r."  #abc,  match_##name##64_tr_r_##abc,   mask_##name##64_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "64.tr.c."  #abc,  match_##name##64_tr_c_##abc,   mask_##name##64_tr_c_##abc,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e32.m" ,   match_##name##abc##e32_m,     mask_##name##abc##e32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e64.m" ,   match_##name##abc##e64_m,     mask_##name##abc##e64_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te8.m" ,   match_##name##abc##te8_m,     mask_##name##abc##te8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te16.m" ,  match_##name##abc##te16_m,    mask_##name##abc##te16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te32.m" ,  match_##name##abc##te32_m,    mask_##name##abc##te32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te64.m" ,  match_##name##abc##te64_m,    mask_##name##abc##te64_m,  fmt)); \
+
 
   #define DISASM_MMEM_ACC_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name "8.xa.r."   #abc,  match_##name##8_xa_r_##abc,    mask_##name##8_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "8.xa.c."   #abc,  match_##name##8_xa_c_##abc,    mask_##name##8_xa_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.xa.r."  #abc,  match_##name##16_xa_r_##abc,   mask_##name##16_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.xa.c."  #abc,  match_##name##16_xa_c_##abc,   mask_##name##16_xa_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.xa.r."  #abc,  match_##name##32_xa_r_##abc,   mask_##name##32_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.xa.c."  #abc,  match_##name##32_xa_c_##abc,   mask_##name##32_xa_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "64.xa.r."  #abc,  match_##name##64_xa_r_##abc,   mask_##name##64_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "64.xa.c."  #abc,  match_##name##64_xa_c_##abc,   mask_##name##64_xa_c_##abc,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e32.m" ,   match_##name##abc##e32_m,     mask_##name##abc##e32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e64.m" ,   match_##name##abc##e64_m,     mask_##name##abc##e64_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te8.m" ,   match_##name##abc##te8_m,     mask_##name##abc##te8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te16.m" ,  match_##name##abc##te16_m,    mask_##name##abc##te16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te32.m" ,  match_##name##abc##te32_m,    mask_##name##abc##te32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "te64.m" ,  match_##name##abc##te64_m,    mask_##name##abc##te64_m,  fmt)); \
 
-  #define DISASM_MMEM_FP_TR_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name "16.tr.r."  #abc,  match_##name##16_tr_r_##abc,   mask_##name##16_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.tr.c."  #abc,  match_##name##16_tr_c_##abc,   mask_##name##16_tr_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.tr.r."  #abc,  match_##name##32_tr_r_##abc,   mask_##name##32_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.tr.c."  #abc,  match_##name##32_tr_c_##abc,   mask_##name##32_tr_c_##abc,  fmt)); \
-
-  #define DISASM_MMEM_FP_ACC_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name "16.xa.r."  #abc,  match_##name##16_xa_r_##abc,   mask_##name##16_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "16.xa.c."  #abc,  match_##name##16_xa_c_##abc,   mask_##name##16_xa_c_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.xa.r."  #abc,  match_##name##32_xa_r_##abc,   mask_##name##32_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name "32.xa.c."  #abc,  match_##name##32_xa_c_##abc,   mask_##name##32_xa_c_##abc,  fmt)); \
 
   std::vector<const arg_t *> tr_ld_unit = {&td, &v_address, &xrs2};
   std::vector<const arg_t *> tr_st_unit = {&td, &v_address, &xrs2};
   std::vector<const arg_t *> acc_ld_unit = {&accd, &v_address, &xrs2};
   std::vector<const arg_t *> acc_st_unit = {&accd, &v_address, &xrs2};
 
-  DISASM_MMEM_TR_INSN(mle, tr_ld_unit, c);
-  DISASM_MMEM_TR_INSN(mle, tr_ld_unit, a);
-  DISASM_MMEM_TR_INSN(mle, tr_ld_unit, b);
-  DISASM_MMEM_TR_INSN(mse, tr_st_unit, c);
-  DISASM_MMEM_TR_INSN(mse, tr_st_unit, a);
-  DISASM_MMEM_TR_INSN(mse, tr_st_unit, b);
+  DISASM_MMEM_TR_INSN(ml, tr_ld_unit, a);
+  DISASM_MMEM_TR_INSN(ml, tr_ld_unit, b);
+  DISASM_MMEM_TR_INSN(ms, tr_st_unit, a);
+  DISASM_MMEM_TR_INSN(ms, tr_st_unit, b);
 
-  DISASM_MMEM_ACC_INSN(mle, acc_ld_unit, c);
-  DISASM_MMEM_ACC_INSN(mle, acc_ld_unit, a);
-  DISASM_MMEM_ACC_INSN(mle, acc_ld_unit, b);
-  DISASM_MMEM_ACC_INSN(mse, acc_st_unit, c);
-  DISASM_MMEM_ACC_INSN(mse, acc_st_unit, a);
-  DISASM_MMEM_ACC_INSN(mse, acc_st_unit, b);
+  DISASM_MMEM_ACC_INSN(ml, acc_ld_unit, c);
+  DISASM_MMEM_ACC_INSN(ms, acc_st_unit, c);
 
-  DISASM_MMEM_FP_TR_INSN(mfle, tr_ld_unit, c);
-  DISASM_MMEM_FP_TR_INSN(mfle, tr_ld_unit, a);
-  DISASM_MMEM_FP_TR_INSN(mfle, tr_ld_unit, b);
-  DISASM_MMEM_FP_TR_INSN(mfse, tr_st_unit, c);
-  DISASM_MMEM_FP_TR_INSN(mfse, tr_st_unit, a);
-  DISASM_MMEM_FP_TR_INSN(mfse, tr_st_unit, b);
+#undef DISASM_MMEM_TR_INSN
+#undef DISASM_MMEM_ACC_INSN
 
-  DISASM_MMEM_FP_ACC_INSN(mfle, acc_ld_unit, c);
-  DISASM_MMEM_FP_ACC_INSN(mfle, acc_ld_unit, a);
-  DISASM_MMEM_FP_ACC_INSN(mfle, acc_ld_unit, b);
-  DISASM_MMEM_FP_ACC_INSN(mfse, acc_st_unit, c);
-  DISASM_MMEM_FP_ACC_INSN(mfse, acc_st_unit, a);
-  DISASM_MMEM_FP_ACC_INSN(mfse, acc_st_unit, b);
+  DISASM_INSN("mma.mm",   mma_mm,   0, {&accd, &ts2, &ts1});
+  DISASM_INSN("mfma.mm",  mfma_mm,  0, {&accd, &ts2, &ts1});
+  DISASM_INSN("mwma.mm",  mwma_mm,  0, {&accd, &ts2, &ts1});
+  DISASM_INSN("mfwma.mm", mfwma_mm, 0, {&accd, &ts2, &ts1});
+  DISASM_INSN("mqma.mm",  mqma_mm,  0, {&accd, &ts2, &ts1});
 
+  DISASM_INSN("maddc.mm",   maddc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfaddc.mm",  mfaddc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mwaddc.mm",  mwaddc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfwaddc.mm", mfwaddc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mqaddc.mm",  mqaddc_mm,   0, {&accd, &acc1});
 
-  #undef DISASM_MMEM_TR_INSN
-  #undef DISASM_MMEM_ACC_INSN
-  DISASM_INSN("mopa.mm",   mopa_mm,   0, {&accd, &ts2, &ts1});
-  DISASM_INSN("mfopa.mm",  mfopa_mm,  0, {&accd, &ts2, &ts1});
-  DISASM_INSN("mwopa.mm",  mwopa_mm,  0, {&accd, &ts2, &ts1});
-  DISASM_INSN("mfwopa.mm", mfwopa_mm, 0, {&accd, &ts2, &ts1});
-  DISASM_INSN("mqopa.mm",  mqopa_mm,  0, {&accd, &ts2, &ts1});
+  DISASM_INSN("msubc.mm",   msubc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfsubc.mm",  mfsubc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mwsubc.mm",  mwsubc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfwsubc.mm", mfwsubc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mqsubc.mm",  mqsubc_mm,   0, {&accd, &acc1});
 
-  DISASM_INSN("madd.mm",   madd_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfadd.mm",  mfadd_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mwadd.mm",   mwadd_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfwadd.mm",  mfwadd_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mqadd.mm",   mqadd_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mrsubc.mm",   mrsubc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfrsubc.mm",  mfrsubc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mwrsubc.mm",  mwrsubc_mm,   0, {&accd, &acc1});
+  DISASM_INSN("mfwrsubc.mm", mfwrsubc_mm,  0, {&accd, &acc1});
+  DISASM_INSN("mqrsubc.mm",  mqrsubc_mm,   0, {&accd, &acc1});
 
-  DISASM_INSN("msub.mm",   msub_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfsub.mm",  mfsub_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mwsub.mm",   mwsub_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfwsub.mm",  mfwsub_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mqsub.mm",   mqsub_mm,   0, {&accd, &acc1});
-
-  DISASM_INSN("mrsub.mm",   mrsub_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfrsub.mm",  mfrsub_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mwrsub.mm",   mwrsub_mm,   0, {&accd, &acc1});
-  DISASM_INSN("mfwrsub.mm",  mfwrsub_mm,  0, {&accd, &acc1});
-  DISASM_INSN("mqrsub.mm",   mqrsub_mm,   0, {&accd, &acc1});
-
-  DISASM_INSN("mfncvt.f.f.w",  mfncvt_f_f_w,  0, {&accd, &ts1, &xrs2});
-
-  #define DISASM_MMV_ACC_IN_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name ".xa.v.r."   #abc,  match_##name##_xa_v_r_##abc,   mask_##name##_xa_v_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name ".xa.v.c."   #abc,  match_##name##_xa_v_c_##abc,   mask_##name##_xa_v_c_##abc,  fmt)); \
-
-  #define DISASM_MMV_TR_IN_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name ".tr.v.r."   #abc,  match_##name##_tr_v_r_##abc,   mask_##name##_tr_v_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name ".tr.v.c."   #abc,  match_##name##_tr_v_c_##abc,   mask_##name##_tr_v_c_##abc,  fmt)); \
-
-  #define DISASM_MVM_ACC_OUT_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name ".v.xa.r."   #abc,  match_##name##_v_xa_r_##abc,   mask_##name##_v_xa_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name ".v.xa.c."   #abc,  match_##name##_v_xa_c_##abc,   mask_##name##_v_xa_c_##abc,  fmt)); \
-
-  #define DISASM_MVM_TR_OUT_INSN(name, fmt, abc) \
-    add_insn(new disasm_insn_t(#name ".v.tr.r."   #abc,  match_##name##_v_tr_r_##abc,   mask_##name##_v_tr_r_##abc,  fmt)); \
-    add_insn(new disasm_insn_t(#name ".v.tr.c."   #abc,  match_##name##_v_tr_c_##abc,   mask_##name##_v_tr_c_##abc,  fmt)); \
-
-    std::vector<const arg_t *> mtu_mv_tr_unit = {&td, &vs1, &xrs2};
-    std::vector<const arg_t *> mtu_mv_acc_unit = {&accd, &vs1, &xrs2};
-    std::vector<const arg_t *> mtu_vm_tr_unit = {&vd, &ts1, &xrs2};
-    std::vector<const arg_t *> mtu_vm_acc_unit = {&accd, &ts1, &xrs2};
-
-  DISASM_MMV_TR_IN_INSN(mmv, mtu_mv_tr_unit, m);
-  DISASM_MMV_TR_IN_INSN(mmv, mtu_mv_tr_unit, k);
-  DISASM_MMV_TR_IN_INSN(mmv, mtu_mv_tr_unit, n);
-
-  DISASM_MMV_ACC_IN_INSN(mmv, mtu_mv_acc_unit, m);
-  DISASM_MMV_ACC_IN_INSN(mmv, mtu_mv_acc_unit, k);
-  DISASM_MMV_ACC_IN_INSN(mmv, mtu_mv_acc_unit, n);
-
-  DISASM_MVM_TR_OUT_INSN(mmv, mtu_vm_tr_unit, m);
-  DISASM_MVM_TR_OUT_INSN(mmv, mtu_vm_tr_unit, k);
-  DISASM_MVM_TR_OUT_INSN(mmv, mtu_vm_tr_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mmv, mtu_vm_acc_unit, n);
-
-  DISASM_MMV_TR_IN_INSN(mwmv, mtu_mv_tr_unit, m);
-  DISASM_MMV_TR_IN_INSN(mwmv, mtu_mv_tr_unit, k);
-  DISASM_MMV_TR_IN_INSN(mwmv, mtu_mv_tr_unit, n);
-
-  DISASM_MMV_ACC_IN_INSN(mwmv, mtu_mv_acc_unit, m);
-  DISASM_MMV_ACC_IN_INSN(mwmv, mtu_mv_acc_unit, k);
-  DISASM_MMV_ACC_IN_INSN(mwmv, mtu_mv_acc_unit, n);
-
-  DISASM_MVM_TR_OUT_INSN(mwmv, mtu_vm_tr_unit, m);
-  DISASM_MVM_TR_OUT_INSN(mwmv, mtu_vm_tr_unit, k);
-  DISASM_MVM_TR_OUT_INSN(mwmv, mtu_vm_tr_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mwmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mwmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mwmv, mtu_vm_acc_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mqmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mqmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mqmv, mtu_vm_acc_unit, n);
-
-  DISASM_MVM_TR_OUT_INSN(mfmv, mtu_vm_tr_unit, m);
-  DISASM_MVM_TR_OUT_INSN(mfmv, mtu_vm_tr_unit, k);
-  DISASM_MVM_TR_OUT_INSN(mfmv, mtu_vm_tr_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mfmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mfmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mfmv, mtu_vm_acc_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mfwmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mfwmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mfwmv, mtu_vm_acc_unit, n);
-
-  DISASM_MVM_ACC_OUT_INSN(mfqmv, mtu_vm_acc_unit, m);
-  DISASM_MVM_ACC_OUT_INSN(mfqmv, mtu_vm_acc_unit, k);
-  DISASM_MVM_ACC_OUT_INSN(mfqmv, mtu_vm_acc_unit, n);
+  DISASM_INSN("memulc.mx",   memulc_mx,    0, {&accd, &acc1, &xrs2});
+  DISASM_INSN("mfemulc.mf",  mfemulc_mf,   0, {&accd, &acc1, &frs2});
+  DISASM_INSN("mwemulc.mx",  mwemulc_mx,   0, {&accd, &acc1, &xrs2});
+  DISASM_INSN("mfwemulc.mf", mfwemulc_mf,  0, {&accd, &acc1, &frs2});
+  DISASM_INSN("mqemulc.mx",  mqemulc_mx,   0, {&accd, &acc1, &xrs2});
+  DISASM_INSN("memulc.mi",   memulc_mi,    0, {&accd, &acc1, &mimm5});
+  DISASM_INSN("mwemulc.mi",  mwemulc_mi,    0, {&accd, &acc1, &mimm5});
+  DISASM_INSN("mqemulc.mi",  mqemulc_mi,    0, {&accd, &acc1, &mimm5});
 
 
-  #undef DISASM_MMV_TR_IN_INSN
-  #undef DISASM_MVM_INSN
+#define DISASM_MXU_CVT(name, mname) \
+  add_insn(new disasm_insn_t(#name,  match_##mname,    mask_##mname,   {&accd, &acc1})); \
+
+  DISASM_MXU_CVT("mfncvtc.f.fw.m",  mfncvtc_f_fw_m);
+  DISASM_MXU_CVT("mfwcvtc.fw.f.m",  mfwcvtc_fw_f_m);
+  DISASM_MXU_CVT("mfcvtc.f.x.m",    mfcvtc_f_x_m);
+  DISASM_MXU_CVT("mfcvtc.x.f.m",    mfcvtc_x_f_m);
+  DISASM_MXU_CVT("mfncvtc.f.xw.m",  mfncvtc_f_xw_m);
+  DISASM_MXU_CVT("mfwcvtc.xw.f.m",  mfwcvtc_xw_f_m);
+  DISASM_MXU_CVT("mfncvtc.f.xq.m",  mfncvtc_f_xq_m);
+  DISASM_MXU_CVT("mfwcvtc.xq.f.m",  mfwcvtc_xq_f_m);
+  DISASM_MXU_CVT("mfncvtc.x.fw.m",  mfncvtc_x_fw_m);
+  DISASM_MXU_CVT("mfwcvtc.fw.x.m",  mfwcvtc_fw_x_m);
+  DISASM_MXU_CVT("mfcvtc.fw.xw.m",  mfcvtc_fw_xw_m);
+  DISASM_MXU_CVT("mfcvtc.xw.fw.m",  mfcvtc_xw_fw_m);
+  DISASM_MXU_CVT("mfncvtc.fw.xq.m", mfncvtc_fw_xq_m);
+  DISASM_MXU_CVT("mfwcvtc.xq.fw.m", mfwcvtc_xq_fw_m);
+
+#undef DISASM_MXU_CVT
 
   if (xlen == 32) {
     DISASM_INSN("c.flw", c_flw, 0, {&rvc_fp_rs2s, &rvc_lw_address});
