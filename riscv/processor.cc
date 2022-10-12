@@ -436,13 +436,9 @@ void processor_t::matrixUnit_t::reset(){
   free(acc_file);
   tr_file = malloc(mlenb * 8);
   memset(tr_file, 0, mlenb * 8);
-  if (maccq) {
-    acc_file = malloc(mlenb * 4 * 8);
-    memset(acc_file, 0, mlenb * 4 * 8);
-  } else {
-    acc_file = malloc(mlenb * 2 * 8);
-    memset(acc_file, 0, mlenb * 2 * 8);
-  }
+  
+  acc_file = malloc(mlenb * 4 * 8);
+  memset(acc_file, 0, mlenb * 4 * 8);
 
   mtype = 0;
   tile_m = 0;

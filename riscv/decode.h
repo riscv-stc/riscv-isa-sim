@@ -2577,6 +2577,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
         set_fp_exceptions; \
       MU_MFP_LOOP_END \
       } \
+      break; \
     case e64: {\
       MU_MFP_LOOP_SCALE_BASE \
         BODY64 \
