@@ -592,7 +592,6 @@ public:
           } else {
             elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
           }
-          printf("elts_per_slice=%d\n", elts_per_slice);
 
           T *regStart = (T *)((char*)acc_file + td * mlenb * 4);
           if (tt & 1) { // col
