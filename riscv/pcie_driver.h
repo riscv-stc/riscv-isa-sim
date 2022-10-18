@@ -9,6 +9,7 @@
 #include <thread>
 #include "devices.h"
 #include "mbox_device.h"
+#include "atu.h"
 
 class simif_t;
 class bankif_t;
@@ -55,9 +56,15 @@ struct command_head_t {
 #define COMMAND_HEAD_SIZE (sizeof(command_head_t) - COMMAND_DATA_SIZE_MAX)
 #define PCIE_COMMAND_SEND_SIZE(cmd)  (sizeof(cmd)-sizeof(cmd.data)+cmd.len)
 
+#define PCIE_REGION_SIZE      0x100000  /* 1MiB */    
+
+#define PCIE_IOV_ATU0_OFFSET  0xC0000
+#define PCIE_IOV_ATU1_OFFSET  0xC8000
+#define PCIE_IOV_ATU_SIZE     0x8000
+
 class pcie_driver_t {
  public:
-  pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id);
+  pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id, const char *atuini);
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);
@@ -69,6 +76,9 @@ class pcie_driver_t {
   /* pcie_dma */
   int read_host_ready_to(struct command_head_t *cmd);
   int read_host_wait(void);
+
+  /* pcie atu */
+  atu_t *get_atu(int n) { return pcie_atu[n]; }
 
  private:
   std::unique_ptr<std::thread> mDriverThread;
@@ -87,6 +97,7 @@ class pcie_driver_t {
   bool pcie_enabled;
   size_t board_id;
   size_t chip_id;
+  atu_t *pcie_atu[2];
   
   reg_t mTxCfgAddr;
   reg_t mTxCmd;
@@ -99,6 +110,8 @@ class pcie_driver_t {
   bool lock_channel(void);
   void task_doing();
   std::mutex pcie_mutex;
+
+  char sys_pcie_reg[PCIE_REGION_SIZE];
 
   /* pcie_dma */
   sem_t read_host_sem;

@@ -9,7 +9,7 @@ using namespace std;
 #define IPA_DEBUG
 
 /* npc atu， 每个proc包含一个,根据 procid 解析 ini 配置 */
-atu_t::atu_t(const char *atuini,int procid, enum atu_type_t type) : procid(procid)
+atu_t::atu_t(const char *atuini, int procid, enum atu_type_t type) : procid(procid)
 {
     switch(type) {
     case NP_ATU:
@@ -17,6 +17,7 @@ atu_t::atu_t(const char *atuini,int procid, enum atu_type_t type) : procid(proci
         atu_type = type;
         break;
     case SYSDMA_ATU:
+    case PCIE_ATU:
     default:
         throw std::runtime_error("error atu type");
     }
@@ -45,6 +46,20 @@ atu_t::atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base) :
     }
 }
 
+/**
+ * PCIe atu
+ */
+atu_t::atu_t(const char *atuini, int atu_id, uint8_t *reg_base) :
+        at_reg_base((uint8_t *)reg_base), pcie_atu_id(atu_id)
+{
+    atu_type = PCIE_ATU;
+    memset(at_reg_base, 0, 0x8000);
+    
+    if (nullptr != atuini) {
+        atini = iniparser_load(atuini);
+    }
+}
+
 atu_t::~atu_t()
 {
     if (atini)
@@ -53,6 +68,7 @@ atu_t::~atu_t()
     switch(atu_type) {
     case NP_ATU:
     case MTE_ATU:
+    case PCIE_ATU:
         if (at_reg_base) {
             delete at_reg_base;
         }
@@ -183,6 +199,9 @@ int atu_t::at_update(dictionary *ini, int procid)
     case MTE_ATU:
         section_name.assign("ipa-trans-mte-core");
         break;
+    case PCIE_ATU:
+        section_name.assign("ipa-trans-pcie-atu");
+        break;
     case SYSDMA_ATU:
     default:
         throw std::runtime_error("at_update() atu type error");
@@ -193,6 +212,8 @@ int atu_t::at_update(dictionary *ini, int procid)
     if (0 >= nkeys) {
         return -2;
     }
+
+    at_enabled = true;
 
     ipa_at.clear();
     string keys_name;
@@ -239,7 +260,6 @@ int atu_t::at_update(dictionary *ini, int procid)
         }
     }
 
-    at_enabled = true;
     return 0;
 }
 
@@ -320,10 +340,13 @@ void atu_t::reset(void)
         switch(atu_type) {
         case NP_ATU:
         case MTE_ATU:
-            at_update(atini,procid);
+            at_update(atini, procid);
             break;
         case SYSDMA_ATU:
             at_update(atini, dma_id, ch_id);
+            break;
+        case PCIE_ATU:
+            at_update(atini, pcie_atu_id);
             break;
         default:
             throw std::runtime_error("reset() atu type error");

@@ -36,7 +36,7 @@
 #define NL_GROUPS        (0)
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, 
-        size_t board_id, size_t chip_id) : mPSim(sim), mBank(bank), mBankId(bank_id),
+        size_t board_id, size_t chip_id, const char *atuini) : mPSim(sim), mBank(bank), mBankId(bank_id),
         pcie_enabled(pcie_enabled), board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
@@ -73,6 +73,12 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
   }
 
   memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
+
+  pcie_atu[0] = new atu_t(atuini, 0, (uint8_t *)sys_pcie_reg + PCIE_IOV_ATU0_OFFSET);
+  pcie_atu[1] = new atu_t(atuini, 1, (uint8_t *)sys_pcie_reg + PCIE_IOV_ATU1_OFFSET);
+
+  pcie_atu[0]->reset();
+  pcie_atu[1]->reset();
   
   #if 0 /* 因为引入了pcie_mbox,sys_soc等, 此处需向后调整 */
   /* Recheck netlink status */
@@ -293,6 +299,11 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
     int procid = 0;
     int idxinbank  = 0;
     char *host_addr = nullptr;
+    atu_t *at = pcie_atu[0];
+
+    if (at && at->is_ipa_enabled()) {
+      paddr = at->translate(addr, len);
+    }
 
     procid = which_npc(addr, &paddr);
     if (0 <= procid) {
@@ -326,6 +337,11 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     int procid = 0;
     int idxinbank  = 0;
     char *host_addr = nullptr;
+    atu_t *at = pcie_atu[0];
+
+    if (at && at->is_ipa_enabled()) {
+      paddr = at->translate(addr, len);
+    }
 
     procid = which_npc(addr, &paddr);
     if (0 <= procid) {
@@ -462,6 +478,9 @@ pcie_driver_t::~pcie_driver_t()
     free(mRecvBuffer);
     mRecvBuffer = NULL;
   }
+
+  delete pcie_atu[0];
+  delete pcie_atu[1];
 }
 
 /* 成功返回0 */
@@ -794,6 +813,7 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   uint32_t val32 = 0;
   uint64_t desc_addr_reg = 0;
   uint8_t *desc_addr = nullptr;
+  atu_t *at = pcie->get_atu(1);
 
   int xfer_len = 0;
   uint64_t soc_addr = 0;
@@ -818,6 +838,10 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   desc_addr_reg = PCIEDMA_DESC(reg_base, ch);
   desc_len = PCIEDMA_CTL(reg_base, ch) & 0x1fff;
   ob_not_ib = (PCIEDMA_CTL(reg_base, ch) >> PCIEDMA_CTL_OB_NOT_IB) & 0x01;
+
+  if (at && at->is_ipa_enabled()) {
+    desc_addr_reg = at->translate(desc_addr_reg, len);
+  }
   
   printf("%s ch %d desc_len %d start ... \n", __FUNCTION__, ch, desc_len);
 

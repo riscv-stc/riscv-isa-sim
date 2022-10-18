@@ -58,7 +58,8 @@ struct ipa_at_t {
 enum atu_type_t {
     NP_ATU,
     SYSDMA_ATU,
-    MTE_ATU
+    MTE_ATU,
+    PCIE_ATU
 };
 
 class atu_t : public abstract_device_t
@@ -66,6 +67,7 @@ class atu_t : public abstract_device_t
 public:
     atu_t(const char *atuini, int procid, enum atu_type_t type);      /* npc */
     atu_t(const char *atuini, int dma_id, int ch_id, uint8_t *reg_base);    /* sysdma */
+    atu_t(const char *atuini, int atu_id, uint8_t *reg_base);    /* PCIe */
     ~atu_t();
 
     bool pmp_ok(reg_t addr, reg_t len) const;
@@ -91,6 +93,9 @@ private:
     /* sysdma atu */
     int dma_id;
     int ch_id;
+
+    /* pcie atu */
+    int pcie_atu_id;
 
     int at_update(uint8_t *at_base);
     int at_update(dictionary *ini, int procid);

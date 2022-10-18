@@ -49,7 +49,7 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
 
     /* pcie driver */
     if(pcie_enabled) {
-        pcie_driver = new pcie_driver_t(sim, this, bank_id, pcie_enabled, board_id, chip_id);
+        pcie_driver = new pcie_driver_t(sim, this, bank_id, pcie_enabled, board_id, chip_id, atuini);
     } else {
         pcie_driver = nullptr;
     }
