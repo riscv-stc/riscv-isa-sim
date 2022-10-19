@@ -15,6 +15,8 @@
 #define N2AP_MBOX_LOC_BASE        0xd3d06000
 #define P2AP_MBOX_IRQ             34
 #define N2AP_MBOX_IRQ             35
+#define P2AP_MBOX_IRQ_ECO		  46
+#define N2AP_MBOX_IRQ_ECO         63
 
 #define PCIE_MBOX_LOC_PF_BASE		0xE30B0000
 

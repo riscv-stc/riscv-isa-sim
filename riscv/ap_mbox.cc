@@ -37,11 +37,27 @@ void ap_mbox_t::irq_generate(bool dir)
             return ;
         }
         if (false == dir) {     /* 取消中断 */
-            apifc->generate_irq_to_a53(irq, dir);
-        } else if ((N2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_n2apmbox()) {
-            apifc->generate_irq_to_a53(irq, dir);
-        } else if ((P2AP_MBOX_IRQ==irq) && sys_irq->is_irq_ena_p2apmbox()) {
-            apifc->generate_irq_to_a53(irq, dir);
+            if(N2AP_MBOX_IRQ==irq){
+                apifc->generate_irq_to_a53(N2AP_MBOX_IRQ, dir);
+                apifc->generate_irq_to_a53(N2AP_MBOX_IRQ_ECO, dir);
+            }else if(P2AP_MBOX_IRQ==irq){
+                apifc->generate_irq_to_a53(P2AP_MBOX_IRQ, dir);
+                apifc->generate_irq_to_a53(P2AP_MBOX_IRQ_ECO, dir);
+            }
+        } else if (N2AP_MBOX_IRQ==irq) {
+            /*send interrupts visa eco and non-eco,a53 will choose one of them.*/
+            send_irq_to_sysirq(N2AP_MBOX_IRQ,dir);
+            apifc->generate_irq_to_a53(N2AP_MBOX_IRQ_ECO, dir);
+        } else if (P2AP_MBOX_IRQ==irq) {
+            /*send interrupts visa eco and non-eco,a53 will choose one of them.*/
+            send_irq_to_sysirq(P2AP_MBOX_IRQ, dir);
+            apifc->generate_irq_to_a53(P2AP_MBOX_IRQ_ECO, dir);
         }
     }
+}
+
+void ap_mbox_t::send_irq_to_sysirq(int irq, bool dir)
+{
+    if(sys_irq->is_irq_ena_n2apmbox())
+        apifc->generate_irq_to_a53(irq, dir);
 }

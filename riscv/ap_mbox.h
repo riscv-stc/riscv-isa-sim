@@ -25,6 +25,7 @@ private:
     int irq = 0;    /* N2AP_MBOX_IRQ / P2AP_MBOX_IRQ*/
 
     void irq_generate(bool dir) override;
+    void send_irq_to_sysirq(int irq, bool dir);
 };
 
 #endif  /* __AP_MBOX_H__ */
