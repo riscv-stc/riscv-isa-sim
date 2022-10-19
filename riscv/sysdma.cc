@@ -208,10 +208,13 @@ void sysdma_device_t::dma_core(int ch) {
       uint64_t transfer_daddr = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
       uint64_t transfer_saddr = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
 
-      if (!((dst=bank->bank_addr_to_mem(transfer_daddr)) || (dst=sim->addr_to_mem(transfer_daddr)))) {
+      dst = dmae_addr_to_mem(transfer_daddr, 1, ch, nullptr);
+      src = dmae_addr_to_mem(transfer_saddr, 1, ch, nullptr);
+
+      if (!dst) {
         throw std::runtime_error("dma_core() ddar error");
       }
-      if (!((src=bank->bank_addr_to_mem(transfer_saddr)) || (src=sim->addr_to_mem(transfer_saddr)))) {
+      if (!src) {
         throw std::runtime_error("dma_core() dsar error");
       }
 
