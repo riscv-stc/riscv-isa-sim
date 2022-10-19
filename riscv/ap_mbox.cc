@@ -58,6 +58,8 @@ void ap_mbox_t::irq_generate(bool dir)
 
 void ap_mbox_t::send_irq_to_sysirq(int irq, bool dir)
 {
-    if(sys_irq->is_irq_ena_n2apmbox())
+    if(N2AP_MBOX_IRQ==irq && sys_irq->is_irq_ena_n2apmbox())
+        apifc->generate_irq_to_a53(irq, dir);
+    if(P2AP_MBOX_IRQ==irq && sys_irq->is_irq_ena_p2apmbox())
         apifc->generate_irq_to_a53(irq, dir);
 }
