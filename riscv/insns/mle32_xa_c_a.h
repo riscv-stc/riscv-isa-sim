@@ -1,1 +1,0 @@
-MTU_ACC_LD(1, 'a', uint32);

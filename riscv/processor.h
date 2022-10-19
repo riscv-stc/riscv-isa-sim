@@ -554,10 +554,8 @@ public:
       reg_t tile_m, tile_k, tile_n;
       reg_t MLEN, mlenb;
       reg_t mtype;
-      reg_t mlmul;
-      reg_t tsidx, sidx, sdim; // 0-10: idx;   11-12: idx dim
       reg_t mill, maccq;
-      reg_t msew, mltr, mrtr;
+      reg_t msew;
       reg_t mbf16, mtf32;
       reg_t mrows, mcols;
 
@@ -595,13 +593,13 @@ public:
             elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
           }
 
-          T *regStart = ((T*)acc_file) + td * elts_per_slice * mrows;
+          T *regStart = (T *)((char*)acc_file + td * mlenb * 4);
           if (tt & 1) { // col
-            reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
-            return regStart[elts_per_slice * n + slice];
+            // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
+            return *(regStart + elts_per_slice * n + slice);
           } else { //row
-            reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
-            return regStart[elts_per_slice * slice + n];
+            // reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
+            return *(regStart + elts_per_slice * slice + n);
           }
         }
 
@@ -622,7 +620,6 @@ public:
 
       reg_t set_mtype(int rd, reg_t newType);
       reg_t set_ml(int rd, int rs1, reg_t newMlen, char dim);
-      reg_t set_tsidx(int rd, reg_t newIdx, bool imm);
 
   };
 
