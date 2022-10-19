@@ -205,16 +205,18 @@ void sysdma_device_t::dma_core(int ch) {
 
       char *dst = nullptr;
       char *src = nullptr;
+      uint64_t transfer_daddr = desc->ddar + dma_channel_[ch].ddr_base[DDR_DIR_DST];
+      uint64_t transfer_saddr = desc->dsar + dma_channel_[ch].ddr_base[DDR_DIR_SRC];
 
-      if (!((dst=bank->bank_addr_to_mem(desc->ddar)) || (dst=sim->addr_to_mem(desc->ddar)))) {
+      if (!((dst=bank->bank_addr_to_mem(transfer_daddr)) || (dst=sim->addr_to_mem(transfer_daddr)))) {
         throw std::runtime_error("dma_core() ddar error");
       }
-      if (!((src=bank->bank_addr_to_mem(desc->dsar)) || (src=sim->addr_to_mem(desc->dsar)))) {
+      if (!((src=bank->bank_addr_to_mem(transfer_saddr)) || (src=sim->addr_to_mem(transfer_saddr)))) {
         throw std::runtime_error("dma_core() dsar error");
       }
 
-      for (i = 0 ; i < depth ; i++) {
-        for (j = 0 ; j < high ; j++) {
+      for (i = 0 ; i < (int)depth ; i++) {
+        for (j = 0 ; j < (int)high ; j++) {
           memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
         }
       }
