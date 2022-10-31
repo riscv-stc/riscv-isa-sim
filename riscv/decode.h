@@ -99,8 +99,8 @@ public:
   int64_t ade_bbc_imm() {return ((x(8, 4) << 1) + (x(25, 5) << 5) + (imm_sign() << 10)); }
   int64_t ade_bbc_cimm() {return ((x(7, 1) << 5) + (x(20, 5))); }
   int64_t ade_bec_cimm() {return ((x(7, 1) << 5) + (x(20, 5))) + (x(30, 1) << 6); }
-  int64_t ade_bf_msb() {return (x(26, 6)); }
-  int64_t ade_bf_lsb() {return (x(20, 6));}
+  int64_t ade_bf_msb() {return (x(26, 5)); }
+  int64_t ade_bf_lsb() {return (x(20, 5));}
   int64_t u_imm() { return int64_t(b) >> 12 << 12; }
   int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
   uint64_t v_uimm() { return x(15, 5); }
@@ -188,6 +188,8 @@ private:
   && ((DEBUG_ROM_BASE + 0x884) >= (zext32(pc)))) || (((DEBUG_ROM_BASE + 0x360) <= (zext32(pc))) \
   && ((DEBUG_ROM_BASE + 0x374) > (zext32(pc)))))
 #define READ_REG(reg) (unlikely(IS_EXECUTE_IN_DEBUGROM(pc) && (reg == 0)) ? DEBUG_ROM_BASE : STATE.XPR[reg])
+// #define CHECK_REG(reg) ((void) 0)
+// #define READ_REG(reg) ({ CHECK_REG(reg); STATE.XPR[reg]; })
 
 #define READ_FREG(reg) STATE.FPR[reg]
 #define READ_VREG(reg) STATE.VPR[reg]

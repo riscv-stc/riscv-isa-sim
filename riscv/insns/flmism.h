@@ -15,33 +15,21 @@ F1 = ((rs1_val & 0xFF) != (rs2_val & 0xFF));
 F2 = (((rs1_val >> 8)& 0xFF) != ((rs2_val >> 8) & 0xFF));
 F3 = (((rs1_val >> 16)& 0xFF) != ((rs2_val >> 16) & 0xFF));
 F4 = (((rs1_val >> 24)& 0xFF) != ((rs2_val >> 24) & 0xFF));
-F5 = (((rs1_val >> 32)& 0xFF) != ((rs2_val >> 32) & 0xFF));
-F6 = (((rs1_val >> 40)& 0xFF) != ((rs2_val >> 40) & 0xFF));
-F7 = (((rs1_val >> 48)& 0xFF) != ((rs2_val >> 48) & 0xFF));
-F8 = (((rs1_val >> 56)& 0xFF) != ((rs2_val >> 56) & 0xFF));
 
-found = F1 || F2 || F3 || F4 || F5 || F6 || F7 || F8;
+found = F1 || F2 || F3 || F4;
 
     if (!found) 
         WRITE_RD(0);
     else if (c.b & 0x1)  //Litile Endian
     {
-        if (F8) 
+       if (F4) 
             WRITE_RD(-1);
-        else if (F7) 
-            WRITE_RD(-2);
-        else if (F6) 
-            WRITE_RD(-3);
-        else if (F5) 
-            WRITE_RD(-4);
-        else if (F4) 
-            WRITE_RD(-5);
         else if (F3) 
-            WRITE_RD(-6);
+            WRITE_RD(-2);
         else if (F2) 
-            WRITE_RD(-7);
+            WRITE_RD(-3);
         else 
-            WRITE_RD(-8);
+            WRITE_RD(-4);
     }
     else 
     { // “Big Endian”
@@ -51,14 +39,6 @@ found = F1 || F2 || F3 || F4 || F5 || F6 || F7 || F8;
             WRITE_RD(-2);
         else if (F3) 
             WRITE_RD(-3);
-        else if (F4) 
-            WRITE_RD(-4);
-        else if (F5) 
-            WRITE_RD(-5);
-        else if (F6)
-            WRITE_RD(-6);
-        else if (F7) 
-            WRITE_RD(-7);
         else 
-            WRITE_RD(-8);
+            WRITE_RD(-4);
     }
