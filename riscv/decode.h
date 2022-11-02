@@ -1705,11 +1705,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        check_cust_invalid_shape(CONV_SH, 1); \
         check_cust_invalid_deconv_padding(CONV_KH, CONV_PAD_U); \
         check_cust_invalid_deconv_padding(CONV_KW, CONV_PAD_L); \
-        if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
-            throw trap_ncp_cust_invalid_param(); \
-        } \
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
@@ -1736,12 +1734,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_cust_invalid_shape(CONV_OUT_ROW, CONV_OUT_COLUMN); \
         check_cust_invalid_shape(CONV_CIN, CONV_COUT); \
         check_cust_invalid_shape(CONV_KH, CONV_KW); \
+        check_cust_invalid_shape(CONV_SH, 1); \
         check_cust_invalid_params_misaligned_4(TRAP_CONV);\
         check_cust_invalid_deconv_padding(CONV_KH, CONV_PAD_U); \
         check_cust_invalid_deconv_padding(CONV_KW, CONV_PAD_L); \
-        if (unlikely(CONV_SH == 0 || CONV_SW == 0)) { \
-            throw trap_ncp_cust_invalid_param(); \
-        } \
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
