@@ -51,3 +51,8 @@ chmod 644 ~/.ssh/known_hosts
 
 ssh $DEPLOY_USER@$DEPLOY_SERVER "if [ ! -d ~/files/simulator/spike/$OS_VERSION ]; then mkdir -p ~/files/simulator/spike/$OS_VERSION; fi"
 tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike/$OS_VERSION"
+
+# Set the ubuntu18.04 version as default spike release
+if [ x"$OS_VERSION" == x"ubuntu18.04" ]; then
+	tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike"
+fi
