@@ -305,7 +305,7 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
       paddr = at->translate(addr, len);
     }
 
-    procid = which_npc(addr, &paddr);
+    procid = which_npc(paddr, &paddr);
     if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
@@ -313,18 +313,18 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
         host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
     }
 
-    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(addr)) ||
-            (host_addr=mPSim->addr_to_mem(addr))) {
+    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(paddr)) ||
+            (host_addr=mPSim->addr_to_mem(paddr))) {
         memcpy(bytes, host_addr, len);
     } else if (!((mBank->npc_mmio_load(paddr, len, bytes,idxinbank)) ||
-            (mBank->bank_mmio_load(addr, len, bytes)) ||
-            (mPSim->mmio_load(addr, len, bytes)))) {
+            (mBank->bank_mmio_load(paddr, len, bytes)) ||
+            (mPSim->mmio_load(paddr, len, bytes)))) {
         std::cout << "PCIe driver load addr: 0x"
             << hex
-            << addr
+            << paddr
             << " access fault."
             << std::endl;
-        throw trap_load_access_fault(false, addr, 0, 0);
+        throw trap_load_access_fault(false, paddr, 0, 0);
     }
 
     return true;
@@ -343,7 +343,7 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
       paddr = at->translate(addr, len);
     }
 
-    procid = which_npc(addr, &paddr);
+    procid = which_npc(paddr, &paddr);
     if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
@@ -351,18 +351,18 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
         host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
     }
 
-    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(addr)) ||
-            (host_addr=mPSim->addr_to_mem(addr))) {
+    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(paddr)) ||
+            (host_addr=mPSim->addr_to_mem(paddr))) {
         memcpy(host_addr, bytes, len);
     } else if (!((mBank->npc_mmio_store(paddr, len, bytes,idxinbank)) ||
-            (mBank->bank_mmio_store(addr, len, bytes)) ||
-            (mPSim->mmio_store(addr, len, bytes)))) {
+            (mBank->bank_mmio_store(paddr, len, bytes)) ||
+            (mPSim->mmio_store(paddr, len, bytes)))) {
         std::cout << "PCIe driver store addr: 0x"
             << hex
-            << addr
+            << paddr
             << " access fault."
             << std::endl;
-        throw trap_store_access_fault(false, addr, 0, 0);
+        throw trap_store_access_fault(false, paddr, 0, 0);
     }
     
     return true;
