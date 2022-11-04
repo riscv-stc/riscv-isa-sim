@@ -764,7 +764,7 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
   uint64_t pcie_addr = 0;
   uint8_t *buf = nullptr;
 
-  printf("%s src %lx dst %lx len %d dir %d \n", __FUNCTION__, soc, pcie, len, ob_not_ib);
+  printf("%s soc %lx pcie %lx len %d dir %d \n", __FUNCTION__, soc, pcie, len, ob_not_ib);
 
   buf = (uint8_t*)malloc(XFER_LEN_ONCE_MAX);
   if (nullptr == buf) {
@@ -813,7 +813,8 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   uint32_t val32 = 0;
   uint64_t desc_addr_reg = 0;
   uint8_t *desc_addr = nullptr;
-  atu_t *at = pcie->get_atu(1);
+  atu_t *pcie_atu = pcie->get_atu(0);
+  atu_t *pcie_desc_atu = pcie->get_atu(1);
 
   int xfer_len = 0;
   uint64_t soc_addr = 0;
@@ -839,8 +840,8 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   desc_len = PCIEDMA_CTL(reg_base, ch) & 0x1fff;
   ob_not_ib = (PCIEDMA_CTL(reg_base, ch) >> PCIEDMA_CTL_OB_NOT_IB) & 0x01;
 
-  if (at && at->is_ipa_enabled()) {
-    desc_addr_reg = at->translate(desc_addr_reg, len);
+  if (pcie_desc_atu && pcie_desc_atu->is_ipa_enabled()) {
+    desc_addr_reg = pcie_desc_atu->translate(desc_addr_reg, 1);
   }
   
   printf("%s ch %d desc_len %d start ... \n", __FUNCTION__, ch, desc_len);
@@ -861,6 +862,9 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
     soc_addr = PDD_SOC_ADDR(desc_addr);
     pcie_addr = PDD_PCIE_ADDR(desc_addr);
 
+    if (pcie_atu && pcie_atu->is_ipa_enabled()) {
+      soc_addr = pcie_atu->translate(soc_addr, 1);
+    }
     ret = pcie_dma_xfer(soc_addr, pcie_addr, xfer_len, ob_not_ib);
     if (0 != ret) {
       break;
@@ -878,7 +882,7 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
     printf("%s ch %d desc_len %d done \n", __FUNCTION__, ch, desc_len);
   } else {
     PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_ERR_STAT);     /* control.error_status = 1 */
-    printf("%s ch %d desc_len %d error \n", __FUNCTION__, ch, desc_len);
+    printf("%s ch %d desc_len %d ret %d error \n", __FUNCTION__, ch, desc_len, ret);
   }
 
   /* raise irq */
