@@ -722,7 +722,7 @@ void sim_t::configure_log(bool enable_log, bool enable_commitlog)
   abort();
 #else
 
-    for (int i = 0 ; i < nprocs() ; i++) {
+    for (int i = 0 ; i < int(nprocs()) ; i++) {
         get_core_by_idxinsim(i)->enable_log_commits();
     }
 
@@ -797,8 +797,13 @@ bool sim_t::in_mmio(reg_t addr)
 
 bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 {
+    int bankid = 0;
     if (addr + len < addr || !paddr_ok(addr + len - 1))
         return false;
+    /* sysdma在bank_bus内，但是希望这里能访问 */
+    if (0 <= (bankid=sysdma_addr_to_bankid(addr))) {  
+        return bank_mmio_load(addr, len, bytes, bankid);
+    }
     if (in_mmio(addr)) {
         return glb_bus.load(addr & 0xffffffff, len, bytes);
     }
@@ -807,8 +812,13 @@ bool sim_t::mmio_load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool sim_t::mmio_store(reg_t addr, size_t len, const uint8_t* bytes)
 {
+    int bankid = 0;
     if (addr + len < addr || !paddr_ok(addr + len - 1))
         return false;
+    /* sysdma在bank_bus内，但是希望这里能访问 */
+    if (0 <= (bankid=sysdma_addr_to_bankid(addr))) {  
+        return bank_mmio_store(addr, len, bytes, bankid);
+    }
     if (in_mmio(addr)) {
         return glb_bus.store(addr & 0xffffffff, len, bytes);
     }
@@ -916,6 +926,28 @@ void sim_t::set_rom()
 
   boot_rom.reset(new rom_device_t(rom));
   glb_bus.add_device(DEFAULT_RSTVEC, boot_rom.get());
+}
+
+int sim_t::sysdma_addr_to_bankid(reg_t addr)
+{
+  int i = 0;
+  const uint64_t region[] = {
+    SYSDMA0_BASE,
+    SYSDMA1_BASE,
+    SYSDMA2_BASE,
+    SYSDMA3_BASE,
+    SYSDMA4_BASE,
+    SYSDMA5_BASE,
+    SYSDMA6_BASE,
+    SYSDMA7_BASE
+  };
+
+  for (i = 0 ; i < int(sizeof(region)/sizeof(region[0])) ; i++) {
+    if (region[i]<=addr && region[i]+DMA_REGION_SIZE>addr) {
+      return i/2;
+    }
+  }
+  return -1;
 }
 
 /* 访问sim内的 mem_t 类型资源, 如果是40bit地址额外找bank_bus */

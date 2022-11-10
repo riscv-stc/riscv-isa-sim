@@ -142,6 +142,8 @@ private:
   hwsync_t *hwsync;
   apifc_t *apifc = nullptr;
 
+  int sysdma_addr_to_bankid(reg_t addr);
+
   // memory-mapped I/O routines
   bool is_upper_mem(reg_t addr);
   int get_bankid_by_uppermem(reg_t addr);

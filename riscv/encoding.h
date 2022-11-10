@@ -219,6 +219,8 @@
 #define CLINT_SIZE         0x000c0000
 #define EXT_IO_BASE        0x40000000
 #define DRAM_BASE          0x80000000
+
+#define DMA_REGION_SIZE   0x8000       /* 32kB */
 #define SYSDMA0_BASE       0xD2F00000
 #define SYSDMA1_BASE       0xD3F00000
 #define SYSDMA2_BASE       0xE2F00000

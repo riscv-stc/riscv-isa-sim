@@ -125,7 +125,6 @@ class sysdma_device_t : public abstract_device_t {
   int dma_idx_;
   // size of dma buffer
   #define DMA_BUF_SIZE 0x1000
-  #define DMA_REGION_SIZE 0x8000       /* 32kB */
 
   char sys_dma_reg[DMA_REGION_SIZE];
   enum {
