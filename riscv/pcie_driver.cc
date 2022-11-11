@@ -524,10 +524,17 @@ pcie_ctl_device_t::pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie) : sim(
   reg_base = (uint8_t *)malloc(len);
 
   pcie_dma = new pcie_dma_dev_t((uint8_t *)reg_base + PCIE_DMA_OFFSET, sim, pcie);
+  axi_master_comm = new axi_master_common_t((uint8_t *)reg_base + AXI_MASTER_COMM_OFFSET);
 }
 
 pcie_ctl_device_t::~pcie_ctl_device_t(void)
 {
+  delete pcie_dma;
+  pcie_dma = nullptr;
+
+  delete axi_master_comm;
+  axi_master_comm = nullptr;
+
   delete reg_base;
   reg_base = nullptr;
 }
@@ -543,6 +550,9 @@ bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
   /* pcie_dma */
   if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
     pcie_dma->load(addr-PCIE_DMA_OFFSET, len, bytes);
+  } else if (AXI_MASTER_COMM_OFFSET<=addr &&    /* axi master common */
+      (AXI_MASTER_COMM_OFFSET+AXI_MASTER_COMM_SIZE>addr)) {
+    axi_master_comm->load(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
   } else {
     memcpy(bytes, (uint8_t*)reg_base+addr, len);
   }
@@ -561,6 +571,9 @@ bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   /* pcie_dma */
   if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
     pcie_dma->store(addr-PCIE_DMA_OFFSET, len, bytes);
+  } else if (AXI_MASTER_COMM_OFFSET<=addr &&\   /* axi master common */
+      (AXI_MASTER_COMM_OFFSET+AXI_MASTER_COMM_SIZE>addr)) {
+    axi_master_comm->store(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
   } else {
     memcpy((uint8_t*)reg_base+addr, bytes, len);
   }
@@ -895,4 +908,145 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   }
 }
 
+axi_master_common_t::axi_master_common_t(uint8_t *regs) : reg_base(regs)
+{
+  int i = 0;
 
+  if (NULL == reg_base) {
+    throw std::invalid_argument("error! pcie_dma reg_base is nullptr");
+  }
+  memset(reg_base, 0, size());
+}
+
+axi_master_common_t::~axi_master_common_t(void)
+{
+  reg_base = nullptr;
+}
+
+bool axi_master_common_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+  int ch = 0;
+  if (unlikely(!bytes || ((size()<addr+len)))) {
+    std::cout << "axi_master_common_t: unsupported load register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  memcpy(bytes, (uint8_t*)reg_base+addr, len);
+
+  return true;
+}
+
+bool axi_master_common_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+  int ch = 0;
+  uint32_t val32 = 0;
+
+  if (unlikely(!bytes || ((size()<addr+len)))) {
+    std::cout << "axi_master_common_t: unsupported store register offset: " << hex << addr
+        << " len: " << hex << len << std::endl;
+    return false;
+  }
+
+  memcpy((uint8_t*)reg_base+addr, bytes, len);
+
+  return true;
+}
+
+/**
+ * pcie 访存经过 bar窗口进行地址转换
+ * pf: barid 0/4
+ */
+uint64_t axi_master_common_t::bar_axi_addr(int barid)
+{
+  uint32_t addr0 = 0;
+  uint32_t addr1 = 0;
+
+  if (4 < barid) {
+    std::cout << "bar_axi_addr: unsupported barid :" << barid << std::endl;
+    throw std::invalid_argument("");
+  }
+
+  addr0 = ((uint32_t*)reg_base)[barid*2];
+  addr1 = ((uint32_t*)reg_base)[barid*2+1];
+
+  return ((uint64_t)addr1 << 32) | addr0;
+}
+
+/* pcie bar2地址映射， 参考 芯片架构图 Memory Mapping from the view of PCIe Host */
+uint64_t axi_master_common_t::pf_bar2_axi_addr(uint32_t bar_offset)
+{
+  uint64_t trans_addr = 0xc4000000 + bar_offset;
+
+  struct axi_map_t {
+    uint64_t trans_addr;
+    uint64_t soc_addr;
+    uint32_t size;
+  };
+
+  const struct axi_map_t pf_bar2_remapper[] = {
+    {0xc4000000, SOC_APB_BASE,        0x80000},
+    {0xc4080000, HWSYNC_START,        0x80000},
+    {0xc410c000, P2AP_MBOX_LOC_BASE,  0x1000},
+    {0xc410d000, N2AP_MBOX_LOC_BASE,  0x1000},
+    {0xc4800000, SYSDMA0_BASE,        0x10000},
+    {0xc4810000, SYSDMA1_BASE,        0x10000},
+    {0xc4820000, SYSDMA2_BASE,        0x10000},
+    {0xc4830000, SYSDMA3_BASE,        0x10000},
+    {0xc4840000, SYSDMA4_BASE,        0x10000},
+    {0xc4850000, SYSDMA5_BASE,        0x10000},
+    {0xc4860000, SYSDMA6_BASE,        0x10000},
+    {0xc4870000, SYSDMA7_BASE,        0x10000},
+    {0xc4880000, SRAM_START,          0x80000},
+    {0xc4900000, PCIE_CTL_CFG_BASE,   0x80000},
+    {0xc4d00000, NOC_NPC0_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d10000, NOC_NPC1_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d20000, NOC_NPC2_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d30000, NOC_NPC3_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d40000, NOC_NPC4_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d50000, NOC_NPC5_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d60000, NOC_NPC6_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d70000, NOC_NPC7_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d80000, NOC_NPC8_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4d90000, NOC_NPC9_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4da0000, NOC_NPC10_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4db0000, NOC_NPC11_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4dc0000, NOC_NPC12_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4dd0000, NOC_NPC13_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4de0000, NOC_NPC14_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4df0000, NOC_NPC15_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e00000, NOC_NPC16_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e10000, NOC_NPC17_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e20000, NOC_NPC18_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e30000, NOC_NPC19_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e40000, NOC_NPC20_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e50000, NOC_NPC21_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e60000, NOC_NPC22_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e70000, NOC_NPC23_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e80000, NOC_NPC24_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4e90000, NOC_NPC25_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4ea0000, NOC_NPC26_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4eb0000, NOC_NPC27_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4ec0000, NOC_NPC28_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4ed0000, NOC_NPC29_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4ee0000, NOC_NPC30_BASE+NPC_SYS_OFFET,   0x10000},
+    {0xc4ef0000, NOC_NPC31_BASE+NPC_SYS_OFFET,   0x10000}
+  };
+
+  if (0xc5000000 <= trans_addr) {
+    std::cout << "bar_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
+    throw std::invalid_argument("");
+  }
+
+  for (int i = 0 ; i < sizeof(pf_bar2_remapper)/sizeof(pf_bar2_remapper[0]) ; i++) {
+    if (pf_bar2_remapper[i].trans_addr<=trans_addr && 
+        pf_bar2_remapper[i].trans_addr+pf_bar2_remapper[i].size>trans_addr) {
+      return  trans_addr - pf_bar2_remapper[i].trans_addr + pf_bar2_remapper[i].soc_addr;
+    }
+  }
+
+  std::cout << "bar_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
+  throw std::invalid_argument("");
+
+  return 0;
+}

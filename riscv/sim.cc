@@ -22,10 +22,6 @@
 //im buffer size adjust to 256K, 0xc0400000-0xc0440000
 //Index RAM size 80k, 0xc0500000-0xc0514000
 
-
-#define SRAM_START           (0xD3D80000)   /* NPUV2 IRAM 512K */
-#define SRAM_SIZE            (0x80000)
-
 //coremask configure base address
 #define STC_VALID_NPCS_BASE  (SRAM_START + 0x4400)
 

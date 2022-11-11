@@ -127,6 +127,9 @@ class pcie_driver_t {
 #define PCIE_DMA_OFFSET     0x00017000
 #define PCIE_DMA_SIZE       0x1000
 
+#define AXI_MASTER_COMM_OFFSET  0x10000
+#define AXI_MASTER_COMM_SIZE    0x1000
+
 #define PCIE_DMA_CH_TOTAL   16
 
 #define AXI_ADDR0   (PCIE_AXI_SLAVE+0x120)
@@ -199,6 +202,23 @@ class pcie_dma_dev_t : public abstract_device_t {
     int pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_not_ib);
 };
 
+class axi_master_common_t : public abstract_device_t {
+  public:
+    axi_master_common_t(uint8_t *regs);
+    ~axi_master_common_t();
+
+    size_t size(void) {return len;};
+    bool load(reg_t addr, size_t len, uint8_t* bytes);
+    bool store(reg_t addr, size_t len, const uint8_t* bytes);
+
+    uint64_t bar_axi_addr(int barid);
+    uint64_t pf_bar2_axi_addr(uint32_t bar_offset);
+
+  private:
+    uint8_t *reg_base = nullptr;
+    size_t len = 0x28;   /* bar0 - bar4 */
+};
+
 class pcie_ctl_device_t : public abstract_device_t {
  public:
   pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie);
@@ -215,6 +235,7 @@ class pcie_ctl_device_t : public abstract_device_t {
   uint8_t *reg_base = nullptr;
 
   pcie_dma_dev_t *pcie_dma = nullptr;
+  axi_master_common_t *axi_master_comm = nullptr;
 };
 
 #endif

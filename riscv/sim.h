@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include "ap_mbox.h"
 #include "soc_apb.h"
+#include "noc_addr.h"
 
 class mmu_t;
 class remote_bitbang_t;

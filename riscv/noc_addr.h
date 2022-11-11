@@ -38,12 +38,17 @@
 #define NOC_NPC30_BASE (0xF6000000)
 #define NOC_NPC31_BASE (0xF6800000)
 
+#define NPC_SYS_OFFET   (0x7f0000)
+
 /* NPUV2 Hardware Synchronization Buffer (512KB)  begin at 0xd3e80000*/
 #define HWSYNC_START         (0xd3e80000)
 #define HWSYNC_SIZE          (0x00080000)
 
 #define NPC_LOCAL_ADDR_START (0xc0000000)
 #define NPC_LOCAL_REGIN_SIZE (0x800000)
+
+#define SRAM_START           (0xD3D80000)   /* NPUV2 IRAM 512K */
+#define SRAM_SIZE            (0x80000)
 
 int which_npc(reg_t addr, reg_t *paddr);
 
