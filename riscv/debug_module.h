@@ -111,7 +111,7 @@ class debug_module_t : public abstract_device_t
 
     void add_device(bus_t *bus);
 
-    size_t size(void) {return DEBUG_END - (DEBUG_BASE+DEBUG_START);};
+    size_t size(void) {return DEBUG_SIZE;};
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
 

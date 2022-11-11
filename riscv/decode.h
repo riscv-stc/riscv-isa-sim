@@ -3994,7 +3994,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   }
 
 #define DEBUG_START             (0xC07F0000)
-#define DEBUG_END               (0xC07F1000 - 1)
+#define DEBUG_SIZE              (0x1000)
 
 #define VME_DTYPE_DECODING_TO_TYPE(...) \
     bool relu = false; \
