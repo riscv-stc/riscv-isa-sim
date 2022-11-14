@@ -148,7 +148,7 @@ class rom_device_t : public abstract_device_t {
 
 class misc_device_t : public abstract_device_t {
  public:
-  misc_device_t(pcie_driver_t * pcie, processor_t* proc, simif_t *sim);
+  misc_device_t(processor_t* proc, simif_t *sim);
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
@@ -175,8 +175,6 @@ class misc_device_t : public abstract_device_t {
   uint32_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
-
-  pcie_driver_t *pcie_driver = nullptr;
 
   /* 只读寄存器的写操作不放在store中 */
   bool ro_register_write(reg_t addr, uint32_t val);

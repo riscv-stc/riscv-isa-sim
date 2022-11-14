@@ -27,11 +27,23 @@ class bankif_t;
 
 #define NETLINK_FAULT    (-1)
 
+#define PF_BAR_CMD_CODE(barid, iswrite)   (2 * barid + iswrite + 0x80)
+#define CMD_CODE_TO_BARID(cmd)            ((cmd & 0x0f) / 2)
+
 enum command_code {
     CODE_READ = 0,
     CODE_WRITE = 1,
     CODE_INTERRUPT = 2,
     CODE_STATUS = 3,
+
+    CODE_PF_BAR0_READ = PF_BAR_CMD_CODE(0, CODE_READ),    /* 0x80 */
+    CODE_PF_BAR0_WRITE = PF_BAR_CMD_CODE(0, CODE_WRITE),  /* 0x81 */
+
+    CODE_PF_BAR2_READ = PF_BAR_CMD_CODE(2, CODE_READ),    /* 0x84 */
+    CODE_PF_BAR2_WRITE = PF_BAR_CMD_CODE(2, CODE_WRITE),  /* 0x85 */
+
+    CODE_PF_BAR4_READ = PF_BAR_CMD_CODE(4, CODE_READ),    /* 0x88 */
+    CODE_PF_BAR4_WRITE = PF_BAR_CMD_CODE(4, CODE_WRITE),  /* 0x89 */
 
     /* r/w host mems */
     CODE_READ_HOST      = 0x100,
@@ -62,78 +74,24 @@ struct command_head_t {
 #define PCIE_IOV_ATU1_OFFSET  0xC8000
 #define PCIE_IOV_ATU_SIZE     0x8000
 
-class pcie_driver_t {
- public:
-  pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, size_t board_id, size_t chip_id, const char *atuini);
-  ~pcie_driver_t();
-
-  int send(const uint8_t* data, size_t len);
-  int get_sync_state();
-
-  void set_mStatus(int status) {mStatus = status;};
-  int update_status(NL_STATUS status);
-
-  /* pcie_dma */
-  int read_host_ready_to(struct command_head_t *cmd);
-  int read_host_wait(void);
-
-  /* pcie atu */
-  atu_t *get_atu(int n) { return pcie_atu[n]; }
-
- private:
-  std::unique_ptr<std::thread> mDriverThread;
-
-  struct sockaddr_nl mSrcAddr;
-  struct sockaddr_nl mDestAddr;
-  struct nlmsghdr *mSendBuffer;
-  struct nlmsghdr *mRecvBuffer;
-  simif_t* mPSim;
-  bankif_t *mBank;
-
-  int mSockFd;
-  int mStatus;
-  uint32_t mBankId;
-  int mDev;
-  bool pcie_enabled;
-  size_t board_id;
-  size_t chip_id;
-  atu_t *pcie_atu[2];
-  
-  reg_t mTxCfgAddr;
-  reg_t mTxCmd;
-  reg_t mTxExtCmd;
-  int initialize();
-  int read(reg_t addr, size_t length);
-  int recv();
-  bool load_data(reg_t addr, size_t len, uint8_t* bytes);
-  bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
-  bool lock_channel(void);
-  void task_doing();
-  std::mutex pcie_mutex;
-
-  char sys_pcie_reg[PCIE_REGION_SIZE];
-
-  /* pcie_dma */
-  sem_t read_host_sem;
-  std::mutex read_host_mutex;;
-  struct command_head_t *read_host_cmd = nullptr;
-  void read_host_notify_ok(struct command_head_t *cmd);
-};
-
 #define PCIE_AXI_SLAVE      0x00011000
 #define PCIE_AXI_SLAVE_SIZE 0x1000
 
 /* PCIE_DMA */
 #define PCIE_DMA_OFFSET     0x00017000
 #define PCIE_DMA_SIZE       0x1000
+#define PCIE_DMA_CH_TOTAL   16
 
 #define AXI_MASTER_COMM_OFFSET  0x10000
 #define AXI_MASTER_COMM_SIZE    0x1000
 
-#define PCIE_DMA_CH_TOTAL   16
+#define PCIE_MBOX_PF_OFFSET     0xb0000
+#define PCIE_MBOX_PF_SIZE       0x1000
 
 #define AXI_ADDR0   (PCIE_AXI_SLAVE+0x120)
 #define AXI_ADDR1   (PCIE_AXI_SLAVE+0x124)
+
+#define IS_IN_REGION(addr, start, size) ((start<=addr && start+size>addr) ? true : false)
 
 #define PCIEDMA_VERSION     0x00
 #define PCIEDMA_FEATURES    0x04
@@ -179,9 +137,69 @@ enum {
 
 #define XFER_LEN_ONCE_MAX       COMMAND_DATA_SIZE_MAX
 
+class pcie_ctl_device_t;
+
+class pcie_driver_t {
+ public:
+  pcie_driver_t(simif_t* sim, bool pcie_enabled, size_t board_id, size_t chip_id, const char *atuini);
+  ~pcie_driver_t();
+
+  int send(const uint8_t* data, size_t len);
+
+  void set_mStatus(int status) {mStatus = status;};
+  int update_status(NL_STATUS status);
+
+  /* pcie_dma */
+  int read_host_ready_to(struct command_head_t *cmd);
+  int read_host_wait(void);
+
+  pcie_ctl_device_t *get_pcie_ctl(void) { return  pcie_ctl;};
+
+ private:
+  std::unique_ptr<std::thread> mDriverThread;
+
+  struct sockaddr_nl mSrcAddr;
+  struct sockaddr_nl mDestAddr;
+  struct nlmsghdr *mSendBuffer;
+  struct nlmsghdr *mRecvBuffer;
+  simif_t* mPSim;
+
+  int mSockFd;
+  int mStatus;
+  bool pcie_enabled;
+  size_t board_id;
+  size_t chip_id;  
+  reg_t mTxCfgAddr;
+  reg_t mTxCmd;
+  reg_t mTxExtCmd;
+
+  int cluster_mdev[4] = {-1, -1, -1, -1};
+  int initialize();
+  int read(reg_t addr, size_t length);
+  int recv();
+  bool load_data(reg_t addr, size_t len, uint8_t* bytes);
+  bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
+
+  int pcie_bar_read(int barid, reg_t addr, size_t length);
+  bool pcie_bar_store_data(int barid, reg_t addr, size_t len, const uint8_t* bytes);
+
+  bool lock_channel(void);
+  void task_doing();
+  std::mutex pcie_mutex;
+
+  /* pcie_dma */
+  sem_t read_host_sem;
+  std::mutex read_host_mutex;;
+  struct command_head_t *read_host_cmd = nullptr;
+  void read_host_notify_ok(struct command_head_t *cmd);
+
+  pcie_ctl_device_t *pcie_ctl = nullptr;
+};
+
 class pcie_dma_dev_t : public abstract_device_t {
   public:
-    pcie_dma_dev_t(uint8_t *pcie_dma_regs, simif_t *_sim, pcie_driver_t *_pcie);
+    pcie_dma_dev_t(uint8_t *pcie_dma_regs, atu_t *_pcie_atu,
+        atu_t *_pcie_desc_atu, simif_t *_sim, pcie_driver_t *_pcie);
     ~pcie_dma_dev_t();
 
     size_t size(void) {return len;};
@@ -189,9 +207,11 @@ class pcie_dma_dev_t : public abstract_device_t {
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
   private:
+    uint8_t *reg_base = nullptr;
+    atu_t *pcie_atu;
+    atu_t *pcie_desc_atu;
     simif_t *sim = nullptr;
     pcie_driver_t *pcie = nullptr;
-    uint8_t *reg_base = nullptr;
     size_t len = 0x20*PCIE_DMA_CH_TOTAL;   /* PCIE_DMA_SIZE */
 
     void pcie_dma_go(int ch);
@@ -211,29 +231,35 @@ class axi_master_common_t : public abstract_device_t {
     bool load(reg_t addr, size_t len, uint8_t* bytes);
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
-    uint64_t bar_axi_addr(int barid);
-    uint64_t pf_bar2_axi_addr(uint32_t bar_offset);
-
+    uint64_t bar_axi_addr(int barid, uint32_t bar_offset);
   private:
     uint8_t *reg_base = nullptr;
     size_t len = 0x28;   /* bar0 - bar4 */
+    uint64_t bar_axi_base_addr(int barid);
+    uint64_t pf_bar2_axi_addr(uint32_t bar_offset);
 };
 
 class pcie_ctl_device_t : public abstract_device_t {
  public:
-  pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie);
+  pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie, const char *atuini);
   ~pcie_ctl_device_t();
 
   size_t size(void) {return len;};
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
 
+  /* pcie atu */
+  atu_t *get_atu(int n) { return pcie_atu[n]; }
+  uint64_t bar_axi_addr(int barid, uint32_t bar_offset);
  private:
   simif_t *sim = nullptr;
   pcie_driver_t *pcie = nullptr;
   size_t len = PCIE_CTL_CFG_SIZE;
   uint8_t *reg_base = nullptr;
 
+  atu_t *pcie_atu[2];
+
+  pcie_mbox_t *pcie_mbox = nullptr;
   pcie_dma_dev_t *pcie_dma = nullptr;
   axi_master_common_t *axi_master_comm = nullptr;
 };

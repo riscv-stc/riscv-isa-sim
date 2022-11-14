@@ -12,7 +12,6 @@
 #include "simif.h"
 #include "bankif.h"
 #include "hwsync.h"
-#include "pcie_driver.h"
 #include "processor.h"
 #include "sysdma.h"
 
@@ -20,15 +19,13 @@ class bank_t : public bankif_t {
 private:
     int nprocs;     /* bank内核心数 */
     int bank_id;
-    int pcie_enabled;
     std::vector<processor_t*> procs;
-    pcie_driver_t *pcie_driver;
     bus_t bank_bus;
     sysdma_device_t *sysdma[2] = {nullptr, nullptr};    /* 每个bank包含2个sysdma控制器 */
 
 public:
     bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
-            hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, size_t chip_id, 
+            hwsync_t *hwsync, FILE *log_file, size_t board_id, size_t chip_id, 
             int bank_nprocs, int bankid,const std::vector<int> hartids, bool halted,
             const char *atuini);
     virtual ~bank_t();
@@ -51,8 +48,6 @@ public:
 
     char* npc_addr_to_mem(reg_t addr, uint32_t idxinbank);
     char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
-
-    pcie_driver_t *get_pcie_driver(void) {return pcie_driver; };
 };
 
 #endif // __BANK_H__

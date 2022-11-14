@@ -2,7 +2,6 @@
 
 #include "devices.h"
 #include "processor.h"
-#include "pcie_driver.h"
 #include "soc_apb.h"
 
 #define UART_BASE  0x100
@@ -17,8 +16,8 @@
 #define MCU_IRQ_ENABLE_MASK     MCU_IRQ_STATUS_MASK
 #define MCU_IRQ_CLEAR_MASK      0x1ffe
 
-misc_device_t::misc_device_t(pcie_driver_t * pcie, processor_t* proc,  simif_t *sim)
-  : proc(proc), buf_len(0x4000), dump_count(0), pcie_driver(pcie), sim(sim)
+misc_device_t::misc_device_t(processor_t* proc,  simif_t *sim)
+  : proc(proc), buf_len(0x4000), dump_count(0), sim(sim)
 {
     reg_base = new uint8_t[MISC_SIZE];
     memset(reg_base, 0, MISC_SIZE);

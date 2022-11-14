@@ -118,8 +118,7 @@ private:
   soc_apb_t *soc_apb = nullptr;
   ap_mbox_t *p2ap_mbox = nullptr;
   ap_mbox_t *n2ap_mbox = nullptr;
-  pcie_ctl_device_t *pcie_ctl = nullptr;
-  pcie_mbox_t *pcie_mbox = nullptr;
+  pcie_driver_t *pcie_driver = nullptr;
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
 

@@ -35,12 +35,11 @@
 /* netlink groups */
 #define NL_GROUPS        (0)
 
-pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, bool pcie_enabled, 
-        size_t board_id, size_t chip_id, const char *atuini) : mPSim(sim), mBank(bank), mBankId(bank_id),
+pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
+        size_t board_id, size_t chip_id, const char *atuini) : mPSim(sim),
         pcie_enabled(pcie_enabled), board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
-  mDev = -1;
 
   if(!pcie_enabled)
   	return;
@@ -62,8 +61,7 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
 
   memset(mSendBuffer, 0, NLMSG_SPACE(MAX_PAYLOAD));
   mSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-  //mSendBuffer->nlmsg_pid = NL_START_PORT + mBankId;
-  mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id) + mBankId;
+  mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id);
   mSendBuffer->nlmsg_flags = NL_GROUPS;
 
   mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
@@ -74,17 +72,13 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bankif_t *bank, uint32_t bank_id, boo
 
   memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
 
-  pcie_atu[0] = new atu_t(atuini, 0, (uint8_t *)sys_pcie_reg + PCIE_IOV_ATU0_OFFSET);
-  pcie_atu[1] = new atu_t(atuini, 1, (uint8_t *)sys_pcie_reg + PCIE_IOV_ATU1_OFFSET);
-
-  pcie_atu[0]->reset();
-  pcie_atu[1]->reset();
-  
-  #if 0 /* 因为引入了pcie_mbox,sys_soc等, 此处需向后调整 */
+  #if 0 /* 需要初始化完 pcie_mbox,sys_soc等, 再 update_status() */
   /* Recheck netlink status */
   if (NETLINK_FAULT == update_status(STATUS_OK))
     mStatus = ERROR_CONN;
   #endif
+
+  pcie_ctl = new pcie_ctl_device_t(mPSim, this, atuini);
 }
 
 int pcie_driver_t::initialize()
@@ -106,8 +100,7 @@ int pcie_driver_t::initialize()
   // To prepare binding
   memset(&mSrcAddr, 0, sizeof(mSrcAddr));
   mSrcAddr.nl_family = AF_NETLINK;
-  //mSrcAddr.nl_pid = NL_START_PORT + mBankId;
-  mSrcAddr.nl_pid = NL_NETLINK_START_PORT(board_id, chip_id) + mBankId;
+  mSrcAddr.nl_pid = NL_NETLINK_START_PORT(board_id, chip_id);
   mSrcAddr.nl_groups = NL_GROUPS;
 
   // Bind src addr
@@ -146,23 +139,27 @@ bool pcie_driver_t::lock_channel(void)
   char pathname[32];
   int rc;
 
-  memset(pathname, 0, sizeof(pathname));
-  sprintf(pathname, "/proc/stc/stc_cluster_%d", mBankId);
-  if (access(pathname, F_OK)) {
-    std::cout << "Cluster["
-              << mBankId
-              << "] dev is not exist, please check driver."
-              << std::endl;
-    return false;
+  for (int i = 0 ; i < int(mPSim->nbanks()) ; i++) {
+    memset(pathname, 0, sizeof(pathname));
+    sprintf(pathname, "/proc/stc/stc_cluster_%d", i);
+    if (access(pathname, F_OK)) {
+      std::cout << "Cluster["
+                << i
+                << "] dev is not exist, please check driver."
+                << std::endl;
+      return false;
+    }
+
+    cluster_mdev[i] = open(pathname, O_RDWR);
+    if (cluster_mdev[i] < 0)
+      return false;
+
+    rc = write(cluster_mdev[i], magic_str, magic_len);
+    if (rc != magic_len)
+      return false;
+    usleep(10 * 1000);
   }
 
-  mDev = open(pathname, O_RDWR);
-  if (mDev < 0)
-    return false;
-
-  rc = write(mDev, magic_str, magic_len);
-  if (rc != magic_len)
-    return false;
   return true;
 }
 
@@ -211,7 +208,7 @@ int pcie_driver_t::update_status(NL_STATUS status)
 
    cmd.code = CODE_STATUS;
    /* address is bankid */
-   cmd.addr = mBankId;
+   cmd.addr = 0;
    cmd.len = 4;
    *(uint32_t *)cmd.data = (uint32_t)status;
    rv = send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
@@ -262,6 +259,43 @@ int pcie_driver_t::read(reg_t addr, size_t length)
   return count;
 }
 
+int pcie_driver_t::pcie_bar_read(int barid, reg_t addr, size_t length)
+{
+  uint64_t axi_addr = 0;
+  uint64_t paddr = 0;
+  
+  axi_addr = pcie_ctl->bar_axi_addr(barid, addr);
+
+  if (2 == barid) {   /* pf bar2 不经过ATU */
+    paddr = axi_addr;
+  } else {    /* pf bar0 bar4 经过ATU */
+    atu_t *at = pcie_ctl->get_atu(0);
+    if (at && at->is_ipa_enabled()) {
+      paddr = at->translate(axi_addr, length);
+    }
+  }
+
+  return read(paddr, length);
+}
+
+bool pcie_driver_t::pcie_bar_store_data(int barid, reg_t addr, size_t len, const uint8_t* bytes)
+{
+  uint64_t axi_addr = 0;
+  uint64_t paddr = 0;
+  
+  axi_addr = pcie_ctl->bar_axi_addr(barid, addr);
+
+  paddr = axi_addr;
+  if (2 != barid) {      /* pf bar2 不经过ATU */
+    atu_t *at = pcie_ctl->get_atu(0);
+    if (at && at->is_ipa_enabled()) {
+      paddr = at->translate(axi_addr, len);
+    }
+  }
+
+  return store_data(paddr, len, bytes);
+}
+
 /* recv data from PCIe port, recv data length
    no bigger than 1024 byte once. */
 int pcie_driver_t::recv()
@@ -299,32 +333,40 @@ bool pcie_driver_t::load_data(reg_t addr, size_t len, uint8_t* bytes)
     int procid = 0;
     int idxinbank  = 0;
     char *host_addr = nullptr;
-    atu_t *at = pcie_atu[0];
 
-    if (at && at->is_ipa_enabled()) {
-      paddr = at->translate(addr, len);
-    }
-
-    procid = which_npc(paddr, &paddr);
+    procid = which_npc(addr, &paddr);
     if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
         idxinbank = mPSim->get_idxinbank(idxinsim);
         host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
+
+        if (host_addr) {
+            memcpy(bytes, host_addr, len);
+            return true;
+        } else {
+            if (mPSim->npc_mmio_load(paddr, len, bytes, bankid, idxinbank)) {
+                return true;
+            } else {
+                std::cout << "PCIe driver load addr: 0x"
+                    << hex
+                    << addr
+                    << " access fault."
+                    << std::endl;
+                throw trap_load_access_fault(false, addr, 0, 0);
+            }
+        }
     }
 
-    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(paddr)) ||
-            (host_addr=mPSim->addr_to_mem(paddr))) {
+    if (nullptr != (host_addr=mPSim->addr_to_mem(addr))) {
         memcpy(bytes, host_addr, len);
-    } else if (!((mBank->npc_mmio_load(paddr, len, bytes,idxinbank)) ||
-            (mBank->bank_mmio_load(paddr, len, bytes)) ||
-            (mPSim->mmio_load(paddr, len, bytes)))) {
+    } else if (!mPSim->mmio_load(addr, len, bytes)) {
         std::cout << "PCIe driver load addr: 0x"
             << hex
-            << paddr
+            << addr
             << " access fault."
             << std::endl;
-        throw trap_load_access_fault(false, paddr, 0, 0);
+        throw trap_load_access_fault(false, addr, 0, 0);
     }
 
     return true;
@@ -337,32 +379,40 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
     int procid = 0;
     int idxinbank  = 0;
     char *host_addr = nullptr;
-    atu_t *at = pcie_atu[0];
 
-    if (at && at->is_ipa_enabled()) {
-      paddr = at->translate(addr, len);
-    }
-
-    procid = which_npc(paddr, &paddr);
+    procid = which_npc(addr, &paddr);
     if (0 <= procid) {
         int idxinsim =mPSim->coreid_to_idxinsim(procid);
         int bankid = mPSim->get_bankid(idxinsim);
         idxinbank = mPSim->get_idxinbank(idxinsim);
         host_addr=mPSim->npc_addr_to_mem(paddr, bankid, idxinbank);
+
+        if (host_addr) {
+            memcpy(host_addr, bytes, len);
+            return true;
+        } else {
+            if (mPSim->npc_mmio_store(paddr, len, bytes, bankid, idxinbank)) {
+                return true;
+            } else {
+                std::cout << "PCIe driver store addr: 0x"
+                    << hex
+                    << addr
+                    << " access fault."
+                    << std::endl;
+                throw trap_store_access_fault(false, addr, 0, 0);
+            }
+        }
     }
 
-    if ((host_addr) || (host_addr=mBank->bank_addr_to_mem(paddr)) ||
-            (host_addr=mPSim->addr_to_mem(paddr))) {
+    if (nullptr != (host_addr=mPSim->addr_to_mem(addr))) {
         memcpy(host_addr, bytes, len);
-    } else if (!((mBank->npc_mmio_store(paddr, len, bytes,idxinbank)) ||
-            (mBank->bank_mmio_store(paddr, len, bytes)) ||
-            (mPSim->mmio_store(paddr, len, bytes)))) {
+    } else if (!mPSim->mmio_store(addr, len, bytes)) {
         std::cout << "PCIe driver store addr: 0x"
             << hex
-            << paddr
+            << addr
             << " access fault."
             << std::endl;
-        throw trap_store_access_fault(false, paddr, 0, 0);
+        throw trap_store_access_fault(false, addr, 0, 0);
     }
     
     return true;
@@ -371,29 +421,6 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 /* core reset addr, just only write,
  * not realy phy_addr, just valid for PCIe dummy driver. */
 #define PCIE_CORE_RESET_ADDR    (0xc07f3500)
-
-/* sync state addr, just only read,
- * not realy phy_addr, just valid for PCIe dummy driver. */
-#define PCIE_SYNC_STATE_ADDR    (0xc07f3504)
-int pcie_driver_t::get_sync_state()
-{
-  int rv;
-  uint32_t state = 0;
-  command_head_t cmd;
-
-  cmd.code = CODE_READ;
-  cmd.addr = PCIE_SYNC_STATE_ADDR;
-  cmd.len = 4;
-
-  for (reg_t i = 0; i < mPSim->nprocs(); i++)
-    if ((mPSim->get_core_by_idxinsim(i)->get_hwsync_status() & (1 << (mBankId * 8 + i))) == 0)
-      state |= 0x1 << mPSim->get_core_by_idxinsim(i)->id;
-
-  /* each bank core_id in spike is start at 0. */
-  *(uint32_t *)cmd.data = state;
-  rv = send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
-  return rv;
-}
 
 void pcie_driver_t::task_doing()
 {
@@ -419,17 +446,9 @@ void pcie_driver_t::task_doing()
 
       switch (pCmd->code) {
         case CODE_READ:
-          switch (pCmd->addr) {
-            case PCIE_SYNC_STATE_ADDR:
-              get_sync_state();
-              break;
-
-            default:
-                    read(pCmd->addr, pCmd->len);
-	        }
-        usleep(1);
-              break;
-
+          read(pCmd->addr, pCmd->len);
+          usleep(1);
+          break;
         case CODE_WRITE:
           switch (pCmd->addr) {
             case PCIE_CORE_RESET_ADDR:
@@ -439,10 +458,19 @@ void pcie_driver_t::task_doing()
               break;
 
             default:
-                    store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+              store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
           }
           break;
-
+        case CODE_PF_BAR0_READ:
+        case CODE_PF_BAR2_READ:
+        case CODE_PF_BAR4_READ:
+          pcie_bar_read(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len);
+          break;
+        case CODE_PF_BAR0_WRITE:
+        case CODE_PF_BAR2_WRITE:
+        case CODE_PF_BAR4_WRITE:
+          pcie_bar_store_data(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+          break;
         case CODE_READ_HOST:    /* CODE_READ_HOST resp */
           read_host_notify_ok(pCmd);
           break;
@@ -464,9 +492,9 @@ pcie_driver_t::~pcie_driver_t()
     mSockFd = -1;
   }
 
-  if (mDev != -1) {
-    close(mDev);
-    mDev = -1;
+  for (int i = 0 ; i < int(mPSim->nbanks()) ; i++) {
+    if (0 <= cluster_mdev[i])
+      close(cluster_mdev[i]);
   }
 
   if (mSendBuffer) {
@@ -479,8 +507,10 @@ pcie_driver_t::~pcie_driver_t()
     mRecvBuffer = NULL;
   }
 
-  delete pcie_atu[0];
-  delete pcie_atu[1];
+  if (pcie_ctl) {
+      delete pcie_ctl;
+      pcie_ctl = nullptr;
+  }
 }
 
 /* 成功返回0 */
@@ -519,11 +549,18 @@ void pcie_driver_t::read_host_notify_ok(struct command_head_t *cmd)
   sem_post(&read_host_sem);
 }
 
-pcie_ctl_device_t::pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie) : sim(_sim), pcie(_pcie)
+pcie_ctl_device_t::pcie_ctl_device_t(simif_t *_sim, pcie_driver_t *_pcie, const char *atuini) : sim(_sim), pcie(_pcie)
 {
   reg_base = (uint8_t *)malloc(len);
 
-  pcie_dma = new pcie_dma_dev_t((uint8_t *)reg_base + PCIE_DMA_OFFSET, sim, pcie);
+  pcie_atu[0] = new atu_t(atuini, 0, (uint8_t *)reg_base + PCIE_IOV_ATU0_OFFSET);
+  pcie_atu[1] = new atu_t(atuini, 1, (uint8_t *)reg_base + PCIE_IOV_ATU1_OFFSET);
+
+  pcie_atu[0]->reset();
+  pcie_atu[1]->reset();
+
+  pcie_mbox = new pcie_mbox_t(sim, pcie);
+  pcie_dma = new pcie_dma_dev_t((uint8_t *)reg_base + PCIE_DMA_OFFSET, pcie_atu[0], pcie_atu[1], sim, pcie);
   axi_master_comm = new axi_master_common_t((uint8_t *)reg_base + AXI_MASTER_COMM_OFFSET);
 }
 
@@ -534,6 +571,15 @@ pcie_ctl_device_t::~pcie_ctl_device_t(void)
 
   delete axi_master_comm;
   axi_master_comm = nullptr;
+
+  delete pcie_atu[0];
+  pcie_atu[0] = nullptr;
+
+  delete pcie_atu[1];
+  pcie_atu[1] = nullptr;
+
+  delete pcie_mbox;
+  pcie_mbox = nullptr;
 
   delete reg_base;
   reg_base = nullptr;
@@ -547,13 +593,22 @@ bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     return false;
   }
 
-  /* pcie_dma */
-  if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
+  if (IS_IN_REGION(addr, PCIE_DMA_OFFSET, PCIE_DMA_SIZE)) {   /* pcie_dma */
     pcie_dma->load(addr-PCIE_DMA_OFFSET, len, bytes);
-  } else if (AXI_MASTER_COMM_OFFSET<=addr &&    /* axi master common */
-      (AXI_MASTER_COMM_OFFSET+AXI_MASTER_COMM_SIZE>addr)) {
+  } 
+  else if (IS_IN_REGION(addr, AXI_MASTER_COMM_OFFSET, AXI_MASTER_COMM_SIZE)) {  /* axi_master_common */
     axi_master_comm->load(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
-  } else {
+  }
+  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_dma */
+    pcie_dma->load(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
+  }
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU0_OFFSET, PCIE_IOV_ATU_SIZE)) {   /* pcie_atu */
+    pcie_atu[0]->load(addr-PCIE_IOV_ATU0_OFFSET, len, bytes);
+  }
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU1_OFFSET, PCIE_IOV_ATU_SIZE)) {   /* pcie_desc_atu */
+    pcie_atu[1]->load(addr-PCIE_IOV_ATU1_OFFSET, len, bytes);
+  }
+  else {
     memcpy(bytes, (uint8_t*)reg_base+addr, len);
   }
 
@@ -568,21 +623,37 @@ bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     return false;
   }
 
-  /* pcie_dma */
-  if (PCIE_DMA_OFFSET<=addr && (PCIE_DMA_OFFSET+PCIE_DMA_SIZE>addr)) {
+  if (IS_IN_REGION(addr, PCIE_DMA_OFFSET, PCIE_DMA_SIZE)) {   /* pcie_dma */
     pcie_dma->store(addr-PCIE_DMA_OFFSET, len, bytes);
-  } else if (AXI_MASTER_COMM_OFFSET<=addr &&\   /* axi master common */
-      (AXI_MASTER_COMM_OFFSET+AXI_MASTER_COMM_SIZE>addr)) {
+  }
+  else if (IS_IN_REGION(addr, AXI_MASTER_COMM_OFFSET, AXI_MASTER_COMM_SIZE)) {  /* axi_master_common */
     axi_master_comm->store(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
-  } else {
+  }
+  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_dma */
+    pcie_dma->store(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
+  }
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU0_OFFSET, PCIE_IOV_ATU_SIZE)) {
+    pcie_atu[0]->store(addr-PCIE_IOV_ATU0_OFFSET, len, bytes);
+  }
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU1_OFFSET, PCIE_IOV_ATU_SIZE)) {
+    pcie_atu[1]->store(addr-PCIE_IOV_ATU1_OFFSET, len, bytes);
+  }
+  else {
     memcpy((uint8_t*)reg_base+addr, bytes, len);
   }
 
   return true;
 }
 
-pcie_dma_dev_t::pcie_dma_dev_t(uint8_t *pcie_dma_regs, simif_t *_sim,
-    pcie_driver_t *_pcie) : sim(_sim), pcie(_pcie), reg_base(pcie_dma_regs)
+/* pcie滑窗地址， 转换到 axi(noc)地址 */
+uint64_t pcie_ctl_device_t::bar_axi_addr(int barid, uint32_t bar_offset)
+{
+  return axi_master_comm->bar_axi_addr(barid, bar_offset);
+}
+
+pcie_dma_dev_t::pcie_dma_dev_t(uint8_t *pcie_dma_regs, atu_t *_pcie_atu,
+    atu_t *_pcie_desc_atu,simif_t *_sim, pcie_driver_t *_pcie) : reg_base(pcie_dma_regs),
+    pcie_atu(_pcie_atu), pcie_desc_atu(_pcie_desc_atu), sim(_sim), pcie(_pcie)
 {
   int i = 0;
 
@@ -826,8 +897,6 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   uint32_t val32 = 0;
   uint64_t desc_addr_reg = 0;
   uint8_t *desc_addr = nullptr;
-  atu_t *pcie_atu = pcie->get_atu(0);
-  atu_t *pcie_desc_atu = pcie->get_atu(1);
 
   int xfer_len = 0;
   uint64_t soc_addr = 0;
@@ -954,16 +1023,16 @@ bool axi_master_common_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 }
 
 /**
- * pcie 访存经过 bar窗口进行地址转换
+ * pcie 访存经过 bar窗口， 返回该窗口配置的基地只
  * pf: barid 0/4
  */
-uint64_t axi_master_common_t::bar_axi_addr(int barid)
+uint64_t axi_master_common_t::bar_axi_base_addr(int barid)
 {
   uint32_t addr0 = 0;
   uint32_t addr1 = 0;
 
   if (4 < barid) {
-    std::cout << "bar_axi_addr: unsupported barid :" << barid << std::endl;
+    std::cout << "bar_axi_base_addr: unsupported barid :" << barid << std::endl;
     throw std::invalid_argument("");
   }
 
@@ -1034,19 +1103,29 @@ uint64_t axi_master_common_t::pf_bar2_axi_addr(uint32_t bar_offset)
   };
 
   if (0xc5000000 <= trans_addr) {
-    std::cout << "bar_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
+    std::cout << "pf_bar2_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
     throw std::invalid_argument("");
   }
 
-  for (int i = 0 ; i < sizeof(pf_bar2_remapper)/sizeof(pf_bar2_remapper[0]) ; i++) {
+  for (int i = 0 ; i < int(sizeof(pf_bar2_remapper)/sizeof(pf_bar2_remapper[0])) ; i++) {
     if (pf_bar2_remapper[i].trans_addr<=trans_addr && 
         pf_bar2_remapper[i].trans_addr+pf_bar2_remapper[i].size>trans_addr) {
       return  trans_addr - pf_bar2_remapper[i].trans_addr + pf_bar2_remapper[i].soc_addr;
     }
   }
 
-  std::cout << "bar_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
+  std::cout << "pf_bar2_axi_addr: unsupported translated address " << hex << trans_addr << std::endl;
   throw std::invalid_argument("");
 
   return 0;
+}
+
+/* pcie滑窗地址， 转换到 axi(noc)地址 */
+uint64_t axi_master_common_t::bar_axi_addr(int barid, uint32_t bar_offset)
+{
+  if (2 == barid) {
+    return pf_bar2_axi_addr(bar_offset);
+  } else {
+    return bar_axi_base_addr(barid) + bar_offset;
+  }
 }

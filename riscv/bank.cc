@@ -14,11 +14,10 @@
  * 参数: @nprocs bank内processor数量 
  */
 bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
-            hwsync_t *hwsync, FILE *log_file, bool pcie_enabled, size_t board_id, 
+            hwsync_t *hwsync, FILE *log_file, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
             const std::vector<int> hartids, bool halted, const char *atuini) : nprocs(bank_nprocs),
-            bank_id(bankid), pcie_enabled(pcie_enabled), 
-            procs(std::max(size_t(bank_nprocs),size_t(1)))
+            bank_id(bankid), procs(std::max(size_t(bank_nprocs),size_t(1)))
 {
     /* 添加 sysdma */
     switch (bankid) {
@@ -47,17 +46,10 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
         bank_bus.add_device(GLB_DIE0_UPPER_REGION_BANK0_START_ADDR+bank_id*GLB_UPPER_REGION_SIZE, new mem_t(ddr_size));
     }
 
-    /* pcie driver */
-    if(pcie_enabled) {
-        pcie_driver = new pcie_driver_t(sim, this, bank_id, pcie_enabled, board_id, chip_id, atuini);
-    } else {
-        pcie_driver = nullptr;
-    }
-
     /* 创建 processor */
     for (int i = 0; i < nprocs; i++) {
         int hart_id = hartids.empty() ? (i + bank_id * nprocs) : hartids[bank_id*nprocs+i];
-        procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, pcie_driver, i,
+        procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, i,
                     hart_id, bank_id, halted, atuini, log_file);
     }
 
@@ -67,10 +59,6 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
 bank_t::~bank_t() {
     for (int i = 0; i < nprocs; i++) {
         delete procs[i];
-    }
-    
-    if(pcie_enabled) {
-        delete pcie_driver;
     }
 
     return ;

@@ -368,7 +368,7 @@ class processor_t : public abstract_device_t
 {
 public:
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              simif_t* sim, bankif_t* bank, hwsync_t *hs,
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
               const char *atuini,FILE *log_file);
   ~processor_t();
@@ -634,7 +634,6 @@ private:
   simif_t* sim;
   bankif_t* bank;
   hwsync_t *hwsync;
-  pcie_driver_t *pcie_driver = nullptr;
   soc_apb_t *soc_apb = nullptr;
   bus_t npc_bus;
   atu_t *np_atu = nullptr;

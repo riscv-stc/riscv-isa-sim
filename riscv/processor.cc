@@ -23,11 +23,10 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, bankif_t* bank, hwsync_t *hs, pcie_driver_t *pcie_driver,
+              simif_t* sim, bankif_t* bank, hwsync_t *hs, 
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
               const char *atuini,FILE *log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs),
-  pcie_driver(pcie_driver),ext(NULL), 
+  : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs), ext(NULL), 
   idxinbank(idxinbank), bank_id(bank_id), id(id), xlen(0),histogram_enabled(false), 
   log_commits_enabled(false),log_file(log_file), halt_on_reset(halt_on_reset),
   mbox(NULL),extension_table(256, false), impl_table(256, false),async_running(true), 
@@ -44,7 +43,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     npc_bus.add_device(l1_buffer_start, new mem_t(l1_buffer_size));
     npc_bus.add_device(im_buffer_start, new mem_t(im_buffer_size));
     npc_bus.add_device(sp_buffer_start, new mem_t(sp_buffer_size));
-    misc_dev = new misc_device_t(pcie_driver, this, sim);
+    misc_dev = new misc_device_t(this, sim);
     npc_bus.add_device(MISC_START, misc_dev);
 
     np_mbox_t *mbox = new np_mbox_t(sim, misc_dev);

@@ -54,6 +54,6 @@ int which_npc(reg_t addr, reg_t *paddr);
 
 /* PCIE_CTL_CFG (128KB) */
 #define PCIE_CTL_CFG_BASE       0xe3000000
-#define PCIE_CTL_CFG_SIZE       0x20000
+#define PCIE_CTL_CFG_SIZE       0x1000000
 
 #endif
