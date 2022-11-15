@@ -216,31 +216,21 @@ int pcie_driver_t::update_status(NL_STATUS status)
    return rv;
 }
 
-/* get npc data for kernel at address in npc view */
-int pcie_driver_t::read(reg_t addr, size_t length)
+int pcie_driver_t::send_nl_read_resp(uint64_t addr, uint8_t *data, int len, unsigned short resp_code)
 {
-  int rv = 0;
-  int count = 0;
-  int size = 0;
-  reg_t offset = 0;
-  int block_size = 1024;
-  command_head_t *pCmd = NULL;
-
-  pCmd = (command_head_t*)NLMSG_DATA(mSendBuffer);
-  for (size_t i = 0; i < length; i+=block_size) {
-    offset = addr + i;
-    size = std::min(length - i, (size_t)block_size);
+    int rv = 0;
+    command_head_t *pCmd = (command_head_t*)NLMSG_DATA(mSendBuffer);
 
     pcie_mutex.lock();
-    pCmd->addr = offset;
-    pCmd->len = size;
-    load_data(offset, size, (uint8_t*)pCmd->data);
+    pCmd->addr = addr;
+    pCmd->len = len;
+    pCmd->code = resp_code;
+    memcpy(pCmd->data, data, len);
+    mSendBuffer->nlmsg_len = NLMSG_SPACE(len + COMMAND_HEAD_SIZE);
 
-    pCmd->code = CODE_READ;
-    mSendBuffer->nlmsg_len = NLMSG_SPACE(size + COMMAND_HEAD_SIZE);
     rv = sendto(mSockFd,
     	        mSendBuffer,
-    	        NLMSG_LENGTH(size + COMMAND_HEAD_SIZE),
+    	        NLMSG_LENGTH(len + COMMAND_HEAD_SIZE),
                 0,
                 (struct sockaddr*)(&mDestAddr),
                 sizeof(mDestAddr));
@@ -253,13 +243,10 @@ int pcie_driver_t::read(reg_t addr, size_t length)
       return rv;
     }
 
-    count += rv;
-  }
-
-  return count;
+    return rv;
 }
 
-int pcie_driver_t::pcie_bar_read(int barid, reg_t addr, size_t length)
+bool pcie_driver_t::pcie_bar_read(int barid, reg_t addr, size_t length, uint8_t *data)
 {
   uint64_t axi_addr = 0;
   uint64_t paddr = 0;
@@ -275,7 +262,7 @@ int pcie_driver_t::pcie_bar_read(int barid, reg_t addr, size_t length)
     }
   }
 
-  return read(paddr, length);
+  return load_data(paddr, length, data);
 }
 
 bool pcie_driver_t::pcie_bar_store_data(int barid, reg_t addr, size_t len, const uint8_t* bytes)
@@ -424,13 +411,14 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
 
 void pcie_driver_t::task_doing()
 {
+  uint8_t *data = nullptr;
   command_head_t *pCmd = NULL;
   uint32_t value;
 
   /* check PCIe init status. */
   if (unlikely(PCIE_OK != mStatus))
     return;
-
+  data = (uint8_t *)malloc(COMMAND_DATA_SIZE_MAX);
   std::cout << "driver transfer loop start." << std::endl;
   while (1) {
     if (NETLINK_FAULT != recv()) {
@@ -446,7 +434,9 @@ void pcie_driver_t::task_doing()
 
       switch (pCmd->code) {
         case CODE_READ:
-          read(pCmd->addr, pCmd->len);
+          memset(data, 0, pCmd->len);
+          load_data(pCmd->addr, pCmd->len, data);
+          send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
           usleep(1);
           break;
         case CODE_WRITE:
@@ -464,7 +454,9 @@ void pcie_driver_t::task_doing()
         case CODE_PF_BAR0_READ:
         case CODE_PF_BAR2_READ:
         case CODE_PF_BAR4_READ:
-          pcie_bar_read(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len);
+          memset(data, 0, pCmd->len);
+          pcie_bar_read(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, data);
+          send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
           break;
         case CODE_PF_BAR0_WRITE:
         case CODE_PF_BAR2_WRITE:
@@ -599,8 +591,8 @@ bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
   else if (IS_IN_REGION(addr, AXI_MASTER_COMM_OFFSET, AXI_MASTER_COMM_SIZE)) {  /* axi_master_common */
     axi_master_comm->load(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
   }
-  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_dma */
-    pcie_dma->load(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
+  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_mbox */
+    pcie_mbox->load(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
   }
   else if (IS_IN_REGION(addr, PCIE_IOV_ATU0_OFFSET, PCIE_IOV_ATU_SIZE)) {   /* pcie_atu */
     pcie_atu[0]->load(addr-PCIE_IOV_ATU0_OFFSET, len, bytes);
@@ -629,13 +621,13 @@ bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   else if (IS_IN_REGION(addr, AXI_MASTER_COMM_OFFSET, AXI_MASTER_COMM_SIZE)) {  /* axi_master_common */
     axi_master_comm->store(addr-AXI_MASTER_COMM_OFFSET, len, bytes);
   }
-  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_dma */
-    pcie_dma->store(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
+  else if (IS_IN_REGION(addr, PCIE_MBOX_PF_OFFSET, PCIE_MBOX_PF_SIZE)) {    /* pcie_mbox */
+    pcie_mbox->store(addr-PCIE_MBOX_PF_OFFSET, len, bytes);
   }
-  else if (IS_IN_REGION(addr, PCIE_IOV_ATU0_OFFSET, PCIE_IOV_ATU_SIZE)) {
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU0_OFFSET, PCIE_IOV_ATU_SIZE)) {   /* pcie_atu */
     pcie_atu[0]->store(addr-PCIE_IOV_ATU0_OFFSET, len, bytes);
   }
-  else if (IS_IN_REGION(addr, PCIE_IOV_ATU1_OFFSET, PCIE_IOV_ATU_SIZE)) {
+  else if (IS_IN_REGION(addr, PCIE_IOV_ATU1_OFFSET, PCIE_IOV_ATU_SIZE)) {   /* pcie_desc_atu */
     pcie_atu[1]->store(addr-PCIE_IOV_ATU1_OFFSET, len, bytes);
   }
   else {
@@ -1067,7 +1059,7 @@ uint64_t axi_master_common_t::pf_bar2_axi_addr(uint32_t bar_offset)
     {0xc4860000, SYSDMA6_BASE,        0x10000},
     {0xc4870000, SYSDMA7_BASE,        0x10000},
     {0xc4880000, SRAM_START,          0x80000},
-    {0xc4900000, PCIE_CTL_CFG_BASE,   0x80000},
+    {0xc4900000, PCIE_CTL_CFG_BASE,   0x100000},
     {0xc4d00000, NOC_NPC0_BASE+NPC_SYS_OFFET,   0x10000},
     {0xc4d10000, NOC_NPC1_BASE+NPC_SYS_OFFET,   0x10000},
     {0xc4d20000, NOC_NPC2_BASE+NPC_SYS_OFFET,   0x10000},

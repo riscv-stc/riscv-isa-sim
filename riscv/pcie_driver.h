@@ -175,13 +175,14 @@ class pcie_driver_t {
 
   int cluster_mdev[4] = {-1, -1, -1, -1};
   int initialize();
-  int read(reg_t addr, size_t length);
   int recv();
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
 
-  int pcie_bar_read(int barid, reg_t addr, size_t length);
+  bool pcie_bar_read(int barid, reg_t addr, size_t length, uint8_t *data);
   bool pcie_bar_store_data(int barid, reg_t addr, size_t len, const uint8_t* bytes);
+
+  int send_nl_read_resp(uint64_t addr, uint8_t *data, int len, unsigned short resp_code);
 
   bool lock_channel(void);
   void task_doing();
