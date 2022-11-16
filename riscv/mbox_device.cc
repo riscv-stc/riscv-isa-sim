@@ -107,6 +107,14 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
                 irq_generate(false);
             }
         }
+        /* fifo有剩余数据, 继续产生中断 */
+        if (!rx_fifo.empty() && (0==rx_fifo.size()%2)) {
+            uint32_t int_pend_val = 0;
+            load(MBOX_INT_PEND, 4, (uint8_t*)(&int_pend_val));
+            int_pend_val |= MBOX_INT_RX_VALID;
+            *(uint32_t*)(reg_base+MBOX_INT_PEND) = int_pend_val;
+            irq_update();
+        }
         break;
     case MBOX_INT_MASK:     /* 0是中断使能 */
         memcpy(reg_base+addr, bytes, 4);
