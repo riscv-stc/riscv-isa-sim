@@ -579,7 +579,7 @@ pcie_ctl_device_t::~pcie_ctl_device_t(void)
 
 bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 {
-  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+  if (unlikely(!bytes || ((size()<addr+len)))) {
     std::cout << "pcie_ctl_cfg: unsupported load register offset: " << hex << addr
         << " len: " << hex << len << std::endl;
     return false;
@@ -609,7 +609,7 @@ bool pcie_ctl_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool pcie_ctl_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (unlikely(!bytes || ((size()<addr+len)) || ((4!=len)))) {
+  if (unlikely(!bytes || ((size()<addr+len)))) {
     std::cout << "pcie_ctl_cfg: unsupported store register offset: " << hex << addr
         << " len: " << hex << len << std::endl;
     return false;
