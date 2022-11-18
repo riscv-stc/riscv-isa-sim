@@ -1380,6 +1380,10 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R1TYPE(msettilek);
   DEFINE_R1TYPE(msettilen);
 
+  DEFINE_RTYPE(msetoutsh);
+  DEFINE_RTYPE(msetinsh);
+  DEFINE_RTYPE(msetsk);
+
   #define DISASM_MMEM_TR_INSN(name, fmt, abc) \
     add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
     add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
@@ -1415,8 +1419,18 @@ disassembler_t::disassembler_t(int xlen)
   DISASM_MMEM_ACC_INSN(ml, acc_ld_unit, c);
   DISASM_MMEM_ACC_INSN(ms, acc_st_unit, c);
 
+
 #undef DISASM_MMEM_TR_INSN
 #undef DISASM_MMEM_ACC_INSN
+
+#define DISASM_MMEM_TR_IM2COL_INSN(name, fmt, abc) \
+    add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e32.m" ,   match_##name##abc##e32_m,     mask_##name##abc##e32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e64.m" ,   match_##name##abc##e64_m,     mask_##name##abc##e64_m,  fmt)); \
+
+  DISASM_MMEM_TR_IM2COL_INSN(mluf, tr_ld_unit, a);
+#undef DISASM_MMEM_TR_IM2COL_INSN
 
   DISASM_INSN("mma.mm",   mma_mm,   0, {&accd, &ts2, &ts1});
   DISASM_INSN("mfma.mm",  mfma_mm,  0, {&accd, &ts2, &ts1});

@@ -489,6 +489,39 @@ reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim
 
 }
 
+reg_t processor_t::matrixUnit_t::set_moutsh(int rd, int rs1, int rs2){
+  outshape[0] = extract64(rs1, 0,  16);
+  outshape[1] = extract64(rs1, 16, 16);
+
+  mstr_w = extract64(rs2, 0,  8);
+  mstr_h = extract64(rs2, 8,  8);
+  mdil_w = extract64(rs2, 16, 8);
+  mdil_h = extract64(rs2, 24, 8);
+
+  return outshape[0] || outshape[1] << 16;
+}
+
+reg_t processor_t::matrixUnit_t::set_insh(int rd, int rs1, int rs2) {
+  inshape[0] = extract64(rs1, 0,  16);
+  inshape[1] = extract64(rs1, 16, 16);
+
+  mpad_right  = extract64(rs2, 0,  8);
+  mpad_left   = extract64(rs2, 8,  8);
+  mpad_bottom = extract64(rs2, 16, 8);
+  mpad_top    = extract64(rs2, 24, 8);
+
+  return inshape[0] || inshape[1] << 16;
+}
+
+reg_t processor_t::matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
+  mskin[0] = short(extract64(rs1, 0,  16));
+  mskin[1] = short(extract64(rs1, 16, 16));
+
+  mskout[0] = extract64(rs2, 0,  16);
+  mskout[1] = extract64(rs2, 16, 16);
+
+  return mskin[0] || mskin[1] << 16;
+}
 
 
 void processor_t::set_debug(bool value)

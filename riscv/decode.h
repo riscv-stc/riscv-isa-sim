@@ -2506,6 +2506,51 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
     } \
   } \
 
+
+#define MTU_UF_TR_LD(is_trans, elt_width) \
+  reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t td = insn.rd(); \
+  reg_t sh = P.MU.mstr_h; \
+  reg_t sw = P.MU.mstr_w; \
+  reg_t dh = P.MU.mdil_h; \
+  reg_t dw = P.MU.mdil_w; \
+  reg_t inh = P.MU.inshape[1]; \
+  reg_t inw = P.MU.inshape[0]; \
+  reg_t pt = P.MU.mpad_top; \
+  reg_t pb = P.MU.mpad_bottom; \
+  reg_t pl = P.MU.mpad_left; \
+  reg_t pr = P.MU.mpad_bottom; \
+  reg_t outh = P.MU.outshape[1]; \
+  reg_t outw = P.MU.outshape[0]; \
+  sreg_t inposh = P.MU.mskin[1]; \
+  sreg_t inposw = P.MU.mskin[0]; \
+  reg_t krposw = P.MU.mskout[1]; \
+  reg_t outposw = P.MU.mskout[0]; \
+  reg_t height, width; \
+  MTU_LS_LEN(is_trans, 'a'); \
+  CLEAR_TILE(td); \
+  for (reg_t i = 0; i < height; ++i) { \
+    if (inposh >= 0 && inposh < inh && inposw >= 0 && inposw < inw) { \
+      for (reg_t j = 0; j < width; ++j) { \
+        elt_width##_t val = MMU.load_##elt_width( \
+                      baseAddr + j * sizeof(elt_width##_t)); \
+        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, true) = val; \
+      } \
+    } \
+    outposw++; \
+    if (outposw > outw - 1) { \
+      outposw = 0; \
+      baseAddr += (inw - inposw - pl) * stride2 + (sh -1) * inw * stride2 + krposw * stride2; \
+      inposw = - pl + krposw; \
+      inposh+=sh; \
+    } else { \
+      inposw += sw; \
+      baseAddr += sw * stride2; \
+    } \
+  } \
+
+
 #define MU_MFP_LOOP_SCALE_BASE \
   const reg_t acc1_num = insn.rs1(); \
   const reg_t accd_num = insn.rd(); \
