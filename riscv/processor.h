@@ -191,8 +191,25 @@ struct state_t
   reg_t mcounterwen;
   reg_t mhpmcounter[32];
   reg_t mhpmevent[32];
+
   reg_t mdcause;
   reg_t mmisc_ctl;
+  reg_t mxstatus; 
+  reg_t milmb;
+  reg_t mdlmb;
+  reg_t mecc_code;
+  reg_t mnvec;
+  reg_t mpft_ctl;
+  reg_t mclk_ctl;
+  reg_t mcounterinten;
+  reg_t mcountermask_m;
+  reg_t mcountermask_u;
+  reg_t mcounterovf;
+  reg_t micm_cfg;
+  reg_t mdcm_cfg;
+  reg_t mmsc_cfg;
+  reg_t mvec_cfg;
+
   reg_t sepc;
   reg_t stval;
   reg_t sscratch;
@@ -220,10 +237,21 @@ struct state_t
   reg_t dpc;
   reg_t dscratch0, dscratch1;
   dcsr_t dcsr;
+  reg_t ddcause;
+  reg_t dexc2dbg;
+
   reg_t mhsp_ctl;
   reg_t msp_bound;
   reg_t msp_base;
+
   reg_t tselect;
+  reg_t tinfo;
+  reg_t tcontrol;
+  reg_t mcontext;
+  
+  reg_t pmacfg0;
+  reg_t pmacfg2;
+
   mcontrol_t mcontrol[num_triggers];
   reg_t tdata2[num_triggers];
   bool debug_mode;
@@ -312,6 +340,20 @@ struct state_t
   reg_t mcache_ctl;
   reg_t wfi_flag;
   bool serialized; // whether timer CSRs are in a well-defined state
+
+  // User mode csr
+  reg_t ustatus;
+  reg_t ucause;
+  reg_t udcause;
+  reg_t ucctlbeginaddr;
+  reg_t ucctlcommand;
+  reg_t uitd;
+  reg_t ucode;
+  reg_t uie;
+  reg_t utvec;
+  reg_t uscratch;
+  reg_t uepc;
+  reg_t uip;
 
   bool async_started = false;
   bool pld = false;

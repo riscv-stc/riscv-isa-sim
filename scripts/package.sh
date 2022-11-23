@@ -12,9 +12,12 @@ script=`readlink -f $2`
 cat > ${script} <<EOF
 #!/bin/bash
 
+tmpfile=`mktemp /tmp/.XXXinstall`
+
 if [ \`basename \$0\` = 'bash' ] || [ \`basename \$0\` = 'sh' ]; then
-	cat > /tmp/.XXXinstall
-        bash /tmp/.XXXinstall
+	cat > \$tmpfile
+	bash \$tmpfile
+	rm \$tmpfile
 	exit
 fi
 

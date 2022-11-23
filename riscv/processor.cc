@@ -1253,6 +1253,92 @@ void processor_t::set_csr(int which, reg_t val)
       state.medeleg = (state.medeleg & ~mask) | (val & mask);
       break;
     }
+    case CSR_MXSTATUS:
+      state.mxstatus = val;
+      break;
+    case CSR_MILMB:
+      state.milmb = val;
+      break;
+    case CSR_MDLMB:
+      state.mdlmb = val;
+      break;
+    case CSR_MECC_CODE:
+      state.mecc_code = val;
+      break;
+    case CSR_MNVEC:
+      state.mnvec = val;
+      break;
+    case CSR_MPFT_CTL:
+      state.mpft_ctl = val;
+      break;
+    case CSR_MCLK_CTL:
+      state.mclk_ctl = val;
+      break;
+    case CSR_MCOUNTERINTEN:
+      state.mcounterinten = val;
+      break;
+    case CSR_MCOUNTERMASK_M:
+      state.mcountermask_m = val;
+      break;
+    case CSR_MCOUNTERMASK_U:
+      state.mcountermask_u = val;
+      break;
+    case CSR_MCOUNTEROVF:
+      state.mcounterovf = val;
+      break;
+    case CSR_MICM_CFG:
+      state.micm_cfg = val;
+      break;
+    case CSR_MDCM_CFG:
+      state.mdcm_cfg = val;
+      break;
+    case CSR_MMSC_CFG:
+      state.mmsc_cfg = val;
+      break;
+    case CSR_MVEC_CFG:
+      state.mvec_cfg = val;
+      break;
+    case CSR_TINFO:
+      state.tinfo = val;
+      break;
+    case CSR_TCONTROL:
+      state.tcontrol = val;
+      break;
+    case CSR_MCONTEXT:
+      state.mcontext = val;
+      break;
+
+    case CSR_UDCAUSE:
+      state.udcause = val;
+      break;
+    case CSR_UCCTLBEGINADDR:
+      state.ucctlbeginaddr = val;
+      break;
+    case CSR_UCCTLCOMMAND:
+      state.ucctlcommand = val;
+      break;
+    case CSR_UITD:
+      state.uitd = val;
+      break;
+    case CSR_UCODE:
+      state.utvec = val;
+      break;
+    case CSR_USTATUS:
+      state.ustatus = val;
+      break;
+    case CSR_UIE:
+      state.uie = val;
+      break;
+    case CSR_USCRATCH:
+      state.uscratch = val;
+      break;
+    case CSR_UEPC:
+      state.uepc = val;
+      break;
+    case CSR_UIP:
+      state.uip = val;
+      break;
+
     case CSR_VME_SHAPE_S:
       state.vme_shape_s = val;
       break;
@@ -1693,6 +1779,9 @@ void processor_t::set_csr(int which, reg_t val)
       break;
     case CSR_DSCRATCH1:
       state.dscratch1 = val;
+      break;
+    case CSR_DEXC2DBG:
+      state.dexc2dbg = val;
       break;
     case CSR_MHSP_CTL:
       state.mhsp_ctl = val;
@@ -2155,8 +2244,8 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if(!supports_extension('V'))
         break;
       return state.dmae_ctrl;
-    case CSR_MICM_CFG:
-    case CSR_MDCM_CFG:
+    //case CSR_MICM_CFG:
+    //case CSR_MDCM_CFG:
     case CSR_MCCTLBEGINADDR:
     case CSR_MCCTLCOMMAND:
       return 0;//Return 0 since it is not truely supported yet.
@@ -2172,6 +2261,8 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_MINSTRET:
     case CSR_MCYCLE:
       ret(state.minstret);
+    case CSR_MICM_CFG: 
+      ret(state.micm_cfg);
     case CSR_INSTRETH:
     case CSR_CYCLEH:
       if (!ctr_ok || xlen != 32)
@@ -2184,6 +2275,55 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (xlen == 32)
         ret(state.minstret >> 32);
       break;
+    case CSR_MXSTATUS:
+      ret(state.mxstatus);
+    case CSR_MILMB:
+      ret(state.milmb);
+    case CSR_MDLMB:
+      ret(state.mdlmb);
+    case CSR_MECC_CODE:
+      ret(state.mecc_code);
+    case CSR_MNVEC:
+      ret(state.mnvec);
+    case CSR_MPFT_CTL:
+      ret(state.mpft_ctl);
+    case CSR_MCLK_CTL:
+      ret(state.mclk_ctl);
+    case CSR_MHSP_CTL:
+      ret(state.mhsp_ctl);
+
+    case CSR_MSP_BASE:
+      ret(state.msp_base);
+    case CSR_DDCAUSE:
+      ret(state.ddcause);
+    case CSR_DEXC2DBG:
+      ret(state.dexc2dbg);
+
+    case CSR_MCOUNTERINTEN:
+      ret(state.mcounterinten);
+    case CSR_MCOUNTERMASK_M:
+      ret(state.mcounterinten);
+    case CSR_MCOUNTERMASK_U:
+      ret(state.mcountermask_u);
+    case CSR_MCOUNTEROVF:
+      ret(state.mcounterovf);
+    case CSR_MDCM_CFG:
+       ret(state.mdcm_cfg);
+    case CSR_MMSC_CFG:
+      ret(state.mmsc_cfg);
+    case CSR_MVEC_CFG:
+      ret(state.mvec_cfg);
+    case CSR_TINFO:
+      ret(state.tinfo);
+    case CSR_TCONTROL:
+      ret(state.tcontrol);
+    case CSR_MCONTEXT:
+      ret(state.mcontext);
+    case CSR_PMACFG2:
+      ret(state.pmacfg2);
+    case CSR_MSP_BOUND:
+      ret(state.msp_bound);
+
     case CSR_SCOUNTEREN: ret(state.scounteren);
     case CSR_MCOUNTEREN:
       if (!supports_extension('U'))
@@ -2421,18 +2561,18 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       if (!state.debug_mode)
         break;
       ret(state.dscratch1);
-    case CSR_MHSP_CTL:
-      if (!state.debug_mode)
-        break;
-      return state.mhsp_ctl;
-    case CSR_MSP_BOUND:
-      if (!state.debug_mode)
-        break;
-      return state.msp_bound;
-    case CSR_MSP_BASE:
-      if (!state.debug_mode)
-        break;
-      return state.msp_base;
+    // case CSR_MHSP_CTL:
+    //   if (!state.debug_mode)
+    //     break;
+    //   return state.mhsp_ctl;
+    // case CSR_MSP_BOUND:
+    //   if (!state.debug_mode)
+    //     break;
+    //   return state.msp_bound;
+    // case CSR_MSP_BASE:
+    //   if (!state.debug_mode)
+    //     break;
+    //   return state.msp_base;
     case CSR_VSTART:
       require_vector_vs;
       if (!supports_extension('V'))
@@ -2472,6 +2612,18 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
     case CSR_USER5: ret(state.user5);
     case CSR_USER6: ret(state.user6);
     case CSR_USER7: ret(state.user7);
+    case CSR_USTATUS: ret(state.ustatus);
+    case CSR_UCAUSE: ret(state.ucause);
+    case CSR_UDCAUSE: ret(state.udcause);
+    case CSR_UCCTLBEGINADDR: ret(state.ucctlbeginaddr);
+    case CSR_UCCTLCOMMAND: ret(state.ucctlcommand);
+    case CSR_UITD: ret(state.uitd);
+    case CSR_UCODE: ret(state.ucode);
+    case CSR_UIE: ret(state.uie);
+    case CSR_UTVEC: ret(state.utvec);
+    case CSR_USCRATCH: ret(state.uscratch);
+    case CSR_UEPC: ret(state.uepc);
+    case CSR_UIP: ret(state.uip);
     case 0x401:
     case 0x41e:
       throw trap_ncp_rw_illegal_csr();
