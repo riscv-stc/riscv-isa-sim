@@ -47,11 +47,16 @@
 #define SYS_APB_DECODER_EAST_BASE   0xd3e60000
 #define SYS_APB_DECODER_SIZE        0x10000
 
-#define DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR     (0x100)
-#define DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR     (0x104)
-#define DECODER_SOC_CHIP_NAME_ADDR 	          (0x1000)
-#define DECODER_SOC_CHIP_VERSION_ADDR 	      (0x1004)
-#define DECODER_SOC_DIE_SEL_ADDR              (0x19b4)
+#define DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR        (0x100)
+#define DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR        (0x104)
+#define DECODER_SOC_CHIP_NAME_ADDR 	                    (0x1000)
+#define DECODER_SOC_CHIP_VERSION_ADDR 	                (0x1004)
+#define DECODER_SOC_DIE_SEL_ADDR                        (0x19b4)
+#define DECODER_SAFE_RESET_REQ_SET_ADDR                 (0x1920)
+#define DECODER_SAFE_RESET_REQ_SET2_ADDR                (0x1924)
+#define DECODER_SAFE_RESET_REQ_CLR_ADDR                 (0x1940)
+#define DECODER_SAFE_RESET_REQ_CLR2_ADDR                (0x1944)
+
 
 #define getBitValue(var, idx) ((var >> (idx)) & 1)
 #define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))

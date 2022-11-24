@@ -64,6 +64,10 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
     case DECODER_SOC_DIE_SEL_ADDR:
         memcpy(bytes, (char *)reg_base + addr, len);
         break;
+    case DECODER_SAFE_RESET_REQ_SET_ADDR:
+    case DECODER_SAFE_RESET_REQ_SET2_ADDR:
+        memset(bytes ,0 ,4);
+        break;
     default:
         printf("sys_apb_decoder r 0x%x 0x%lx unsupport \r\n", *(uint32_t*)bytes, addr+base);
         throw trap_load_access_fault(false, addr, 0, 0);
@@ -75,8 +79,8 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    int i = 0;
-    uint32_t val32 = 0;
+    // int i = 0;
+    // uint32_t val32 = 0;
 
     if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
         return false;
@@ -88,6 +92,34 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
         this->set_disarm_reset_state(this->sim,bytes);
+        break;
+    case DECODER_SAFE_RESET_REQ_SET_ADDR:
+        for(int i = 5 ;i < 32;i ++)
+        {
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
+                this->set_processor_reset(this->sim,(i - 5) / 2);
+        }
+        break;
+    case DECODER_SAFE_RESET_REQ_SET2_ADDR:
+        for(int i = 0;i < 5;i ++)
+        {
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
+                this->set_processor_reset(this->sim,13 + (i + 1) / 2);
+        }
+        break;
+    case DECODER_SAFE_RESET_REQ_CLR_ADDR:
+        for(int i = 5 ;i < 32;i ++)
+        {
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
+                this->set_processor_disarm_reset(this->sim,(i - 5) / 2);
+        }
+        break;
+    case DECODER_SAFE_RESET_REQ_CLR2_ADDR:
+        for(int i = 0;i < 5;i ++)
+        {
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
+                this->set_processor_disarm_reset(this->sim,13 + (i + 1) / 2);
+        }
         break;
     case DECODER_SOC_CHIP_NAME_ADDR:
     case DECODER_SOC_CHIP_VERSION_ADDR:
