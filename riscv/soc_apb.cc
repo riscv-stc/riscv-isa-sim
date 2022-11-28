@@ -66,7 +66,7 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
         break;
     case DECODER_SAFE_RESET_REQ_SET_ADDR:
     case DECODER_SAFE_RESET_REQ_SET2_ADDR:
-        memset(bytes ,0 ,4);
+        memset(bytes,0xff,len);
         break;
     default:
         printf("sys_apb_decoder r 0x%x 0x%lx unsupport \r\n", *(uint32_t*)bytes, addr+base);
@@ -79,9 +79,6 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-    // int i = 0;
-    // uint32_t val32 = 0;
-
     if ((nullptr==reg_base) || (nullptr==bytes) || (addr+len>=size())) {
         return false;
     }
