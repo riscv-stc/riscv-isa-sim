@@ -119,6 +119,7 @@ private:
   ap_mbox_t *p2ap_mbox = nullptr;
   ap_mbox_t *n2ap_mbox = nullptr;
   pcie_driver_t *pcie_driver = nullptr;
+  bank_misc_dev_t *bank_misc[4] = {nullptr};
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
 

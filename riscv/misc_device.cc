@@ -311,3 +311,31 @@ void misc_device_t::set_mcu_irq_status(int mcu_irq_status_bit, bool val)
     irq_status &= MCU_IRQ_STATUS_MASK;
     ro_register_write(MCU_IRQ_STATUS_OFFSET, (uint32_t)irq_status);
 }
+
+bank_misc_dev_t::bank_misc_dev_t(simif_t *sim) : sim(sim)
+{
+}
+
+bank_misc_dev_t::~bank_misc_dev_t()
+{
+}
+
+bool bank_misc_dev_t::load(reg_t addr, size_t len, uint8_t* bytes)
+{
+    uint32_t val = 0;
+    switch(addr) {
+    case 0x310:
+        val = 0xff;
+        memcpy(bytes, &val, len);
+        break;
+    default:
+        val = 0;
+        memcpy(bytes, &val, len);
+    }
+    return true;
+}
+
+bool bank_misc_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
+{
+    return true;
+}
