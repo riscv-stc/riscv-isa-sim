@@ -282,4 +282,17 @@ class mmio_plugin_device_t : public abstract_device_t {
   void* user_data;
 };
 
+class bank_misc_dev_t : public abstract_device_t {
+ public:
+  bank_misc_dev_t(simif_t *sim);
+  ~bank_misc_dev_t();
+
+  bool load(reg_t addr, size_t len, uint8_t* bytes);
+  bool store(reg_t addr, size_t len, const uint8_t* bytes);
+  size_t size() { return BANK_MISC_SIZE; }
+
+ private:
+  simif_t *sim = nullptr;
+};
+
 #endif

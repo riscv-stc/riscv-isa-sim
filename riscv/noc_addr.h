@@ -56,4 +56,10 @@ int which_npc(reg_t addr, reg_t *paddr);
 #define PCIE_CTL_CFG_BASE       0xe3000000
 #define PCIE_CTL_CFG_SIZE       0x100000
 
+#define BANK0_MISC      0xd3d70000
+#define BANK1_MISC      0xe3d70000
+#define BANK2_MISC      0xc1204000
+#define BANK3_MISC      0xf9204000
+#define BANK_MISC_SIZE  0x1000
+
 #endif

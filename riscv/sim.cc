@@ -142,6 +142,18 @@ die_id(die_id),
         glb_bus.add_device(P2AP_MBOX_LOC_BASE, p2ap_mbox);
         n2ap_mbox = new ap_mbox_t(this, apifc, N2AP_MBOX_IRQ, soc_apb->sys_irq);
         glb_bus.add_device(N2AP_MBOX_LOC_BASE, n2ap_mbox);
+
+        bank_misc[0] = new bank_misc_dev_t(this);
+        glb_bus.add_device(BANK0_MISC, bank_misc[0]);
+
+        bank_misc[1] = new bank_misc_dev_t(this);
+        glb_bus.add_device(BANK1_MISC, bank_misc[1]);
+
+        bank_misc[2] = new bank_misc_dev_t(this);
+        glb_bus.add_device(BANK2_MISC, bank_misc[2]);
+
+        bank_misc[3] = new bank_misc_dev_t(this);
+        glb_bus.add_device(BANK3_MISC, bank_misc[3]);
     }
 
     debug_module.add_device(&glb_bus);
@@ -261,6 +273,13 @@ sim_t::~sim_t()
     if (pcie_driver) {
         delete pcie_driver;
         pcie_driver = nullptr;
+    }
+    
+    for (int i = 0 ; i < sizeof(bank_misc)/sizeof(bank_misc[0]) ; i++) {
+      if (bank_misc[i]) {
+        delete bank_misc[i];
+        bank_misc[i] = nullptr;
+      }
     }
 
     delete debug_mmu;
@@ -772,6 +791,12 @@ bool sim_t::in_mmio(reg_t addr)
     }
 
     if (auto mem = dynamic_cast<pcie_ctl_device_t *>(desc.second)) {
+        if (addr - desc.first <= mem->size()) {
+            return true;
+        }
+    }
+
+    if (auto mem = dynamic_cast<bank_misc_dev_t *>(desc.second)) {
         if (addr - desc.first <= mem->size()) {
             return true;
         }
