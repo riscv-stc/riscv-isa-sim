@@ -68,12 +68,15 @@ atu_t::~atu_t()
     switch(atu_type) {
     case NP_ATU:
     case MTE_ATU:
-    case PCIE_ATU:
         if (at_reg_base) {
             delete at_reg_base;
+            at_reg_base = nullptr;
         }
         break;
+    case PCIE_ATU:
     case SYSDMA_ATU:
+        at_reg_base = nullptr;
+        break;
     default:
         break;
     }
