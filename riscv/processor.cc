@@ -2772,6 +2772,11 @@ uint32_t processor_t::get_hwsync_status()
     return hwsync->get_hwsync();
 }
 
+uint32_t processor_t::get_pld_status()
+{
+  return hwsync->get_pld();
+}
+
 void processor_t::run_async(std::function<void()> func) {
   {
     std::lock_guard<std::mutex> lock(async_mutex);

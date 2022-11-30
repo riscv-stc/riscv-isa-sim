@@ -12,6 +12,8 @@
 #define DUMP_ADDR_OFFSET    0x8
 #define DUMP_LEN_OFFSET     0x10
 
+#define NCP_INST_STATUS_OFFSET  0x7c
+
 #define MCU_IRQ_STATUS_MASK     0x1ff7
 #define MCU_IRQ_ENABLE_MASK     MCU_IRQ_STATUS_MASK
 #define MCU_IRQ_CLEAR_MASK      0x1ffe
@@ -31,7 +33,22 @@ bool misc_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
     if (/* (addr<0) ||  */(addr+len>=MISC_SIZE)) {
         return false;
     }
-    memcpy(bytes, (uint8_t *)reg_base + addr, len);
+    switch(addr)
+    {
+        case NCP_INST_STATUS_OFFSET:
+        {
+            uint32_t hw_status = proc->get_hwsync_status();
+            uint32_t pld_status = proc->get_pld_status();
+            uint32_t index = proc->get_bank_id() * 8 + proc->get_idxinbank();
+            uint32_t temp1 = (~hw_status) & (1 << index);
+            uint32_t temp2 = (~pld_status) & (1 << index);
+            uint32_t res = temp1<<6 + temp1<<7 + temp2<<8 + temp2<<9;
+            memcpy(bytes, &res, len);
+            break;
+        }
+        default:
+            memcpy(bytes, (uint8_t *)reg_base + addr, len);
+    }
 
     return true;
 }

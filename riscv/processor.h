@@ -488,6 +488,7 @@ public:
   simif_t* get_sim() { return sim; };
   bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();
+  uint32_t get_pld_status();
   uint32_t get_idxinbank() {return idxinbank; };
   uint32_t get_bank_id() {return bank_id;};
   uint32_t get_id() {return id; };
