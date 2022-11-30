@@ -100,5 +100,5 @@ package_centos_7:
   dependencies:
     - build_centos_7
   only:
-    - 2.x-dev-ipa
+    - 2.x-hpe
     - tags
