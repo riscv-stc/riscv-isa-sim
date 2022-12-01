@@ -2650,6 +2650,10 @@ out:
 
   unsigned csr_priv = get_field(which, 0x300);
   bool csr_read_only = get_field(which, 0xC00) == 3;
+  /* 部分URO权限的csr在andes核中是可写的 */
+  if (csr_read_only && CSR_CYCLE<=which && CSR_HPMCOUNTER6>=which) {
+    csr_read_only = false;
+  }
   unsigned priv = state.prv == PRV_S && !state.v ? PRV_HS : state.prv;
 
   if (((csr_priv == PRV_S && !supports_extension('S')) ||
