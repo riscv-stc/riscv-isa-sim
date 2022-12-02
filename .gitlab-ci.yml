@@ -68,7 +68,7 @@ test_ubuntu_2004:
     name: test_output_ubuntu_2004
   dependencies:
     - build_ubuntu_2004
-  timeout: 3h
+  timeout: 6h
 
 package_ubuntu_2004:
   image: 'code.streamcomputing.com/ubuntu:20.04-stc'
