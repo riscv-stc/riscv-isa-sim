@@ -1,4 +1,4 @@
-image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+image: 'harbor.streamcomputing.com/simulator/ubuntu:18.04-stc'
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
