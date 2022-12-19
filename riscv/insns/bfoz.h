@@ -7,8 +7,8 @@ int32_t lsbm1 = LSB - 1;
 int32_t msbm1 = MSB - 1;
 
 int32_t lenm1 = 0;
-int32_t rd_val = 0;
-int32_t rs1_val = 0;
+int64_t rd_val = 0;
+int64_t rs1_val = 0;
 
 rd_val = RD;
 rs1_val = RS1;
