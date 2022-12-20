@@ -427,7 +427,6 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define CONV_CIN	            (STATE.conv_Cin & 0xFFFF)
 #define CONV_COUT	            (STATE.conv_Cout & 0xFFFF)
 #define CONV_IN_STRIDE	      ((STATE.conv_Cin & 0xFFFF0000) >> 16)
-#define CONV_W_STRIDE	        (STATE.conv_kernel_params1 & 0xFF)
 #define CONV_OUT_STRIDE	      ((STATE.conv_Cout & 0xFFFF0000) >> 16)
 #define CONV_KW 	            ((STATE.conv_kernel_params1 & 0xFF000000) >> 24)
 #define CONV_KH 	            ((STATE.conv_kernel_params1 & 0x00FF0000) >> 16)
@@ -1652,9 +1651,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
-        int rs2_size = CONV_W_STRIDE ? \
-                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
-                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int s2_kernel = CONV_S2_STRIDE ? CONV_S2_STRIDE : CONV_CIN;\
+        int rs2_size = CONV_S_KERNEL ? \
+                       (CONV_S_KERNEL * (CONV_KH * CONV_KW * s2_kernel - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * s2_kernel * CONV_COUT * sizeof(rs2_type);\
         int rd_size =  CONV_OUT_STRIDE ? \
                        (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
                        CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
@@ -1685,8 +1685,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
-        int rs2_size = CONV_W_STRIDE ? \
-                       (CONV_W_STRIDE * (CONV_KH * CONV_KW - 1) + CONV_CIN) * sizeof(rs2_type): \
+        int rs2_size = VME_K_C_STRIDE ? \
+                       (VME_K_C_STRIDE * (CONV_KH * CONV_KW - 1) + CONV_CIN) * sizeof(rs2_type): \
                        CONV_KH * CONV_KW * CONV_CIN * sizeof(rs2_type);\
         int rd_size =  CONV_OUT_STRIDE ? \
                        (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_CIN) * sizeof(out_type): \
@@ -1711,8 +1711,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
-        int rs2_size = CONV_W_STRIDE ? \
-                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+        int rs2_size = CONV_S_KERNEL ? \
+                       (CONV_S_KERNEL * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
                        CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
         int rd_size =  CONV_OUT_STRIDE ? \
                        (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
@@ -1741,8 +1741,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
-        int rs2_size = CONV_W_STRIDE ? \
-                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
+        int rs2_size = CONV_S_KERNEL ? \
+                       (CONV_S_KERNEL * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
                        CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
         int rd_size =  CONV_OUT_STRIDE ? \
                        (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
@@ -1776,9 +1776,10 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         int rs1_size = CONV_IN_STRIDE ? \
                        (CONV_IN_STRIDE * (CONV_IN_COLUMN * CONV_IN_ROW - 1) + CONV_CIN) * sizeof(rs1_type): \
                        CONV_IN_COLUMN * CONV_IN_ROW * CONV_CIN * sizeof(rs1_type);\
-        int rs2_size = CONV_W_STRIDE ? \
-                       (CONV_W_STRIDE * (CONV_KH * CONV_KW * CONV_CIN - 1) + CONV_COUT) * sizeof(rs2_type): \
-                       CONV_KH * CONV_KW * CONV_CIN * CONV_COUT * sizeof(rs2_type);\
+        int s2_kernel = CONV_S2_STRIDE ? CONV_S2_STRIDE : CONV_CIN;\
+        int rs2_size = CONV_S_KERNEL ? \
+                       (CONV_S_KERNEL * (CONV_KH * CONV_KW * s2_kernel - 1) + CONV_COUT) * sizeof(rs2_type): \
+                       CONV_KH * CONV_KW * s2_kernel * CONV_COUT * sizeof(rs2_type);\
         int rd_size =  CONV_OUT_STRIDE ? \
                        (CONV_OUT_STRIDE * (CONV_OUT_COLUMN * CONV_OUT_ROW - 1) + CONV_COUT) * sizeof(out_type): \
                        CONV_OUT_COLUMN * CONV_OUT_ROW * CONV_COUT * sizeof(out_type);\
@@ -1971,7 +1972,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         check_tcp_access_end_llb(RS1 + rs_size) \
         check_tcp_invalid_shape(MTE_SHAPE_COLUMN, MTE_SHAPE_ROW); \
         check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RS1) \
-        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \      
+        check_tcp_invalid_stride_less_width(MTE_SHAPE_COLUMN, MTE_STRIDE_RD) \
 })
 
 // check traps for mov.llb.l1 instruction
