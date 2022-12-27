@@ -297,9 +297,11 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         } else if ((sts_new ^ sts_old) & 0xff000000) {
             irq = A53_NPC_CLUSTER3_IRQ;
         }
+    #if 0   /* spike发清中断太慢了, 在qemu里发起清中断不必等spike发消息 */
         if (0 != irq) {
             apifc->generate_irq_to_a53(irq, false);
         }
+    #endif
 
         sts_old = *(uint32_t *)(reg_base+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR);
         sts_new = sts_old & (~val32);
