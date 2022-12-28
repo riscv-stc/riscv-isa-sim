@@ -137,11 +137,11 @@ void sysdma_device_t::dma_core(int ch) {
       thread_cond_[ch].wait(lock);
 
     while (dma_channel_[ch].llp) {
-      if(dma_channel_[ch].llp < sysdma_base[dma_idx_] + DMA_BUF_OFFSET ||
-              dma_channel_[ch].llp >= sysdma_base[dma_idx_] + DMA_BUF_OFFSET+DMA_BUF_SIZE)
+      if((dma_channel_[ch].llp&0xffff) < DMA_BUF_OFFSET ||
+              (dma_channel_[ch].llp&0xffff) >= DMA_BUF_OFFSET+DMA_BUF_SIZE)
           throw std::runtime_error("sysdma:wrong llp");
 
-      struct dma_desc_t* desc = (struct dma_desc_t*)&sys_dma_reg[dma_channel_[ch].llp - sysdma_base[dma_idx_]];
+      struct dma_desc_t* desc = (struct dma_desc_t*)&sys_dma_reg[dma_channel_[ch].llp&0xffff - sysdma_base[dma_idx_]&0xffff];
 
       // std::cout << "desc:" << hex << desc << "desc next:" << desc->llpr
       //           << "sysdma: ctlr:" << desc->ctlr.full << std::endl;
@@ -403,7 +403,7 @@ bool sysdma_device_t::store(reg_t addr, size_t len, const uint8_t* bytes) {
         ch = 1;
         case DMA_C0_CTLR_OFFSET: {
         // Descriptor Mode Enable
-        if (val == 0x80000000) {
+        if (val & (1<<31)) {
             std::unique_lock<std::mutex> lock(thread_lock_[ch], std::defer_lock);
             if (lock.try_lock())
             dma_channel_[ch].desc_mode_enabled = true;
