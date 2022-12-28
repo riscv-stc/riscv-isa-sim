@@ -19,7 +19,7 @@
 #define MCU_IRQ_CLEAR_MASK      0x1ffe
 
 misc_device_t::misc_device_t(processor_t* proc,  simif_t *sim)
-  : proc(proc), buf_len(0x4000), dump_count(0), sim(sim)
+  : buf_len(0x4000), proc(proc), sim(sim), dump_count(0)
 {
     reg_base = new uint8_t[MISC_SIZE];
     memset(reg_base, 0, MISC_SIZE);
@@ -42,7 +42,7 @@ bool misc_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
             uint32_t index = proc->get_bank_id() * 8 + proc->get_idxinbank();
             uint32_t temp1 = (~hw_status) & (1 << index);
             uint32_t temp2 = (~pld_status) & (1 << index);
-            uint32_t res = temp1<<6 + temp1<<7 + temp2<<8 + temp2<<9;
+            uint32_t res = (temp1<<6) + (temp1<<7) + (temp2<<8) + (temp2<<9);
             memcpy(bytes, &res, len);
             break;
         }
@@ -55,8 +55,9 @@ bool misc_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
 
 bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
-  if (unlikely(!bytes || addr >= MISC_SIZE))
-    return false;
+    if (unlikely(!bytes || addr >= MISC_SIZE)) {
+        return false;
+    }
 
     switch(addr) {
     case UART_BASE:     // uart device
@@ -64,7 +65,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         for (size_t index = 0; index < len; index++) {
         if (unlikely('\n' == *bytes)) {
             std::cout << "cpu" << proc->get_id() << ":\t";
-            for (int index = 0; index < buf.size(); index++)
+            for (int index = 0; index < int(buf.size()); index++)
             std::cout << buf[index];
             std::cout << std::endl;
             buf.clear();
@@ -87,8 +88,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         if (prefix_addr != 0) {
             char *str = nullptr;
             if ((str = proc->get_sim()->addr_to_mem(prefix_addr)) ||
-                    (str = proc->bank->bank_addr_to_mem(prefix_addr)) ||
-                    (str = proc->get_sim()->addr_to_mem(prefix_addr))) {
+                    (str = proc->get_bank()->bank_addr_to_mem(prefix_addr))) {
                 prefix = str;
             }
         } else {
@@ -108,7 +108,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         uint32_t val = *(uint32_t *)bytes;
         memcpy((uint8_t *)reg_base+addr, bytes, len);
 
-        if (1 == val&0x01) {
+        if (1 == (val&0x01)) {
             val = 0;
             sim->mmio_load(SYSIRQ_BASE+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
             val |= (1<<proc->get_id());
@@ -128,10 +128,11 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case MCU_IRQ_STATUS_OFFSET:
         {
         uint32_t val = *(uint32_t *)bytes;
-        if ((4==len) && ((1<<MCU_IRQ_STATUS_BIT_NPC_IN_IRQ)==val))
+        if ((4==len) && ((1<<MCU_IRQ_STATUS_BIT_NPC_IN_IRQ)==val)) {
             load(MCU_IRQ_STATUS_OFFSET, 4, (uint8_t *)&val);
             val |= (1<<MCU_IRQ_STATUS_BIT_NPC_IN_IRQ);
             ro_register_write(MCU_IRQ_STATUS_OFFSET, (uint32_t)val);
+        }
         }
         break;
     case MCU_IRQ_CLEAR_OFFSET:
@@ -146,7 +147,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
                     *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET) &= ~(1<<i);
                 }
             }
-            proc->state.mip &= (~MIP_MEIP);
+            proc->get_state()->mip &= (~MIP_MEIP);
         }
         memset((uint8_t *)reg_base+addr, 0, 4);
         }
@@ -260,22 +261,25 @@ void misc_device_t::inst_cnt_clear(void)
 
 bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
 {
+    uint32_t reg_status = 0;
+    uint32_t reg_enable = 0;
+
     if (addr > MISC_SIZE-sizeof(val))
         return false;
     
     switch(addr) {
     case MCU_IRQ_STATUS_OFFSET:
     case MCU_IRQ_ENABLE_OFFSET:
-        {
         *(uint32_t *)((uint8_t *)reg_base+addr) = val;
         *(uint32_t *)((uint8_t *)reg_base+addr) &= MCU_IRQ_ENABLE_MASK;
-        uint32_t reg_status = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET);
-        uint32_t reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
+        reg_status = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET);
+        reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
         if (reg_status & reg_enable) {
-            proc->state.mip |= MIP_MEIP;
+            reg_t mip = 0;
+            mip = proc->get_state()->mip;
+            proc->get_state()->mip = (mip | MIP_MEIP);
         } else {
-            proc->state.mip &= ~MIP_MEIP;
-        }
+            proc->get_state()->mip &= (~MIP_MEIP);
         }
         break;
     default:
