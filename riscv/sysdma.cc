@@ -17,6 +17,8 @@
 #define DMA_CIER_OFFSET 0X018
 #define DMA_C0_CABR_OFFSET  0x01c
 #define DMA_C1_CABR_OFFSET  0x020  
+#define DMA_C0_GNTR 0x24
+#define DMA_C1_GNTR 0x28
 #define DMA_BUF_OFFSET 0X1000
 
 #define DMA_C0_CTLR_OFFSET  0X100
@@ -311,6 +313,11 @@ bool sysdma_device_t::load(reg_t addr, size_t len, uint8_t* bytes) {
       *((uint32_t*)bytes) |= (dma_channel_[ch].ddr_base[DDR_DIR_DST] >> 24) & 0xff00;
       *((uint32_t*)bytes) |= (dma_channel_[ch].ddr_base[DDR_DIR_EA] >> 16) & 0xff0000;
       break;
+    
+      case DMA_C0_GNTR:
+      case DMA_C1_GNTR:
+          *((uint32_t*)bytes) = 0;
+          break;
 
     default:
       if (addr >=DMA_BUF_OFFSET && addr<=(DMA_BUF_OFFSET+DMA_BUF_SIZE-len)){
