@@ -147,7 +147,7 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
                     *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET) &= ~(1<<i);
                 }
             }
-            proc->get_state()->mip &= (~MIP_MEIP);
+            proc->set_mip_bit(IRQ_M_EXT, 0);    /* MIP_MEIP */
         }
         memset((uint8_t *)reg_base+addr, 0, 4);
         }
@@ -275,11 +275,9 @@ bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
         reg_status = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_STATUS_OFFSET);
         reg_enable = *(uint32_t *)((uint8_t *)reg_base+MCU_IRQ_ENABLE_OFFSET);
         if (reg_status & reg_enable) {
-            reg_t mip = 0;
-            mip = proc->get_state()->mip;
-            proc->get_state()->mip = (mip | MIP_MEIP);
+            proc->set_mip_bit(IRQ_M_EXT, 1);  /* MIP_MEIP */
         } else {
-            proc->get_state()->mip &= (~MIP_MEIP);
+            proc->set_mip_bit(IRQ_M_EXT, 0);
         }
         break;
     default:

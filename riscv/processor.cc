@@ -2992,3 +2992,14 @@ Float32 processor_t::rand_Float32( uint8_t no )
   result.x = x.v;
   return result;
 }
+
+void processor_t::set_mip_bit(int bitn, bool val)
+{
+  csr_mutex.lock();
+  if (val) {
+    state.mip |= (1<<bitn);
+  } else {
+    state.mip &= (~(1<<bitn));
+  }
+  csr_mutex.unlock();
+}

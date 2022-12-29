@@ -428,6 +428,8 @@ public:
   void set_csr(int which, reg_t val);
   reg_t get_csr(int which, insn_t insn, bool write, bool peek = 0);
   reg_t get_csr(int which) { return get_csr(which, insn_t(0), false, true); }
+
+  void set_mip_bit(int bitn, bool val);  /* val 0/1 */
   void update_prng_state(uint32_t **prng_state)
   {
     for (int i = 0; i < 16; i++)
@@ -684,6 +686,7 @@ private:
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
+  std::mutex csr_mutex;
   state_t state;
   uint32_t idxinbank;
   uint32_t bank_id;
@@ -732,7 +735,6 @@ private:
   void enter_debug_mode(uint8_t cause);
 
   friend class mmu_t;
-  friend class clint_t;
   friend class extension_t;
   friend class pcie_driver_t;
   friend class np_mbox_t;

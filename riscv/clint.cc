@@ -40,7 +40,7 @@ bool clint_t::load(reg_t addr, size_t len, uint8_t* bytes)
   if (addr >= MSIP_BASE && addr + len <= MSIP_BASE + sim->nprocs()*sizeof(msip_t)) {
     std::vector<msip_t> msip(sim->nprocs());
     for (size_t i = 0; i < sim->nprocs(); ++i)
-      msip[i] = !!(sim->get_core_by_idxinsim(i)->state.mip & MIP_MSIP);
+      msip[i] = !!(sim->get_core_by_idxinsim(i)->get_state()->mip & MIP_MSIP);
     memcpy(bytes, (uint8_t*)&msip[0] + addr - MSIP_BASE, len);
   } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + sim->nprocs()*sizeof(mtimecmp_t)) {
     memcpy(bytes, (uint8_t*)&mtimecmp[0] + addr - MTIMECMP_BASE, len);
@@ -67,9 +67,9 @@ bool clint_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     memset((uint8_t*)&mask[0] + addr - MSIP_BASE, 0xff, len);
     for (size_t i = 0; i < sim->nprocs(); ++i) {
       if (!(mask[i] & 0xFF)) continue;
-      sim->get_core_by_idxinsim(i)->state.mip &= ~MIP_MSIP;
+      sim->get_core_by_idxinsim(i)->set_mip_bit(IRQ_M_SOFT, 0);   /* MIP_MSIP */
       if (!!(msip[i] & 1))
-        sim->get_core_by_idxinsim(i)->state.mip |= MIP_MSIP;
+        sim->get_core_by_idxinsim(i)->set_mip_bit(IRQ_M_SOFT, 1);
     }
   } else if (addr >= MTIMECMP_BASE && addr + len <= MTIMECMP_BASE + sim->nprocs()*sizeof(mtimecmp_t)) {
     memcpy((uint8_t*)&mtimecmp[0] + addr - MTIMECMP_BASE, bytes, len);
@@ -95,8 +95,8 @@ void clint_t::increment(reg_t inc)
         mtime += inc;
     }
     for (size_t i = 0; i < sim->nprocs(); i++) {
-        sim->get_core_by_idxinsim(i)->state.mip &= ~MIP_MTIP;
+        sim->get_core_by_idxinsim(i)->set_mip_bit(IRQ_M_TIMER, 0);  /* MIP_MTIP */
         if (mtime >= mtimecmp[i])
-            sim->get_core_by_idxinsim(i)->state.mip |= MIP_MTIP;
+            sim->get_core_by_idxinsim(i)->set_mip_bit(IRQ_M_TIMER, 1);
     }
 }
