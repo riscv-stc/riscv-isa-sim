@@ -29,7 +29,7 @@ reg_t t_deq = MME_DEQUANT_COEFF;
     WRITE_MEM_STC(RD, (float32_t*)rd, CMT_LOG_MME_CONV);
     break;
   case 0x10101: // bf16*bf16 = bf16
-    check_traps_medeconv_sp_mm(int16_t, int16_t, int32_t);
+    check_traps_medeconv_sp_mm(int16_t, int16_t, int16_t);
     CusIns.medeconv_sp_mm((Bfloat16*)rs1, (Bfloat16*)rs2, (uint8_t *)idx, (Bfloat16*)rd, &sst);
     WRITE_MEM_STC(RD, (Bfloat16*)rd, CMT_LOG_MME_CONV);
     break;
