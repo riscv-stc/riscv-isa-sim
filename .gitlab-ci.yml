@@ -78,7 +78,7 @@ package_ubuntu_2004:
   dependencies:
     - build_ubuntu_2004
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
 
 package_ubuntu_1804:
@@ -89,7 +89,7 @@ package_ubuntu_1804:
   dependencies:
     - build_ubuntu_1804
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
 
 package_centos_7:
@@ -100,5 +100,5 @@ package_centos_7:
   dependencies:
     - build_centos_7
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
