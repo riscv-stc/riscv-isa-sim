@@ -65,8 +65,7 @@ bool sys_apb_decoder_t::load(reg_t addr, size_t len, uint8_t* bytes)
         memcpy(bytes, (char *)reg_base + addr, len);
         break;
     case DECODER_SAFE_RESET_REQ_SET_ADDR:
-    case DECODER_SAFE_RESET_REQ_SET2_ADDR:
-        memset(bytes,0xff,len);
+        memcpy(bytes, (char *)reg_base + addr, len);
         break;
     default:
         printf("sys_apb_decoder r 0x%x 0x%lx unsupport \r\n", *(uint32_t*)bytes, addr+base);
@@ -91,32 +90,20 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         this->set_disarm_reset_state(this->sim,bytes);
         break;
     case DECODER_SAFE_RESET_REQ_SET_ADDR:
-        for(int i = 5 ;i < 32;i ++)
+        for(int i = 0 ;i < 32;i ++)
         {
             if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_reset(this->sim,(i - 5) / 2);
+                this->set_processor_reset(this->sim,i  / 2);
         }
-        break;
-    case DECODER_SAFE_RESET_REQ_SET2_ADDR:
-        for(int i = 0;i < 5;i ++)
-        {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_reset(this->sim,13 + (i + 1) / 2);
-        }
+        memcpy((char *)reg_base + addr, bytes, len);
         break;
     case DECODER_SAFE_RESET_REQ_CLR_ADDR:
         for(int i = 5 ;i < 32;i ++)
         {
             if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_disarm_reset(this->sim,(i - 5) / 2);
+                this->set_processor_disarm_reset(this->sim,i / 2);
         }
-        break;
-    case DECODER_SAFE_RESET_REQ_CLR2_ADDR:
-        for(int i = 0;i < 5;i ++)
-        {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_disarm_reset(this->sim,13 + (i + 1) / 2);
-        }
+        memcpy((char *)reg_base + addr, bytes, len);
         break;
     case DECODER_SOC_CHIP_NAME_ADDR:
     case DECODER_SOC_CHIP_VERSION_ADDR:
