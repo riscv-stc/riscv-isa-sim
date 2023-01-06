@@ -1,5 +1,5 @@
 default:
-  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -18,7 +18,7 @@ cache:
     - build
 
 build_ubuntu_2004:
-  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
@@ -30,7 +30,7 @@ build_ubuntu_2004:
     name: build_output_ubuntu_2004
 
 build_ubuntu_1804:
-  image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:18.04-stc'
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
@@ -42,7 +42,7 @@ build_ubuntu_1804:
     name: build_output_ubuntu_1804
 
 build_centos_7:
-  image: 'code.streamcomputing.com/centos:7-stc'
+  image: 'harbor.streamcomputing.com/simulator/centos:7-stc'
   stage : build
   script:
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
@@ -56,7 +56,7 @@ build_centos_7:
 # Run rvpvp tests on ubuntu 20.04
 # tensorflow can't be installed on ubuntu 18.04 and centos 7
 test_ubuntu_2004:
-  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
   stage : test
   script:
     - bash -xe scripts/test_spike.sh build_v2_ubuntu_2004
@@ -71,34 +71,34 @@ test_ubuntu_2004:
   timeout: 6h
 
 package_ubuntu_2004:
-  image: 'code.streamcomputing.com/ubuntu:20.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
   stage : package
   script:
     - bash -xe scripts/release_spike.sh -b build_v2_ubuntu_2004 -v ubuntu20.04
   dependencies:
     - build_ubuntu_2004
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
 
 package_ubuntu_1804:
-  image: 'code.streamcomputing.com/ubuntu:18.04-stc'
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:18.04-stc'
   stage : package
   script:
     - bash -xe scripts/release_spike.sh -b build_v2_ubuntu_1804 -v ubuntu18.04
   dependencies:
     - build_ubuntu_1804
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
 
 package_centos_7:
-  image: 'code.streamcomputing.com/centos:7-stc'
+  image: 'harbor.streamcomputing.com/simulator/centos:7-stc'
   stage : package
   script:
     - bash -xe scripts/release_spike.sh -b build_v2_centos_7 -v centos7
   dependencies:
     - build_centos_7
   only:
-    - 2.x-dev-ipa
+    - 2.x-dev
     - tags
