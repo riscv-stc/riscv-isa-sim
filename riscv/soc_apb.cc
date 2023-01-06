@@ -92,16 +92,20 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case DECODER_SAFE_RESET_REQ_SET_ADDR:
         for(int i = 0 ;i < 32;i ++)
         {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_reset(this->sim,i  / 2);
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST)
+                this->set_processor_reset(this->sim,(i/16)*2*8+(i%8));
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST)
+                this->set_processor_reset(this->sim,8+(i/16)*2*8+(i%8));
         }
         memcpy((char *)reg_base + addr, bytes, len);
         break;
     case DECODER_SAFE_RESET_REQ_CLR_ADDR:
-        for(int i = 5 ;i < 32;i ++)
+        for(int i = 0 ;i < 32;i ++)
         {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1)
-                this->set_processor_disarm_reset(this->sim,i / 2);
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST)
+                this->set_processor_disarm_reset(this->sim,(i/16)*16+(i%8));
+            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST)
+                this->set_processor_disarm_reset(this->sim,8+(i/16)*2*8+(i%8));
         }
         memcpy((char *)reg_base + addr, bytes, len);
         break;
