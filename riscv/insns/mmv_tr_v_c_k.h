@@ -1,1 +1,0 @@
-MTU_TR_VREG_LOOP(1, 'k');
