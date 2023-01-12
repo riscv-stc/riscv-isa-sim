@@ -353,7 +353,9 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
                 if (sts_new & (1<<STS_ADDR2_PCIE_DMA_BIT_CH(i))) {
                     apifc->generate_irq_to_a53(irq, true);  
                 } else {
-                    apifc->generate_irq_to_a53(irq, false);
+                    /* pcie_dma 清中断在qemu实现 */
+                    /* apifc->generate_irq_to_a53(irq, false); */
+                    ;
                 }
             }
         }
