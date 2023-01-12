@@ -48,7 +48,7 @@ class sysdma_device_t : public abstract_device_t {
         uint32_t desc_en : 1;     /* descriptor mode enabled */
       } bits;
       uint32_t full;
-    } ctlr;
+    } ctrl;
 
     uint32_t dsar;  // source address
     uint32_t ddar;  // destination address
@@ -99,13 +99,13 @@ class sysdma_device_t : public abstract_device_t {
   };
 
  private:
- 
-  void dma_core(int ch);
   simif_t *sim;
   bankif_t *bank;
   smmu_t *smmu[2];
   atu_t *atu[2];
 
+  void dma_core(int ch);
+  void do_one_desc(const struct dma_desc_t* desc, uint64_t sa_base, uint64_t da_base, int ch);
   void dmae_atu_trap(reg_t paddr, int channel, processor_t* proc);
 
   // dma direction
@@ -135,12 +135,24 @@ class sysdma_device_t : public abstract_device_t {
   };
 
   struct {
-    bool enabled;
-    bool desc_mode_enabled;
-    unsigned long llp;
+    bool enabled = false;
+    bool desc_mode_enabled = false;
+    bool reg_mode_enabled = false;
+    unsigned long llp = 0;
     bool xfer_complete = false;
     bool busy = false;
     uint64_t ddr_base[DDR_DIR_MAX];
+    dma_desc_t reg_desc;
+    union
+    {
+      struct  /* dmae需要从gntr读dma channel的占用情况 */
+      {
+          uint32_t gnt_id : 8;
+          uint32_t gnt_busy : 1;
+          uint32_t reserved : 23;
+      } bits;
+      uint32_t full = 0;
+    } gntr;
   } dma_channel_[DMA_MAX_CHANNEL_NUMER];
 };
 
