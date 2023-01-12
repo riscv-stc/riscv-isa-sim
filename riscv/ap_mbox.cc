@@ -32,6 +32,10 @@ void ap_mbox_t::reset(void)
 
 void ap_mbox_t::irq_generate(bool dir)
 {
+    /* 通过spike清ap_mbox中断太慢, 这部分代码在qemu中实现 */
+    if (0 == dir) {
+        return ;
+    }
     if (apifc) {
         if ((N2AP_MBOX_IRQ!=irq) && (P2AP_MBOX_IRQ!=irq)) {
             return ;
