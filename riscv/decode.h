@@ -2824,6 +2824,7 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   reg_t veew = sizeof(elt_width##_t) * 8; \
   float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
   reg_t emul = vemul < 1 ? 1 : vemul; \
+  height = emul; \
   require(vemul >= 0.125 && vemul <= 8); \
   require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * emul); \
   for (int i = 0; i < height; i++) { \
@@ -2843,8 +2844,9 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
   reg_t veew = sizeof(elt_width##_t) * 8; \
   float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
   reg_t emul = vemul < 1 ? 1 : vemul; \
+  height = emul; \
   require(vemul >= 0.125 && vemul <= 8); \
-  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * emul); \
+  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * vemul); \
   for (int i = 0; i < height; i++) { \
     for (int j = 0; j < width; j++) { \
       elt_width##_t val = P.VU.elt<elt_width##_t>(vd, i * width + j); \
