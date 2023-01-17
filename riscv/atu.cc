@@ -126,12 +126,6 @@ reg_t atu_t::translate(reg_t addr, reg_t len) const
         }
     }
 
-    if (atu_type == PCIE_ATU) {
-        paddr = addr;
-        return paddr;
-    }
-
-
     return IPA_INVALID_ADDR;
 }
 
