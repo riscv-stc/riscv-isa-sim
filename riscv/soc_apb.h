@@ -95,6 +95,8 @@ public:
 
     bool is_irq_ena_p2apmbox(void);
     bool is_irq_ena_n2apmbox(void);
+
+    void set_to_cpu_irq_out(int proc_id);
 private:
     simif_t *sim = nullptr;
     apifc_t *apifc = nullptr;
@@ -109,7 +111,9 @@ public:
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return sizeof(reg_base); }
     void disarm_sys_apb(processor_t* processor);
+
     sys_irq_t *sys_irq = nullptr;
+    sys_irq_t *get_sysirq(void) {return sys_irq;};
 private:
     simif_t *sim = nullptr;
     apifc_t *apifc = nullptr;

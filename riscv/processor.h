@@ -27,6 +27,7 @@ class hwsync_t;
 class trap_t;
 class extension_t;
 class disassembler_t;
+class soc_apb_t;
 
 #define VECTOR_REG_LEN    (VREG_LENGTH * 8)
 #define VECTOR_STRIP_LEN  (VREG_LENGTH * 8)

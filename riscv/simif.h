@@ -6,6 +6,7 @@
 #include "decode.h"
 #include <iostream>
 #include "bankif.h"
+#include "soc_apb.h"
 
 class bank_t;
 class processor_t;
@@ -48,6 +49,8 @@ public:
     virtual int get_id_first_bank(void) const = 0;
     virtual int coreid_to_idxinsim(int coreid) = 0;
     virtual processor_t* get_core_by_idxinsim(int idxinsim) = 0;
+
+    virtual sys_irq_t *get_sysirq(void) = 0;
 };
 
 #endif

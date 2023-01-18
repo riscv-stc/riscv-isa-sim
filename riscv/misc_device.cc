@@ -109,11 +109,11 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memcpy((uint8_t *)reg_base+addr, bytes, len);
 
         if (1 == (val&0x01)) {
-            val = 0;
-            sim->mmio_load(SYSIRQ_BASE+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
-            val |= (1<<proc->get_id());
-            sim->mmio_store(SYSIRQ_BASE+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
-
+            sys_irq_t *sysirq = nullptr;
+            sysirq = sim->get_sysirq();
+            if (nullptr != sysirq) {
+                sysirq->set_to_cpu_irq_out(proc->get_id());
+            }
             val = 0;
             sim->mmio_load(SYSIRQ_BASE+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR, 4, (uint8_t *)&val);
             val |= (1<<proc->get_id());

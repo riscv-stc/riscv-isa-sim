@@ -166,6 +166,8 @@ private:
   bool npc_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t bank_id, uint32_t idx);
   bool npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t bank_id, uint32_t idx);
 
+  sys_irq_t *get_sysirq(void) {return soc_apb->get_sysirq();};
+
   void make_dtb();
   void set_rom();
 

@@ -303,12 +303,13 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         *(uint32_t *)(reg_base+SYSIRQ_TO_PCIE_NPC_SW_IRQ_OUT_STS_ADDR) = sts_new;
         /* 清除pcie中断 */
         break;
+    case SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:
     /**
+     * 已弃用， 在专用接口产生中断
      * 两个STS寄存器对用户是RO的， 此处由misc发起写操作
      * 对应mask为0， 修改STS同时发送中断
      * 对应mask为1， 不会修改STS
      */
-    case SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR:
         irq = 0;
         mask = *(uint32_t *)(reg_base+SYSIRQ_CPU_IRQ_MASK_ADDR0);
         sts_old = *(uint32_t *)(reg_base+addr);
@@ -390,6 +391,35 @@ bool sys_irq_t::is_irq_ena_n2apmbox(void)
     load(SYSIRQ_CPU_IRQ_MASK_ADDR1, 4, (uint8_t*)&val32);
 
     return ((val32>>30)&0x01) ? false : true; 
+}
+
+void sys_irq_t::set_to_cpu_irq_out(int proc_id)
+{
+    int irq = 0;
+    uint32_t sts = 0;
+    uint32_t mask = 0;
+    uint32_t val32 = 0;
+
+    /* mask 0b0 不屏蔽, mask 0b1屏蔽 */
+    mask = *(uint32_t *)(reg_base+SYSIRQ_CPU_IRQ_MASK_ADDR0);
+    
+    val32 = 1 << (proc_id & 0x1f);
+    if (val32 & (~mask)) {
+        if (val32 & 0x000000ff) {
+            irq = A53_NPC_CLUSTER0_IRQ;
+        } else if (val32 & 0x0000ff00) {
+            irq = A53_NPC_CLUSTER1_IRQ;
+        } else if (val32 & 0x00ff0000) {
+            irq = A53_NPC_CLUSTER2_IRQ;
+        } else if (val32 & 0xff000000) {
+            irq = A53_NPC_CLUSTER3_IRQ;
+        }
+
+        *(uint32_t *)(reg_base+SYSIRQ_TO_CPU_NPC_SW_IRQ_OUT_STS_ADDR) |= val32;
+        if (0 != irq) {
+            apifc->generate_irq_to_a53(irq, true);
+        }
+    }
 }
 
 soc_apb_t::soc_apb_t(simif_t *sim, apifc_t *apifc) : sim(sim), apifc(apifc)
