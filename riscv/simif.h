@@ -51,6 +51,7 @@ public:
     virtual processor_t* get_core_by_idxinsim(int idxinsim) = 0;
 
     virtual sys_irq_t *get_sysirq(void) = 0;
+    virtual int get_groupID_from_coreID(int coreid) = 0;
 };
 
 #endif

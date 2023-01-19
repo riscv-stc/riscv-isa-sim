@@ -21,6 +21,7 @@
 #define GROUP_VALID_11_8     (0x00000300)
 #define GROUP_VALID_15_11    (0x00000400)
 #define SYNC_STATUS_OFFSET   (0x00000050)
+#define HS_SW_SYNC_REQ_CLR_OFFSET (0x00000068)
 
 #define setBitValue(var, idx, value) (var) = (value > 0) ? ((var) | (1 << (idx))) : ((var) & ~(1 << (idx)))
 #define getBitValue(var, idx) ((var >> (idx)) & 1)
@@ -58,7 +59,7 @@ private:
       setBitValue(*dst, dst_start + i, getBitValue(*src, src_start + i));
     }
   }
-  uint32_t get_groupID_from_coreID(uint32_t core_id);
+  
 
   std::mutex mutex_sync;
   std::mutex mutex_pld;
@@ -91,6 +92,7 @@ public:
   {
     return (hs_sync_timer_num) ? *hs_sync_timer_num : 0xffffffff;
   };
+  uint32_t get_groupID_from_coreID(uint32_t core_id);
   void reset(uint32_t id)
   {
     *req_pld |= (0x1 << id);

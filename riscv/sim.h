@@ -74,6 +74,7 @@ public:
   int get_idxinbank(int idxinsim) const { return  idxinsim%core_num_of_bank;};
   int get_id_first_bank(void) const {return id_first_bank;};
   int coreid_to_idxinsim(int coreid);
+  int get_groupID_from_coreID(int coreid) {return hwsync->get_groupID_from_coreID(coreid);}
 
   void hart_reset(reg_t hart_map) {
     rst_mutex.lock();

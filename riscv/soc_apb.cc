@@ -13,6 +13,8 @@
 #include "pcie_driver.h"
 #include "soc_apb.h"
 
+#define HS_SW_SYNC_REQ_CLR (0x00000068)
+
 sys_apb_decoder_t::sys_apb_decoder_t(simif_t* sim,uint64_t base, uint8_t *reg_ptr) 
     : base(base), reg_base(reg_ptr)
 {
@@ -135,6 +137,9 @@ void sys_apb_decoder_t::set_processor_reset(simif_t *sim, int processor_id)
 void sys_apb_decoder_t::set_processor_disarm_reset(simif_t *sim, int processor_id)
 {
     sim->get_core_by_idxinsim(processor_id)->set_disarm_reset_state(true);
+    int group_id = sim->get_groupID_from_coreID(processor_id);
+    int data = 1<<group_id;
+    sim->mmio_store(HS_SW_SYNC_REQ_CLR, 4, (uint8_t*)&data);
 }
 
 void sys_apb_decoder_t::set_reset_state(simif_t *sim, const uint8_t *flag)

@@ -10,7 +10,7 @@
 #include "hwsync.h"
 #include "processor.h"
 
-//#define DEBUG
+// #define DEBUG
 
 hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(16),
                                                                     core_num(32), hwsync_mem_size(512)
@@ -18,7 +18,7 @@ hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(
     hwsync_base_addr = new uint8_t[HWSYNC_SIZE];
     memset(hwsync_base_addr, 0, HWSYNC_SIZE);
     sync_masks = (uint32_t *)(hwsync_base_addr + GROUP_MASK_OFFSET);
-    //group_done = (uint32_t *)(hwsync_base_addr + GROUP_DONE_OFFSET);
+    // group_done = (uint32_t *)(hwsync_base_addr + GROUP_DONE_OFFSET);
     group_valid = (uint32_t *)(hwsync_base_addr + GROUP_VALID_OFFSET);
     sync_status = (uint32_t *)(hwsync_base_addr + SYNC_STATUS_OFFSET);
     group_locks = new std::condition_variable_any[group_count];
@@ -258,7 +258,9 @@ bool hwsync_t::load(reg_t addr, size_t len, uint8_t *bytes)
     case GROUP_VALID_OFFSET:
         memset(bytes + 2, 0, 2); // set high 2 bytes as 0
         break;
-
+    case HS_SW_SYNC_REQ_CLR_OFFSET:
+        memset(bytes, 0, len);
+        break;
     default:
         break;
     }
@@ -274,6 +276,23 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
     uint8_t *now_addr = (uint8_t *)(hwsync_base_addr + addr);
     switch (addr)
     {
+    case HS_SW_SYNC_REQ_CLR_OFFSET:
+    {
+        memcpy(hwsync_base_addr + addr, bytes, len);
+        uint32_t data = *(uint32_t *)bytes;
+        if (getBitValue(data, 31) == 1) // sync clr enable
+        {
+            for (int group_id = 0; group_id < 15; group_id++)
+            {
+                if (getBitValue(data, group_id) == 1)
+                {
+                    *sync_status &= sync_masks[group_id];
+                    group_locks[group_id].notify_all();
+                }
+            }
+        }
+        break;
+    }     
     case SYNC_STATUS_OFFSET:
         break;
     // case GROUP_DONE_OFFSET:
