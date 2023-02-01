@@ -4469,7 +4469,10 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStr
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
+    //half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -4631,7 +4634,9 @@ int CustomInsns::medeconv_mm(half *rs1, half *rs2, float32_t *rd, struct ConvSha
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -4783,7 +4788,10 @@ int CustomInsns::medeconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct 
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
+    //Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -4943,7 +4951,9 @@ int CustomInsns::medeconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct C
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5102,7 +5112,9 @@ int CustomInsns::medeconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, stru
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    float32_t *left_val = (float32_t *)malloc(h * w * kh * kw * in_c * sizeof(float32_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(float32_t);
+    float32_t *left_val = (float32_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             float32_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5242,7 +5254,9 @@ int CustomInsns::medeconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShap
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    int8_t *left_val = (int8_t *)malloc(h * w * kh * kw * in_c * sizeof(int8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(int8_t);
+    int8_t *left_val = (int8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             int8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5365,7 +5379,9 @@ int CustomInsns::medeconv_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ConvSha
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    uint8_t *left_val = (uint8_t *)malloc(h * w * kh * kw * in_c * sizeof(uint8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(uint8_t);
+    uint8_t *left_val = (uint8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             uint8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5484,7 +5500,9 @@ int CustomInsns::medeconv_mm(int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct Conv
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    int8_t *left_val = (int8_t *)malloc(h * w * kh * kw * in_c * sizeof(int8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(int8_t);
+    int8_t *left_val = (int8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             int8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5603,7 +5621,9 @@ int CustomInsns::medeconv_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct Con
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    uint8_t *left_val = (uint8_t *)malloc(h * w * kh * kw * in_c * sizeof(uint8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(uint8_t);
+    uint8_t *left_val = (uint8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             uint8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5729,7 +5749,9 @@ int CustomInsns::medeconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeS
     //     printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     // }
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -5869,7 +5891,9 @@ int CustomInsns::medeconv_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Co
     //     printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     // }
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6063,7 +6087,10 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
+    //half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6262,7 +6289,9 @@ int CustomInsns::medeconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float3
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6458,7 +6487,9 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6636,7 +6667,9 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx
         printf("h = %d w = %d out_h = %d out_w = %d\n", h, w, out_h, out_w);
     }
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6809,7 +6842,9 @@ int CustomInsns::medeconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparsei
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    float32_t *left_val = (float32_t *)malloc(h * w * kh * kw * in_c * sizeof(float32_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(float32_t);
+    float32_t *left_val = (float32_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             float32_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -6963,7 +6998,9 @@ int CustomInsns::medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, ha
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    int8_t *left_val = (int8_t *)malloc(h * w * kh * kw * in_c * sizeof(int8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(int8_t);
+    int8_t *left_val = (int8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             int8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -7117,7 +7154,9 @@ int CustomInsns::medeconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, h
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    uint8_t *left_val = (uint8_t *)malloc(h * w * kh * kw * in_c * sizeof(uint8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(uint8_t);
+    uint8_t *left_val = (uint8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             uint8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -7271,7 +7310,9 @@ int CustomInsns::medeconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    int8_t *left_val = (int8_t *)malloc(h * w * kh * kw * in_c * sizeof(int8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(int8_t);
+    int8_t *left_val = (int8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             int8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -7425,7 +7466,9 @@ int CustomInsns::medeconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, B
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    uint8_t *left_val = (uint8_t *)malloc(h * w * kh * kw * in_c * sizeof(uint8_t));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(uint8_t);
+    uint8_t *left_val = (uint8_t *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             uint8_t *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -7580,7 +7623,9 @@ int CustomInsns::medeconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    half *left_val = (half *)malloc(h * w * kh * kw * in_c * sizeof(half));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(half);
+    half *left_val = (half *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             half *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
@@ -7749,7 +7794,9 @@ int CustomInsns::medeconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, 
     int h = (in_h - 1) * stride_h - pad_top - pad_bottom + kh;
     int w = (in_w - 1) * stride_w - pad_left - pad_right + kw;
     assert(h==out_h && w==out_w);
-    Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * kh * kw * in_c * sizeof(Bfloat16));
+    long long sz1 = h * w;
+    long long sz2 = kh * kw * in_c * sizeof(Bfloat16);
+    Bfloat16 *left_val = (Bfloat16 *)malloc(sz1*sz2);
     for (i = 0; i < h; i++){
         for (j = 0; j < w; j++){
             Bfloat16 *start = left_val + i * w * kh * kw * in_c + j * kh * kw * in_c; 
