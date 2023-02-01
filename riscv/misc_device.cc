@@ -277,11 +277,9 @@ bool misc_device_t::ro_register_write(reg_t addr, uint32_t val)
         if (reg_status & reg_enable) {
             proc->set_mip_bit(IRQ_M_EXT, 1);  /* MIP_MEIP */
         }
-        /*
         else {
             proc->set_mip_bit(IRQ_M_EXT, 0);
         }
-        */
         break;
     default:
         *(uint32_t *)((uint8_t *)reg_base+addr) = val;
