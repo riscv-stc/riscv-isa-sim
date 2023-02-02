@@ -2487,7 +2487,6 @@ int veavgpool_m(OutDType *rs1, OutDType *rd, struct VmeShapeStride *vss, bool re
     DEFINE_MAP_DTYPE(InDType)
   
     //param check
-    assert((vss->kw * vss->kh <= 64));
     assert((vss->kw > 0) && (vss->kh) > 0);
     assert((vss->row > 0) && (vss->column > 0) && (vss->cin > 0));
     assert((vss->wout > 0) && (vss->hout > 0));
