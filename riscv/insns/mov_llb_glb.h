@@ -16,14 +16,6 @@ dmae_ss.stride_d_y = DMAE_STRIDE_D_Y;
 
 dmae_ss.channel = DMAE_CHANNEL;
 
-uint64_t len = 0;
-len = dmae_src_len(data_type, &dmae_ss);
-// check_trap_mmu_pmp_ok(zext_xlen(RS1), len, LOAD, PRV_U);
-
-len = dmae_dst_len(data_type, &dmae_ss);
-// check_trap_mmu_pmp_ok(zext_xlen(RD), len, STORE, PRV_U);
-
-// dmae_mov(src, dst, data_type, &dmae_ss);
 dmae_vm_mov((reg_t)(zext_xlen(RS1)), (reg_t)(zext_xlen(RD)), data_type, &dmae_ss, p);
 
 uint8_t* dst = (uint8_t*)p->get_sim()->addr_to_mem(zext_xlen(RD));

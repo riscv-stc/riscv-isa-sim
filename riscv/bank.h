@@ -47,7 +47,12 @@ public:
     processor_t* get_core_by_idxinbank(int idx) { return procs.at(idx); }
 
     char* npc_addr_to_mem(reg_t addr, uint32_t idxinbank);
-    char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
+    char *dmae_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
+    void dmae_vm_mov(uint64_t src_addr, uint64_t dst_addr, int ele_size,
+                uint32_t shape_x, uint32_t shape_y, uint32_t shape_z,
+                uint32_t stride_s_x, uint32_t stride_s_y,
+                uint32_t stride_d_x, uint32_t stride_d_y,
+                uint32_t channel, processor_t *l1_proc);
 };
 
 #endif // __BANK_H__

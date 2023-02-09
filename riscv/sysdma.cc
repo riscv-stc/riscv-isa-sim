@@ -80,8 +80,8 @@ static reg_t sysdma_base[] = {
 /**
  * @brief constructor
  */
-sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, const char *atuini)
-    : sim(sim),bank(bank) {
+sysdma_device_t::sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, const char *atuini, processor_t *ptw_proc)
+    : sim(sim),bank(bank), ptw_proc(ptw_proc) {
   // dma feature
   dma_enabled_ = false;
   dma_idx_ = dma_idx;
@@ -122,10 +122,70 @@ sysdma_device_t::~sysdma_device_t()
     delete atu[1];
 }
 
-void sysdma_device_t::do_one_desc(const struct dma_desc_t* desc, uint64_t sa_base, uint64_t da_base, int ch)
+/** 
+ * dmae指令包含L1私有地址, 此时需给 l1_proc 参数
+ * sysdma 不需要传入 l1_proc */
+void sysdma_device_t::sysdma_vm_mov(uint64_t src_addr, uint64_t dst_addr, int ele_size,
+              uint32_t shape_x, uint32_t shape_y, uint32_t shape_z,
+              uint32_t stride_s_x, uint32_t stride_s_y,
+              uint32_t stride_d_x, uint32_t stride_d_y,
+              uint32_t channel, processor_t *l1_proc=nullptr)
 {
     int i = 0;
     int j = 0;
+    uint32_t width = shape_x;
+    uint32_t high = shape_y;
+    uint32_t depth = shape_z;
+    uint32_t stride_s1 = 0;
+    uint32_t stride_s2 = 0;
+    uint32_t stride_d1 = 0;
+    uint32_t stride_d2 = 0;
+
+    /* 24'h0: linear mode */
+    stride_s1 = (stride_s_x) ? stride_s_x : width;
+    stride_d1 = (stride_d_x) ? stride_d_x : width;
+    if ((stride_s1<width) || (stride_d1<width)) {
+      throw std::runtime_error("stride1 is smaller than width");
+    }
+
+    width *= ele_size;
+    stride_s1 *= ele_size;
+    stride_d1 *= ele_size;
+
+    /* 32'h0: linear mode */
+    stride_s2 = (stride_s_y) ? stride_s_y*ele_size : (stride_s1*high);
+    stride_d2 = (stride_d_y) ? stride_d_y*ele_size : (stride_d1*high);
+    if ((stride_s2<(stride_s1*high)) || (stride_d2<(stride_d1*high))) {
+      throw std::runtime_error("stride2 is smaller than stride1*high");
+    }
+
+    char *dst = nullptr;
+    char *src = nullptr;
+
+    if (l1_proc) {
+      dst = dmae_vm_addr_to_mem(dst_addr, 1, channel, l1_proc);
+      src = dmae_vm_addr_to_mem(src_addr, 1, channel, l1_proc);
+    } else {
+      dst = sysdma_vm_addr_to_mem(dst_addr, 1, channel);
+      src = sysdma_vm_addr_to_mem(src_addr, 1, channel);
+    }
+
+    if (!dst) {
+      throw std::runtime_error("dma_core() ddar error");
+    }
+    if (!src) {
+      throw std::runtime_error("dma_core() dsar error");
+    }
+
+    for (i = 0 ; i < (int)depth ; i++) {
+      for (j = 0 ; j < (int)high ; j++) {
+        memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
+      }
+    }
+}
+
+void sysdma_device_t::do_one_desc(const struct dma_desc_t* desc, uint64_t sa_base, uint64_t da_base, int ch)
+{
     int ele_size = 0;
     uint32_t width = 0;
     uint32_t high = 0;
@@ -163,44 +223,11 @@ void sysdma_device_t::do_one_desc(const struct dma_desc_t* desc, uint64_t sa_bas
     /* 16'h0: 65536 blocks */
     depth = (desc->bkmr1.bits.depth) ? desc->bkmr1.bits.depth : 0x10000;
 
-    /* 24'h0: linear mode */
-    stride_s1 = (desc->bkmr2.bits.stride_s1) ? desc->bkmr2.bits.stride_s1 : width;
-    stride_d1 = (desc->bkmr4.bits.stride_d1) ? desc->bkmr4.bits.stride_d1 : width;
-    if ((stride_s1<width) || (stride_d1<width)) {
-      throw std::runtime_error("stride1 is smaller than width");
-    }
-
-    width *= ele_size;
-    stride_s1 *= ele_size;
-    stride_d1 *= ele_size;
-
-    /* 32'h0: linear mode */
-    stride_s2 = (desc->bkmr3.stride_s2) ? desc->bkmr3.stride_s2*ele_size : (stride_s1*high);
-    stride_d2 = (desc->bkmr5.stride_d2) ? desc->bkmr5.stride_d2*ele_size : (stride_d1*high);
-    if ((stride_s2<(stride_s1*high)) || (stride_d2<(stride_d1*high))) {
-      throw std::runtime_error("stride2 is smaller than stride1*high");
-    }
-
-    char *dst = nullptr;
-    char *src = nullptr;
-    uint64_t transfer_daddr = desc->ddar + da_base;
-    uint64_t transfer_saddr = desc->dsar + sa_base;
-
-    dst = dmae_addr_to_mem(transfer_daddr, 1, ch, nullptr);
-    src = dmae_addr_to_mem(transfer_saddr, 1, ch, nullptr);
-
-    if (!dst) {
-      throw std::runtime_error("dma_core() ddar error");
-    }
-    if (!src) {
-      throw std::runtime_error("dma_core() dsar error");
-    }
-
-    for (i = 0 ; i < (int)depth ; i++) {
-      for (j = 0 ; j < (int)high ; j++) {
-        memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
-      }
-    }
+    sysdma_vm_mov(desc->ddar + da_base, desc->dsar + sa_base, ele_size,
+              width, high, depth,
+              desc->bkmr2.bits.stride_s1, desc->bkmr3.stride_s2,
+              desc->bkmr4.bits.stride_d1, desc->bkmr5.stride_d2,
+              ch);
 }
 
 /**
@@ -672,33 +699,68 @@ void sysdma_device_t::dmae_atu_trap(reg_t paddr, int channel, processor_t* proc)
     proc->misc_dev->set_mcu_irq_status(mcu_irq_bit, true);
 }
 
-char* sysdma_device_t::dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc)
+/**
+ * 与sysdma_vm_addr_to_mem()区别在于:
+ *   1) dmae会包含私有L1地址0xC0000000, sysdma不包含
+ *   2) dmae ch 0-3, sysdma ch 0-1
+ */
+char* sysdma_device_t::dmae_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc)
 {
     atu_t *at = atu[channel%2];
     smmu_t *sysdma_smmu = smmu[channel%2];
 
     char *host_addr = nullptr;
-    int idxinbank = proc ? proc->get_idxinbank() : 0;
 
-    paddr = sysdma_smmu->translate(paddr, len, proc);
+    paddr = sysdma_smmu->translate(paddr, len, ptw_proc);
     if(at && at->is_ipa_enabled()) {
         if (!at->pmp_ok(paddr, len)) {
-            dmae_atu_trap(paddr, channel, proc);
+            dmae_atu_trap(paddr, channel, ptw_proc);
             return nullptr;
         }
         paddr = at->translate(paddr, len);
         if (IPA_INVALID_ADDR == paddr) {
-            dmae_atu_trap(paddr, channel, proc);
+            dmae_atu_trap(paddr, channel, ptw_proc);
             return nullptr;
         }
     }
 
     if(IS_NPC_LOCAL_REGION(paddr)) {
-        host_addr = bank->npc_addr_to_mem(paddr, idxinbank);
+        host_addr = proc->addr_to_mem(paddr);
     } else {
         if (nullptr == (host_addr=bank->bank_addr_to_mem(paddr)))
             host_addr = sim->addr_to_mem(paddr);
     }
+
+    return host_addr;
+}
+
+/**
+ * 与dmae_vm_addr_to_mem()区别在于:
+ *   1) dmae会包含私有L1地址0xC0000000, sysdma不包含
+ *   2) dmae ch 0-3, sysdma ch 0-1
+ */
+char* sysdma_device_t::sysdma_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel)
+{
+    atu_t *at = atu[channel%2];
+    smmu_t *sysdma_smmu = smmu[channel%2];
+
+    char *host_addr = nullptr;
+
+    paddr = sysdma_smmu->translate(paddr, len, ptw_proc);
+    if(at && at->is_ipa_enabled()) {
+        if (!at->pmp_ok(paddr, len)) {
+            dmae_atu_trap(paddr, channel, ptw_proc);
+            return nullptr;
+        }
+        paddr = at->translate(paddr, len);
+        if (IPA_INVALID_ADDR == paddr) {
+            dmae_atu_trap(paddr, channel, ptw_proc);
+            return nullptr;
+        }
+    }
+
+    if (nullptr == (host_addr=bank->bank_addr_to_mem(paddr)))
+        host_addr = sim->addr_to_mem(paddr);
 
     return host_addr;
 }

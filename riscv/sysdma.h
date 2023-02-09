@@ -24,14 +24,20 @@ private:
  */
 class sysdma_device_t : public abstract_device_t {
  public:
-  sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, const char *atuini);
+  sysdma_device_t(int dma_idx, simif_t *sim, bankif_t *bank, const char *atuini, processor_t *ptw_proc);
   ~sysdma_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
   bool store(reg_t addr, size_t len, const uint8_t* bytes);
   size_t size(void) {return sizeof(sys_dma_reg);};
 
-  char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
+  char *dmae_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc);
+  char *sysdma_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel);
+  void sysdma_vm_mov(uint64_t src_addr, uint64_t dst_addr, int ele_size,
+              uint32_t shape_x, uint32_t shape_y, uint32_t shape_z,
+              uint32_t stride_s_x, uint32_t stride_s_y,
+              uint32_t stride_d_x, uint32_t stride_d_y,
+              uint32_t channel, processor_t *l1_proc);
 
   // dma descriptor
   struct dma_desc_t {
@@ -103,6 +109,9 @@ class sysdma_device_t : public abstract_device_t {
   bankif_t *bank;
   smmu_t *smmu[2];
   atu_t *atu[2];
+
+  /* smmu取页表依赖ptw */
+  processor_t *ptw_proc = nullptr;
 
   void dma_core(int ch);
   void do_one_desc(const struct dma_desc_t* desc, uint64_t sa_base, uint64_t da_base, int ch);

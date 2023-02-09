@@ -33,7 +33,12 @@ public:
     virtual bool npc_mmio_load(reg_t addr, size_t len, uint8_t* bytes, uint32_t idxinbank) = 0;
     virtual bool npc_mmio_store(reg_t addr, size_t len, const uint8_t* bytes, uint32_t idxinbank) = 0;
 
-    virtual char *dmae_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc) = 0;
+    virtual char *dmae_vm_addr_to_mem(reg_t paddr, reg_t len, reg_t channel, processor_t* proc) = 0;
+    virtual void dmae_vm_mov(uint64_t src_addr, uint64_t dst_addr, int ele_size,
+                uint32_t shape_x, uint32_t shape_y, uint32_t shape_z,
+                uint32_t stride_s_x, uint32_t stride_s_y,
+                uint32_t stride_d_x, uint32_t stride_d_y,
+                uint32_t channel, processor_t *l1_proc) = 0;
 };
 
 #endif

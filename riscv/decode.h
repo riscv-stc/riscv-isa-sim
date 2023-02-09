@@ -387,7 +387,7 @@ static inline void clear_bit(int nr, unsigned long *addr)
 #define MTE_DATA_TYPE_RS1     ((STATE.mte_data_type & 0xFF00) >> 8)
 
 #define DMAE_DATA_TYPE        (STATE.dmae_data_type & 0xFFFF)
-#define DMAE_SHAPE_X          (STATE.dmae_shape_1 & 0xFFFF | STATE.dmae_shape_2 & 0x3F0000)
+#define DMAE_SHAPE_X          ((STATE.dmae_shape_1 & 0xFFFF) | (STATE.dmae_shape_2 & 0x3F0000))
 #define DMAE_SHAPE_Y          ((STATE.dmae_shape_1 & 0xFFFF0000) >> 16)
 #define DMAE_SHAPE_Z          (STATE.dmae_shape_2 & 0xFFFF)
 

@@ -12828,36 +12828,16 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
     }
 }
 
-/** 
- * virtual memory dmae mov
- * local_memory: NPC核内内存, l1, sp, index, misc, mbox
- */
+/* dmae mov with smmu and atu */
 void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct DmaeShapeStride *dmae_ss, processor_t *p)
 {
-    //src shape
-    uint32_t shape_x = dmae_ss->shape_x;
-    uint16_t shape_y = dmae_ss->shape_y;
-    uint16_t shape_z = dmae_ss->shape_z;
-
-    uint64_t copy_stride_s_x = 0;
-    uint64_t copy_stride_s_y = 0;
-    uint64_t copy_stride_d_x = 0;
-    uint64_t copy_stride_d_y = 0;
-    uint64_t copy_s_xy_size = 0;
-    uint64_t copy_d_xy_size = 0;
-    uint8_t e_size = 2;
-
-    uint64_t src_paddr = 0;
-    uint64_t src_vaddr = 0;
-    uint64_t dst_paddr = 0;
-    uint64_t dst_vaddr = 0;
-    uint64_t cpy_len = 0;
+    uint8_t e_size = 1;
 
     if (GLOBAL_DBG) {
         cout << "data type=" << data_type << endl;
-        cout << "shape_x=" << shape_x << endl;
-        cout << "shape_y=" << shape_y << endl;
-        cout << "shape_z=" << shape_z << endl;
+        cout << "shape_x=" << dmae_ss->shape_x << endl;
+        cout << "shape_y=" << dmae_ss->shape_y << endl;
+        cout << "shape_z=" << dmae_ss->shape_z << endl;
     }
 
     if (data_type == 0x0 || data_type == 0x101 ||
@@ -12874,45 +12854,12 @@ void dmae_vm_mov(uint64_t rs1, uint64_t rd, uint32_t data_type, const struct Dma
                 e_size = 1;
                 break;
             default:
-            break;
+                break;
         }
-
-        copy_stride_s_x = (dmae_ss->stride_s_x ? dmae_ss->stride_s_x : shape_x) * e_size;
-        copy_stride_s_y = dmae_ss->stride_s_y ? dmae_ss->stride_s_y * e_size : shape_y * copy_stride_s_x;
-        copy_stride_d_x = (dmae_ss->stride_d_x ? dmae_ss->stride_d_x : shape_x) * e_size;
-        copy_stride_d_y = dmae_ss->stride_d_y ? dmae_ss->stride_d_y * e_size : shape_y * copy_stride_d_x;
-
-        if ((dmae_ss->stride_s_x | dmae_ss->stride_s_y | dmae_ss->stride_d_x | dmae_ss->stride_d_y) == 0) {
-            src_vaddr = (uint64_t)(rs1);
-            dst_vaddr = (uint64_t)(rd);
-            cpy_len = (uint64_t)(shape_x * shape_y * shape_z * e_size);
-
-            src_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, p));
-            dst_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, p));
-
-            /* smmu或ipa翻译错误，不执行指令，不报trap，报中断 */
-            if (src_paddr && dst_paddr) {
-                memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-            }
-        }
-        else {
-            for (int i = 0; i < shape_z; i++) { //z
-                for (int j = 0; j < shape_y; j++) { //y
-                    src_vaddr = (uint64_t)(rs1 + j * copy_stride_s_x + i * copy_stride_s_y);
-                    dst_vaddr = (uint64_t)(rd + j * copy_stride_d_x + i * copy_stride_d_y);
-                    cpy_len = (uint64_t)(shape_x * e_size);
-
-                    src_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(src_vaddr, cpy_len, dmae_ss->channel, p));
-                    dst_paddr = (uint64_t)(p->get_bank()->dmae_addr_to_mem(dst_vaddr, cpy_len, dmae_ss->channel, p));
-
-                    if (src_paddr && dst_paddr) {
-                        memcpy((uint8_t*)dst_paddr, (uint8_t*)src_paddr, cpy_len);
-                    }
-                }
-            }
-        }
-    } else {
-        ;//throw trap_tcp_illegal_encoding();
+        p->get_bank()->dmae_vm_mov(rs1, rd, e_size,
+                dmae_ss->shape_x, dmae_ss->shape_y, dmae_ss->shape_z,
+                dmae_ss->stride_s_x, dmae_ss->stride_s_y,
+                dmae_ss->stride_d_x, dmae_ss->stride_d_y,
+                dmae_ss->channel, p);
     }
-    // WRITE_MEM_STC(rd, (uint8_t*)dst_paddr, CMT_LOG_DMAE);  
 }
