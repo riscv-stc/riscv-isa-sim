@@ -382,7 +382,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStrid
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -442,7 +442,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, half *rd, struct ConvShapeStrid
         cout << "rs2: " << rs2_matrix << endl;
     }
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
+    //#pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -585,7 +585,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, float32_t *rd, struct ConvShape
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
     int i, j, k, ii, jj, kk, index_cin, counter;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half * start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -640,7 +640,7 @@ int CustomInsns::meconv_mm(half *rs1, half *rs2, float32_t *rd, struct ConvShape
     float32_t first, second, third, forth, res12, res34, res;
     float32_t res_tmp;
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
+    //#pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -790,7 +790,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Co
 
     Bfloat16 *rs1_start, *start;
     int i, j, k, ii, jj, kk, index_cin, counter;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk,start,rs1_start)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -850,7 +850,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Bfloat16 *rd, struct Co
         cout << "rs2: " << rs2_matrix << endl;
     }
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
+    //#pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -997,7 +997,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct Con
 
     Bfloat16 *rs1_start, *start;
     int i, j, k, ii, jj, kk, index_cin, counter;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk,start,rs1_start)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1052,7 +1052,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, Bfloat16 *rs2, Float32 *rd, struct Con
     Float32 first, second, third, forth, res12, res34, res, res_tmp;
 
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
+    //#pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1194,7 +1194,7 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct
     h = (in_h + pad_top + pad_bottom - kh + 1 + sk_h - 1) / sk_h;
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     float32_t *left_val = (float32_t *)malloc(h * w * okh * okw * in_c * sizeof(float32_t));
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             float32_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1250,7 +1250,7 @@ int CustomInsns::meconv_mm(float32_t *rs1, float32_t *rs2, float32_t *rd, struct
     float32_t res_tmp;
 
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
+    //#pragma omp parallel for default(shared) private(i,j,k,index_cin,counter,first,second,third,forth,res_tmp,res12,res34)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1403,7 +1403,7 @@ int CustomInsns::meconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeS
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     int8_t *left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             int8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1465,7 +1465,7 @@ int CustomInsns::meconv_mm(int8_t *rs1, int8_t *rs2, half *rd, struct ConvShapeS
     Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
 
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1551,7 +1551,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ConvShape
     uint8_t *left_val = (uint8_t *)malloc(h * w * okh * okw * in_c * sizeof(uint8_t));
 
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             uint8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1614,7 +1614,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, half *rd, struct ConvShape
     Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     int32_t res;
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1706,7 +1706,7 @@ int CustomInsns::meconv_mm( int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     int8_t *left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
 
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             int8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1769,7 +1769,7 @@ int CustomInsns::meconv_mm( int8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
 
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -1864,7 +1864,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     uint8_t *left_val = (uint8_t *)malloc(h * w * okh * okw * in_c * sizeof(uint8_t));
 
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             uint8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -1927,7 +1927,7 @@ int CustomInsns::meconv_mm(uint8_t *rs1, int8_t *rs2, Bfloat16 *rd, struct ConvS
     Map_int8_t  col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
 
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2023,7 +2023,7 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -2090,7 +2090,7 @@ int CustomInsns::meconv_mm(half *rs1, int8_t *rs2, half *rd, struct ConvShapeStr
     int32_t res;
     float16_t rs1_f16;
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2191,7 +2191,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Conv
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * okh * okw * in_c * sizeof(Bfloat16));
     int i, j, k, ii, jj, kk;
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             Bfloat16 *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -2256,7 +2256,7 @@ int CustomInsns::meconv_mm(Bfloat16 *rs1, int8_t *rs2, Bfloat16 *rd, struct Conv
     Map_Bfloat16 row_matrix(row_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     Map_int8_t col_matrix(col_val, 1, okh * okw * in_c, DynStride(okh * okw * in_c, 1));
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2390,7 +2390,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -2461,7 +2461,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, half *rd
         //     cout << endl;
         // }
     }
-    #pragma omp parallel for default(shared) private(i,j,k,odd,even,sp_index1,sp_index2)
+    //#pragma omp parallel for default(shared) private(i,j,k,odd,even,sp_index1,sp_index2)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2593,7 +2593,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -2663,7 +2663,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, half *rs2, uint8_t *sparseidx, float32_
         //     cout << endl;
         // }
     }
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2791,7 +2791,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * okh * okw * in_c * sizeof(Bfloat16));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             Bfloat16 *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -2859,7 +2859,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         //     cout << endl;
         // }
     }
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -2989,7 +2989,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * okh * okw * in_c * sizeof(Bfloat16));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             Bfloat16 *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3057,7 +3057,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, Bfloat16 *rs2, uint8_t *sparseidx, 
         //     cout << endl;
         // }
     }
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -3191,7 +3191,7 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     float32_t *left_val = (float32_t *)malloc(h * w * okh * okw * in_c * sizeof(float32_t));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             float32_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3247,7 +3247,7 @@ int CustomInsns::meconv_sp_mm(float32_t *rs1, float32_t *rs2, uint8_t *sparseidx
     Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
     float32_t odd, even;
 
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -3369,7 +3369,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     int8_t *left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             int8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3434,7 +3434,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, half
            *(deq_val + i) = dequant;
     }
     Map_half dequant_matrix(deq_val, 1, out_c, DynStride(out_c, 1));
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -3557,7 +3557,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     uint8_t *left_val = (uint8_t *)malloc(h * w * okh * okw * in_c * sizeof(uint8_t));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             uint8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3619,7 +3619,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, hal
            *(deq_val + i) = dequant;
     }
     Map_half dequant_matrix(deq_val, 1, out_c, DynStride(out_c, 1));
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -3741,7 +3741,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     int8_t *left_val = (int8_t *)malloc(h * w * okh * okw * in_c * sizeof(int8_t));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             int8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3804,7 +3804,7 @@ int CustomInsns::meconv_sp_mm(int8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bflo
     Map_int8_t col_matrix(col_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
     Map_uint8_t idx_matrix(idx_val, 1, okh * okw * in_c / 2, DynStride(okh * okw * in_c/2, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -3926,7 +3926,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     uint8_t *left_val = (uint8_t *)malloc(h * w * okh * okw * in_c * sizeof(uint8_t));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             uint8_t *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -3989,7 +3989,7 @@ int CustomInsns::meconv_sp_mm(uint8_t *rs1, int8_t *rs2, uint8_t *sparseidx, Bfl
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, out_c, DynStride(out_c, 1));
 
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -4114,7 +4114,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     half *left_val = (half *)malloc(h * w * okh * okw * in_c * sizeof(half));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             half *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -4182,7 +4182,7 @@ int CustomInsns::meconv_sp_mm(half *rs1, int8_t *rs2, uint8_t *sparseidx, half *
     }
     Map_half dequant_matrix(deq_val, 1, out_c, DynStride(out_c, 1));
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
@@ -4315,7 +4315,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     w = (in_w + pad_left + pad_right - kw + 1 + sk_w - 1) / sk_w;
     Bfloat16 *left_val = (Bfloat16 *)malloc(h * w * okh * okw * in_c * sizeof(Bfloat16));
 
-    #pragma omp parallel for default(shared) private(i,j,ii,jj,kk)
+    #pragma omp parallel for default(shared) private(j,ii,jj,kk)
     for (i = 0; i < h; i++) {
         for (j = 0; j < w; j++) {
             Bfloat16 *start = left_val + i * w * okh * okw * in_c + j * okh * okw * in_c;
@@ -4382,7 +4382,7 @@ int CustomInsns::meconv_sp_mm(Bfloat16 *rs1, int8_t *rs2, uint8_t *sparseidx, Bf
     }
     Map_Bfloat16 dequant_matrix(deq_val, 1, out_c, DynStride(out_c, 1));
     //rd_matrix = left_matrix * rs2_matrix;
-    #pragma omp parallel for default(shared) private(i,j,k)
+    //#pragma omp parallel for default(shared) private(i,j,k)
     for (i = 0; i < out_h * out_w; i++) {
         for (j = 0; j < out_c; j++) {
             row_matrix = left_matrix.row(i);
