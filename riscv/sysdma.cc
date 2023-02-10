@@ -223,7 +223,7 @@ void sysdma_device_t::do_one_desc(const struct dma_desc_t* desc, uint64_t sa_bas
     /* 16'h0: 65536 blocks */
     depth = (desc->bkmr1.bits.depth) ? desc->bkmr1.bits.depth : 0x10000;
 
-    sysdma_vm_mov(desc->ddar + da_base, desc->dsar + sa_base, ele_size,
+    sysdma_vm_mov(desc->dsar + sa_base, desc->ddar + da_base, ele_size,
               width, high, depth,
               desc->bkmr2.bits.stride_s1, desc->bkmr3.stride_s2,
               desc->bkmr4.bits.stride_d1, desc->bkmr5.stride_d2,
