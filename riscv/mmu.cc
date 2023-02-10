@@ -259,7 +259,7 @@ reg_t mmu_t::npc_addr_to_mem(reg_t paddr)
     paddr &= 0xffffffff;
   }
   if (proc) {
-      return (reg_t)bank->npc_addr_to_mem(paddr, proc->get_idxinbank());
+      return (reg_t)proc->addr_to_mem(paddr);
   } else {
       return 0;
   }
@@ -529,8 +529,8 @@ reg_t mmu_t::s2xlate(reg_t gva, reg_t gpa, access_type type, access_type trap_ty
     auto pte_paddr = base + idx * vm.ptesize;
     char *ppte = nullptr;
 
-    if ((ppte = (proc&&bank) ? (char *)npc_addr_to_mem(pte_paddr) : nullptr) ||
-        (ppte = bank ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
+    if ((ppte = (proc) ? (char *)proc->addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = (bank) ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
         (ppte = sim->addr_to_mem(pte_paddr))) {
       ;
     } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
@@ -625,8 +625,8 @@ reg_t mmu_t::walk(reg_t addr, access_type type, reg_t mode, bool virt, bool mxr,
     auto pte_paddr = s2xlate(addr, base + idx * vm.ptesize, LOAD, type, virt, false);
     char *ppte = nullptr;
 
-    if ((ppte = (proc&&bank) ? (char *)npc_addr_to_mem(pte_paddr) : nullptr) ||
-        (ppte = bank ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
+    if ((ppte = (proc) ? proc->addr_to_mem(pte_paddr) : nullptr) ||
+        (ppte = (bank) ? bank->bank_addr_to_mem(pte_paddr) : nullptr) ||
         (ppte = sim->addr_to_mem(pte_paddr))) {
       ;
     } else if ((bank && bank->bank_mmio_load(pte_paddr, sizeof mmio_ppte_val, (uint8_t*)&mmio_ppte_val)) ||
