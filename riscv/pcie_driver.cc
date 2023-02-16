@@ -858,7 +858,7 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
         ret = read_host(pcie_addr, buf, len_once);
         if (0 == ret) {
           ret = write_soc(soc_addr, buf, len_once);
-        }
+          }
     } else if (XFER_DIR_D2H == ob_not_ib) {
         ret = read_soc(soc_addr, buf, len_once);
         if (0 == ret) {
@@ -911,7 +911,7 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   // PCIEDMA_CTL(reg_base, ch) |= (2<<PCIEDMA_CTL_STATUS);
 
   desc_addr_reg = PCIEDMA_DESC(reg_base, ch);
-  desc_len = PCIEDMA_CTL(reg_base, ch) & 0x1fff;
+  desc_len = PCIEDMA_CTL(reg_base, ch) & 0x3fff;
   ob_not_ib = (PCIEDMA_CTL(reg_base, ch) >> PCIEDMA_CTL_OB_NOT_IB) & 0x01;
 
   if (pcie_desc_atu && pcie_desc_atu->is_ipa_enabled()) {
