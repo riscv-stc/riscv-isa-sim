@@ -21,18 +21,6 @@ build_ubuntu_2004:
   image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
   stage : build
   script:
-    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
-    - eval $(ssh-agent -s)
-    - echo "$DEPLOY_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/centos7/2.x-dev-ipa"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/centos7/2.x-hpe"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/ubuntu18.04/2.x-dev-ipa"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/ubuntu18.04/2.x-hpe"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/ubuntu20.04/2.x-dev-ipa"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm ~/files/simulator/spike/ubuntu20.04/2.x-hpe"
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
     - bash -xe scripts/build_spike.sh build_v2_ubuntu_2004
   artifacts:
