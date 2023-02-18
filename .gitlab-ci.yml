@@ -39,8 +39,8 @@ build_ubuntu_1804:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER rm -rf ~/files/simulator/spike/2.x-dev-ipa"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER rm -rf ~/files/simulator/spike/2.x-hpe"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm -rf ~/files/simulator/spike/2.x-dev-ipa"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "rm -rf ~/files/simulator/spike/2.x-hpe"
     - echo "#define SPIKE_VERSION \"2.0.0-dev-$CI_PIPELINE_ID\"" > VERSION
     - bash -xe scripts/build_spike.sh build_v2_ubuntu_1804
   artifacts:
