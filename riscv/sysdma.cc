@@ -177,9 +177,13 @@ void sysdma_device_t::sysdma_vm_mov(uint64_t src_addr, uint64_t dst_addr, int el
       throw std::runtime_error("dma_core() dsar error");
     }
 
-    for (i = 0 ; i < (int)depth ; i++) {
-      for (j = 0 ; j < (int)high ; j++) {
-        memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
+    if ((stride_s_x | stride_s_y | stride_d_x | stride_d_y) == 0) {
+      memcpy(dst, src, depth*high*width);
+    } else {
+      for (i = 0 ; i < (int)depth ; i++) {
+        for (j = 0 ; j < (int)high ; j++) {
+          memcpy(dst + j*stride_d1 + i*stride_d2, src + j*stride_s1 + i*stride_s2, width);
+        }
       }
     }
 }
