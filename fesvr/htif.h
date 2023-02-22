@@ -134,7 +134,7 @@ class htif_t : public chunked_memif_t
        +signature=FILE\n\
       --signature-granularity=VAL           Size of each line in signature.\n\
        +signature-granularity=VAL\n\
-      --native             run in native mode, load_program used aty\n\
+      +native              run in native mode, load_program used aty\n\
       --chroot=PATH        Use PATH as location of syscall-servicing binaries\n\
        +chroot=PATH\n\
       --payload=PATH       Load PATH memory as an additional ELF payload\n\

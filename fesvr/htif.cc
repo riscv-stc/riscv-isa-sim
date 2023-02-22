@@ -450,9 +450,6 @@ void htif_t::parse_arguments(int argc, char ** argv)
     switch (c) {
       case 'h': usage(argv[0]);
         throw std::invalid_argument("User queried htif_t help text");
-      case 'n':
-          native = true;
-        break;
       case HTIF_LONG_OPTIONS_OPTIND:
         if (optarg) dynamic_devices.push_back(new rfb_t(atoi(optarg)));
         else        dynamic_devices.push_back(new rfb_t);
@@ -484,6 +481,10 @@ void htif_t::parse_arguments(int argc, char ** argv)
         if (arg == "+h" || arg == "+help") {
           c = 'h';
           optarg = nullptr;
+        }
+        else if (arg.find("+native") == 0) {
+          native = true;
+          break;
         }
         else if (arg == "+rfb") {
           c = HTIF_LONG_OPTIONS_OPTIND;
