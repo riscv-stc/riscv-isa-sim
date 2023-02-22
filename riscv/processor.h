@@ -488,6 +488,7 @@ public:
   Bfloat16 rand_Bfloat16( uint8_t no );
   Float32 rand_Float32( uint8_t no );
   mmu_t* get_mmu() { return mmu; }
+  atu_t* get_np_atu() { return np_atu; }
   simif_t* get_sim() { return sim; };
   bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();

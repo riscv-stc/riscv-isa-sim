@@ -116,24 +116,49 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
   // that have already been preloaded through a sideband
   class preload_aware_memif_t : public memif_t {
    public:
-    preload_aware_memif_t(htif_t* htif,simif_t *simif) : memif_t(htif), htif(htif), simif(simif) {}
+    preload_aware_memif_t(htif_t* htif,simif_t *simif, bool native)
+      : memif_t(htif), htif(htif), simif(simif), native(native) {}
 
     void write(addr_t taddr, size_t len, const void* src) override
     {
         reg_t upaddr = 0;
 
         if (!htif->is_address_preloaded(taddr, len)) {
-            if (simif->is_bottom_ddr(taddr)) {
-                for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
-                    upaddr = simif->bottom_ddr_to_upper((reg_t)taddr, i);
-                    if (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR <= upaddr) {
-                        memif_t::write(upaddr, len, src);
-                    } else {
-                        throw std::runtime_error("upaddr error");
-                    }
+            /* native模式加载程序时使用atu */
+            if (native) {
+              atu_t *np_atu = simif->get_core_by_idxinsim(0)->get_np_atu();
+              addr_t paddr = 0;
+              #define TRANS_SIZE_ONCE   0x1000
+
+              if ((nullptr==np_atu) || (!np_atu->is_ipa_enabled())) {
+                throw std::runtime_error("atu not enable");
+              }
+
+              for (size_t offset = 0 ; offset < len ; offset += TRANS_SIZE_ONCE) {
+                if (!np_atu->pmp_ok(taddr+offset, len)) {
+                    throw std::runtime_error("atu addr error when load_program()");
                 }
+
+                paddr = np_atu->translate(taddr+offset, 1);
+                if (offset + TRANS_SIZE_ONCE > len) {
+                  memif_t::write(paddr, len-offset, src);
+                } else {
+                  memif_t::write(paddr, TRANS_SIZE_ONCE, src);
+                }
+              }
             } else {
-                memif_t::write(taddr, len, src);
+              if (simif->is_bottom_ddr(taddr)) {
+                  for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
+                      upaddr = simif->bottom_ddr_to_upper((reg_t)taddr, i);
+                      if (GLB_DIE0_UPPER_REGION_BANK0_START_ADDR <= upaddr) {
+                          memif_t::write(upaddr, len, src);
+                      } else {
+                          throw std::runtime_error("upaddr error");
+                      }
+                  }
+              } else {
+                  memif_t::write(taddr, len, src);
+              }
             }
         }
     }
@@ -141,7 +166,8 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
    private:
     htif_t* htif;
     simif_t *simif;
-  } preload_aware_memif(this, simif);
+    bool native;
+  } preload_aware_memif(this, simif, native);
 
   return load_elf(path.c_str(), &preload_aware_memif, entry);
 }
@@ -302,9 +328,44 @@ int htif_t::run()
     }
   }
 
+  addr_t tohost_native = 0;
+  addr_t fromhost_native = 0;
+  if (native) {
+    atu_t *np_atu = simif->get_core_by_idxinsim(0)->get_np_atu();
+    if ((nullptr==np_atu) || (!np_atu->is_ipa_enabled())) {
+      throw std::runtime_error("atu not enable");
+    }
+    if (!np_atu->pmp_ok(tohost_addr, 1) || !np_atu->pmp_ok(fromhost_addr, 1)) {
+        throw std::runtime_error("atu addr error when load tohost_addr/fromhost_addr");
+    }
+    tohost_native = np_atu->translate(tohost_addr, 1);
+    fromhost_native = np_atu->translate(fromhost_addr, 1);
+  }
+
   while (!signal_exit && exitcode == 0)
   {
-    if (simif->is_bottom_ddr(tohost_addr)) {
+    if (native) {
+        if (auto tohost = from_target(mem.read_uint64(tohost_native))) {
+        mem.write_uint64(tohost_native, target_endian<uint64_t>::zero);
+        command_t cmd(mem, tohost, fromhost_callback);
+        device_list.handle_command(cmd);
+        } else {
+        idle();
+        }
+
+        if (signal_dump) {
+        dump_mems();
+        signal_dump = false;
+        signal(SIGUSR1, &handle_dump_signal);
+        }
+
+        device_list.tick();
+
+        if (!fromhost_queue.empty() && !mem.read_uint64(fromhost_native)) {
+        mem.write_uint64(fromhost_native, to_target(fromhost_queue.front()));
+        fromhost_queue.pop();
+        }
+    } else if (simif->is_bottom_ddr(tohost_addr)) {
         bool is_all_to_host = true;
         addr_t bank_tohost_addr = 0;
         addr_t bank_fromhost_addr = 0;
@@ -389,6 +450,9 @@ void htif_t::parse_arguments(int argc, char ** argv)
     switch (c) {
       case 'h': usage(argv[0]);
         throw std::invalid_argument("User queried htif_t help text");
+      case 'n':
+          native = true;
+        break;
       case HTIF_LONG_OPTIONS_OPTIND:
         if (optarg) dynamic_devices.push_back(new rfb_t(atoi(optarg)));
         else        dynamic_devices.push_back(new rfb_t);
