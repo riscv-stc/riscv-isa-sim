@@ -100,6 +100,7 @@ class htif_t : public chunked_memif_t
   addr_t fromhost_addr;
   int exitcode;
   bool stopped;
+  bool native = false;    /* native模式, 加载程序使用atu作地址映射 */
 
   device_list_t device_list;
   syscall_t syscall_proxy;
@@ -133,6 +134,7 @@ class htif_t : public chunked_memif_t
        +signature=FILE\n\
       --signature-granularity=VAL           Size of each line in signature.\n\
        +signature-granularity=VAL\n\
+      --native             run in native mode, load_program used aty\n\
       --chroot=PATH        Use PATH as location of syscall-servicing binaries\n\
        +chroot=PATH\n\
       --payload=PATH       Load PATH memory as an additional ELF payload\n\
@@ -149,6 +151,7 @@ TARGET (RISC-V BINARY) OPTIONS\n\
 #define HTIF_LONG_OPTIONS_OPTIND 1024
 #define HTIF_LONG_OPTIONS                                               \
 {"help",      no_argument,       0, 'h'                          },     \
+{"native",    no_argument,       0, 'n'                          },     \
 {"rfb",       optional_argument, 0, HTIF_LONG_OPTIONS_OPTIND     },     \
 {"disk",      required_argument, 0, HTIF_LONG_OPTIONS_OPTIND + 1 },     \
 {"signature", required_argument, 0, HTIF_LONG_OPTIONS_OPTIND + 2 },     \
