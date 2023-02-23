@@ -193,7 +193,9 @@ void mbox_device_t::irq_update(void)
 
 void mbox_device_t::irq_generate(bool dir)
 {
+    /*
     printf("mbox_device_t::irq_generate \r\n");
+    */
 }
 
 np_mbox_t::np_mbox_t(simif_t *simif, misc_device_t *misc_dev) : 
@@ -227,9 +229,11 @@ void np_mbox_t::irq_generate(bool dir)
     if (misc) {
         misc->set_mcu_irq_status(MCU_IRQ_STATUS_BIT_NPC_MBOX_IRQ, dir);
     }
+    /*
     if (dir) {
         printf("np_mbox_t::irq_generate \r\n");
     }
+    */
 }
 
 pcie_mbox_t::pcie_mbox_t(simif_t *simif, pcie_driver_t *pcie_driver) : 
@@ -281,7 +285,9 @@ void pcie_mbox_t::irq_generate(bool dir)
         
         pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
     }
+    /*
     if (dir) {
         printf("pcie_mbox_t::irq_generate \r\n");
     }
+    */
 }

@@ -423,6 +423,7 @@ void pcie_driver_t::task_doing()
   while (1) {
     if (NETLINK_FAULT != recv()) {
       pCmd = (command_head_t*)NLMSG_DATA(mRecvBuffer);
+      /*
       std::cout << "recv cmd:"
           << pCmd->code
           << hex
@@ -431,6 +432,7 @@ void pcie_driver_t::task_doing()
           << " len:0x"
           << pCmd->len
           << std::endl;
+      */
 
       switch (pCmd->code) {
         case CODE_READ:
@@ -840,7 +842,7 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
   uint64_t pcie_addr = 0;
   uint8_t *buf = nullptr;
 
-  printf("%s soc %lx pcie %lx len %d dir %d \n", __FUNCTION__, soc, pcie, len, ob_not_ib);
+  // printf("%s soc %lx pcie %lx len %d dir %d \n", __FUNCTION__, soc, pcie, len, ob_not_ib);
 
   buf = (uint8_t*)malloc(XFER_LEN_ONCE_MAX);
   if (nullptr == buf) {
@@ -962,7 +964,7 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   /* raise irq */
   if (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_DONE_IRQ_ENA) ||
       (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_ERR_IRQ_ENA))) {
-    printf("pcie_dma raise interrupt ch %d \n", ch);
+    // printf("pcie_dma raise interrupt ch %d \n", ch);
     sim->mmio_load(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
     val32 |= (1<<STS_ADDR2_PCIE_DMA_BIT_CH(ch));
     sim->mmio_store(SYSIRQ_BASE+SYSIRQ_INGRESS_IRQ_STS_ADDR2, 4, (uint8_t*)&val32);
