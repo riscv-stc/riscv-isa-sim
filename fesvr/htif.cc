@@ -118,6 +118,30 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
    public:
     preload_aware_memif_t(htif_t* htif,simif_t *simif, bool native)
       : memif_t(htif), htif(htif), simif(simif), native(native) {}
+    
+    void write_with_atu(addr_t taddr, size_t len, const void* src, atu_t *np_atu)
+    {
+      #define TRANS_SIZE_ONCE   8
+
+      addr_t paddr = 0;
+
+      if ((nullptr==np_atu) || (!np_atu->is_ipa_enabled())) {
+        throw std::runtime_error("atu not enable");
+      }
+
+      for (size_t offset = 0 ; offset < len ; offset += TRANS_SIZE_ONCE) {
+        if (!np_atu->pmp_ok(taddr+offset, len)) {
+            throw std::runtime_error("atu addr error when load_program()");
+        }
+
+        paddr = np_atu->translate(taddr+offset, 1);
+        if (offset + TRANS_SIZE_ONCE > len) {
+          memif_t::write(paddr, len-offset, src+offset);
+        } else {
+          memif_t::write(paddr, TRANS_SIZE_ONCE, src+offset);
+        }
+      }
+    }
 
     void write(addr_t taddr, size_t len, const void* src) override
     {
@@ -127,25 +151,7 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
             /* native模式加载程序时使用atu */
             if (native) {
               atu_t *np_atu = simif->get_core_by_idxinsim(0)->get_np_atu();
-              addr_t paddr = 0;
-              #define TRANS_SIZE_ONCE   0x1000
-
-              if ((nullptr==np_atu) || (!np_atu->is_ipa_enabled())) {
-                throw std::runtime_error("atu not enable");
-              }
-
-              for (size_t offset = 0 ; offset < len ; offset += TRANS_SIZE_ONCE) {
-                if (!np_atu->pmp_ok(taddr+offset, len)) {
-                    throw std::runtime_error("atu addr error when load_program()");
-                }
-
-                paddr = np_atu->translate(taddr+offset, 1);
-                if (offset + TRANS_SIZE_ONCE > len) {
-                  memif_t::write(paddr, len-offset, src);
-                } else {
-                  memif_t::write(paddr, TRANS_SIZE_ONCE, src);
-                }
-              }
+              write_with_atu(taddr, len, src, np_atu);
             } else {
               if (simif->is_bottom_ddr(taddr)) {
                   for (int i = simif->get_id_first_bank() ; i < (int)simif->nbanks()+simif->get_id_first_bank() ; i++) {
