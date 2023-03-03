@@ -59,7 +59,7 @@ test_ubuntu_2004:
   image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
   stage : test
   script:
-    - bash -xe scripts/test_spike.sh build_v2_ubuntu_2004
+    - bash -xe scripts/test_spike.sh -b build_v2_ubuntu_2004 -e "--basic"
   artifacts:
     paths:
       - build_v2_ubuntu_2004
@@ -69,6 +69,38 @@ test_ubuntu_2004:
   dependencies:
     - build_ubuntu_2004
   timeout: 6h
+
+test_sysdma:
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
+  stage : test
+  script:
+    - bash -xe scripts/test_spike.sh -b build_v2_ubuntu_2004 -s specs/custom/device/sysdma.yml
+  artifacts:
+    paths:
+      - build_v2_ubuntu_2004
+      - VERSION
+      - log
+    name: test_output_sysdma
+  dependencies:
+    - build_ubuntu_2004
+  timeout: 6h
+
+test_openmp:
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
+  stage : test
+  script:
+    - export OMP_NUM_THREADS=4
+    - bash -xe scripts/test_spike.sh -b build_v2_ubuntu_2004 -s specs/custom/mme/meconv_mm.spec.yml,specs/custom/mme/meconv_sp_mm.spec.yml,specs/custom/mme/memul_mm.spec.yml,specs/custom/mme/memul_sp_mm.spec.yml -e "--cases test_meconv_mm_data_basic_stride,test_meconv_sp_mm_data_basic_stride,test_memul_mm_data_basic_stride,test_memul_sp_mm_data_basic_stride"
+  artifacts:
+    paths:
+      - build_v2_ubuntu_2004
+      - VERSION
+      - log
+    name: test_output_openmp
+  dependencies:
+    - build_ubuntu_2004
+  timeout: 6h
+
 
 package_ubuntu_2004:
   image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
