@@ -1,6 +1,5 @@
 #!/bin/bash
 
-export PATH=$CI_PROJECT_DIR/$BUILD_DIR:$RISCV/bin:$PATH
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 export PIP_INDEX_URL=https://nexus3.in/repository/pypi-aliyun/simple/
@@ -33,6 +32,8 @@ if [ -z "$BUILD_DIR" ]; then
 	echo
 	exit 1
 fi
+
+export PATH=$CI_PROJECT_DIR/$BUILD_DIR:$RISCV/bin:$PATH
 
 # Set specs list
 if [ -n "$SPEC_LIST" ]; then
