@@ -193,35 +193,51 @@ int apifc_t::qemu_mems_read(reg_t addr, size_t length)
 void apifc_t::sqmsg_req_recv_handle(void)
 {
     int ret = 0;
-    struct command_head_t cmd_data = {};
     long recv_type = 0;
     
     while(1) {
-        memset(&cmd_data, 0, sizeof(cmd_data));
+        struct command_head_t *cmd_data = new struct command_head_t;
+        memset(cmd_data, 0, sizeof(*cmd_data));
         // recv_type = SQ_MTYPE_Q2S_REQ(CODE_READ);
         recv_type = 0;
-        ret = sqmsg_spike_recv(recv_type, &cmd_data);
+        ret = sqmsg_spike_recv(recv_type, cmd_data);
         if (0 > ret) {
             perror("sqmsg_req_recv_handle msgrcv() ");
             sleep(1);
             continue;
         }
-        switch(cmd_data.code) {
+        msg_rv_buf.push(cmd_data);
+    }
+}
+
+void apifc_t::process_data(void)
+{
+    int ret = 0;
+    struct command_head_t *cmd_data = nullptr;
+
+    while(!msg_rv_buf.empty()) {
+        cmd_data = msg_rv_buf.front();
+
+        switch(cmd_data->code) {
         case CODE_READ:
-            ret = qemu_mems_read(cmd_data.addr, cmd_data.len);
+            ret = qemu_mems_read(cmd_data->addr, cmd_data->len);
             if (0 > ret) {
                 printf("%s() qemu_mems_read ret %d error \r\n",__FUNCTION__,ret);
             }
             // printf("ap r 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         case CODE_WRITE:
-            store_data(cmd_data.addr, cmd_data.len, (const uint8_t*)cmd_data.data);
+            store_data(cmd_data->addr, cmd_data->len, (const uint8_t*)cmd_data->data);
             // printf("ap w 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         default:
-            printf("%s() unknow cmd 0x%x \r\n", __FUNCTION__, cmd_data.code);
+            printf("%s() unknow cmd 0x%x \r\n", __FUNCTION__, cmd_data->code);
             break;
         }
+
+        msg_rv_buf.pop();
+        delete cmd_data;
+        cmd_data = nullptr;
     }
 }
 

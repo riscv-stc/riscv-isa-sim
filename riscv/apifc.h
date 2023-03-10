@@ -39,6 +39,7 @@ public:
     int sqmsg_spike_send(long recv_type, const struct command_head_t *cmd_data);
     int sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data);
 
+    void process_data();
 private:
     simif_t *sim = nullptr;
 
@@ -52,6 +53,8 @@ private:
 
     bool load_data(reg_t addr, size_t len, uint8_t* bytes);
     bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
+
+    std::queue<struct command_head_t *> msg_rv_buf;
 };
 
 #endif

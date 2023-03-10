@@ -82,20 +82,25 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     case MBOX_RX_CFG_DATA:
     case MBOX_RX_CFG_DATA+4:
+    {
+        static int cnts = 0;
+        static uint64_t rx[2] = {0};
         memcpy(reg_base+addr, bytes, len);
         if (((8==len) && (MBOX_RX_CFG_DATA==addr)) || (MBOX_RX_CFG_DATA+4==addr)) {
-            uint64_t rx = 0;
             uint32_t int_pend_val = 0;
 
-            rx = *(uint64_t*)(reg_base+MBOX_RX_CFG_DATA);
-            rx_fifo.push(rx);
-            if (0 == rx_fifo.size()%2) {
+            rx[cnts++] = *(uint64_t*)(reg_base+MBOX_RX_CFG_DATA);
+            if (2 == cnts) {
                 load(MBOX_INT_PEND, 4, (uint8_t*)(&int_pend_val));
                 int_pend_val |= MBOX_INT_RX_VALID;
                 *(uint32_t*)(reg_base+MBOX_INT_PEND) = int_pend_val;
+                rx_fifo.push(rx[0]);
+                rx_fifo.push(rx[1]);
                 irq_update();
+                cnts = 0;
             }
         }
+    }
         break;
     case MBOX_INT_PEND:     /* R/W1TC */
         memcpy(&val32, bytes, 4);
