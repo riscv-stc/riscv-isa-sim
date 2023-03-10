@@ -228,6 +228,10 @@ void apifc_t::process_data(void)
             break;
         case CODE_WRITE:
             store_data(cmd_data->addr, cmd_data->len, (const uint8_t*)cmd_data->data);
+
+            /* resp */
+            cmd_data->len = 0;
+            sqmsg_spike_send(SQ_MTYPE_RES(CODE_WRITE), cmd_data);
             // printf("ap w 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         default:
