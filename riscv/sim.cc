@@ -688,11 +688,6 @@ void sim_t::step(size_t n)
 
       host->switch_to();
     }
-
-    /* 处理 a53的消息 */
-    if (pcie_enabled && apifc) {
-      apifc->process_data();
-    }
   }
 
   // if all procs in wfi, sleep to avoid 100% cpu usage.

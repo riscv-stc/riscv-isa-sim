@@ -93,6 +93,12 @@ public:
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
 
+  void a53_step(void)
+  {
+    if (likely(pcie_enabled && apifc)) {
+      apifc->process_data();
+    }
+  };
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
