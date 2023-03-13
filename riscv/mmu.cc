@@ -697,3 +697,21 @@ void mmu_t::register_memtracer(memtracer_t* t)
   flush_tlb();
   tracer.hook(t);
 }
+
+reg_t mmu_t::translate_virtual_addr(reg_t addr, reg_t len)
+{
+  char *host_addr = nullptr;
+  int bankid = bank ? bank->get_bankid() : 0;
+  int idxinbank = proc ? proc->get_idxinbank() : 0;
+  reg_t paddr = translate(addr, len, STORE, 0);
+  if(np_atu && np_atu->is_ipa_enabled()) {
+      if (!np_atu->pmp_ok(paddr, len)) {
+          throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+      }
+      paddr = np_atu->translate(paddr, len);
+      if (IPA_INVALID_ADDR == paddr) {
+          throw_access_exception((proc) ? proc->state.v : false, paddr, STORE);
+      }
+  }
+  return paddr;
+}

@@ -172,7 +172,7 @@ class misc_device_t : public abstract_device_t {
   simif_t *sim = nullptr;
   bool inst_start = false;
 
-  uint32_t dump_addr;
+  uint64_t dump_addr;
   uint32_t dump_len;
   uint32_t dump_count;
 

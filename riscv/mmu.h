@@ -524,6 +524,8 @@ reg_t check_pmp_ok(reg_t addr, reg_t len, access_type type, reg_t mode)
     return target_big_endian;
   }
 
+  reg_t translate_virtual_addr(reg_t addr, reg_t len);
+  
   template<typename T> inline T from_target(target_endian<T> n) const
   {
     return target_big_endian? n.from_be() : n.from_le();
