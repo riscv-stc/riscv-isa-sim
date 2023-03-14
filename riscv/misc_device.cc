@@ -84,10 +84,11 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     case (DUMP_BASE + DUMP_START_OFFSET):
         {
-        auto prefix_addr = *((uint64_t*)bytes);
+        uint64_t prefix_addr = 0;
+        memcpy((uint8_t*)&prefix_addr, bytes, len);
         std::string prefix = "snapshot-" + to_string(dump_count);
         if (prefix_addr != 0) {
-            prefix_addr = proc -> get_mmu() -> translate_virtual_addr(prefix_addr,8);
+            prefix_addr = proc -> get_mmu() -> translate_virtual_addr(prefix_addr,len);
             char *str = nullptr;
             if ((str = proc->get_sim()->addr_to_mem(prefix_addr)) ||
                     (str = proc->get_bank()->bank_addr_to_mem(prefix_addr))) {
@@ -101,8 +102,9 @@ bool misc_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         break;
     case (DUMP_BASE + DUMP_ADDR_OFFSET):
         {
-        uint64_t temp_addr = *((uint64_t*)bytes);
-        dump_addr = proc -> get_mmu() -> translate_virtual_addr(temp_addr,8);
+        uint64_t temp_addr = 0;
+        memcpy((uint8_t*)&temp_addr, bytes, len);
+        dump_addr = proc -> get_mmu() -> translate_virtual_addr(temp_addr,len);
         }
         break;
     case (DUMP_BASE + DUMP_LEN_OFFSET):
