@@ -94,6 +94,9 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
     int rd = item.first >> 4;
     bool is_vec = false;
     bool is_vreg = false;
+    bool is_matrix = false;
+    bool is_mreg = false;
+    bool is_accreg = false;
     switch (item.first & 0xf) {
     case 0:
       size = xlen;
@@ -109,9 +112,21 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
       is_vreg = true;
       break;
     case 3:
-      is_vec = true;
+      size = p->MU.MLEN;
+      prefix = 'm';
+      is_mreg = true;
       break;
     case 4:
+      size = p->MU.MLEN*4;
+      if (p->MU.maccq == 0)
+        size = p->MU.MLEN*2;
+      prefix = 'a';
+      is_accreg = true;
+      break;
+    case 5:
+      is_vec = true;
+      break;
+    case 6:
       size = xlen;
       prefix = 'c';
       break;
@@ -136,6 +151,10 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
         fprintf(log_file, " %c%2d ", prefix, rd);
       if (is_vreg)
         commit_log_print_value(log_file, size, &p->VU.elt<uint8_t>(rd, 0));
+      else if (is_mreg)
+        commit_log_print_value(log_file, size, &p->MU.tr_elt<uint8_t>(rd, 0, 0, 0));
+      else if (is_accreg)
+        commit_log_print_value(log_file, size, &p->MU.acc_elt<uint8_t>(rd, 0, 0, 0));
       else
         commit_log_print_value(log_file, size, item.second.v);
     }
@@ -195,7 +214,7 @@ static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
       //handle segfault in midlle of vector load/store
       if (p->get_log_commits_enabled()) {
         for (auto item : p->get_state()->log_reg_write) {
-          if ((item.first & 3) == 3) {
+          if ((item.first & 5) == 5) {
             commit_log_print_insn(p, pc, fetch.insn);
             break;
           }

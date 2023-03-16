@@ -203,7 +203,7 @@ private:
     STATE.log_reg_write[((reg) << 4) | 1] = wdata; \
     DO_WRITE_FREG(reg, wdata); \
   })
-# define WRITE_VSTATUS STATE.log_reg_write[3] = {0, 0};
+# define WRITE_VSTATUS STATE.log_reg_write[5] = {0, 0};
 #endif
 
 // RVC macros
@@ -760,8 +760,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 #define MXU_PARAMS(x) \
   type_sew_t<x>::type &accd = P.MU.acc_elt<type_sew_t<x>::type>(accd_num, 0, i, j, true); \
-  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, true); \
-  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, true); \
+  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, false); \
+  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, false); \
 
 #define VX_PARAMS(x) \
   type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i, true); \
@@ -1269,25 +1269,25 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e8) \
         accd = (int8_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1307,19 +1307,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1339,13 +1339,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1451,24 +1451,24 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   switch(P.MU.msew) { \
     case e16: { \
       float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, true); \
-      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, true); \
+      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false); \
+      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, true); \
-      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, true); \
+      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false); \
+      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false); \
       BODY32; \
       set_fp_exceptions; \
       break; \
     }\
     case e64: {\
       float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, true); \
-      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, true); \
+      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, false); \
+      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, false); \
       BODY64; \
       set_fp_exceptions; \
       break; \
@@ -1499,21 +1499,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       switch(P.MU.msew) { \
       case e16: { \
         float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         BODY16; \
         set_fp_exceptions; \
         break; \
       }\
       case e32: {\
         float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         BODY32; \
         set_fp_exceptions; \
         break; \
       }\
       case e64: {\
         float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         BODY64; \
         set_fp_exceptions; \
         break; \
@@ -1543,21 +1543,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       switch(P.MU.msew) { \
       case e8: { \
         float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         BODY16; \
         set_fp_exceptions; \
         break; \
       }\
       case e16: {\
         float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         BODY32; \
         set_fp_exceptions; \
         break; \
       }\
       case e32: {\
         float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         BODY64; \
         set_fp_exceptions; \
         break; \
@@ -1574,16 +1574,16 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   switch(P.MU.msew) { \
     case e16: {\
       float32_t &accd_w = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, true)); \
-      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, true)); \
+      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false)); \
+      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false)); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float64_t &accd_w = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, true)); \
-      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, true)); \
+      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false)); \
+      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false)); \
       BODY32; \
       set_fp_exceptions; \
       break; \
@@ -1608,25 +1608,25 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e8) \
         accd = (int8_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)accd * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1646,19 +1646,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1678,13 +1678,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1706,17 +1706,17 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         float16_t rs2 = f16(READ_FREG(rs2_num)); \
         BODY16; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2 = f32(READ_FREG(rs2_num)); \
         BODY32; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2 = f64(READ_FREG(rs2_num)); \
         BODY64; \
       } \
@@ -1736,12 +1736,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2 = f32(READ_FREG(rs2_num)); \
         BODY32; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2 = f64(READ_FREG(rs2_num)); \
         BODY64; \
       } \
@@ -1776,28 +1776,28 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       if (sew == e8){ \
         GET_VS2(e8, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e8) \
         accd = (int8_t)res; \
       }else if(sew == e16){ \
         GET_VS2(e16, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e32){ \
         GET_VS2(e32, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e64){ \
         GET_VS2(e64, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1820,21 +1820,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       if (sew == e8){ \
         GET_VS2(e8, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e16){ \
         GET_VS2(e16, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e32){ \
         GET_VS2(e32, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1856,14 +1856,14 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       if (sew == e8){ \
         GET_VS2(e8, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e16){ \
         GET_VS2(e16, is_trans, i, j) \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         BODY \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1884,7 +1884,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         float16_t rs2; \
         if (!is_trans) { \
           rs2 = P.VU.elt<float16_t>(vs2_num, j); \
@@ -1894,7 +1894,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         BODY16; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2; \
         if (!is_trans) { \
           rs2 = P.VU.elt<float32_t>(vs2_num, j); \
@@ -1904,7 +1904,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         BODY32; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2; \
         if (!is_trans) { \
           rs2 = P.VU.elt<float64_t>(vs2_num, j); \
@@ -1929,7 +1929,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2; \
         if (!is_trans) { \
           rs2 = f16_to_f32(P.VU.elt<float16_t>(vs2_num, j)); \
@@ -1939,7 +1939,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
         BODY32; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2; \
         if (!is_trans) { \
           rs2 = f32_to_f64(P.VU.elt<float32_t>(vs2_num, j)); \

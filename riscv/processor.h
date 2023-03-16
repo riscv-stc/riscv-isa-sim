@@ -583,7 +583,10 @@ public:
           assert(msew != 0);
           assert((mcols >> 3)/sizeof(T) > 0);
           reg_t elts_per_slice = (mcols>> 3) / (sizeof(T));
-
+#ifdef RISCV_ENABLE_COMMITLOG
+          if (is_write)
+            p->get_state()->log_reg_write[((td) << 4) | 3] = {0, 0};
+#endif
           T *regStart = ((T*)tr_file) + td * elts_per_slice * mrows;
           if (tt & 1) { // col
             reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
@@ -604,7 +607,10 @@ public:
           } else {
             elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
           }
-
+#ifdef RISCV_ENABLE_COMMITLOG
+          if (is_write)
+            p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
+#endif
           T *regStart = (T *)((char*)acc_file + td * mlenb * 4);
           if (tt & 1) { // col
             // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;

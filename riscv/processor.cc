@@ -30,6 +30,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
 {
   VU.p = this;
+  MU.p = this;
 
   parse_isa_string(isa);
   parse_priv_string(priv);
@@ -939,7 +940,7 @@ void processor_t::set_csr(int which, reg_t val)
 {
 #if defined(RISCV_ENABLE_COMMITLOG)
 #define LOG_CSR(rd) \
-  STATE.log_reg_write[((which) << 4) | 4] = {get_csr(rd), 0};
+  STATE.log_reg_write[((which) << 4) | 6] = {get_csr(rd), 0};
 #else
 #define LOG_CSR(rd)
 #endif
