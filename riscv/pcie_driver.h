@@ -145,6 +145,7 @@ class pcie_driver_t {
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);
+  int dma_send(const uint8_t* data, size_t len);
 
   void set_mStatus(int status) {mStatus = status;};
   int update_status(NL_STATUS status);
@@ -158,14 +159,21 @@ class pcie_driver_t {
 
  private:
   std::unique_ptr<std::thread> mDriverThread;
+  std::unique_ptr<std::thread> dmaThread;
 
   struct sockaddr_nl mSrcAddr;
   struct sockaddr_nl mDestAddr;
   struct nlmsghdr *mSendBuffer;
   struct nlmsghdr *mRecvBuffer;
+
+  struct sockaddr_nl dmaSrcAddr;
+  struct nlmsghdr *dmaSendBuffer;
+  struct nlmsghdr *dmaRecvBuffer;
+
   simif_t* mPSim;
 
   int mSockFd;
+  int dmaFd;
   int mStatus;
   bool pcie_enabled;
   size_t board_id;
@@ -177,6 +185,7 @@ class pcie_driver_t {
   int cluster_mdev[4] = {-1, -1, -1, -1};
   int initialize();
   int recv();
+  int dma_recv();
   std::queue<struct command_head_t *> nl_rv_buf;
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
@@ -188,6 +197,7 @@ class pcie_driver_t {
 
   bool lock_channel(void);
   void task_doing();
+  void dma_recv_fun();
   std::mutex pcie_mutex;
 
   /* pcie_dma */

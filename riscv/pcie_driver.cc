@@ -32,6 +32,7 @@
 #define NL_CHIP_ADDR(chip_id)   (chip_id << NL_CHIP_BIT)
 
 #define NL_NETLINK_START_PORT(board_id,chip_id) (NL_BOARD_ADDR(board_id)|NL_CHIP_ADDR(chip_id) + NL_START_PORT)
+#define NL_NETLINK_PCIEDMA_PORT(board_id,chip_id) (NL_NETLINK_START_PORT(board_id,chip_id) + 21)   /* DRIVER_PORT in  driver*/
 /* netlink groups */
 #define NL_GROUPS        (0)
 
@@ -47,35 +48,51 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
   /* pcie_dma */
   sem_init(&read_host_sem, 0, 0);
 
-  mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
-  if (!mRecvBuffer) {
-    std::cout << "driver init malloc recv buffer error!" << std::endl;
-    return;
+  /* 初始化buffer */
+  {
+      // To prepare create mssage head
+      mSendBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+      if (!mSendBuffer) {
+        std::cout << "driver init malloc send buffer error!" << std::endl;
+        return;
+      }
+      memset(mSendBuffer, 0, NLMSG_SPACE(MAX_PAYLOAD));
+      mSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
+      mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id);
+      mSendBuffer->nlmsg_flags = NL_GROUPS;
+      
+      mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+      if (!mRecvBuffer) {
+        std::cout << "driver init malloc recv buffer error!" << std::endl;
+        return;
+      }
+      memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
   }
-  memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
+
+  /* pcie_dma使用单独的 sendBuffer和recvBuffer */
+  {
+      dmaSendBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+      if (!dmaSendBuffer) {
+        std::cout << "driver init malloc send buffer error!" << std::endl;
+        return;
+      }
+      memset(dmaSendBuffer, 0, NLMSG_SPACE(MAX_PAYLOAD));
+      dmaSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
+      dmaSendBuffer->nlmsg_pid = NL_NETLINK_PCIEDMA_PORT(board_id, chip_id);
+      dmaSendBuffer->nlmsg_flags = NL_GROUPS;
+      
+      dmaRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+      if (!dmaRecvBuffer) {
+        std::cout << "driver init malloc recv buffer error!" << std::endl;
+        return;
+      }
+      memset(dmaRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
+  }
 
   if (initialize() != PCIE_OK) {
     std::cout << "PCIe driver init fail." << std::endl;
     return;
   }
-
-  // To prepare create mssage head
-  mSendBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
-  if (!mSendBuffer) {
-    std::cout << "driver init malloc send buffer error!" << std::endl;
-    return;
-  }
-
-  memset(mSendBuffer, 0, NLMSG_SPACE(MAX_PAYLOAD));
-  mSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-  mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id);
-  mSendBuffer->nlmsg_flags = NL_GROUPS;
-
-  #if 0 /* 需要初始化完 pcie_mbox,sys_soc等, 再 update_status() */
-  /* Recheck netlink status */
-  if (NETLINK_FAULT == update_status(STATUS_OK))
-    mStatus = ERROR_CONN;
-  #endif
 
   pcie_ctl = new pcie_ctl_device_t(mPSim, this, atuini);
 }
@@ -89,31 +106,6 @@ int pcie_driver_t::initialize()
     return ERROR_LOCK;
   }
 
-  // Create a socket
-  mSockFd = socket(AF_NETLINK, SOCK_RAW, NL_PROTOCOL);
-  if (mSockFd == NETLINK_FAULT) {
-    mStatus = ERROR_SOCK;
-    return ERROR_SOCK;
-  }
-
-  // To prepare binding
-  memset(&mSrcAddr, 0, sizeof(mSrcAddr));
-  mSrcAddr.nl_family = AF_NETLINK;
-  mSrcAddr.nl_pid = NL_NETLINK_START_PORT(board_id, chip_id);
-  mSrcAddr.nl_groups = NL_GROUPS;
-
-  // Bind src addr
-  rv = bind(mSockFd, (struct sockaddr*)&mSrcAddr, sizeof(mSrcAddr));
-  if (rv < 0) {
-    std::cout << "driver init bind failed: "
-    	<< strerror(errno)
-    	<< std::endl;
-    close(mSockFd);
-    mSockFd = -1;
-    mStatus = ERROR_BIND;
-    return ERROR_BIND;
-  }
-
   memset(&mDestAddr, 0, sizeof(mDestAddr));
   mDestAddr.nl_family = AF_NETLINK;
 
@@ -121,12 +113,72 @@ int pcie_driver_t::initialize()
   mDestAddr.nl_pid = 0;
   mDestAddr.nl_groups = 0;
 
-  /* just a status for temporary */
-  mStatus = PCIE_OK;
-  auto mainloop = std::bind(&pcie_driver_t::task_doing, this);
-  auto thread = new std::thread(mainloop);
-  thread->detach();
-  mDriverThread.reset(thread);
+  // Create a socket
+  {
+      mSockFd = socket(AF_NETLINK, SOCK_RAW, NL_PROTOCOL);
+      if (mSockFd == NETLINK_FAULT) {
+        mStatus = ERROR_SOCK;
+        return ERROR_SOCK;
+      }
+
+      // To prepare binding
+      memset(&mSrcAddr, 0, sizeof(mSrcAddr));
+      mSrcAddr.nl_family = AF_NETLINK;
+      mSrcAddr.nl_pid = NL_NETLINK_START_PORT(board_id, chip_id);
+      mSrcAddr.nl_groups = NL_GROUPS;
+
+      // Bind src addr
+      rv = bind(mSockFd, (struct sockaddr*)&mSrcAddr, sizeof(mSrcAddr));
+      if (rv < 0) {
+        std::cout << "driver init bind failed: "
+          << strerror(errno)
+          << std::endl;
+        close(mSockFd);
+        mSockFd = -1;
+        mStatus = ERROR_BIND;
+        return ERROR_BIND;
+      }
+
+      /* just a status for temporary */
+      mStatus = PCIE_OK;
+      auto mainloop = std::bind(&pcie_driver_t::task_doing, this);
+      auto thread = new std::thread(mainloop);
+      thread->detach();
+      mDriverThread.reset(thread);
+  }
+
+  /* pcie_dma 使用 nl_pid 101 */
+  if (PCIE_OK == mStatus)
+  {
+      dmaFd = socket(AF_NETLINK, SOCK_RAW, NL_PROTOCOL);
+      if (dmaFd == NETLINK_FAULT) {
+        mStatus = ERROR_SOCK;
+        return ERROR_SOCK;
+      }
+
+      memset(&dmaSrcAddr, 0, sizeof(dmaSrcAddr));
+      dmaSrcAddr.nl_family = AF_NETLINK;
+      dmaSrcAddr.nl_pid = NL_NETLINK_PCIEDMA_PORT(board_id, chip_id);
+      dmaSrcAddr.nl_groups = NL_GROUPS;
+
+      rv = bind(dmaFd, (struct sockaddr*)&dmaSrcAddr, sizeof(dmaSrcAddr));
+      if (rv < 0) {
+        std::cout << "driver init bind failed: "
+          << strerror(errno)
+          << std::endl;
+        close(dmaFd);
+        dmaFd = -1;
+        mStatus = ERROR_BIND;
+        return ERROR_BIND;
+      }
+
+      /* just a status for temporary */
+      mStatus = PCIE_OK;
+      auto mainloop = std::bind(&pcie_driver_t::dma_recv_fun, this);
+      auto thread = new std::thread(mainloop);
+      thread->detach();
+      dmaThread.reset(thread);
+  }
 
   return PCIE_OK;
 }
@@ -196,6 +248,34 @@ int pcie_driver_t::send(const uint8_t* data, size_t len)
   return rv;
 }
 
+int pcie_driver_t::dma_send(const uint8_t* data, size_t len)
+{
+  int rv = 0;
+
+  if (unlikely(PCIE_OK != mStatus))
+    return mStatus;
+
+  pcie_mutex.lock();
+  dmaSendBuffer->nlmsg_len = NLMSG_SPACE(len);
+  if (data && len)
+    memcpy(NLMSG_DATA(dmaSendBuffer), data, len);
+
+  // send message
+  rv = sendto(dmaFd,
+              dmaSendBuffer,
+              NLMSG_LENGTH(len),
+              0,
+              (struct sockaddr*)(&mDestAddr),
+              sizeof(mDestAddr));
+  pcie_mutex.unlock();
+
+  if (NETLINK_FAULT == rv)
+    std::cout << "pcie_dma send data error: "
+        << strerror(errno)
+        << std::endl;
+
+  return rv;
+}
 /*
  * Tell the peer status.
  * status: the status of this bank netlink connect.
@@ -295,6 +375,25 @@ int pcie_driver_t::recv()
   /* recv message and save to mRecvBuffer. */
   rv = recvfrom(mSockFd,
                 mRecvBuffer,
+                NLMSG_LENGTH(MAX_PAYLOAD),
+                0,
+                NULL,
+                NULL);
+
+  if (NETLINK_FAULT == rv)
+    std::cout << "pcie recv data error: "
+        << strerror(errno)
+        << std::endl;
+
+  return rv;
+}
+
+int pcie_driver_t::dma_recv()
+{
+  int rv;
+
+  rv = recvfrom(dmaFd,
+                dmaRecvBuffer,
                 NLMSG_LENGTH(MAX_PAYLOAD),
                 0,
                 NULL,
@@ -440,10 +539,6 @@ void pcie_driver_t::process_data(void)
           case CODE_PF_BAR4_WRITE:
             pcie_bar_store_data(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
             break;
-          case CODE_READ_HOST:    /* CODE_READ_HOST resp */
-            read_host_notify_ok(pCmd);
-            break;
-
           default:
             std::cout << "unknow cmd." << std::endl;
         }
@@ -477,17 +572,35 @@ void pcie_driver_t::task_doing()
         << std::endl;
     */
 
-    /* CODE_READ_HOST resp */
-    if (CODE_READ_HOST == pCmd->code) {
-        read_host_notify_ok(pCmd);
-    } else {
-        struct command_head_t *cmd_data = new struct command_head_t;
-        memcpy(cmd_data, pCmd, sizeof(struct command_head_t)-COMMAND_DATA_SIZE_MAX+pCmd->len);
-        nl_rv_buf.push(cmd_data);
-    }
+    struct command_head_t *cmd_data = new struct command_head_t;
+    memcpy(cmd_data, pCmd, sizeof(struct command_head_t)-COMMAND_DATA_SIZE_MAX+pCmd->len);
+    nl_rv_buf.push(cmd_data);
   }
 
   std::cout << "driver transfer loop end." << std::endl;
+}
+
+void pcie_driver_t::dma_recv_fun(void)
+{
+    struct command_head_t *pCmd = (command_head_t*)NLMSG_DATA(dmaRecvBuffer);
+
+    /* check PCIe init status. */
+    if (unlikely(PCIE_OK != mStatus))
+        return;
+    std::cout << "driver dma transfer loop start." << std::endl;
+
+    while(1) {
+        if (NETLINK_FAULT == dma_recv()) {
+            printf("pcie wrapper dma recv data error: %s\n", strerror(errno));
+            continue;
+        }
+
+        /* CODE_READ_HOST resp */
+        if (CODE_READ_HOST == pCmd->code) {
+            printf("__sxs dma recv cmd %x addr %x .\n", pCmd->code, pCmd->addr);
+            read_host_notify_ok(pCmd);
+        } 
+    }
 }
 
 pcie_driver_t::~pcie_driver_t()
@@ -508,9 +621,19 @@ pcie_driver_t::~pcie_driver_t()
     mSendBuffer = NULL;
   }
 
+  if (dmaSendBuffer) {
+    free(dmaSendBuffer);
+    dmaSendBuffer = NULL;
+  }
+
   if (mRecvBuffer) {
     free(mRecvBuffer);
     mRecvBuffer = NULL;
+  }
+
+  if (dmaRecvBuffer) {
+    free(dmaRecvBuffer);
+    dmaRecvBuffer = NULL;
   }
 
   if (pcie_ctl) {
@@ -811,7 +934,8 @@ int pcie_dma_dev_t::write_host(uint64_t addr, uint8_t *data, int len)
   cmd.addr = addr;
   cmd.len = len;
   memcpy(cmd.data, data, len);
-  ret = pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+  printf("__sxs dma send cmd %x addr %x .\n", cmd.code, cmd.addr);
+  ret = pcie->dma_send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
   if (0 < ret)
     return 0;
   else 
@@ -829,7 +953,7 @@ int pcie_dma_dev_t::read_host(uint64_t addr, uint8_t *data, int len)
   cmd.len = len;
 
   pcie->read_host_ready_to(&cmd);
-  ret = pcie->send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
+  ret = pcie->dma_send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
   if (0 < ret) {
     pcie->read_host_wait();
     if ((addr==cmd.addr) && (len==cmd.len) && (CODE_READ_HOST==cmd.code)) {
