@@ -99,6 +99,12 @@ public:
       apifc->process_data();
     }
   };
+  void pcie_step(void)
+  {
+    if (likely(pcie_enabled && pcie_driver)) {
+      pcie_driver->process_data();
+    }
+  }
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;

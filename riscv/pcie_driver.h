@@ -154,6 +154,7 @@ class pcie_driver_t {
   int read_host_wait(void);
 
   pcie_ctl_device_t *get_pcie_ctl(void) { return  pcie_ctl;};
+  void process_data();
 
  private:
   std::unique_ptr<std::thread> mDriverThread;
@@ -176,6 +177,7 @@ class pcie_driver_t {
   int cluster_mdev[4] = {-1, -1, -1, -1};
   int initialize();
   int recv();
+  std::queue<struct command_head_t *> nl_rv_buf;
   bool load_data(reg_t addr, size_t len, uint8_t* bytes);
   bool store_data(reg_t addr, size_t len, const uint8_t* bytes);
 

@@ -738,6 +738,8 @@ void processor_t::step(size_t n)
   while (n > 0 && !this->in_reset_state) {
     /* 处理a53发给spike的消息 */
     get_sim()->a53_step();
+    /* 处理driver发过来的消息 */
+    get_sim()->pcie_step();
 
     size_t instret = 0;
     reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;

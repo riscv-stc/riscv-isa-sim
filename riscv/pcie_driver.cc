@@ -47,6 +47,13 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
   /* pcie_dma */
   sem_init(&read_host_sem, 0, 0);
 
+  mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+  if (!mRecvBuffer) {
+    std::cout << "driver init malloc recv buffer error!" << std::endl;
+    return;
+  }
+  memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
+
   if (initialize() != PCIE_OK) {
     std::cout << "PCIe driver init fail." << std::endl;
     return;
@@ -63,14 +70,6 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
   mSendBuffer->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
   mSendBuffer->nlmsg_pid = NL_NETLINK_START_PORT(board_id, chip_id);
   mSendBuffer->nlmsg_flags = NL_GROUPS;
-
-  mRecvBuffer = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
-  if (!mRecvBuffer) {
-    std::cout << "driver init malloc recv buffer error!" << std::endl;
-    return;
-  }
-
-  memset(mRecvBuffer, 0, sizeof(NLMSG_SPACE(MAX_PAYLOAD)));
 
   #if 0 /* 需要初始化完 pcie_mbox,sys_soc等, 再 update_status() */
   /* Recheck netlink status */
@@ -409,69 +408,82 @@ bool pcie_driver_t::store_data(reg_t addr, size_t len, const uint8_t* bytes)
  * not realy phy_addr, just valid for PCIe dummy driver. */
 #define PCIE_CORE_RESET_ADDR    (0xc07f3500)
 
+void pcie_driver_t::process_data(void)
+{
+    uint8_t *data = nullptr;
+    command_head_t *pCmd = NULL;
+
+    while(!nl_rv_buf.empty()) {
+        pCmd = nl_rv_buf.front();
+        switch (pCmd->code) {
+          case CODE_READ:
+            data = (uint8_t *)malloc(COMMAND_DATA_SIZE_MAX);
+            memset(data, 0, pCmd->len);
+            load_data(pCmd->addr, pCmd->len, data);
+            send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
+            free(data);
+            break;
+          case CODE_WRITE:
+            store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+            break;
+          case CODE_PF_BAR0_READ:
+          case CODE_PF_BAR2_READ:
+          case CODE_PF_BAR4_READ:
+            data = (uint8_t *)malloc(COMMAND_DATA_SIZE_MAX);
+            memset(data, 0, pCmd->len);
+            pcie_bar_read(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, data);
+            send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
+            free(data);
+            break;
+          case CODE_PF_BAR0_WRITE:
+          case CODE_PF_BAR2_WRITE:
+          case CODE_PF_BAR4_WRITE:
+            pcie_bar_store_data(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
+            break;
+          case CODE_READ_HOST:    /* CODE_READ_HOST resp */
+            read_host_notify_ok(pCmd);
+            break;
+
+          default:
+            std::cout << "unknow cmd." << std::endl;
+        }
+        nl_rv_buf.pop();
+        delete pCmd;
+        pCmd = nullptr;
+    }
+}
+
 void pcie_driver_t::task_doing()
 {
-  uint8_t *data = nullptr;
-  command_head_t *pCmd = NULL;
-  uint32_t value;
+  struct command_head_t *pCmd = (command_head_t*)NLMSG_DATA(mRecvBuffer);
 
   /* check PCIe init status. */
   if (unlikely(PCIE_OK != mStatus))
     return;
-  data = (uint8_t *)malloc(COMMAND_DATA_SIZE_MAX);
   std::cout << "driver transfer loop start." << std::endl;
   while (1) {
-    if (NETLINK_FAULT != recv()) {
-      pCmd = (command_head_t*)NLMSG_DATA(mRecvBuffer);
-      /*
-      std::cout << "recv cmd:"
-          << pCmd->code
-          << hex
-          << " addr:0x"
-          << pCmd->addr
-          << " len:0x"
-          << pCmd->len
-          << std::endl;
-      */
+    if (NETLINK_FAULT == recv()) {
+        printf("pcie wrapper recv data error: %s\n", strerror(errno));
+        continue;
+    }
+    /*
+    std::cout << "recv cmd:"
+        << pCmd->code
+        << hex
+        << " addr:0x"
+        << pCmd->addr
+        << " len:0x"
+        << pCmd->len
+        << std::endl;
+    */
 
-      switch (pCmd->code) {
-        case CODE_READ:
-          memset(data, 0, pCmd->len);
-          load_data(pCmd->addr, pCmd->len, data);
-          send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
-          usleep(1);
-          break;
-        case CODE_WRITE:
-          switch (pCmd->addr) {
-            case PCIE_CORE_RESET_ADDR:
-              value = *(uint32_t *)pCmd->data;
-              /* each bank in spike core_id is start at 0. */
-              mPSim->hart_reset(value);
-              break;
-
-            default:
-              store_data(pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
-          }
-          break;
-        case CODE_PF_BAR0_READ:
-        case CODE_PF_BAR2_READ:
-        case CODE_PF_BAR4_READ:
-          memset(data, 0, pCmd->len);
-          pcie_bar_read(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, data);
-          send_nl_read_resp(pCmd->addr, data, pCmd->len, pCmd->code);
-          break;
-        case CODE_PF_BAR0_WRITE:
-        case CODE_PF_BAR2_WRITE:
-        case CODE_PF_BAR4_WRITE:
-          pcie_bar_store_data(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
-          break;
-        case CODE_READ_HOST:    /* CODE_READ_HOST resp */
-          read_host_notify_ok(pCmd);
-          break;
-
-        default:
-          std::cout << "unknow cmd." << std::endl;
-      }
+    /* CODE_READ_HOST resp */
+    if (CODE_READ_HOST == pCmd->code) {
+        read_host_notify_ok(pCmd);
+    } else {
+        struct command_head_t *cmd_data = new struct command_head_t;
+        memcpy(cmd_data, pCmd, sizeof(struct command_head_t)-COMMAND_DATA_SIZE_MAX+pCmd->len);
+        nl_rv_buf.push(cmd_data);
     }
   }
 

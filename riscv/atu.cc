@@ -6,7 +6,7 @@
 
 using namespace std;
 
-#define IPA_DEBUG
+// #define IPA_DEBUG
 
 /* npc atu， 每个proc包含一个,根据 procid 解析 ini 配置 */
 atu_t::atu_t(const char *atuini, int procid, enum atu_type_t type) : procid(procid)

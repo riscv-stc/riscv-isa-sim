@@ -54,6 +54,7 @@ public:
     virtual int get_groupID_from_coreID(int coreid) = 0;
 
     virtual void a53_step(void) = 0;
+    virtual void pcie_step(void) = 0;
 };
 
 #endif
