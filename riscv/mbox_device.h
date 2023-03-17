@@ -22,6 +22,7 @@ class mbox_device_t : public abstract_device_t {
  protected:
   uint8_t reg_base[4096];
   std::queue<uint64_t> rx_fifo;   /* 16x64-bit */
+  std::mutex store_mutex;
     
  private:
   simif_t *sim = nullptr;
