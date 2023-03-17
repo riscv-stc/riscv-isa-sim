@@ -66,6 +66,7 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         return false;
     }
 
+    store_mutex.lock();
     switch(addr) {
     case MBOX_TX_CFG:
     case MBOX_TX_CFG+4:
@@ -131,6 +132,7 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memcpy(reg_base+addr, bytes, len);
         break;
     }
+    store_mutex.unlock();
 
     return true;
 }
