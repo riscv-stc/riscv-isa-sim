@@ -597,7 +597,6 @@ void pcie_driver_t::dma_recv_fun(void)
 
         /* CODE_READ_HOST resp */
         if (CODE_READ_HOST == pCmd->code) {
-            printf("__sxs dma recv cmd %x addr %x .\n", pCmd->code, pCmd->addr);
             read_host_notify_ok(pCmd);
         } 
     }
@@ -934,7 +933,6 @@ int pcie_dma_dev_t::write_host(uint64_t addr, uint8_t *data, int len)
   cmd.addr = addr;
   cmd.len = len;
   memcpy(cmd.data, data, len);
-  printf("__sxs dma send cmd %x addr %x .\n", cmd.code, cmd.addr);
   ret = pcie->dma_send((const uint8_t *)&cmd, PCIE_COMMAND_SEND_SIZE(cmd));
   if (0 < ret)
     return 0;

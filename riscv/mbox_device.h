@@ -8,9 +8,17 @@
 #include "simif.h"
 
 #define MBOX_RXFIFO_DEPTH       16  /* 16x64-bit */
+
+enum mbox_identify_t {
+    NP_MBOX,
+    N2AP_MBOX,
+    P2AP_MBOX,
+    PCIE_MBOX
+};
+
 class mbox_device_t : public abstract_device_t {
  public:
-  mbox_device_t(simif_t *simif);
+  mbox_device_t(simif_t *simif, mbox_identify_t type);
   ~mbox_device_t();
 
   bool load(reg_t addr, size_t len, uint8_t* bytes);
@@ -23,6 +31,7 @@ class mbox_device_t : public abstract_device_t {
   uint8_t reg_base[4096];
   std::queue<uint64_t> rx_fifo;   /* 16x64-bit */
   std::mutex store_mutex;
+  mbox_identify_t mbox_type;
     
  private:
   simif_t *sim = nullptr;

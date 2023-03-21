@@ -5,7 +5,7 @@
 #include "pcie_driver.h"
 #include "mbox_device.h"
 
-mbox_device_t::mbox_device_t(simif_t *simif) : sim(simif)
+mbox_device_t::mbox_device_t(simif_t *simif, mbox_identify_t type) : sim(simif),mbox_type(type)
 {
 }
 
@@ -206,7 +206,7 @@ void mbox_device_t::irq_generate(bool dir)
 }
 
 np_mbox_t::np_mbox_t(simif_t *simif, misc_device_t *misc_dev) : 
-    sim(simif), misc(misc_dev), mbox_device_t(simif)
+    sim(simif), misc(misc_dev), mbox_device_t(simif, NP_MBOX)
 {
     reset();
 }
@@ -244,7 +244,7 @@ void np_mbox_t::irq_generate(bool dir)
 }
 
 pcie_mbox_t::pcie_mbox_t(simif_t *simif, pcie_driver_t *pcie_driver) : 
-    sim(simif), pcie(pcie_driver), mbox_device_t(simif)
+    sim(simif), pcie(pcie_driver), mbox_device_t(simif, PCIE_MBOX)
 {
     reset();
 }

@@ -13,7 +13,7 @@
 
 class ap_mbox_t : public mbox_device_t {
  public:
-  ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num, sys_irq_t *sys_irq);
+  ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num, sys_irq_t *sys_irq, mbox_identify_t type);
   ~ap_mbox_t();
 
   void reset(void);
