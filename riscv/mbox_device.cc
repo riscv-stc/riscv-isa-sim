@@ -45,6 +45,18 @@ bool mbox_device_t::load(reg_t addr, size_t len, uint8_t* bytes)
         }
         memcpy(bytes, &val64, len);
         break;
+    case MBOX_STATUS:
+    {
+        val32 = *(uint32_t*)(reg_base+addr);
+        val32 &= (~(0x1f << 16));
+        if (rx_fifo.size() >= 0x1f) {
+            val32 |= (0x1f << 16);
+        } else {
+            val32 |= ((rx_fifo.size() & 0x1f) << 16);
+        }
+        memcpy(bytes, &val32, len);
+    }
+        break;
     default:
         memcpy(bytes, reg_base+addr, len);
         break;
@@ -224,7 +236,7 @@ void np_mbox_t::reset(void)
 
     memset(reg_base, 0, size());
 
-    val = (1<<5) | (1<<6) | (0xf<<8) | (1<<13) | (1<<21);
+    val = (1<<5) | (1<<6) | (0x1f<<8) | (1<<13) | (1<<21);
     *(uint32_t*)(reg_base+MBOX_STATUS) = val;
 
     val = ~((uint32_t)0);
