@@ -198,8 +198,8 @@ void apifc_t::sqmsg_req_recv_handle(void)
     while(1) {
         struct command_head_t *cmd_data = new struct command_head_t;
         memset(cmd_data, 0, sizeof(*cmd_data));
-        // recv_type = SQ_MTYPE_Q2S_REQ(CODE_READ);
-        recv_type = 0;
+        /* 接收所有req消息， 不接收 rsp消息 */
+        recv_type = -(SQ_MTYPE_RES(0)-1);
         ret = sqmsg_spike_recv(recv_type, cmd_data);
         if (0 > ret) {
             perror("sqmsg_req_recv_handle msgrcv() ");
@@ -322,7 +322,10 @@ int apifc_t::generate_irq_to_a53(int irq, int dir)
     } else {
         *((int *)(cmd_data.data)) = cmd_data_clear_irq(irq);
     }
+
+    /* 发送中断并等待应答 */
     ret = sqmsg_spike_send(SQ_MTYPE_REQ(CODE_INTERRUPT), &cmd_data);
+    sqmsg_spike_recv(SQ_MTYPE_RES(CODE_INTERRUPT), &cmd_data);
 
     return (0 > ret) ? ret : 0;
 }
