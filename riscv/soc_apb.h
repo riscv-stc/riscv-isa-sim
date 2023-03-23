@@ -19,6 +19,7 @@
 #define SYSIRQ_CPU_IRQ_MASK_ADDR0               0x00    /* 0b1 屏蔽中断, 0b0不屏蔽 */
 #define SYSIRQ_CPU_IRQ_MASK_ADDR1               0x04
 #define SYSIRQ_CPU_IRQ_MASK_ADDR2               0x08
+#define SYSIRQ_CPU_IRQ_MASK_ADDR3               0x0c
 #define SYSIRQ_PCIE_IRQ_MASK_ADDR0              0x20
 #define SYSIRQ_BANK_SW_IRQ_IN_SET_ADDR          0x54    /* 0b1 在NPC产生中断 */
 #define SYSIRQ_BANK_NPC_SW_IRQ_LATCH_CLR_ADDR   0x58

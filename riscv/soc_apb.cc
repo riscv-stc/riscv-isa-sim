@@ -263,6 +263,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     /* A53中断mask, [29]:p2ap_mbox， [30]:n2ap_mbox， 0b0中断可以发送到A53 */
     case SYSIRQ_CPU_IRQ_MASK_ADDR1:     /* 0x04 */
     case SYSIRQ_CPU_IRQ_MASK_ADDR2:     /* 0x08 */
+    case SYSIRQ_CPU_IRQ_MASK_ADDR3:     /* 0x0c 没有添加功能, 只支持读写 */
     case SYSIRQ_PCIE_IRQ_MASK_ADDR0:
         memcpy((char *)reg_base + addr, bytes, len);
         break;
@@ -372,7 +373,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memcpy((char *)reg_base + addr, bytes, len);
         break;
     default:
-        printf("store addr sys_irq:0x%lx no support \r\n",addr);
+        printf("sys_irq store addr :0x%lx len %d no support \r\n",addr, len);
         throw trap_store_access_fault(false, addr, 0, 0);
         return false;
     }
