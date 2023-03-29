@@ -700,7 +700,7 @@ void sim_t::step(size_t n)
     }
 
     if (wfi_count == (int)nprocs())
-      usleep(10000);
+      usleep(50);
   }
 }
 
