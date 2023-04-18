@@ -218,6 +218,7 @@ private:
   freg_t get_freg(const std::vector<std::string>& args);
   reg_t get_mem(const std::vector<std::string>& args);
   reg_t get_pc(const std::vector<std::string>& args);
+  reg_t get_pc_by_id(int procid);
 
   friend class processor_t;
   friend class mmu_t;

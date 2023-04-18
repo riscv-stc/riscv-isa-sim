@@ -186,9 +186,28 @@ reg_t sim_t::get_pc(const std::vector<std::string>& args)
   return p->get_state()->pc;
 }
 
+reg_t sim_t::get_pc_by_id(int procid)
+{
+  if(procid >= (int)nprocs())
+    throw trap_interactive();
+
+  processor_t *p = get_core_by_id(procid);
+  return p->get_state()->pc;
+}
+
 void sim_t::interactive_pc(const std::string& cmd, const std::vector<std::string>& args)
 {
-  fprintf(stderr, "0x%016" PRIx64 "\n", get_pc(args));
+  if (0 == args.size()) {
+    for (int i = 0 ; i < (int)nprocs() ; i++) {
+      if (0 == (i%4)) {
+        fprintf(stderr, "\n npc%02d-%02d:", i, i+3);
+      }
+      fprintf(stderr, "  0x%016" PRIx64, get_pc_by_id(i));
+    }
+    fprintf(stderr, "\n");
+  } else {
+    fprintf(stderr, "0x%016" PRIx64 "\n", get_pc(args));
+  }
 }
 
 reg_t sim_t::get_reg(const std::vector<std::string>& args)
