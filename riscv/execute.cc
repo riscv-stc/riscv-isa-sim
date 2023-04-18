@@ -714,33 +714,28 @@ bool processor_t::slow_path()
 // fetch/decode/execute loop
 void processor_t::step(size_t n)
 {
-  if(this->in_disarm_reset_state)
-  {
-    this->reset();
-    return;
-  }
-  
   if (!state.debug_mode) {
     if (halt_request == HR_REGULAR) {
       enter_debug_mode(DCSR_CAUSE_DEBUGINT);
     } else if (halt_request == HR_GROUP) {
       enter_debug_mode(DCSR_CAUSE_GROUP);
-	   if (unlikely(state.wfi_flag && !state.async_started))
+	   if (unlikely(state.wfi_flag && is_async_idle()))
         state.wfi_flag = 0;
     } // !!!The halt bit in DCSR is deprecated.
     else if (state.dcsr.halt) {
       enter_debug_mode(DCSR_CAUSE_HALT);
-      if (unlikely(state.wfi_flag && !state.async_started))
+      if (unlikely(state.wfi_flag && is_async_idle()))
         state.wfi_flag = 0;
     }
   }
 
-  while (n > 0 && !this->in_reset_state) {
-    /* 处理a53发给spike的消息 */
-    get_sim()->a53_step();
-    /* 处理driver发过来的消息 */
-    get_sim()->pcie_step();
+  /* 处理a53发给spike的消息 */
+  get_sim()->a53_step();
+  /* 处理driver发过来的消息 */
+  get_sim()->pcie_step();
 
+  // while (n > 0 && !this->suspend) {
+  while (n > 0) {
     size_t instret = 0;
     reg_t pc = state.wfi_flag ? PC_SERIALIZE_WFI : state.pc;
     mmu_t* _mmu = mmu;
@@ -767,7 +762,8 @@ void processor_t::step(size_t n)
         reset();
         /* clear rst signal. */
         sim->clear_reset_signal(id);
-              std::cout<< "hart[" << id << "] will reset." << std::endl;
+        break;
+      } else if (unlikely(this->suspend)) {
         break;
       }
       /* check current core sync state, if current core is sync,
@@ -784,7 +780,7 @@ void processor_t::step(size_t n)
 
       /* if sync is started, let other core that not in sync to execute.
        * the core will not ack interrupt if it is in sync. */
-      if (unlikely(state.async_started))
+      if (unlikely(is_async_started()))
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
@@ -976,5 +972,10 @@ void processor_t::step(size_t n)
 
     state.minstret += instret;
     n -= instret;
+
+    /* 处理a53发给spike的消息 */
+    get_sim()->a53_step();
+    /* 处理driver发过来的消息 */
+    get_sim()->pcie_step();
   }
 }

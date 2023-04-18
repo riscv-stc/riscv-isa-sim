@@ -76,6 +76,12 @@ public:
   int coreid_to_idxinsim(int coreid);
   int get_groupID_from_coreID(int coreid) {return hwsync->get_groupID_from_coreID(coreid);}
 
+  void hart_core_reset(int id)
+  {
+    rst_mutex.lock();
+    core_reset_n |= ((1<<id)&0xffffffff);
+    rst_mutex.unlock();
+  }
   void hart_reset(reg_t hart_map) {
     rst_mutex.lock();
     core_reset_n = hart_map;

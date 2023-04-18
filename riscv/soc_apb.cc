@@ -85,33 +85,17 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 
     switch(addr) {
     case DECODER_BANK_NPC_MCU_RESET_ADDR_SET_ADDR:
-        this->set_reset_state(this->sim,bytes);
+        this->reset_req(this->sim, bytes);
         break;
     case DECODER_BANK_NPC_MCU_RESET_ADDR_CLR_ADDR:
-        this->set_disarm_reset_state(this->sim,bytes);
+        this->reset_clr(this->sim, bytes);
         break;
     case DECODER_SAFE_RESET_REQ_SET_ADDR:
-        for(int i = 0 ;i < 32;i ++)
-        {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
-            && (i/8 == 1 || i/8 == 3)) 
-                this->set_processor_reset(this->sim,(i/16)*2*8+(i%8));
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
-            && (i/8 == 1 || i/8 == 3)) 
-                this->set_processor_reset(this->sim,8+(i/16)*2*8+(i%8));
-        }
+        this->safereset_req(this->sim, bytes);
         memcpy((char *)reg_base + addr, bytes, len);
         break;
     case DECODER_SAFE_RESET_REQ_CLR_ADDR:
-        for(int i = 0 ;i < 32;i ++)
-        {
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
-            && (i/8 == 1 || i/8 == 3)) 
-                this->set_processor_disarm_reset(this->sim,(i/16)*2*8+(i%8));
-            if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
-            && (i/8 == 1 || i/8 == 3)) 
-                this->set_processor_disarm_reset(this->sim,8+(i/16)*2*8+(i%8));
-        }
+        this->safereset_clr(this->sim, bytes);
         memcpy((char *)reg_base + addr, bytes, len);
         break;
     case DECODER_SOC_CHIP_NAME_ADDR:
@@ -128,20 +112,59 @@ bool sys_apb_decoder_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     return true;
 }
 
-void sys_apb_decoder_t::set_processor_reset(simif_t *sim, int processor_id)
+void sys_apb_decoder_t::npc_reset_req(simif_t *sim, int processor_id)
 {
-    sim->get_core_by_idxinsim(processor_id)->set_reset_state(true);
+    sim->get_core_by_idxinsim(processor_id)->reset_req();
 }
 
-void sys_apb_decoder_t::set_processor_disarm_reset(simif_t *sim, int processor_id)
+void sys_apb_decoder_t::npc_safereset_clr(simif_t *sim, int processor_id)
 {
-    sim->get_core_by_idxinsim(processor_id)->set_disarm_reset_state(true);
-    int group_id = sim->get_groupID_from_coreID(processor_id);
+    sim->get_core_by_idxinsim(processor_id)->safereset_clr();
+    sim->hart_core_reset(processor_id);
+}
+
+void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
+{
+    for(int i = 0 ;i < 32;i ++)
+    {
+        if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
+        && (i/8 == 1 || i/8 == 3)) {
+            this->npc_reset_req(this->sim,(i/16)*2*8+(i%8));
+        }
+        if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
+        && (i/8 == 1 || i/8 == 3)) {
+            this->npc_reset_req(this->sim,8+(i/16)*2*8+(i%8));
+        }
+    }
+}
+
+void sys_apb_decoder_t::safereset_clr(simif_t *sim, const uint8_t *bytes)
+{
+    int proc_id = 0;
+
+    for(int i = 0 ;i < 32;i ++)
+    {
+        if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
+        && (i/8 == 1 || i/8 == 3))  {
+
+            proc_id = (i/16)*2*8+(i%8);
+            this->npc_safereset_clr(this->sim, proc_id);
+        }
+        if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
+        && (i/8 == 1 || i/8 == 3)) {
+
+            proc_id = 8+(i/16)*2*8+(i%8);
+            this->npc_safereset_clr(this->sim,proc_id);
+        }
+    }
+
+    /* 清除npc所在sync grp的状态 */
+    int group_id = sim->get_groupID_from_coreID(proc_id);
     int data = (1<<31) + (1<<group_id);
     sim->mmio_store(HWSYNC_START + HS_SW_SYNC_REQ_CLR_OFFSET, 4, (uint8_t*)&data);
 }
 
-void sys_apb_decoder_t::set_reset_state(simif_t *sim, const uint8_t *flag)
+void sys_apb_decoder_t::reset_req(simif_t *sim, const uint8_t *flag)
 {
     if(this->position == direction::WEST)
     {
@@ -151,13 +174,13 @@ void sys_apb_decoder_t::set_reset_state(simif_t *sim, const uint8_t *flag)
         {
             bool perform = getBitValue(bank0_flag, i);
             if(perform)
-                set_processor_reset(sim,i);
+                npc_reset_req(sim,i);
         }
         for(int i = 0; i < 8; i++)
         {
             bool perform = getBitValue(bank2_flag, i);
             if(perform)
-                set_processor_reset(sim,2 * 8 + i);
+                npc_reset_req(sim,2 * 8 + i);
         }
     }
     else
@@ -168,18 +191,18 @@ void sys_apb_decoder_t::set_reset_state(simif_t *sim, const uint8_t *flag)
         {
             bool perform = getBitValue(bank1_flag, i);
             if(perform)
-                set_processor_reset(sim,8 + i);
+                npc_reset_req(sim,8 + i);
         }
         for(int i = 0; i < 8; i++)
         {
             bool perform = getBitValue(bank3_flag, i);
             if(perform)
-                set_processor_reset(sim,3 * 8 + i);
+                npc_reset_req(sim,3 * 8 + i);
         }
     }
 }
 
-void sys_apb_decoder_t::set_disarm_reset_state(simif_t *sim,const uint8_t *flag)
+void sys_apb_decoder_t::reset_clr(simif_t *sim,const uint8_t *flag)
 {
     if(this->position == direction::WEST)
     {
@@ -189,13 +212,13 @@ void sys_apb_decoder_t::set_disarm_reset_state(simif_t *sim,const uint8_t *flag)
         {
             bool perform = getBitValue(bank0_flag, i);
             if(perform)
-                set_processor_disarm_reset(sim,i);
+                npc_safereset_clr(sim,i);
         }
         for(int i = 0; i < 8; i++)
         {
             bool perform = getBitValue(bank2_flag, i);
             if(perform)
-                set_processor_disarm_reset(sim,2 * 8 + i);
+                npc_safereset_clr(sim,2 * 8 + i);
         }
     }
     else
@@ -206,13 +229,13 @@ void sys_apb_decoder_t::set_disarm_reset_state(simif_t *sim,const uint8_t *flag)
         {
             bool perform = getBitValue(bank1_flag, i);
             if(perform)
-                set_processor_disarm_reset(sim,8 + i);
+                npc_safereset_clr(sim,8 + i);
         }
         for(int i = 0; i < 8; i++)
         {
             bool perform = getBitValue(bank3_flag, i);
             if(perform)
-                set_processor_disarm_reset(sim,3 * 8 + i);
+                npc_safereset_clr(sim,3 * 8 + i);
         }
     }
 }

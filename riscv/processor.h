@@ -160,6 +160,12 @@ struct type_sew_t<64>
   using type=int64_t;
 };
 
+enum sync_stat_t {
+  SYNC_IDLE,
+  SYNC_STARTED,
+  SYNC_FINISH
+};
+
 // architectural state of a RISC-V hart
 struct state_t
 {
@@ -356,7 +362,7 @@ struct state_t
   reg_t uepc;
   reg_t uip;
 
-  bool async_started = false;
+  sync_stat_t sync_stat = SYNC_IDLE;
   bool pld = false;
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
@@ -543,7 +549,9 @@ public:
   void run_async(std::function<void()> func);
   void run_async(std::function<void()> func, bool flag);
   bool async_done();
-  bool async_state() { return state.async_started; };
+  bool is_async_started() {return (SYNC_STARTED==state.sync_stat); };
+  bool is_async_idle() {return (SYNC_IDLE==state.sync_stat); };
+
   uint64_t get_host_clks(void) {
   #if defined (__i386__)
     uint64_t x;
@@ -665,8 +673,15 @@ public:
 
   void set_pma_num(reg_t pma_num);
 
-  void set_reset_state(bool val){this->in_reset_state = val;}
-  void set_disarm_reset_state(bool val){this->in_disarm_reset_state = val;}
+  void reset_req(void){this->suspend = true;}
+  void safereset_clr(void)
+  {
+    state.sync_stat = SYNC_IDLE;
+    async_function = nullptr;
+    async_trap = nullptr;
+
+    suspend = false;
+  }
 
   const char* get_symbol(uint64_t addr);
 
@@ -720,8 +735,7 @@ private:
   bool async_running;
   bool exit_request;
 
-  bool in_reset_state;
-  bool in_disarm_reset_state;
+  volatile bool suspend;
 
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];

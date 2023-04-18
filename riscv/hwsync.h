@@ -39,6 +39,7 @@ void free_set(T* point)
 class hwsync_t : public abstract_device_t
 {
 private:
+  simif_t *sim;
   uint32_t *sync_masks = nullptr;  /* sync_masks[0]-sync_masks[15]共16个sync组, 为0的bit对应的核在同一个sync组， 默认值{0xffffffff} */
   uint32_t *sync_status = nullptr; /* core_n开始sync时第n位清零，sync结束重新, 初始值0x0000 */
   uint32_t *group_valid = nullptr;
@@ -59,7 +60,6 @@ private:
       setBitValue(*dst, dst_start + i, getBitValue(*src, src_start + i));
     }
   }
-  
 
   std::mutex mutex_sync;
   std::mutex mutex_pld;
@@ -70,7 +70,7 @@ private:
   uint32_t *hs_sync_timer_cnt; /* 为每个核分配一个sync timer(硬件只有一个timer) */
 
 public:
-  hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num);
+  hwsync_t(simif_t *sim, char *hwsync_masks, uint32_t hwsync_timer_num);
   virtual ~hwsync_t();
 
   bool enter(unsigned core_id);

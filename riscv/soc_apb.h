@@ -73,11 +73,15 @@ public:
     bool store(reg_t addr, size_t len, const uint8_t* bytes);
     size_t size() { return SYS_APB_DECODER_SIZE; }
     void set_position(direction position){this->position=position;}
-    void set_processor_reset(simif_t *sim, int processor_id);
-    void set_processor_disarm_reset(simif_t *sim, int processor_id);
-    void set_reset_state(simif_t *sim, const uint8_t *flag);
-    void set_disarm_reset_state(simif_t *sim,const uint8_t *flag);
+
+    void reset_req(simif_t *sim, const uint8_t *flag);
+    void reset_clr(simif_t *sim,const uint8_t *flag);
+    void npc_reset_req(simif_t *sim, int processor_id);
     
+    void safereset_req(simif_t *sim, const uint8_t *bytes);
+    void safereset_clr(simif_t *sim,const uint8_t *bytes);
+    void npc_safereset_clr(simif_t *sim, int processor_id);
+
 private:
     uint64_t base = 0x00;
     uint8_t *reg_base = nullptr;

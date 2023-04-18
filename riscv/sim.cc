@@ -103,7 +103,7 @@ die_id(die_id),
         }
         sprintf(hwsync_masks,"0x%x",masks);
     }
-    hwsync = new hwsync_t(hwsync_masks, hwsync_timer_num);
+    hwsync = new hwsync_t(this, hwsync_masks, hwsync_timer_num);
     glb_bus.add_device(HWSYNC_START, hwsync);
 
     glb_bus.add_device(SRAM_START, new mem_t(SRAM_SIZE));
@@ -695,7 +695,7 @@ void sim_t::step(size_t n)
     int wfi_count = 0;
     for (size_t p = 0; p < nprocs(); p++) {
       auto state = get_core_by_idxinsim(p)->get_state();
-      if (state->wfi_flag && !state->async_started)
+      if (state->wfi_flag && get_core_by_idxinsim(p)->is_async_idle())
         wfi_count++;
     }
 

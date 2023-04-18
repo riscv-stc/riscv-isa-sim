@@ -12,8 +12,8 @@
 
 // #define DEBUG
 
-hwsync_t::hwsync_t(char *hwsync_masks, uint32_t hwsync_timer_num) : group_count(16),
-                                                                    core_num(32), hwsync_mem_size(512)
+hwsync_t::hwsync_t(simif_t *sim, char *hwsync_masks, uint32_t hwsync_timer_num) 
+    : sim(sim), group_count(16), core_num(32), hwsync_mem_size(512)
 {
     hwsync_base_addr = new uint8_t[HWSYNC_SIZE];
     memset(hwsync_base_addr, 0, HWSYNC_SIZE);
@@ -286,8 +286,45 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
             {
                 if (getBitValue(data, group_id) == 1)
                 {
+                    /* 清sync前, 确保已经发起sync的npc都处于 group_locks.wait(),而不是处于线程/函数上下文 */
+                    for (int i = 0 ; i < 32 ; i++) {
+                        if (0 == ((sync_masks[group_id]>>i)&0x01)) {
+                            while(1) {
+                                bool npc_sync_start = false;
+                                bool sync_set_req  = false;
+                                {
+                                std::unique_lock<std::mutex> lock(mutex_sync);
+                                npc_sync_start = sim->get_core_by_idxinsim(i)->is_async_started();
+                                sync_set_req = getBitValue(*sync_status, i);
+                                }
+                                if (npc_sync_start && !sync_set_req) {
+                                    usleep(1000);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     *sync_status &= sync_masks[group_id];
                     group_locks[group_id].notify_all();
+
+                    /*等待 执行sync的npc由SYNC_STARTED进入SYNC_FINISH状态 */
+                    for (int i = 0 ; i < 32 ; i++) {
+                        if (0 == ((sync_masks[group_id]>>i)&0x01)) {
+                            while(1) {
+                                bool npc_sync_start = false;
+                                {
+                                std::unique_lock<std::mutex> lock(mutex_sync);
+                                npc_sync_start = sim->get_core_by_idxinsim(i)->is_async_started();
+                                }
+                                if (npc_sync_start) {
+                                    usleep(1000);
+                                } else {    /* SYNC_IDLE / SYNC_FINISH */
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
