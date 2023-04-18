@@ -125,17 +125,26 @@ void sys_apb_decoder_t::npc_safereset_clr(simif_t *sim, int processor_id)
 
 void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
 {
+    int proc_id = 0;
+
     for(int i = 0 ;i < 32;i ++)
     {
         if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
         && (i/8 == 1 || i/8 == 3)) {
-            this->npc_reset_req(this->sim,(i/16)*2*8+(i%8));
+            proc_id = (i/16)*2*8+(i%8);
+            this->npc_reset_req(this->sim, proc_id);
         }
         if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
         && (i/8 == 1 || i/8 == 3)) {
-            this->npc_reset_req(this->sim,8+(i/16)*2*8+(i%8));
+            proc_id = 8+(i/16)*2*8+(i%8);
+            this->npc_reset_req(this->sim, proc_id);
         }
     }
+
+    /* 清除npc所在sync grp的状态 */
+    int group_id = sim->get_groupID_from_coreID(proc_id);
+    int data = (1<<31) + (1<<group_id);
+    sim->mmio_store(HWSYNC_START + HS_SW_SYNC_REQ_CLR_OFFSET, 4, (uint8_t*)&data);
 }
 
 void sys_apb_decoder_t::safereset_clr(simif_t *sim, const uint8_t *bytes)
@@ -157,11 +166,6 @@ void sys_apb_decoder_t::safereset_clr(simif_t *sim, const uint8_t *bytes)
             this->npc_safereset_clr(this->sim,proc_id);
         }
     }
-
-    /* 清除npc所在sync grp的状态 */
-    int group_id = sim->get_groupID_from_coreID(proc_id);
-    int data = (1<<31) + (1<<group_id);
-    sim->mmio_store(HWSYNC_START + HS_SW_SYNC_REQ_CLR_OFFSET, 4, (uint8_t*)&data);
 }
 
 void sys_apb_decoder_t::reset_req(simif_t *sim, const uint8_t *flag)
