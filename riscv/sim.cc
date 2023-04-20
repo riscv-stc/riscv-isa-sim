@@ -695,7 +695,7 @@ void sim_t::step(size_t n)
     int wfi_count = 0;
     for (size_t p = 0; p < nprocs(); p++) {
       auto state = get_core_by_idxinsim(p)->get_state();
-      if (state->wfi_flag && get_core_by_idxinsim(p)->is_async_idle())
+      if (state->wfi_flag && get_core_by_idxinsim(p)->is_sync_idle())
         wfi_count++;
     }
 

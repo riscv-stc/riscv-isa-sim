@@ -166,6 +166,12 @@ enum sync_stat_t {
   SYNC_FINISH
 };
 
+enum pld_stat_t {
+  PLD_IDLE,
+  PLD_STARTED,
+  PLD_FINISH
+};
+
 // architectural state of a RISC-V hart
 struct state_t
 {
@@ -363,7 +369,7 @@ struct state_t
   reg_t uip;
 
   sync_stat_t sync_stat = SYNC_IDLE;
-  bool pld = false;
+  pld_stat_t pld = PLD_IDLE;
   // When true, execute a single instruction and then enter debug mode.  This
   // can only be set by executing dret.
   enum {
@@ -549,8 +555,9 @@ public:
   void run_async(std::function<void()> func);
   void run_async(std::function<void()> func, bool flag);
   bool async_done();
-  bool is_async_started() {return (SYNC_STARTED==state.sync_stat); };
-  bool is_async_idle() {return (SYNC_IDLE==state.sync_stat); };
+  bool is_sync_started() {return ((SYNC_STARTED==state.sync_stat) && (PLD_STARTED!=state.pld)); };
+  bool is_sync_idle() {return (SYNC_IDLE==state.sync_stat); };
+  bool is_pld_started() {return PLD_STARTED==state.pld;};
 
   uint64_t get_host_clks(void) {
   #if defined (__i386__)

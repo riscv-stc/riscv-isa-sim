@@ -103,6 +103,10 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
 
       async_function = nullptr;
       state.sync_stat = SYNC_FINISH;
+
+      if (PLD_STARTED == state.pld) {
+        state.pld = PLD_FINISH;
+      }
     }
   });
 }
@@ -372,7 +376,7 @@ void processor_t::parse_isa_string(const char* str)
 void state_t::reset(reg_t max_isa)
 {
   sync_stat_t async_status = SYNC_IDLE;
-  if (sync_stat && (!pld))
+  if (sync_stat && (PLD_IDLE==pld))
     async_status = sync_stat;
 
   wfi_flag = 0;
@@ -540,10 +544,9 @@ void processor_t::enable_log_commits()
 
 void processor_t::reset()
 {
-  bool pld = state.pld;
-  if (pld) {
+  if (PLD_STARTED == state.pld) {
     if (hwsync)
-      hwsync->reset(id);
+      hwsync->pld_clr(id);
   }
 
   suspend = false;
@@ -2770,6 +2773,7 @@ void processor_t::sync() {
 }
 
 void processor_t::pld(uint32_t coremap) {
+  /* 这里利用hwsync的方法实现同步, 硬件上两者不相关 */
   hwsync->enter(id, coremap);
 }
 uint32_t processor_t::get_hwsync_status()
@@ -2793,7 +2797,9 @@ void processor_t::run_async(std::function<void()> func) {
 }
 
 void processor_t::run_async(std::function<void()> func, bool flag) {
-  state.pld = flag;
+  if (flag) {
+    state.pld = PLD_STARTED;
+  }
    run_async(func);
 }
 
@@ -2802,8 +2808,8 @@ bool processor_t::async_done() {
     if (async_function == nullptr) {
       state.sync_stat = SYNC_IDLE;
       hwsync->hwsync_timer_clear(id);
-      if (state.pld) {
-          state.pld = false;
+      if (PLD_FINISH == state.pld) {
+          state.pld = PLD_IDLE;
           misc_dev->inst_done_cnt(MATCH_PLD);
       } else {
           misc_dev->inst_done_cnt(MATCH_SYNC);

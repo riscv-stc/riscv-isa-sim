@@ -719,12 +719,12 @@ void processor_t::step(size_t n)
       enter_debug_mode(DCSR_CAUSE_DEBUGINT);
     } else if (halt_request == HR_GROUP) {
       enter_debug_mode(DCSR_CAUSE_GROUP);
-	   if (unlikely(state.wfi_flag && is_async_idle()))
+	   if (unlikely(state.wfi_flag && is_sync_idle()))
         state.wfi_flag = 0;
     } // !!!The halt bit in DCSR is deprecated.
     else if (state.dcsr.halt) {
       enter_debug_mode(DCSR_CAUSE_HALT);
-      if (unlikely(state.wfi_flag && is_async_idle()))
+      if (unlikely(state.wfi_flag && is_sync_idle()))
         state.wfi_flag = 0;
     }
   }
@@ -780,7 +780,7 @@ void processor_t::step(size_t n)
 
       /* if sync is started, let other core that not in sync to execute.
        * the core will not ack interrupt if it is in sync. */
-      if (unlikely(is_async_started()))
+      if (unlikely(is_sync_started() || is_pld_started()))
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */

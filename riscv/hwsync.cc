@@ -24,6 +24,8 @@ hwsync_t::hwsync_t(simif_t *sim, char *hwsync_masks, uint32_t hwsync_timer_num)
     group_locks = new std::condition_variable_any[group_count];
 
     hwsync_ptr = hwsync_base_addr;
+
+    /* 硬件上pld有专用的同步方法,和hs没有关联, 这里借用了hs的同步方法 */
     req_pld = new uint32_t(~0);
 
     hs_sync_timer_num = new uint32_t(0);
@@ -143,6 +145,38 @@ bool hwsync_t::enter(unsigned core_id, uint32_t coremap)
 #endif
 
     return true;
+}
+
+void hwsync_t::pld_clr(uint32_t id)
+{
+    bool req_bit_clred = false;
+    if (sim->get_core_by_idxinsim(id)->is_pld_started()) {
+
+        while(1) {
+            {
+            std::unique_lock<std::mutex> lock(mutex_pld);
+            req_bit_clred = (0 == (*req_pld & (1<<id)));
+            }
+            if (req_bit_clred) {
+                break;
+            } else {
+                printf("npc%d wait pld step1 \n", id);
+                usleep(1000);
+            }
+        }
+
+        {
+        std::unique_lock<std::mutex> lock(mutex_pld);
+        *req_pld |= (0x1 << id);
+        cond_pld.notify_all();
+        }
+
+        /* while !finish */
+        while(sim->get_core_by_idxinsim(id)->is_pld_started()) {
+            printf("npc%d wait pld step2 \n", id);
+            usleep(1000);
+        }
+    }
 }
 
 bool hwsync_t::is_group_all_sync(int group_id)
@@ -294,7 +328,7 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
                                 bool sync_set_req  = false;
                                 {
                                 std::unique_lock<std::mutex> lock(mutex_sync);
-                                npc_sync_start = sim->get_core_by_idxinsim(i)->is_async_started();
+                                npc_sync_start = sim->get_core_by_idxinsim(i)->is_sync_started();
                                 sync_set_req = getBitValue(*sync_status, i);
                                 }
                                 if (npc_sync_start && !sync_set_req) {
@@ -312,12 +346,7 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
                     for (int i = 0 ; i < 32 ; i++) {
                         if (0 == ((sync_masks[group_id]>>i)&0x01)) {
                             while(1) {
-                                bool npc_sync_start = false;
-                                {
-                                std::unique_lock<std::mutex> lock(mutex_sync);
-                                npc_sync_start = sim->get_core_by_idxinsim(i)->is_async_started();
-                                }
-                                if (npc_sync_start) {
+                                if (sim->get_core_by_idxinsim(i)->is_sync_started()) {
                                     usleep(1000);
                                 } else {    /* SYNC_IDLE / SYNC_FINISH */
                                     break;

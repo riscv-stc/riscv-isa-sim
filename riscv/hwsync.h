@@ -85,6 +85,8 @@ public:
   void hwsync_timer_cnts_add(int coreid, uint32_t clks);
   void hwsync_timer_clear(int coreid);
   void hwsync_clear(void);
+  void pld_clr(unsigned core_id);
+
   uint32_t get_hwsync_timer_cnts(int coreid);
   uint32_t get_hwsync() { return ~(*sync_status); }
   uint32_t get_pld() {return *req_pld;}
@@ -93,11 +95,6 @@ public:
     return (hs_sync_timer_num) ? *hs_sync_timer_num : 0xffffffff;
   };
   uint32_t get_groupID_from_coreID(uint32_t core_id);
-  void reset(uint32_t id)
-  {
-    *req_pld |= (0x1 << id);
-    cond_pld.notify_all();
-  }
   size_t size(void) { return HWSYNC_SIZE; };
 };
 
