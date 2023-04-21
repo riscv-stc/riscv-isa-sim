@@ -103,10 +103,11 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
 
       async_function = nullptr;
       state.sync_stat = SYNC_FINISH;
-
+#if 0
       if (PLD_STARTED == state.pld) {
         state.pld = PLD_FINISH;
       }
+#endif
     }
   });
 }

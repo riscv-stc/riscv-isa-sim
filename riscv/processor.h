@@ -505,6 +505,7 @@ public:
   bankif_t* get_bank() { return bank; };
   uint32_t get_hwsync_status();
   uint32_t get_pld_status();
+  void set_pld_finish(void) {state.pld = PLD_FINISH;};
   uint32_t get_idxinbank() {return idxinbank; };
   uint32_t get_bank_id() {return bank_id;};
   uint32_t get_id() {return id; };
@@ -558,6 +559,7 @@ public:
   bool is_sync_started() {return ((SYNC_STARTED==state.sync_stat) && (PLD_STARTED!=state.pld)); };
   bool is_sync_idle() {return (SYNC_IDLE==state.sync_stat); };
   bool is_pld_started() {return PLD_STARTED==state.pld;};
+  bool is_pld_idle() {return PLD_IDLE==state.pld;};
 
   uint64_t get_host_clks(void) {
   #if defined (__i386__)

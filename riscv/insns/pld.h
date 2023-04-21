@@ -52,6 +52,7 @@ p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
 
   // do sync for pld
   p->pld(core_map);
+  p->set_pld_finish();
 
   #if 0
   //2020-01-04: the bit of current core is no need to set but the data will send

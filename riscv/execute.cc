@@ -780,7 +780,7 @@ void processor_t::step(size_t n)
 
       /* if sync is started, let other core that not in sync to execute.
        * the core will not ack interrupt if it is in sync. */
-      if (unlikely(is_sync_started() || is_pld_started()))
+      if (unlikely(is_sync_started() || !is_pld_idle()))
 	      break;
       /* check interrupt status, if there is any interrupt occur,
        * deal with interrupt and clear wfi_flag if it is set, and wakeup current core. */
