@@ -49,6 +49,7 @@ public:
     virtual int get_idxinbank(int idxinsim) const = 0;
     virtual int get_id_first_bank(void) const = 0;
     virtual int coreid_to_idxinsim(int coreid) = 0;
+    virtual void npc_pld_clr(int coreid) = 0;
     virtual processor_t* get_core_by_idxinsim(int idxinsim) = 0;
 
     virtual sys_irq_t *get_sysirq(void) = 0;

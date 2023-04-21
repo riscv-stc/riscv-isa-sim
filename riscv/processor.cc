@@ -545,7 +545,7 @@ void processor_t::enable_log_commits()
 void processor_t::reset()
 {
   if (PLD_STARTED == state.pld) {
-    if (hwsync)
+    if (hwsync) 
       hwsync->pld_clr(id);
   }
 

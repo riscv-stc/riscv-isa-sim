@@ -24,7 +24,7 @@ sys_apb_decoder_t::sys_apb_decoder_t(simif_t* sim,uint64_t base, uint8_t *reg_pt
 
     /* CHIP_NAME_ADDR，表征仿真平台包括哪些资源 */
     val32 = 0;
-    for (i = 0 ; i < sim->nbanks() ; i++) {
+    for (i = 0 ; i < int(sim->nbanks()) ; i++) {
         tmp = 0x03;     /* 支持该bank, 支持ddr */
         switch(sim->nprocs()/sim->nbanks()) {   /* 核心数 */
         case 2: tmp |= 1<<2; break;
@@ -132,11 +132,14 @@ void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
         if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST
         && (i/8 == 1 || i/8 == 3)) {
             proc_id = (i/16)*2*8+(i%8);
+            /* 硬件pld清除位于bank_misc */
+            sim->npc_pld_clr(proc_id);
             this->npc_reset_req(this->sim, proc_id);
         }
         if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::EAST
         && (i/8 == 1 || i/8 == 3)) {
             proc_id = 8+(i/16)*2*8+(i%8);
+            sim->npc_pld_clr(proc_id);
             this->npc_reset_req(this->sim, proc_id);
         }
     }
@@ -400,7 +403,7 @@ bool sys_irq_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         memcpy((char *)reg_base + addr, bytes, len);
         break;
     default:
-        printf("sys_irq store addr :0x%lx len %d no support \r\n",addr, len);
+        printf("sys_irq store addr :0x%lx len %ld no support \r\n",addr, len);
         throw trap_store_access_fault(false, addr, 0, 0);
         return false;
     }

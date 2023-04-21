@@ -130,15 +130,15 @@ bool hwsync_t::enter(unsigned core_id, uint32_t coremap)
     std::cout << "core" << core_id << ": start pld, coremap=" << coremap << std::endl;
 #endif
     std::unique_lock<std::mutex> lock(mutex_pld);
-    *req_pld &= ~(1 << core_id);
-    if ((*req_pld | ~coremap) == ~coremap)
+    (*req_pld) &= (~(1 << core_id));
+    if (((*req_pld) | (~coremap)) == ~coremap)
     {
         // all enter, clear enter requests
         *req_pld |= coremap;
         cond_pld.notify_all();
     }
     cond_pld.wait(lock, [&]
-                  { return (*req_pld & 1 << core_id) != 0; });
+                  { return ((*req_pld) & (1 << core_id)) != 0; });
 
 #ifdef DEBUG
     std::cout << "core" << core_id << ": end pld" << std::endl;
@@ -160,7 +160,7 @@ void hwsync_t::pld_clr(uint32_t id)
             if (req_bit_clred) {
                 break;
             } else {
-                printf("npc%d wait pld step1 \n", id);
+                printf("npc%d wait pld clr step1 \n", id);
                 usleep(1000);
             }
         }
@@ -172,8 +172,9 @@ void hwsync_t::pld_clr(uint32_t id)
         }
 
         /* while !finish */
+        usleep(1);
         while(sim->get_core_by_idxinsim(id)->is_pld_started()) {
-            printf("npc%d wait pld step2 \n", id);
+            printf("npc%d wait pld clr step2 \n", id);
             usleep(1000);
         }
     }
@@ -343,6 +344,7 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
                     group_locks[group_id].notify_all();
 
                     /*等待 执行sync的npc由SYNC_STARTED进入SYNC_FINISH状态 */
+                    usleep(1);
                     for (int i = 0 ; i < 32 ; i++) {
                         if (0 == ((sync_masks[group_id]>>i)&0x01)) {
                             while(1) {

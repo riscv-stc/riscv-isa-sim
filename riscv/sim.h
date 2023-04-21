@@ -75,6 +75,7 @@ public:
   int get_id_first_bank(void) const {return id_first_bank;};
   int coreid_to_idxinsim(int coreid);
   int get_groupID_from_coreID(int coreid) {return hwsync->get_groupID_from_coreID(coreid);}
+  void npc_pld_clr(int coreid) {hwsync->pld_clr(coreid);};
 
   void hart_core_reset(int id)
   {
