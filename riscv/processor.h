@@ -685,6 +685,8 @@ public:
   void reset_req(void){this->suspend = true;}
   void safereset_clr(void)
   {
+    state.pld = PLD_IDLE;
+
     state.sync_stat = SYNC_IDLE;
     async_function = nullptr;
     async_trap = nullptr;
