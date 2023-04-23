@@ -150,33 +150,37 @@ bool hwsync_t::enter(unsigned core_id, uint32_t coremap)
 void hwsync_t::pld_clr(uint32_t id)
 {
     bool req_bit_clred = false;
-    if (sim->get_core_by_idxinsim(id)->is_pld_started()) {
 
-        while(1) {
-            {
-            std::unique_lock<std::mutex> lock(mutex_pld);
-            req_bit_clred = (0 == (*req_pld & (1<<id)));
-            }
-            if (req_bit_clred) {
-                break;
-            } else {
-                printf("npc%d wait pld clr step1 \n", id);
-                usleep(1000);
-            }
-        }
+    if (!sim->get_core_by_idxinsim(id)->is_pld_started()) {
+        return ;
+    }
 
+    /* 等待执行pld的核进入 cond_pld.wait */
+    while(sim->get_core_by_idxinsim(id)->is_pld_started()) {
         {
+        std::unique_lock<std::mutex> lock(mutex_pld);
+        req_bit_clred = (0 == (*req_pld & (1<<id)));
+        }
+        if (req_bit_clred) {
+            break;
+        } else {
+            printf("npc%d wait pld clr step1 \n", id);
+            usleep(1000);
+        }
+    }
+
+    /* 释放 */
+    {
         std::unique_lock<std::mutex> lock(mutex_pld);
         *req_pld |= (0x1 << id);
         cond_pld.notify_all();
-        }
+    }
 
-        /* while !finish */
-        usleep(1);
-        while(sim->get_core_by_idxinsim(id)->is_pld_started()) {
-            printf("npc%d wait pld clr step2 \n", id);
-            usleep(1000);
-        }
+    /* 等待进入 PLD_FINISH 状态 */
+    usleep(1);
+    while(sim->get_core_by_idxinsim(id)->is_pld_started()) {
+        printf("npc%d wait pld clr step2 \n", id);
+        usleep(1000);
     }
 }
 
