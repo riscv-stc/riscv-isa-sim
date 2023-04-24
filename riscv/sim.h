@@ -76,6 +76,7 @@ public:
   int coreid_to_idxinsim(int coreid);
   int get_groupID_from_coreID(int coreid) {return hwsync->get_groupID_from_coreID(coreid);}
   void npc_pld_clr(int coreid) {hwsync->pld_clr(coreid);};
+  void hpe_debug_backdoor(void);
 
   void hart_core_reset(int id)
   {

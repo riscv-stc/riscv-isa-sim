@@ -275,7 +275,7 @@ sim_t::~sim_t()
         pcie_driver = nullptr;
     }
     
-    for (int i = 0 ; i < sizeof(bank_misc)/sizeof(bank_misc[0]) ; i++) {
+    for (int i = 0 ; i < (int)(sizeof(bank_misc)/sizeof(bank_misc[0])) ; i++) {
       if (bank_misc[i]) {
         delete bank_misc[i];
         bank_misc[i] = nullptr;
@@ -283,6 +283,40 @@ sim_t::~sim_t()
     }
 
     delete debug_mmu;
+}
+
+void sim_t::hpe_debug_backdoor(void)
+{
+    int len = 4;
+    uint32_t addr = 0;
+    uint32_t val = 0;
+
+    {
+    printf("/\n***** hs *****/\n");
+    len = 4;
+    addr = 0xd3e80000;
+    mmio_load( addr, len, (uint8_t*)(&val));
+    printf("grp0:%x \t", val);
+
+    addr = 0xd3e80004;
+    mmio_load( addr, len, (uint8_t*)(&val));
+    printf("grp1:%x \t", val);
+
+    addr = 0xd3e80050;
+    mmio_load( addr, len, (uint8_t*)(&val));
+    printf("stat:%x \n", val);
+    }
+
+    {
+      printf("\n/***** npc *****/\n");
+      uint64_t pc = 0;
+      int sync_stat = 0;
+      for (int i = 0 ; i < (int)nprocs() ; i++) {
+        state_t *stat = get_core_by_id(i)->get_state();
+        printf("npc%2d:\t pc:%lx\t sync_stat:%d\t pld_stat:%d \n",
+           i, stat->pc, (int)stat->sync_stat, (int)stat->pld);
+      }
+    }
 }
 
 void sim_thread_main(void* arg)

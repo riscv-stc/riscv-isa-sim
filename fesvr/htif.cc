@@ -35,6 +35,8 @@
 
 static volatile bool signal_exit = false;
 static volatile bool signal_dump = false;
+
+static volatile bool hpe_dump = false;
 static void handle_signal(int sig)
 {
   if (sig == SIGABRT || signal_exit) // someone set up us the bomb!
@@ -48,6 +50,11 @@ static void handle_dump_signal(int sig)
   signal_dump = true;
 }
 
+void hpe_debug(int sig)
+{
+    hpe_dump = true;
+}
+
 htif_t::htif_t()
   : mem(this), entry(DRAM_BASE), sig_addr(0), sig_len(0),
     tohost_addr(0), fromhost_addr(0), exitcode(0), stopped(false),
@@ -58,6 +65,7 @@ htif_t::htif_t()
   signal(SIGABRT, &handle_signal); // we still want to call static destructors
 
   signal(SIGUSR1, &handle_dump_signal);
+  signal(SIGUSR2, &hpe_debug);
 }
 
 htif_t::htif_t(int argc, char** argv) : htif_t()
@@ -326,6 +334,10 @@ int htif_t::run()
   if (tohost_addr == 0) {
     while (true) {
       idle();
+      if (hpe_dump) {
+          simif->hpe_debug_backdoor();
+          hpe_dump = false;
+      }
       if (signal_dump) {
         dump_mems();
         signal_dump = false;
