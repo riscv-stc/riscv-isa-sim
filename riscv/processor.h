@@ -693,6 +693,7 @@ public:
 
     suspend = false;
   }
+  bool is_suspend(void) {return suspend;};
 
   const char* get_symbol(uint64_t addr);
 
