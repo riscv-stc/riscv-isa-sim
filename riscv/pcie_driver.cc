@@ -1184,6 +1184,10 @@ uint64_t axi_master_common_t::pf_bar2_axi_addr(uint32_t bar_offset)
   const struct axi_map_t pf_bar2_remapper[] = {
     {0xc4000000, SOC_APB_BASE,        0x80000},
     {0xc4080000, HWSYNC_START,        0x80000},
+    {0xc4108000, BANK0_MISC,          0x1000},
+    {0xc4109000, BANK1_MISC,          0x1000},
+    {0xc410a000, BANK2_MISC,          0x1000},
+    {0xc410b000, BANK3_MISC,          0x1000},
     {0xc410c000, P2AP_MBOX_LOC_BASE,  0x1000},
     {0xc410d000, N2AP_MBOX_LOC_BASE,  0x1000},
     {0xc4800000, SYSDMA0_BASE,        0x10000},
