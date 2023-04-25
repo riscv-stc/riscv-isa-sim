@@ -126,6 +126,7 @@ void sys_apb_decoder_t::npc_safereset_clr(simif_t *sim, int processor_id)
 void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
 {
     int proc_id = -1;
+    printf("safereset_req %c %x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
 
     for(int i = 0 ;i < 32;i ++)
     {
@@ -157,6 +158,8 @@ void sys_apb_decoder_t::safereset_clr(simif_t *sim, const uint8_t *bytes)
 {
     int proc_id = 0;
 
+    printf("safereset_clr %c %x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
+    fflush(NULL);
     for(int i = 0 ;i < 32;i ++)
     {
         if(getBitValue(*(uint32_t*) (bytes),i) == 1 && this->position == direction::WEST

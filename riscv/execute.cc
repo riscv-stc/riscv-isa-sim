@@ -776,6 +776,8 @@ void processor_t::step(size_t n)
           pc -= 4;
           std::rethrow_exception(async_trap);
         }
+        printf("npc%d sync done %lx\n", id, pc);
+        fflush(NULL);
       }
 
       /* if sync is started, let other core that not in sync to execute.
