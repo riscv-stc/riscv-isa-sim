@@ -126,7 +126,7 @@ void sys_apb_decoder_t::npc_safereset_clr(simif_t *sim, int processor_id)
 void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
 {
     int proc_id = -1;
-    printf("safereset_req %c %x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
+    printf("safereset_req %c %-08x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
 
     for(int i = 0 ;i < 32;i ++)
     {
@@ -145,20 +145,26 @@ void sys_apb_decoder_t::safereset_req(simif_t *sim, const uint8_t *bytes)
         }
     }
 
-    /* 清除npc所在sync grp的状态 */
-    if (-1 != proc_id) {
-        int group_id = sim->get_groupID_from_coreID(proc_id);
-        int data = (1<<31) + (1<<group_id);
-        printf("sync clr grp%d by safereset_req\n", group_id);
-        sim->mmio_store(HWSYNC_START + HS_SW_SYNC_REQ_CLR_OFFSET, 4, (uint8_t*)&data);
+    if (-1 == proc_id) {
+        return ;
     }
+
+    int group_id = sim->get_groupID_from_coreID(proc_id);
+    if (-1 == group_id) {
+        return ;
+    }
+
+    /* 清除npc所在sync grp的状态 */
+    int data = (1<<31) + (1<<group_id);
+    printf("sync clr grp%d by safereset_req\n", group_id);
+    sim->mmio_store(HWSYNC_START + HS_SW_SYNC_REQ_CLR_OFFSET, 4, (uint8_t*)&data);
 }
 
 void sys_apb_decoder_t::safereset_clr(simif_t *sim, const uint8_t *bytes)
 {
     int proc_id = 0;
 
-    printf("safereset_clr %c %x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
+    printf("safereset_clr %c %-08x\n", (direction::EAST==position)?'e':'w', *(uint32_t*)bytes);
     fflush(NULL);
     for(int i = 0 ;i < 32;i ++)
     {

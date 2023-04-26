@@ -776,7 +776,7 @@ void processor_t::step(size_t n)
           pc -= 4;
           std::rethrow_exception(async_trap);
         }
-        printf("npc%d sync done %lx\n", id, pc);
+        printf("npc%d sync done %lx req_stat: %x \n", id, pc, ~get_hwsync_status());
         fflush(NULL);
       }
 

@@ -103,6 +103,8 @@ bool hwsync_t::enter(unsigned core_id)
             // all enter, clear enter requests
             *sync_status &= sync_masks[idx];
             group_locks[idx].notify_all();
+            printf("sync grp%d %08x all done stat %x \n",idx, sync_masks[idx], *sync_status);
+            fflush(NULL);
             break;
         }
     }
@@ -417,6 +419,7 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
         cpyBits(hwsync_base_addr + GROUP_VALID_15_11, now_addr + 1, 0, 4, 4);
         break;
     default:
+        printf("write sync grp%d %x req_stat %x \n",addr/4, *(uint32_t*)bytes, *sync_status);
         memcpy(hwsync_base_addr + addr, bytes, len);
         break;
     }

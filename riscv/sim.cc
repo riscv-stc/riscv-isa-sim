@@ -317,6 +317,7 @@ void sim_t::hpe_debug_backdoor(void)
            i, stat->pc, (int)stat->sync_stat, (int)stat->pld);
       }
     }
+    fflush(NULL);
 }
 
 void sim_thread_main(void* arg)
