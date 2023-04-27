@@ -117,8 +117,9 @@ bool hwsync_t::enter(unsigned core_id)
         // if the the number <group_id> bit of register sync_status is 1,just wait,if it is 0,just pass
         group_locks[group_id].wait(lock, [&]
                                    { return getBitValue(*sync_status, core_id) == 0; });
+    } else {    /* npc没有sync grp时不阻塞, 清寄存器后返回 */
+        setBitValue(*sync_status, core_id, 0);
     }
-
 #ifdef DEBUG
     std::cout << "core" << core_id << ": end sync" << std::endl;
 #endif
