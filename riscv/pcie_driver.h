@@ -199,10 +199,11 @@ class pcie_driver_t {
   void task_doing();
   void dma_recv_fun();
   std::mutex pcie_mutex;
+  std::mutex pciedma_mutex;
 
   /* pcie_dma */
   sem_t read_host_sem;
-  std::mutex read_host_mutex;;
+  std::mutex read_host_mutex;
   struct command_head_t *read_host_cmd = nullptr;
   void read_host_notify_ok(struct command_head_t *cmd);
 
@@ -226,6 +227,12 @@ class pcie_dma_dev_t : public abstract_device_t {
     simif_t *sim = nullptr;
     pcie_driver_t *pcie = nullptr;
     size_t len = 0x20*PCIE_DMA_CH_TOTAL;   /* PCIE_DMA_SIZE */
+
+    std::queue<int> xfer_pend_list;
+    std::thread pdma_thread;
+    std::mutex pdma_thread_lock;
+    std::condition_variable pdma_thread_cond;
+    void pciedma_pth_fun(void);
 
     void pcie_dma_go(int ch);
     int write_soc(uint64_t addr, uint8_t *data, int len);

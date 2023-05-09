@@ -255,7 +255,7 @@ int pcie_driver_t::dma_send(const uint8_t* data, size_t len)
   if (unlikely(PCIE_OK != mStatus))
     return mStatus;
 
-  pcie_mutex.lock();
+  pciedma_mutex.lock();
   dmaSendBuffer->nlmsg_len = NLMSG_SPACE(len);
   if (data && len)
     memcpy(NLMSG_DATA(dmaSendBuffer), data, len);
@@ -267,7 +267,7 @@ int pcie_driver_t::dma_send(const uint8_t* data, size_t len)
               0,
               (struct sockaddr*)(&mDestAddr),
               sizeof(mDestAddr));
-  pcie_mutex.unlock();
+  pciedma_mutex.unlock();
 
   if (NETLINK_FAULT == rv)
     std::cout << "pcie_dma send data error: "
@@ -792,6 +792,9 @@ pcie_dma_dev_t::pcie_dma_dev_t(uint8_t *pcie_dma_regs, atu_t *_pcie_atu,
   for (i = 0 ; i < PCIE_DMA_CH_TOTAL ; i++) {
     PCIEDMA_CTL(reg_base, i) |= (1<<PCIEDMA_CTL_READY);
   }
+
+  pdma_thread = std::thread([this] { pciedma_pth_fun(); });
+  pdma_thread.detach();
 }
 
 pcie_dma_dev_t::~pcie_dma_dev_t(void)
@@ -882,7 +885,8 @@ bool pcie_dma_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
       }
 
       if (PCIEDMA_CTL(reg_base, ch) & (1<<PCIEDMA_CTL_GO)) {    /* go */
-        pcie_dma_go(ch);
+        xfer_pend_list.push(ch);
+        pdma_thread_cond.notify_all();
       }
     }
     break;
@@ -893,6 +897,21 @@ bool pcie_dma_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   }
 
   return true;
+}
+
+void pcie_dma_dev_t::pciedma_pth_fun(void)
+{
+  int ch = 0;
+  
+  while(1) {
+    std::unique_lock<std::mutex> lock(pdma_thread_lock, std::defer_lock);
+    pdma_thread_cond.wait(lock);
+    while(!xfer_pend_list.empty()) {
+      ch = xfer_pend_list.front();
+      pcie_dma_go(ch);
+      xfer_pend_list.pop();
+    };
+  }
 }
 
 /* 写DDR, 成功返回0 */
