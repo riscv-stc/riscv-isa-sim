@@ -817,6 +817,9 @@ bool pcie_dma_dev_t::load(reg_t addr, size_t len, uint8_t* bytes)
         << " len: " << hex << len << std::endl;
     return false;
   }
+
+  std::unique_lock<std::mutex> lock(pdma_thread_lock);
+
   switch(addr%0x20) {
   case PCIEDMA_VERSION:
   case PCIEDMA_FEATURES:
@@ -852,6 +855,9 @@ bool pcie_dma_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
         << " len: " << hex << len << std::endl;
     return false;
   }
+
+  std::unique_lock<std::mutex> lock(pdma_thread_lock);
+
   switch(addr%0x20) {
   /*
   case PCIEDMA_VERSION:
