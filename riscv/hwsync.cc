@@ -103,8 +103,10 @@ bool hwsync_t::enter(unsigned core_id)
             // all enter, clear enter requests
             *sync_status &= sync_masks[idx];
             group_locks[idx].notify_all();
+        #if 0
             printf("sync grp%d %08x all done stat %x \n",idx, sync_masks[idx], *sync_status);
             fflush(NULL);
+        #endif
             break;
         }
     }
@@ -339,20 +341,6 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
                 continue;
             }
 
-            printf("sync clr grp%d \t", group_id);
-            for (int i = 0 ; i < 32 ; i++) {
-                if (0 != ((sync_masks[group_id]>>i)&0x01)) {
-                    continue;
-                }
-                if (0 == i%8) {
-                    printf("\n");
-                }
-                printf("%d:%x,%s ",i, sim->get_core_by_idxinsim(i)->get_state()->pc,
-                    (sim->get_core_by_idxinsim(i)->is_suspend()) ? "||" : "..");
-            }
-            printf("\n");
-            fflush(NULL);
-
             /* 清sync前, 确保已经发起sync的npc都处于 group_locks.wait(),而不是处于线程/函数上下文 */
             for (int i = 0 ; i < 32 ; i++) {
                 if (0 == ((sync_masks[group_id]>>i)&0x01)) {
@@ -420,7 +408,10 @@ bool hwsync_t::store(reg_t addr, size_t len, const uint8_t *bytes)
         cpyBits(hwsync_base_addr + GROUP_VALID_15_11, now_addr + 1, 0, 4, 4);
         break;
     default:
+    #if 0
         printf("write sync grp%d %x req_stat %x \n",addr/4, *(uint32_t*)bytes, *sync_status);
+        fflush(NULL);
+    #endif
         memcpy(hwsync_base_addr + addr, bytes, len);
         break;
     }

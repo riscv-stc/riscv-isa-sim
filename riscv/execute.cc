@@ -776,8 +776,10 @@ void processor_t::step(size_t n)
           pc -= 4;
           std::rethrow_exception(async_trap);
         }
+      #if 0
         printf("npc%d sync done %lx req_stat: %x \n", id, pc, ~get_hwsync_status());
         fflush(NULL);
+      #endif
       }
 
       /* if sync is started, let other core that not in sync to execute.

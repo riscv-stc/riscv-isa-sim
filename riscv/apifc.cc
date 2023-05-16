@@ -227,10 +227,6 @@ void apifc_t::process_data(void)
             // printf("ap r 0x%lx l %d \r\n", cmd_data.addr, cmd_data.len);
             break;
         case CODE_WRITE:
-            if (0xd3e80068 == cmd_data->addr) {
-                printf("apifc write addr%x val %x \n",cmd_data->addr, *(uint32_t*)cmd_data->data);
-                fflush(NULL);
-            }
             store_data(cmd_data->addr, cmd_data->len, (const uint8_t*)cmd_data->data);
             /* resp */
             cmd_data->len = 0;
