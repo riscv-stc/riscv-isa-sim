@@ -88,6 +88,11 @@ die_id(die_id),
         exit(1);
     }
 
+    if (0>(long)board_id || 4<=(long)board_id) {
+        printf("board-id %lx not support \n", board_id);
+        exit(1);
+    }
+
     /* 创建并添加 hs */
     if ('\0' == hwsync_masks[0]) {
         int i = 0;
@@ -133,7 +138,7 @@ die_id(die_id),
         /* PCIE_CTL_CFG (16MB) */
         glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_driver->get_pcie_ctl());
 
-        apifc = new apifc_t(this);
+        apifc = new apifc_t(this, board_id);
         soc_apb = new soc_apb_t(this, apifc);
         glb_bus.add_device(SOC_APB_BASE, soc_apb);
 

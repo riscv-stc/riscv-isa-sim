@@ -9,9 +9,13 @@
 #include "apifc.h"
 #include "processor.h"
 
-apifc_t::apifc_t(simif_t *sim) : sim(sim)
+apifc_t::apifc_t(simif_t *sim, int board_id) : sim(sim), board_id(board_id),
+        msg_name("/proc/stc/stc_ctrl_")
 {
     int ret = 0;
+
+    msg_name.push_back('0' + board_id);
+
     /* 初始化消息队列，创建线程处理qemu发送的请求 */
     spike_qemu_msg_init();
     if (0 != ret) {
@@ -260,10 +264,10 @@ int apifc_t::spike_qemu_msg_init(void)
     struct sq_msg_t sq_msg = {};
 
     /* sq_s2q_msqid */
-    key = ftok(SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_S2Q_PROJ);
+    key = ftok(msg_name.c_str(), SPIKE_QEMU_MSG_S2Q_PROJ);
     if (-1 == key) {
         printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_S2Q_PROJ);
+            __FUNCTION__, msg_name.c_str(), SPIKE_QEMU_MSG_S2Q_PROJ);
         return -1;
     }
     sq_s2q_msqid = msgget(key, IPC_CREAT | 0666);
@@ -277,10 +281,10 @@ int apifc_t::spike_qemu_msg_init(void)
     } while(0 <= ret);
 
     /* sq_q2s_msqid */
-    key = ftok(SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_Q2S_PROJ);
+    key = ftok(msg_name.c_str(), SPIKE_QEMU_MSG_Q2S_PROJ);
     if (-1 == key) {
         printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, SPIKE_QEMU_MSG_PATHNAME, SPIKE_QEMU_MSG_Q2S_PROJ);
+            __FUNCTION__, msg_name.c_str(), SPIKE_QEMU_MSG_Q2S_PROJ);
         return -1;
     }
     sq_q2s_msqid = msgget(key, IPC_CREAT | 0666);

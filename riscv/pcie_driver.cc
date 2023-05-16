@@ -91,6 +91,7 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
 
   if (initialize() != PCIE_OK) {
     std::cout << "PCIe driver init fail." << std::endl;
+    exit(2);
     return;
   }
 
@@ -100,11 +101,6 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
 int pcie_driver_t::initialize()
 {
   int rv = 0;
-
-  if (!lock_channel()) {
-    mStatus = ERROR_LOCK;
-    return ERROR_LOCK;
-  }
 
   memset(&mDestAddr, 0, sizeof(mDestAddr));
   mDestAddr.nl_family = AF_NETLINK;
@@ -180,38 +176,47 @@ int pcie_driver_t::initialize()
       dmaThread.reset(thread);
   }
 
+  if (NETLINK_FAULT == update_status(STATUS_INIT)) {
+    mStatus = ERROR_SOCK;
+    return ERROR_SOCK;
+  }
+  usleep(10 * 1000);
+
+  if (!lock_channel()) {
+    mStatus = ERROR_LOCK;
+    return ERROR_LOCK;
+  }
+
   return PCIE_OK;
 }
 
 bool pcie_driver_t::lock_channel(void)
 {
-  char magic_str[] = "lock";
-  int magic_len = 4;
-  char pathname[32];
-  int rc;
+    char magic_str[] = "lock";
+    int magic_len = 4;
+    char pathname[32];
+    int rc;
 
-  for (int i = 0 ; i < int(mPSim->nbanks()) ; i++) {
     memset(pathname, 0, sizeof(pathname));
-    sprintf(pathname, "/proc/stc/stc_cluster_%d", i);
+    sprintf(pathname, "/proc/stc/stc_device_%d", (int)board_id);
     if (access(pathname, F_OK)) {
-      std::cout << "Cluster["
-                << i
-                << "] dev is not exist, please check driver."
-                << std::endl;
-      return false;
+        std::cout << "device["
+                  << board_id
+                  << "] dev is not exist, please check driver."
+                  << std::endl;
+        return false;
     }
 
-    cluster_mdev[i] = open(pathname, O_RDWR);
-    if (cluster_mdev[i] < 0)
-      return false;
+    mdev = open(pathname, O_RDWR);
+    if (mdev < 0)
+        return false;
 
-    rc = write(cluster_mdev[i], magic_str, magic_len);
+    rc = write(mdev, magic_str, magic_len);
     if (rc != magic_len)
-      return false;
+        return false;
     usleep(10 * 1000);
-  }
 
-  return true;
+    return true;
 }
 
 /*
@@ -610,10 +615,8 @@ pcie_driver_t::~pcie_driver_t()
     mSockFd = -1;
   }
 
-  for (int i = 0 ; i < int(mPSim->nbanks()) ; i++) {
-    if (0 <= cluster_mdev[i])
-      close(cluster_mdev[i]);
-  }
+  if (0 <= mdev)
+    close(mdev);
 
   if (mSendBuffer) {
     free(mSendBuffer);

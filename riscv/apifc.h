@@ -7,7 +7,6 @@
 #include "pcie_driver.h"
 
 /* spike和qemu通过消息队列通信 */
-#define SPIKE_QEMU_MSG_PATHNAME     "/proc/stc/stc_cluster_0"
 #define SPIKE_QEMU_MSG_S2Q_PROJ     's'
 #define SPIKE_QEMU_MSG_Q2S_PROJ     'q'
 
@@ -31,7 +30,7 @@ struct sq_msg_t {
 class apifc_t
 {
 public:
-    apifc_t(simif_t *sim);
+    apifc_t(simif_t *sim, int board_id);
     ~apifc_t();
 
     int generate_irq_to_a53(int irq, int dir);
@@ -42,7 +41,9 @@ public:
     void process_data();
 private:
     simif_t *sim = nullptr;
+    int board_id;
 
+    std::string msg_name;
     int sq_s2q_msqid = -1;        /* spike send to qemu */
     int sq_q2s_msqid = -1;        /* qemu send to spike */
     std::unique_ptr<std::thread> sqmsg_spike_recv_thread_p;

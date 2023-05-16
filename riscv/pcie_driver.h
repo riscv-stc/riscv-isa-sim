@@ -182,7 +182,7 @@ class pcie_driver_t {
   reg_t mTxCmd;
   reg_t mTxExtCmd;
 
-  int cluster_mdev[4] = {-1, -1, -1, -1};
+  int mdev = 0;
   int initialize();
   int recv();
   int dma_recv();
