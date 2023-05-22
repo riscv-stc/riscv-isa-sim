@@ -13,14 +13,16 @@ apifc_t::apifc_t(simif_t *sim, int board_id) : sim(sim), board_id(board_id),
         msg_name("/proc/stc/stc_ctrl_")
 {
     int ret = 0;
+    char board_s[8] = "";
 
-    msg_name.push_back('0' + board_id);
+    snprintf(board_s, sizeof(board_s), "%d", board_id);
+    msg_name += board_s;
 
     /* 初始化消息队列，创建线程处理qemu发送的请求 */
-    spike_qemu_msg_init();
+    ret = spike_qemu_msg_init();
     if (0 != ret) {
         std::cout << "apifc_t() spike_qemu_msg_init failed ret " << ret << std::endl;
-        return ;
+        exit(3);
     }
 }
 
