@@ -88,8 +88,8 @@ die_id(die_id),
         exit(1);
     }
 
-    if (0>(long)board_id || 4<=(long)board_id) {
-        printf("board-id %lx not support \n", board_id);
+    if (0>(int)board_id || 32<=(int)board_id) {
+        printf("board-id %d not support \n", (int)board_id);
         exit(1);
     }
 
