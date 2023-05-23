@@ -198,6 +198,8 @@ bool pcie_driver_t::lock_channel(void)
 
     memset(pathname, 0, sizeof(pathname));
     sprintf(pathname, "/proc/stc/stc_device_%d", (int)board_id);
+
+    /* 等待driver创建设备文件 10ms */
     for (int i = 0 ; i < 10 ; i++) {
       rc = access(pathname, F_OK);
       if (0 == rc) {
@@ -237,7 +239,7 @@ int pcie_driver_t::send(const uint8_t* data, size_t len)
 
   if (unlikely(PCIE_OK != mStatus))
     return mStatus;
-
+    
   pcie_mutex.lock();
   mSendBuffer->nlmsg_len = NLMSG_SPACE(len);
   if (data && len)

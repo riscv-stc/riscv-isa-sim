@@ -10,7 +10,7 @@
 #include "processor.h"
 
 apifc_t::apifc_t(simif_t *sim, int board_id) : sim(sim), board_id(board_id),
-        msg_name("/proc/stc/stc_ctrl_")
+        msg_name("/proc/stc/stc_device_")
 {
     int ret = 0;
     char board_s[8] = "";
@@ -268,8 +268,9 @@ int apifc_t::spike_qemu_msg_init(void)
     /* sq_s2q_msqid */
     key = ftok(msg_name.c_str(), SPIKE_QEMU_MSG_S2Q_PROJ);
     if (-1 == key) {
-        printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, msg_name.c_str(), SPIKE_QEMU_MSG_S2Q_PROJ);
+        printf("%s() get key failed ret %d , pathname:%s proj:%c \r\n",
+            __FUNCTION__, key, msg_name.c_str(), SPIKE_QEMU_MSG_S2Q_PROJ);
+        perror("\n");
         return -1;
     }
     sq_s2q_msqid = msgget(key, IPC_CREAT | 0666);
@@ -285,8 +286,8 @@ int apifc_t::spike_qemu_msg_init(void)
     /* sq_q2s_msqid */
     key = ftok(msg_name.c_str(), SPIKE_QEMU_MSG_Q2S_PROJ);
     if (-1 == key) {
-        printf("%s() get key failed, pathname:%s proj:%c \r\n",
-            __FUNCTION__, msg_name.c_str(), SPIKE_QEMU_MSG_Q2S_PROJ);
+        printf("%s() get key failed ret %d, pathname:%s proj:%c \r\n",
+            __FUNCTION__, key, msg_name.c_str(), SPIKE_QEMU_MSG_Q2S_PROJ);
         return -1;
     }
     sq_q2s_msqid = msgget(key, IPC_CREAT | 0666);
