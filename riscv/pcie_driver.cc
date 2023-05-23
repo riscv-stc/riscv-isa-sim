@@ -180,7 +180,6 @@ int pcie_driver_t::initialize()
     mStatus = ERROR_SOCK;
     return ERROR_SOCK;
   }
-  usleep(10 * 1000);
 
   if (!lock_channel()) {
     mStatus = ERROR_LOCK;
@@ -195,14 +194,23 @@ bool pcie_driver_t::lock_channel(void)
     char magic_str[] = "lock";
     int magic_len = 4;
     char pathname[32];
-    int rc;
+    int rc = -1;
 
     memset(pathname, 0, sizeof(pathname));
     sprintf(pathname, "/proc/stc/stc_device_%d", (int)board_id);
-    if (access(pathname, F_OK)) {
-        std::cout << "device["
-                  << board_id
-                  << "] dev is not exist, please check driver."
+    for (int i = 0 ; i < 10 ; i++) {
+      rc = access(pathname, F_OK);
+      if (0 == rc) {
+        break;
+      } else {
+        usleep(1 * 1000);
+      }
+    }
+
+    if (rc) {
+        std::cout << "device"
+                  << pathname
+                  << "is not exist, please check driver."
                   << std::endl;
         return false;
     }
@@ -214,7 +222,6 @@ bool pcie_driver_t::lock_channel(void)
     rc = write(mdev, magic_str, magic_len);
     if (rc != magic_len)
         return false;
-    usleep(10 * 1000);
 
     return true;
 }
