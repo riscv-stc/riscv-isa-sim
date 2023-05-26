@@ -1053,6 +1053,7 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
 
   int xfer_len = 0;
   uint64_t soc_addr = 0;
+  uint64_t soc_va = 0;
   uint64_t pcie_addr = 0;
 
   /* control.go = 0 */
@@ -1078,8 +1079,6 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
   if (pcie_desc_atu && pcie_desc_atu->is_ipa_enabled()) {
     desc_addr_reg = pcie_desc_atu->translate(desc_addr_reg, 1);
   }
-  
-  printf("%s ch %d desc_len %d start ... \n", __FUNCTION__, ch, desc_len);
 
   if ( 0 == desc_len) {
     std::cout << "pcie_dma: control.length " << desc_len << " is error"  << std::endl;
@@ -1094,11 +1093,12 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
     }
 
     xfer_len = PDD_CTL_LEN(desc_addr) & 0xffffff;
-    soc_addr = PDD_SOC_ADDR(desc_addr);
+    soc_va = PDD_SOC_ADDR(desc_addr);
+    soc_addr = soc_va;
     pcie_addr = PDD_PCIE_ADDR(desc_addr);
 
     if (pcie_atu && pcie_atu->is_ipa_enabled()) {
-      soc_addr = pcie_atu->translate(soc_addr, 1);
+      soc_addr = pcie_atu->translate(soc_va, 1);
     }
     ret = pcie_dma_xfer(soc_addr, pcie_addr, xfer_len, ob_not_ib);
     if (0 != ret) {
@@ -1114,10 +1114,11 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
 
   if (0 == ret) {
     PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_DONE_STAT);    /* control.done_status = 1 */
-    printf("%s ch %d desc_len %d done \n", __FUNCTION__, ch, desc_len);
   } else {
     PCIEDMA_CTL(reg_base, ch) |= (1<<PCIEDMA_CTL_ERR_STAT);     /* control.error_status = 1 */
-    printf("%s ch %d desc_len %d ret %d error \n", __FUNCTION__, ch, desc_len, ret);
+    printf("%s ch %d desc_len %d error ret %d, desc %d %s soc %lx(%lx) pcie %lx len %d \n",
+        __FUNCTION__, ch, desc_len, ret,
+        i, (ob_not_ib) ? "d2h" : "h2d", soc_va, soc_addr, pcie_addr, xfer_len);
   }
 
   /* raise irq */
