@@ -1030,6 +1030,12 @@ riscv_insn_ext_matrix = \
 	mfncvtc_fw_xq_m \
 	mfwcvtc_xq_fw_m \
 
+riscv_insn_ext_matrix_im2col = \
+	msetoutsh \
+	msetinsh \
+	msetsk \
+	mlufae8_m \
+	mlufae16_m \
 
 riscv_insn_ext_matrix_ext = \
 	mlae8_v   \
@@ -1088,6 +1094,28 @@ riscv_insn_ext_matrix_ext = \
 	mwemulcc_mv  \
 	mfwemulcc_mv \
 	mqemulcc_mv  \
+	\
+	maddcr_mv   \
+	mfaddcr_mv  \
+	mwaddcr_mv  \
+	mfwaddcr_mv \
+	mqaddcr_mv  \
+	maddcc_mv   \
+	mfaddcc_mv  \
+	mwaddcc_mv  \
+	mfwaddcc_mv \
+	mqaddcc_mv  \
+	\
+	mmacccr_mv   \
+	mfmacccr_mv  \
+	mwmacccr_mv  \
+	mfwmacccr_mv \
+	mqmacccr_mv  \
+	mmacccc_mv   \
+	mfmacccc_mv  \
+	mwmacccc_mv  \
+	mfwmacccc_mv \
+	mqmacccc_mv  \
 
 
 riscv_insn_list = \
@@ -1105,6 +1133,9 @@ riscv_insn_list = \
 	$(riscv_insn_ext_h) \
 	$(riscv_insn_priv) \
 	$(riscv_insn_ext_matrix) \
+	$(riscv_insn_ext_matrix_im2col) \
+	$(riscv_insn_ext_matrix_ext) \
+
 
 riscv_gen_srcs = \
 	$(addsuffix .cc,$(riscv_insn_list))

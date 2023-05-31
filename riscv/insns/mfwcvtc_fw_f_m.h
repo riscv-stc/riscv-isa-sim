@@ -3,11 +3,11 @@
     ;
   },
   {
-    auto acc1 = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true);
+    auto acc1 = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false);
     P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true) = f16_to_f32(acc1);
   },
   {
-    auto acc1 = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true);
+    auto acc1 = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false);
     P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true) = f32_to_f64(acc1);
   },
   {

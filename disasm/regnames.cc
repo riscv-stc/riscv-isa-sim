@@ -28,7 +28,8 @@ const char* tr_name[] = {
 };
 
 const char* acc_name[] = {
-  "acc0", "acc1"
+  "acc0", "acc1", "acc2", "acc3", "acc4", "acc5", "acc6", "acc7",
+  "acc8", "acc9", "acc10", "acc11", "acc12", "acc13", "acc14", "acc15"
 };
 
 const char* csr_name(int which) {

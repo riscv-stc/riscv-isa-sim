@@ -30,6 +30,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
 {
   VU.p = this;
+  MU.p = this;
 
   parse_isa_string(isa);
   parse_priv_string(priv);
@@ -437,8 +438,8 @@ void processor_t::matrixUnit_t::reset(){
   tr_file = malloc(mlenb * 8);
   memset(tr_file, 0, mlenb * 8);
   
-  acc_file = malloc(mlenb * 4 * 8);
-  memset(acc_file, 0, mlenb * 4 * 8);
+  acc_file = malloc(mlenb * 4 * 16);
+  memset(acc_file, 0, mlenb * 4 * 16);
 
   mtype = 0;
   tile_m = 0;
@@ -489,6 +490,39 @@ reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim
 
 }
 
+reg_t processor_t::matrixUnit_t::set_moutsh(int rd, int rs1, int rs2){
+  outshape[0] = extract64(rs1, 0,  16);
+  outshape[1] = extract64(rs1, 16, 16);
+
+  mstr_w = extract64(rs2, 0,  8);
+  mstr_h = extract64(rs2, 8,  8);
+  mdil_w = extract64(rs2, 16, 8);
+  mdil_h = extract64(rs2, 24, 8);
+
+  return outshape[0] || outshape[1] << 16;
+}
+
+reg_t processor_t::matrixUnit_t::set_insh(int rd, int rs1, int rs2) {
+  inshape[0] = extract64(rs1, 0,  16);
+  inshape[1] = extract64(rs1, 16, 16);
+
+  mpad_right  = extract64(rs2, 0,  8);
+  mpad_left   = extract64(rs2, 8,  8);
+  mpad_bottom = extract64(rs2, 16, 8);
+  mpad_top    = extract64(rs2, 24, 8);
+
+  return inshape[0] || inshape[1] << 16;
+}
+
+reg_t processor_t::matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
+  mskin[0] = short(extract64(rs1, 0,  16));
+  mskin[1] = short(extract64(rs1, 16, 16));
+
+  mskout[0] = extract64(rs2, 0,  16);
+  mskout[1] = extract64(rs2, 16, 16);
+
+  return mskin[0] || mskin[1] << 16;
+}
 
 
 void processor_t::set_debug(bool value)
@@ -906,7 +940,7 @@ void processor_t::set_csr(int which, reg_t val)
 {
 #if defined(RISCV_ENABLE_COMMITLOG)
 #define LOG_CSR(rd) \
-  STATE.log_reg_write[((which) << 4) | 4] = {get_csr(rd), 0};
+  STATE.log_reg_write[((which) << 4) | 6] = {get_csr(rd), 0};
 #else
 #define LOG_CSR(rd)
 #endif

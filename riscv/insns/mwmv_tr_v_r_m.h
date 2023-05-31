@@ -1,2 +1,0 @@
-// MTU_VREG_ACC_LOOP(0, 'k');
-MTU_W_TR_VREG_LOOP (0, 'm')

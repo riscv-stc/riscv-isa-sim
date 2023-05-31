@@ -1,0 +1,1 @@
+MMV_VREG_FROM_ACC(1, 'c')

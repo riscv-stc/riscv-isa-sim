@@ -203,7 +203,7 @@ private:
     STATE.log_reg_write[((reg) << 4) | 1] = wdata; \
     DO_WRITE_FREG(reg, wdata); \
   })
-# define WRITE_VSTATUS STATE.log_reg_write[3] = {0, 0};
+# define WRITE_VSTATUS STATE.log_reg_write[5] = {0, 0};
 #endif
 
 // RVC macros
@@ -760,8 +760,8 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 
 #define MXU_PARAMS(x) \
   type_sew_t<x>::type &accd = P.MU.acc_elt<type_sew_t<x>::type>(accd_num, 0, i, j, true); \
-  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, true); \
-  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, true); \
+  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, false); \
+  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, false); \
 
 #define VX_PARAMS(x) \
   type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i, true); \
@@ -979,225 +979,134 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   } \
   VI_LOOP_END 
 
-#define MTU_MV_LEN(dim) \
-  switch(dim) { \
-  case 'k': \
-    len = P.MU.tile_k; \
+#define MTU_MV_LEN(trans, dim) \
+  switch (dim) \
+  { \
+  case 'c' : \
+    width = trans? P.MU.tile_m : P.MU.tile_n; \
     break; \
-  case 'm' : \
-    len = P.MU.tile_m; \
+  case 'a' : \
+    width = trans? P.MU.tile_m : P.MU.tile_k; \
     break; \
-  case 'n' : \
-    len = P.MU.tile_n; \
+  case 'b' : \
+    width = trans? P.MU.tile_k : P.MU.tile_n; \
     break; \
-  default: \
-    len = 0; \
-  } \
+  default : \
+    break; \
+  }; \
 
-#define MTU_OUT_GENERAL_LOOP_BASE(dim) \
+
+#define MMV_GENERAL_LOOP_BASE(is_trans, dim) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(P.VU.vsew >= e8 && P.VU.vsew <= e64); \
   reg_t sew = P.MU.msew; \
-  reg_t vd_num = insn.rd(); \
-  reg_t ts1_num = insn.rs1(); \
-  reg_t slice = RS2; \
-  reg_t len; \
-  MTU_MV_LEN(dim); \
-  for (reg_t i = 0; i < len; ++i) { \
+  reg_t rd_num = insn.rd(); \
+  reg_t rs1_num = insn.rs1(); \
+  reg_t start_height = RS2; \
+  reg_t height, width; \
+  MTU_MV_LEN(is_trans, dim); \
+  float vemul = (float)P.MU.msew / P.VU.vsew * P.VU.vflmul; \
+  height = vemul < 1 ? 1 : vemul; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
 
-#define MTU_IN_GENERAL_LOOP_BASE(dim) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t sew = P.MU.msew; \
-  reg_t td_num = insn.rd(); \
-  reg_t vs1_num = insn.rs1(); \
-  reg_t slice = RS2; \
-  reg_t len; \
-  MTU_MV_LEN(dim); \
-  for (reg_t i = 0; i < len; ++i) { \
+#define MTU_VREG_TR_PARAMS(trans, x) \
+  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
+  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i+start_height, j); \
 
-#define MTU_VREG_TR_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(vd_num, i, true); \
-  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, tt, slice, i); \
+#define MTU_VREG_ACC_PARAMS(trans, x) \
+  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
+  type_sew_t<x>::type acc1 = P.MU.acc_elt<type_sew_t<x>::type>(rs1_num, trans, i+start_height, j); \
 
-#define MTU_VREG_ACC_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(vd_num, i, true); \
-  type_sew_t<x>::type ts1 = P.MU.acc_elt<type_sew_t<x>::type>(ts1_num, tt, slice, i); \
+#define MTU_TR_VREG_PARAMS(trans, x) \
+  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j, true); \
+  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j); \
 
-#define MTU_TR_VREG_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(vs1_num, i, true); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(td_num, tt, slice, i); \
-
-#define MTU_ACC_VREG_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(vs1_num, i, true); \
-  type_sew_t<x>::type &td = P.MU.acc_elt<type_sew_t<x>::type>(td_num, tt, slice, i); \
+#define MTU_ACC_VREG_PARAMS(trans, x) \
+  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j, true); \
+  type_sew_t<x>::type &accd = P.MU.acc_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j); \
 
 #define MTU_VM_LOOP_END \
+    } \
   } \
 
-// merge and copy loop
-#define MTU_VREG_TR_LOOP(tt, dim) \
-  MTU_OUT_GENERAL_LOOP_BASE(dim) \
+// vreg <-- tr
+#define MMV_VREG_FROM_TR(is_trans, dim) \
+  require(P.MU.msew == P.VU.vsew);\
+  MMV_GENERAL_LOOP_BASE(is_trans, dim) \
   if (sew == e8){ \
-    MTU_VREG_TR_PARAMS(e8, tt, slice); \
+    MTU_VREG_TR_PARAMS(is_trans, e8); \
     vd = ts1; \
   }else if(sew == e16){ \
-    MTU_VREG_TR_PARAMS(e16, tt, slice); \
+    MTU_VREG_TR_PARAMS(is_trans, e16); \
     vd = ts1; \
   }else if(sew == e32){ \
-    MTU_VREG_TR_PARAMS(e32, tt, slice); \
+    MTU_VREG_TR_PARAMS(is_trans, e32); \
     vd = ts1; \
   }else if(sew == e64){ \
-    MTU_VREG_TR_PARAMS(e64, tt, slice); \
+    MTU_VREG_TR_PARAMS(is_trans, e64); \
     vd = ts1; \
   } \
   MTU_VM_LOOP_END 
 
-#define MTU_VREG_ACC_LOOP(tt, dim) \
-  MTU_OUT_GENERAL_LOOP_BASE(dim) \
+// vreg <-- acc
+#define MMV_VREG_FROM_ACC(is_trans, dim) \
+  require(P.MU.msew == P.VU.vsew);\
+  MMV_GENERAL_LOOP_BASE(is_trans, dim) \
   if (sew == e8){ \
-    MTU_VREG_ACC_PARAMS(e8, tt, slice); \
-    vd = ts1; \
+    MTU_VREG_ACC_PARAMS(is_trans, e8); \
+    vd = acc1; \
   }else if(sew == e16){ \
-    MTU_VREG_ACC_PARAMS(e16, tt, slice); \
-    vd = ts1; \
+    MTU_VREG_ACC_PARAMS(is_trans, e16); \
+    vd = acc1; \
   }else if(sew == e32){ \
-    MTU_VREG_ACC_PARAMS(e32, tt, slice); \
-    vd = ts1; \
+    MTU_VREG_ACC_PARAMS(is_trans, e32); \
+    vd = acc1; \
   }else if(sew == e64){ \
-    MTU_VREG_ACC_PARAMS(e64, tt, slice); \
-    vd = ts1; \
+    MTU_VREG_ACC_PARAMS(is_trans, e64); \
+    vd = acc1; \
   } \
   MTU_VM_LOOP_END
 
-#define MTU_W_VREG_TR_LOOP(tt, dim) \
-  MTU_OUT_GENERAL_LOOP_BASE(dim) \
+// tr <-- vreg
+#define MMV_TR_FROM_VREG(is_trans, dim) \
+  require(P.MU.msew == P.VU.vsew); \
+  MMV_GENERAL_LOOP_BASE(is_trans, dim) \
   if (sew == e8){ \
-    MTU_VREG_TR_PARAMS(e16, tt, slice); \
-    vd = ts1; \
-  }else if(sew == e16){ \
-    MTU_VREG_TR_PARAMS(e32, tt, slice); \
-    vd = ts1; \
-  }else if(sew == e32){ \
-    MTU_VREG_TR_PARAMS(e64, tt, slice); \
-    vd = ts1; \
-  } \
-  MTU_VM_LOOP_END
-
-#define MTU_W_TR_VREG_LOOP(tt, dim) \
-  MTU_IN_GENERAL_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_TR_VREG_PARAMS(e16, tt, slice); \
+    MTU_TR_VREG_PARAMS(is_trans, e8); \
     td = vs1; \
   }else if(sew == e16){ \
-    MTU_TR_VREG_PARAMS(e32, tt, slice); \
+    MTU_TR_VREG_PARAMS(is_trans, e16); \
     td = vs1; \
   }else if(sew == e32){ \
-    MTU_TR_VREG_PARAMS(e64, tt, slice); \
-    td = vs1; \
-  } \
-  MTU_VM_LOOP_END
-
-#define MTU_W_VREG_ACC_LOOP(tt, dim) \
-  MTU_OUT_GENERAL_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_VREG_ACC_PARAMS(e16, tt, slice); \
-    vd = ts1; \
-  }else if(sew == e16){ \
-    MTU_VREG_ACC_PARAMS(e32, tt, slice); \
-    vd = ts1; \
-  }else if(sew == e32){ \
-    MTU_VREG_ACC_PARAMS(e64, tt, slice); \
-    vd = ts1; \
-  } \
-  MTU_VM_LOOP_END
-
-#define MTU_W_ACC_VREG_LOOP(tt, dim) \
-  MTU_IN_GENERAL_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_ACC_VREG_PARAMS(e16, tt, slice); \
-    td = vs1; \
-  }else if(sew == e16){ \
-    MTU_ACC_VREG_PARAMS(e32, tt, slice); \
-    td = vs1; \
-  }else if(sew == e32){ \
-    MTU_ACC_VREG_PARAMS(e64, tt, slice); \
-    td = vs1; \
-  } \
-  MTU_VM_LOOP_END
-
-
-#define MTU_Q_VREG_ACC_LOOP(tt, dim) \
-  MTU_OUT_GENERAL_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_VREG_ACC_PARAMS(e32, tt, slice); \
-    vd = ts1; \
-  }else if(sew == e16){ \
-    MTU_VREG_ACC_PARAMS(e64, tt, slice); \
-    vd = ts1; \
-  } \
-  MTU_VM_LOOP_END
-
-#define MTU_Q_ACC_VREG_LOOP(tt, dim) \
-  MTU_IN_GENERAL_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_ACC_VREG_PARAMS(e32, tt, slice); \
-    td = vs1; \
-  }else if(sew == e16){ \
-    MTU_ACC_VREG_PARAMS(e64, tt, slice); \
-    td = vs1; \
-  } \
-  MTU_VM_LOOP_END
-
-#define MTU_TREG_VREG_LOOP_BASE(dim) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t sew = P.MU.msew; \
-  reg_t vs1_num = insn.rs1(); \
-  reg_t td_num = insn.rd(); \
-  reg_t slice = RS2; \
-  reg_t len; \
-  MTU_MV_LEN(dim); \
-  for (reg_t i = 0; i < len; ++i){ \
-
-#define MTU_TR_VREG_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(vs1_num, i, true); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(td_num, tt, slice, i); \
-
-#define MTU_ACC_VREG_PARAMS(x, tt, slice) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(vs1_num, i, true); \
-  type_sew_t<x>::type &td = P.MU.acc_elt<type_sew_t<x>::type>(td_num, tt, slice, i); \
-
-#define MTU_TR_VREG_LOOP(tt, dim) \
-  MTU_TREG_VREG_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_TR_VREG_PARAMS(e8, tt, slice); \
-    td = vs1; \
-  }else if(sew == e16){ \
-    MTU_TR_VREG_PARAMS(e16, tt, slice); \
-    td = vs1; \
-  }else if(sew == e32){ \
-    MTU_TR_VREG_PARAMS(e32, tt, slice); \
+    MTU_TR_VREG_PARAMS(is_trans, e32); \
     td = vs1; \
   }else if(sew == e64){ \
-    MTU_TR_VREG_PARAMS(e64, tt, slice); \
+    MTU_TR_VREG_PARAMS(is_trans, e64); \
     td = vs1; \
+  } \
+  MTU_VM_LOOP_END 
+
+// acc <-- vreg
+#define MMV_ACC_FROM_VREG(is_trans, dim) \
+  require(P.MU.msew == P.VU.vsew);\
+  MMV_GENERAL_LOOP_BASE(is_trans, dim) \
+  if (sew == e8){ \
+    MTU_ACC_VREG_PARAMS(is_trans, e8); \
+    accd = vs1; \
+  }else if(sew == e16){ \
+    MTU_ACC_VREG_PARAMS(is_trans, e16); \
+    accd = vs1; \
+  }else if(sew == e32){ \
+    MTU_ACC_VREG_PARAMS(is_trans, e32); \
+    accd = vs1; \
+  }else if(sew == e64){ \
+    MTU_ACC_VREG_PARAMS(is_trans, e64); \
+    accd = vs1; \
   } \
   MTU_VM_LOOP_END
 
-#define MTU_ACC_VREG_LOOP(tt, dim) \
-  MTU_TREG_VREG_LOOP_BASE(dim) \
-  if (sew == e8){ \
-    MTU_ACC_VREG_PARAMS(e8, tt, slice); \
-    td = vs1; \
-  }else if(sew == e16){ \
-    MTU_ACC_VREG_PARAMS(e16, tt, slice); \
-    td = vs1; \
-  }else if(sew == e32){ \
-    MTU_ACC_VREG_PARAMS(e32, tt, slice); \
-    td = vs1; \
-  }else if(sew == e64){ \
-    MTU_ACC_VREG_PARAMS(e64, tt, slice); \
-    td = vs1; \
-  } \
-  MTU_VM_LOOP_END
+
 
 // reduction loop - signed
 #define VI_LOOP_REDUCTION_BASE(x) \
@@ -1360,25 +1269,25 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e8) \
         accd = (int8_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1398,19 +1307,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1430,13 +1339,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = opd(int128_t)accd op0 (int128_t)acc1; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1542,24 +1451,24 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   switch(P.MU.msew) { \
     case e16: { \
       float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, true); \
-      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, true); \
+      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false); \
+      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, true); \
-      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, true); \
+      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false); \
+      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false); \
       BODY32; \
       set_fp_exceptions; \
       break; \
     }\
     case e64: {\
       float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, true); \
-      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, true); \
+      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, false); \
+      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, false); \
       BODY64; \
       set_fp_exceptions; \
       break; \
@@ -1590,21 +1499,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       switch(P.MU.msew) { \
       case e16: { \
         float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         BODY16; \
         set_fp_exceptions; \
         break; \
       }\
       case e32: {\
         float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         BODY32; \
         set_fp_exceptions; \
         break; \
       }\
       case e64: {\
         float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         BODY64; \
         set_fp_exceptions; \
         break; \
@@ -1634,21 +1543,21 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       switch(P.MU.msew) { \
       case e8: { \
         float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        float16_t acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         BODY16; \
         set_fp_exceptions; \
         break; \
       }\
       case e16: {\
         float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        float32_t acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         BODY32; \
         set_fp_exceptions; \
         break; \
       }\
       case e32: {\
         float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        float64_t acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         BODY64; \
         set_fp_exceptions; \
         break; \
@@ -1665,16 +1574,16 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
   switch(P.MU.msew) { \
     case e16: {\
       float32_t &accd_w = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, true)); \
-      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, true)); \
+      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false)); \
+      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false)); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float64_t &accd_w = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, true)); \
-      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, true)); \
+      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false)); \
+      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false)); \
       BODY32; \
       set_fp_exceptions; \
       break; \
@@ -1699,25 +1608,25 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e8) \
         accd = (int8_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)accd * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1737,19 +1646,19 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e16) \
         accd = (int16_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1769,13 +1678,13 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e32) \
         accd = (int32_t)res; \
       }else if(sew == e16){ \
         auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
         res = (int128_t)acc1 * (int128_t)factor; \
         MXU_CHECK_OVERFLOW(e64) \
         accd = (int64_t)res; \
@@ -1797,17 +1706,17 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
         float16_t rs2 = f16(READ_FREG(rs2_num)); \
         BODY16; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2 = f32(READ_FREG(rs2_num)); \
         BODY32; \
       }else if(sew == e64){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2 = f64(READ_FREG(rs2_num)); \
         BODY64; \
       } \
@@ -1827,17 +1736,417 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     for (reg_t j = 0; j < tile_n; ++j) { \
       if(sew == e16){ \
         auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
         float32_t rs2 = f32(READ_FREG(rs2_num)); \
         BODY32; \
       }else if(sew == e32){ \
         auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
         float64_t rs2 = f64(READ_FREG(rs2_num)); \
         BODY64; \
       } \
     } \
   } \
+
+#define GET_VS1(sew, is_trans, i, j) \
+  if (!is_trans)  { \
+    vs1 = P.VU.elt<type_sew_t<sew>::type>(vs1_num, j); \
+  } else { \
+    vs1 = P.VU.elt<type_sew_t<sew>::type>(vs1_num, i); \
+  } \
+
+#define GET_VS2(sew, is_trans, i, j) \
+  if (!is_trans)  { \
+    vs2 = P.VU.elt<type_sew_t<sew>::type>(vs2_num, j); \
+  } else { \
+    vs2 = P.VU.elt<type_sew_t<sew>::type>(vs2_num, i); \
+  } \
+
+#define MXU_MEMUL_MV(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t acc1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e8>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e8) \
+        accd = (int8_t)res; \
+      }else if(sew == e16){ \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e16) \
+        accd = (int16_t)res; \
+      }else if(sew == e32){ \
+        GET_VS2(e32, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e64){ \
+        GET_VS2(e64, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+
+#define MXU_MEMUL_MV_WIDEN(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e32); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t acc1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e16>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e16) \
+        accd = (int16_t)res; \
+      }else if(sew == e16){ \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e32){ \
+        GET_VS2(e32, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+#define MXU_MEMUL_MV_QUAD(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e16); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t acc1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e32>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e16){ \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<type_sew_t<e64>::type>(acc1_num, 0, i, j, false); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+#define MXU_MEMUL_MVFP(is_trans, BODY16, BODY32, BODY64) \
+  require(P.MU.msew >= e16 && P.MU.msew <= e64); \
+  reg_t tile_m = P.MU.tile_m;\
+  reg_t tile_n = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t acc1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res; \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t j = 0; j < tile_n; ++j) { \
+      if(sew == e16){ \
+        auto &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float16_t>(acc1_num, 0, i, j, false); \
+        float16_t rs2; \
+        if (!is_trans) { \
+          rs2 = P.VU.elt<float16_t>(vs2_num, j); \
+        } else { \
+          rs2 = P.VU.elt<float16_t>(vs2_num, i); \
+        }\
+        BODY16; \
+      }else if(sew == e32){ \
+        auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
+        float32_t rs2; \
+        if (!is_trans) { \
+          rs2 = P.VU.elt<float32_t>(vs2_num, j); \
+        } else { \
+          rs2 = P.VU.elt<float32_t>(vs2_num, i); \
+        }\
+        BODY32; \
+      }else if(sew == e64){ \
+        auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
+        float64_t rs2; \
+        if (!is_trans) { \
+          rs2 = P.VU.elt<float64_t>(vs2_num, j); \
+        } else { \
+          rs2 = P.VU.elt<float64_t>(vs2_num, i); \
+        }\
+        BODY64; \
+      } \
+    } \
+  } \
+
+#define MXU_MEMUL_MVFP_WIDEN(is_trans, BODY32, BODY64) \
+  require(P.MU.msew >= e16 && P.MU.msew <= e32); \
+  reg_t tile_m = P.MU.tile_m;\
+  reg_t tile_n = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t acc1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res; \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t j = 0; j < tile_n; ++j) { \
+      if(sew == e16){ \
+        auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float32_t>(acc1_num, 0, i, j, false); \
+        float32_t rs2; \
+        if (!is_trans) { \
+          rs2 = f16_to_f32(P.VU.elt<float16_t>(vs2_num, j)); \
+        } else { \
+          rs2 = f16_to_f32(P.VU.elt<float16_t>(vs2_num, i)); \
+        }\
+        BODY32; \
+      }else if(sew == e32){ \
+        auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
+        auto acc1  = P.MU.acc_elt<float64_t>(acc1_num, 0, i, j, false); \
+        float64_t rs2; \
+        if (!is_trans) { \
+          rs2 = f32_to_f64(P.VU.elt<float32_t>(vs2_num, j)); \
+        } else { \
+          rs2 = f32_to_f64(P.VU.elt<float32_t>(vs2_num, i)); \
+        }\
+        BODY64; \
+      } \
+    } \
+  } \
+
+#define MXU_MMACC_MV(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t vs1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs1, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS1(e8, is_trans, i, j) \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e8>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e8) \
+        accd = (int8_t)res; \
+      }else if(sew == e16){ \
+        GET_VS1(e16, is_trans, i, j) \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e16) \
+        accd = (int16_t)res; \
+      }else if(sew == e32){ \
+        GET_VS1(e32, is_trans, i, j) \
+        GET_VS2(e32, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e64){ \
+        GET_VS1(e64, is_trans, i, j) \
+        GET_VS2(e64, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+
+#define MXU_MMACC_MV_WIDEN(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e32); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t vs1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs1, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS1(e8, is_trans, i, j) \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e16>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e16) \
+        accd = (int16_t)res; \
+      }else if(sew == e16){ \
+        GET_VS1(e16, is_trans, i, j) \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e32){ \
+        GET_VS1(e32, is_trans, i, j) \
+        GET_VS2(e32, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+
+#define MXU_MMACC_MV_QUAD(is_trans, BODY) \
+  require(P.MU.msew >= e8 && P.MU.msew <= e16); \
+  reg_t height = P.MU.tile_m;\
+  reg_t width = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t vs1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res, vs1, vs2; \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+      if (sew == e8){ \
+        GET_VS1(e8, is_trans, i, j) \
+        GET_VS2(e8, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e32>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e32) \
+        accd = (int32_t)res; \
+      }else if(sew == e16){ \
+        GET_VS1(e16, is_trans, i, j) \
+        GET_VS2(e16, is_trans, i, j) \
+        auto &accd = P.MU.acc_elt<type_sew_t<e64>::type>(accd_num, 0, i, j, true); \
+        BODY \
+        MXU_CHECK_OVERFLOW(e64) \
+        accd = (int64_t)res; \
+      } \
+    } \
+  } \
+
+#define MXU_MMACC_MVFP(is_trans, BODY16, BODY32, BODY64) \
+  require(P.MU.msew >= e16 && P.MU.msew <= e64); \
+  reg_t tile_m = P.MU.tile_m;\
+  reg_t tile_n = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t vs1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res; \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t j = 0; j < tile_n; ++j) { \
+      if(sew == e16){ \
+        auto &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
+        float16_t vs1, vs2; \
+        if (!is_trans) { \
+          vs1 = P.VU.elt<float16_t>(vs1_num, j); \
+          vs2 = P.VU.elt<float16_t>(vs2_num, j); \
+        } else { \
+          vs1 = P.VU.elt<float16_t>(vs1_num, i); \
+          vs2 = P.VU.elt<float16_t>(vs2_num, i); \
+        }\
+        BODY16; \
+      }else if(sew == e32){ \
+        auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
+        float32_t vs1, vs2; \
+        if (!is_trans) { \
+          vs1 = P.VU.elt<float32_t>(vs1_num, j); \
+          vs2 = P.VU.elt<float32_t>(vs2_num, j); \
+        } else { \
+          vs1 = P.VU.elt<float32_t>(vs1_num, i); \
+          vs2 = P.VU.elt<float32_t>(vs2_num, i); \
+        }\
+        BODY32; \
+      }else if(sew == e64){ \
+        auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
+        float64_t vs1, vs2; \
+        if (!is_trans) { \
+          vs1 = P.VU.elt<float64_t>(vs1_num, j); \
+          vs2 = P.VU.elt<float64_t>(vs2_num, j); \
+        } else { \
+          vs1 = P.VU.elt<float64_t>(vs1_num, i); \
+          vs2 = P.VU.elt<float64_t>(vs2_num, i); \
+        }\
+        BODY64; \
+      } \
+    } \
+  } \
+
+
+#define MXU_MMACC_MVFP_WIDEN(is_trans, BODY32, BODY64) \
+  require(P.MU.msew >= e16 && P.MU.msew <= e32); \
+  reg_t tile_m = P.MU.tile_m;\
+  reg_t tile_n = P.MU.tile_n;\
+  reg_t sew = P.MU.msew; \
+  reg_t accd_num = insn.rd(); \
+  reg_t vs1_num = insn.rs1(); \
+  reg_t vs2_num = insn.rs2(); \
+  int128_t res; \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t j = 0; j < tile_n; ++j) { \
+      if(sew == e16){ \
+        auto &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
+        float32_t vs1, vs2; \
+        if (!is_trans) { \
+          vs1 = f16_to_f32(P.VU.elt<float16_t>(vs1_num, j)); \
+          vs2 = f16_to_f32(P.VU.elt<float16_t>(vs2_num, j)); \
+        } else { \
+          vs1 = f16_to_f32(P.VU.elt<float16_t>(vs1_num, i)); \
+          vs2 = f16_to_f32(P.VU.elt<float16_t>(vs2_num, i)); \
+        }\
+        BODY32; \
+      }else if(sew == e32){ \
+        auto &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
+        float64_t vs1, vs2; \
+        if (!is_trans) { \
+          vs1 = f32_to_f64(P.VU.elt<float32_t>(vs1_num, j)); \
+          vs2 = f32_to_f64(P.VU.elt<float32_t>(vs2_num, j)); \
+        } else { \
+          vs1 = f32_to_f64(P.VU.elt<float32_t>(vs1_num, i)); \
+          vs2 = f32_to_f64(P.VU.elt<float32_t>(vs2_num, i)); \
+        }\
+        BODY64; \
+      } \
+    } \
+  } \
+
 
 
 #define VI_VX_ULOOP(BODY) \
@@ -2505,6 +2814,91 @@ for (reg_t i = 0; i < P.VU.vlmax && P.VU.vl != 0; ++i) { \
                   baseAddr + i * stride2 + j * sizeof(elt_width##_t), val); \
     } \
   } \
+
+#define MTU_VECTOR_LD(is_trans, dim, elt_width) \
+  const reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t vd = insn.rd(); \
+  reg_t height, width; \
+  MTU_LS_LEN(is_trans, dim); \
+  reg_t veew = sizeof(elt_width##_t) * 8; \
+  float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
+  reg_t emul = vemul < 1 ? 1 : vemul; \
+  height = emul; \
+  require(vemul >= 0.125 && vemul <= 8); \
+  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * emul); \
+  for (int i = 0; i < height; i++) { \
+    for (int j = 0; j < width; j++) { \
+      elt_width##_t val = MMU.load_##elt_width( \
+              baseAddr + i * stride2 + j * sizeof(elt_width##_t)); \
+      P.VU.elt<elt_width##_t>(vd, i * width + j, true) = val; \
+    } \
+  } \
+
+#define MTU_VECTOR_ST(is_trans, dim, elt_width) \
+  const reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t vd = insn.rd(); \
+  reg_t height, width; \
+  MTU_LS_LEN(is_trans, dim); \
+  reg_t veew = sizeof(elt_width##_t) * 8; \
+  float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
+  reg_t emul = vemul < 1 ? 1 : vemul; \
+  height = emul; \
+  require(vemul >= 0.125 && vemul <= 8); \
+  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * vemul); \
+  for (int i = 0; i < height; i++) { \
+    for (int j = 0; j < width; j++) { \
+      elt_width##_t val = P.VU.elt<elt_width##_t>(vd, i * width + j); \
+      MMU.store_##elt_width( \
+        baseAddr + i * stride2 + j * sizeof(elt_width##_t), val); \
+    } \
+  } \
+
+
+#define MTU_UF_TR_LD(is_trans, elt_width) \
+  reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t td = insn.rd(); \
+  reg_t sh = P.MU.mstr_h; \
+  reg_t sw = P.MU.mstr_w; \
+  reg_t dh = P.MU.mdil_h; \
+  reg_t dw = P.MU.mdil_w; \
+  reg_t inh = P.MU.inshape[1]; \
+  reg_t inw = P.MU.inshape[0]; \
+  reg_t pt = P.MU.mpad_top; \
+  reg_t pb = P.MU.mpad_bottom; \
+  reg_t pl = P.MU.mpad_left; \
+  reg_t pr = P.MU.mpad_bottom; \
+  reg_t outh = P.MU.outshape[1]; \
+  reg_t outw = P.MU.outshape[0]; \
+  sreg_t inposh = P.MU.mskin[1]; \
+  sreg_t inposw = P.MU.mskin[0]; \
+  reg_t krposw = P.MU.mskout[1]; \
+  reg_t outposw = P.MU.mskout[0]; \
+  reg_t height, width; \
+  MTU_LS_LEN(is_trans, 'a'); \
+  CLEAR_TILE(td); \
+  for (reg_t i = 0; i < height; ++i) { \
+    if (inposh >= 0 && inposh < inh && inposw >= 0 && inposw < inw) { \
+      for (reg_t j = 0; j < width; ++j) { \
+        elt_width##_t val = MMU.load_##elt_width( \
+                      baseAddr + j * sizeof(elt_width##_t)); \
+        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, true) = val; \
+      } \
+    } \
+    outposw++; \
+    if (outposw > outw - 1) { \
+      outposw = 0; \
+      baseAddr += (inw - inposw - pl) * stride2 + (sh -1) * inw * stride2 + krposw * stride2; \
+      inposw = - pl + krposw; \
+      inposh+=sh; \
+    } else { \
+      inposw += sw; \
+      baseAddr += sw * stride2; \
+    } \
+  } \
+
 
 #define MU_MFP_LOOP_SCALE_BASE \
   const reg_t acc1_num = insn.rs1(); \

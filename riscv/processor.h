@@ -559,6 +559,18 @@ public:
       reg_t mbf16, mtf32;
       reg_t mrows, mcols;
 
+      // im2col register
+      reg_t moutsh;
+      reg_t minsh;
+      reg_t mpad, mstdi;
+      reg_t msk;
+      reg_t outshape[2];
+      reg_t inshape[2];
+      reg_t mpad_top, mpad_bottom, mpad_left, mpad_right;
+      reg_t mdil_h, mdil_w, mstr_h, mstr_w;
+      sreg_t mskin[2];
+      reg_t mskout[2];
+
       /* matrix element for varies eew
         td: tile reg num
         tt: read row 6 or col 7
@@ -571,7 +583,10 @@ public:
           assert(msew != 0);
           assert((mcols >> 3)/sizeof(T) > 0);
           reg_t elts_per_slice = (mcols>> 3) / (sizeof(T));
-
+#ifdef RISCV_ENABLE_COMMITLOG
+          if (is_write)
+            p->get_state()->log_reg_write[((td) << 4) | 3] = {0, 0};
+#endif
           T *regStart = ((T*)tr_file) + td * elts_per_slice * mrows;
           if (tt & 1) { // col
             reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
@@ -592,7 +607,10 @@ public:
           } else {
             elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
           }
-
+#ifdef RISCV_ENABLE_COMMITLOG
+          if (is_write)
+            p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
+#endif
           T *regStart = (T *)((char*)acc_file + td * mlenb * 4);
           if (tt & 1) { // col
             // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
@@ -620,6 +638,9 @@ public:
 
       reg_t set_mtype(int rd, reg_t newType);
       reg_t set_ml(int rd, int rs1, reg_t newMlen, char dim);
+      reg_t set_moutsh(int rd, int rs1, int rs2);
+      reg_t set_insh(int rd, int rs1, int rs2);
+      reg_t set_msk(int rd, int rs1, int rs2);
 
   };
 

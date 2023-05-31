@@ -1380,6 +1380,10 @@ disassembler_t::disassembler_t(int xlen)
   DEFINE_R1TYPE(msettilek);
   DEFINE_R1TYPE(msettilen);
 
+  DEFINE_RTYPE(msetoutsh);
+  DEFINE_RTYPE(msetinsh);
+  DEFINE_RTYPE(msetsk);
+
   #define DISASM_MMEM_TR_INSN(name, fmt, abc) \
     add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
     add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
@@ -1415,8 +1419,66 @@ disassembler_t::disassembler_t(int xlen)
   DISASM_MMEM_ACC_INSN(ml, acc_ld_unit, c);
   DISASM_MMEM_ACC_INSN(ms, acc_st_unit, c);
 
+
 #undef DISASM_MMEM_TR_INSN
 #undef DISASM_MMEM_ACC_INSN
+
+
+// matrix load verg
+#define DISASM_MMEM_VECTOR_INSN(name, fmt, abc) \
+    add_insn(new disasm_insn_t(#name #abc "e8.v" ,    match_##name##abc##e8_v,      mask_##name##abc##e8_v,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e16.v" ,   match_##name##abc##e16_v,     mask_##name##abc##e16_v,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e32.v" ,   match_##name##abc##e32_v,     mask_##name##abc##e32_v,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e64.v" ,   match_##name##abc##e64_v,     mask_##name##abc##e64_v,  fmt)); \
+
+  std::vector<const arg_t *> vector_ls_unit = {&vd, &v_address, &xrs2};
+  DISASM_MMEM_VECTOR_INSN(ml, vector_ls_unit, a);
+  DISASM_MMEM_VECTOR_INSN(ml, vector_ls_unit, b);
+  DISASM_MMEM_VECTOR_INSN(ml, vector_ls_unit, c);
+  DISASM_MMEM_VECTOR_INSN(ms, vector_ls_unit, a);
+  DISASM_MMEM_VECTOR_INSN(ms, vector_ls_unit, b);
+  DISASM_MMEM_VECTOR_INSN(ms, vector_ls_unit, c);
+
+#undef DISASM_MMEM_VECTOR_INSN
+
+
+// mmv
+#define DISASM_VREG_FROM_MATRIX_INSN(name, fmt, abc) \
+    add_insn(new disasm_insn_t(#name #abc "r.v.m" ,    match_##name##abc##r_v_m,    mask_##name##abc##r_v_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "c.v.m" ,    match_##name##abc##c_v_m,    mask_##name##abc##c_v_m,   fmt)); \
+
+#define DISASM_MATRIX_FROM_VREG_INSN(name, fmt, abc) \  
+    add_insn(new disasm_insn_t(#name #abc "r.m.v" ,    match_##name##abc##r_m_v,    mask_##name##abc##r_m_v,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "c.m.v" ,    match_##name##abc##c_m_v,    mask_##name##abc##c_m_v,   fmt)); \
+
+  std::vector<const arg_t *> mv_vreg_tr_unit  = {&vd,   &ts1,  &xrs2};
+  std::vector<const arg_t *> mv_vreg_acc_unit = {&vd,   &acc1,  &xrs2};
+  std::vector<const arg_t *> mv_tr_vreg_unit  = {&td,   &vs1,  &xrs2};
+  std::vector<const arg_t *> mv_acc_vreg_unit = {&accd, &vs1,  &xrs2};
+
+  DISASM_VREG_FROM_MATRIX_INSN(mmv,  mv_vreg_tr_unit,  a);
+  DISASM_VREG_FROM_MATRIX_INSN(mmv,  mv_vreg_tr_unit,  b);
+  DISASM_VREG_FROM_MATRIX_INSN(mmv,  mv_vreg_acc_unit, c);
+  DISASM_MATRIX_FROM_VREG_INSN(mmv,  mv_tr_vreg_unit,  a);
+  DISASM_MATRIX_FROM_VREG_INSN(mmv,  mv_tr_vreg_unit,  b);
+  DISASM_MATRIX_FROM_VREG_INSN(mmv,  mv_acc_vreg_unit, c);
+ 
+  DISASM_VREG_FROM_MATRIX_INSN(mwmv, mv_vreg_acc_unit, c);
+  DISASM_VREG_FROM_MATRIX_INSN(mqmv, mv_vreg_acc_unit, c);
+  DISASM_MATRIX_FROM_VREG_INSN(mwmv, mv_acc_vreg_unit, c);
+  DISASM_MATRIX_FROM_VREG_INSN(mqmv, mv_acc_vreg_unit, c);
+
+#undef DISASM_VREG_FROM_MATRIX_INSN
+#undef DISASM_MATRIX_FROM_VREG_INSN
+
+#define DISASM_MMEM_TR_IM2COL_INSN(name, fmt, abc) \
+    add_insn(new disasm_insn_t(#name #abc "e8.m" ,    match_##name##abc##e8_m,      mask_##name##abc##e8_m,   fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e16.m" ,   match_##name##abc##e16_m,     mask_##name##abc##e16_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e32.m" ,   match_##name##abc##e32_m,     mask_##name##abc##e32_m,  fmt)); \
+    add_insn(new disasm_insn_t(#name #abc "e64.m" ,   match_##name##abc##e64_m,     mask_##name##abc##e64_m,  fmt)); \
+
+  DISASM_MMEM_TR_IM2COL_INSN(mluf, tr_ld_unit, a);
+#undef DISASM_MMEM_TR_IM2COL_INSN
 
   DISASM_INSN("mma.mm",   mma_mm,   0, {&accd, &ts2, &ts1});
   DISASM_INSN("mfma.mm",  mfma_mm,  0, {&accd, &ts2, &ts1});
@@ -1450,6 +1512,39 @@ disassembler_t::disassembler_t(int xlen)
   DISASM_INSN("memulc.mi",   memulc_mi,    0, {&accd, &acc1, &mimm5});
   DISASM_INSN("mwemulc.mi",  mwemulc_mi,    0, {&accd, &acc1, &mimm5});
   DISASM_INSN("mqemulc.mi",  mqemulc_mi,    0, {&accd, &acc1, &mimm5});
+
+  DISASM_INSN("memulcr.mv",   memulcr_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfemulcr.mv",  mfemulcr_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mwemulcr.mv",  mwemulcr_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfwemulcr.mv", mfwemulcr_mv,  0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mqemulcr.mv",  mqemulcr_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("memulcc.mv",   memulcc_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfemulcc.mv",  mfemulcc_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mwemulcc.mv",  mwemulcc_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfwemulcc.mv", mfwemulcc_mv,  0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mqemulcc.mv",  mqemulcc_mv,   0, {&accd, &acc1, &vs2});
+
+  DISASM_INSN("maddcr.mv",    maddcr_mv,     0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfaddcr.mv",   mfaddcr_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mwaddcr.mv",   mwaddcr_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfwaddcr.mv",  mfwaddcr_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mqaddcr.mv",   mqaddcr_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("maddcc.mv",    maddcc_mv,     0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfaddcc.mv",   mfaddcc_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mwaddcc.mv",   mwaddcc_mv,    0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mfwaddcc.mv",  mfwaddcc_mv,   0, {&accd, &acc1, &vs2});
+  DISASM_INSN("mqaddcc.mv",   mqaddcc_mv,    0, {&accd, &acc1, &vs2});
+
+  DISASM_INSN("mmacccr.mv",   mmacccr_mv,    0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mfmacccr.mv",  mfmacccr_mv,   0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mwmacccr.mv",  mwmacccr_mv,   0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mfwmacccr.mv", mfwmacccr_mv,  0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mqmacccr.mv",  mqmacccr_mv,   0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mmacccc.mv",   mmacccc_mv,    0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mfmacccc.mv",  mfmacccc_mv,   0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mwmacccc.mv",  mwmacccc_mv,   0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mfwmacccc.mv", mfwmacccc_mv,  0, {&accd, &vs1,  &vs2});
+  DISASM_INSN("mqmacccc.mv",  mqmacccc_mv,   0, {&accd, &vs1,  &vs2});
 
 
 #define DISASM_MXU_CVT(name, mname) \

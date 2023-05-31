@@ -1,0 +1,1 @@
+MTU_VECTOR_LD(0, 'a', uint16);
