@@ -176,6 +176,10 @@ die_id(die_id),
         *(uint32_t *)mem = (coremask & (0xff << i * 8)) >> i * 8;
     }
 
+    /* die0 cluster数量写到 0xd3d80008, die0 cluster数量写到 0xd3d80010 */
+    *(uint32_t *)addr_to_mem(0xd3d80008) = (uint32_t)nbanks();
+    *(uint32_t *)addr_to_mem(0xd3d80010) = (uint32_t)0;
+
     make_dtb();
 
   void *fdt = (void *)dtb.c_str();
