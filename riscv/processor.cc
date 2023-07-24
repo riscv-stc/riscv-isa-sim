@@ -2804,6 +2804,20 @@ void processor_t::run_async(std::function<void()> func, bool flag) {
    run_async(func);
 }
 
+void processor_t::set_run_async_state_start(bool flag) {
+  if (flag) {
+    state.pld = PLD_STARTED;
+  }
+  state.sync_stat = SYNC_STARTED;
+}
+
+void processor_t::set_run_async_state_finish(bool flag) {
+  if (flag) {
+    state.pld = PLD_FINISH;
+  }
+  state.sync_stat = SYNC_FINISH;
+}
+
 bool processor_t::async_done() {
   if (SYNC_FINISH == state.sync_stat) {
     if (async_function == nullptr) {

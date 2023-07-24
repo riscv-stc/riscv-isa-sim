@@ -20,6 +20,7 @@
 #include "ap_mbox.h"
 #include "soc_apb.h"
 #include "noc_addr.h"
+#include <atomic>
 
 class mmu_t;
 class remote_bitbang_t;
@@ -36,7 +37,8 @@ public:
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
         bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, 
-        size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini);
+        size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini,
+        bool multiCoreThreadFlag, bool multiCoreThreadFlagAll);
   ~sim_t();
 
   // run the simulation to completion
@@ -113,6 +115,10 @@ public:
       pcie_driver->process_data();
     }
   }
+
+  bool getMultiCoreThreadFlag(void){
+    return multiCoreThreadFlag || multiCoreThreadFlagAll;
+  }
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
   std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices;
@@ -143,6 +149,7 @@ private:
   bank_misc_dev_t *bank_misc[4] = {nullptr};
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
+  std::mutex switch_mutex;
 
   std::vector<std::string> exit_dump;
   std::string dump_path;
@@ -232,6 +239,11 @@ private:
 
   context_t* host;
   context_t target;
+  bool multiCoreThreadFlag = false;
+  bool multiCoreThreadFlagAll = false;
+  std::thread *mulThreadAray[64] = {};
+  size_t mulThreadStep[64] = {};
+  std::mutex switch_tasks_mutex;
   void reset();
   void idle();
   void read_chunk(addr_t taddr, size_t len, void* dst);
@@ -253,6 +265,97 @@ public:
   // yet.
   debug_module_t debug_module;
   bool has_hwsync_masks() {return (hwsync_masks[0] == 0) ? false : true;};
+  
+
+private:
+  //创建私有的线程类--线程池，线程池目的是减少线程的反复创建和销毁造成的资源开销。
+  class ThreadPool {
+      std::vector<std::thread> threads; //创建线程组，根据 core数量来定
+      std::queue<uint32_t> taskFinshSeq;
+      std::mutex tasks_mutex; //线程锁定
+      std::mutex taskFinshSeq_mutex; //线程锁定
+      std::condition_variable cv; //条件变量，用于唤醒线程池中线程。
+      std::mutex main_mutex;  //线程运行结束后唤醒主线程继续运行的条件锁。
+      std::condition_variable main_cv; //唤醒主线程条件。
+      std::atomic_bool stop;  //停止线程运行，任务推出。
+      std::vector< std::function<void()> > tasks; //任务数量和线程数量是一致的，每个线程执行一个任务。
+      std::atomic<uint32_t> wakeFlags{UINT32_MAX};
+
+    public:
+
+      uint32_t getFinshTasks(){
+        std::unique_lock<std::mutex> lock(taskFinshSeq_mutex);
+        uint32_t threadId = taskFinshSeq.front();
+        taskFinshSeq.pop();
+        return threadId;
+      }
+      bool emptyFinshTasks(){
+        std::unique_lock<std::mutex> lock(taskFinshSeq_mutex);
+        return taskFinshSeq.empty();
+      }
+    
+
+    ThreadPool(int n) : stop(false), tasks(n) {
+        threads.reserve(n);
+        for(int i = 0; i < n; i++) {
+            wakeFlags &= ~(1 << i);
+            //根据使用的核数量创建线程。
+            threads.emplace_back([this, i] {
+                while(true) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(tasks_mutex);
+                        cv.wait(lock, [this, i] { return stop || ((wakeFlags.load() & (1 << i)) != 0); });
+                        if(stop && this->tasks[i] == nullptr) return;
+                        task = std::move(this->tasks[i]);
+                        wakeFlags &= ~(1 << i);;
+                    }
+                    task();
+                    {
+                        //防止多个线程同时访问finished_tasks变量导致出错。
+                        std::unique_lock<std::mutex> lock(taskFinshSeq_mutex);
+                        taskFinshSeq.push(i);
+                        // if (taskFinshSeq.size() == 1){
+                          main_cv.notify_one(); // 任务执行完成后通知主线程
+                        // }
+                    
+                    }
+                    
+                }
+            });
+        }
+    }
+
+    ~ThreadPool() {
+        stop = true;
+        cv.notify_all();
+        for(auto& thread : threads) {
+            thread.join();
+        }
+       
+    }
+    //将函数加入tasks队列，并更新tasks_count，用于标记当前的任务数量。
+    template<class F, class... Args>
+    void submitTask(uint32_t threadId, F&& f, Args&&... args) {
+        {   
+            std::unique_lock<std::mutex> lock(tasks_mutex);
+            tasks[threadId] = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+            wakeFlags |= (1 << threadId);;
+        }
+        // if (wakeFlags == UINT32_MAX)
+        cv.notify_all();
+    }
+
+    void waitForAllTasks() {
+        std::unique_lock<std::mutex> lock(main_mutex);
+        main_cv.wait(lock, [this]{ return (taskFinshSeq.size() != 0); });
+    }
+  };
+
+  ThreadPool *threadPool;
+  void stepTaskFunc(size_t p, size_t steps);
+  void stepTaskFuncAll(size_t p, size_t steps);
+  static void stepTaskFuncAll2(void* args);
 };
 
 extern volatile bool ctrlc_pressed;

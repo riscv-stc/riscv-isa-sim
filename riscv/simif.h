@@ -59,6 +59,7 @@ public:
     virtual void pcie_step(void) = 0;
 
     virtual void hpe_debug_backdoor(void) = 0;
+    virtual bool getMultiCoreThreadFlag(void) = 0;
 };
 
 #endif

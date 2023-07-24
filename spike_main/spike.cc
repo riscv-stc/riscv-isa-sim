@@ -31,6 +31,8 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
   fprintf(stderr, "  --pcie-enabled        Start PCIE driver\n");
+  fprintf(stderr, "  --parallel-speedup    Use parallel speedup run multi npc core,one core forbiden,Default true\n");
+  fprintf(stderr, "  --parallel-aspeedup   Use parallel asyn speedup run multi npc core,one core forbiden,Default true\n");
   fprintf(stderr, "  --output-ddr-id-enabled         Output memery file name with bank id [default false]\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
   fprintf(stderr, "  --priv=<m|mu|msu>     RISC-V privilege modes supported [default %s]\n", DEFAULT_PRIV);
@@ -243,6 +245,8 @@ int main(int argc, char** argv)
   bool dtb_enabled = true;
   bool real_time_clint = false;
   bool pcie_enabled = false;
+  bool multiCoreThreadFlag = false;
+  bool multiCoreThreadFlagAll = false;
   bool file_name_with_bank_id = false;
   int nbanks = 1;
   size_t nprocs = 1;
@@ -362,6 +366,8 @@ int main(int argc, char** argv)
   parser.option('b', 0, 1, [&](const char* s){nbanks = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   parser.option(0, "pcie-enabled", 0, [&](const char *s) { pcie_enabled = true; });
+  parser.option(0, "parallel-speedup", 0, [&](const char *s) { multiCoreThreadFlag = true; });
+  parser.option(0, "parallel-aspeedup", 0, [&](const char *s) { multiCoreThreadFlagAll = true; });
   parser.option(0, "output-ddr-id-enabled", 0, [&](const char *s) { file_name_with_bank_id = true; });
   parser.option(0, "bank-id", 1, [&](const char* s){ id_first_bank = atoi(s);});
   parser.option(0, "die-id", 1, [&](const char* s){ die_id = atoi(s);});
@@ -475,7 +481,8 @@ int main(int argc, char** argv)
   sim_t s(isa, priv, varch, nprocs, nbanks, id_first_bank, die_id, (char *)hwsync_masks, hwsync_timer_num, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
       htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
-      pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask, atuini);
+      pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask, atuini, 
+      multiCoreThreadFlag, multiCoreThreadFlagAll);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));

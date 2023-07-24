@@ -427,7 +427,7 @@ public:
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
               const char *atuini,FILE *log_file);
   ~processor_t();
-
+  
   void set_debug(bool value);
   void set_histogram(bool value);
 #ifdef RISCV_ENABLE_COMMITLOG
@@ -503,6 +503,7 @@ public:
   atu_t* get_np_atu() { return np_atu; }
   simif_t* get_sim() { return sim; };
   bankif_t* get_bank() { return bank; };
+  std::mutex& hwsync_test(void);
   uint32_t get_hwsync_status();
   uint32_t get_pld_status();
   void set_pld_finish(void) {state.pld = PLD_FINISH;};
@@ -560,7 +561,8 @@ public:
   bool is_sync_idle() {return (SYNC_IDLE==state.sync_stat); };
   bool is_pld_started() {return PLD_STARTED==state.pld;};
   bool is_pld_idle() {return PLD_IDLE==state.pld;};
-
+  void set_run_async_state_finish(bool flag);
+  void set_run_async_state_start(bool flag);
   uint64_t get_host_clks(void) {
   #if defined (__i386__)
     uint64_t x;
@@ -702,7 +704,7 @@ public:
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   bool in_npc_mem(reg_t addr, local_device_type type);
   bool in_npc_mmio(reg_t addr);
-
+  
   idtu_t *idtu = nullptr;
 private:
   simif_t* sim;

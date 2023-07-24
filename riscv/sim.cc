@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-
+#include <sys/resource.h>
 //L1 buffer size adjust to 1.288M, 0xc0000000-0xc0148000
 //im buffer size adjust to 256K, 0xc0400000-0xc0440000
 //Index RAM size 80k, 0xc0500000-0xc0514000
@@ -48,7 +48,8 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              const debug_module_config_t &dm_config,
              const char *log_path,
              bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id,
-             size_t board_id,  size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini)
+             size_t board_id,  size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini, 
+             bool multiCoreThreadFlag, bool multiCoreThreadFlagAll)
   : htif_t(args, this),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -75,7 +76,9 @@ die_id(die_id),
     pcie_enabled(pcie_enabled),
     file_name_with_bank_id(file_name_with_bank_id),
     remote_bitbang(NULL),
-    debug_module(this, dm_config)
+    debug_module(this, dm_config),
+    multiCoreThreadFlag(multiCoreThreadFlag),
+    multiCoreThreadFlagAll(multiCoreThreadFlagAll)
 {
     core_reset_n = 0;
     signal(SIGINT, &handle_signal);
@@ -244,6 +247,9 @@ die_id(die_id),
         pcie_driver->set_mStatus(ERROR_CONN);
     }
   }
+
+  if(multiCoreThreadFlag)
+    threadPool = new ThreadPool(nprocs);
 
 }
 
@@ -690,6 +696,7 @@ int sim_t::run(std::vector<std::string> load_files,
   dump_path = dump_path_;
 
   host = context_t::current();
+
   target.init(sim_thread_main, this);
   load_mems(load_files);
 
@@ -698,9 +705,45 @@ int sim_t::run(std::vector<std::string> load_files,
 
   stat = htif_t::run();
 
+  if(multiCoreThreadFlag)
+    delete threadPool;
+    
   if (exit_dump.size() > 0)
     dump_mems("output_mem", exit_dump, dump_path);
   return stat;
+}
+
+void sim_t::stepTaskFunc(size_t p, size_t steps){
+    processor_t *current_processor = get_core_by_idxinsim(p);
+    current_processor->set_soc_apb(soc_apb);    
+    current_processor->step(steps);
+    mulThreadStep[p] += steps;   
+}
+
+void sim_t::stepTaskFuncAll(size_t p, size_t steps){
+    processor_t *current_processor = get_core_by_idxinsim(p);
+    current_processor->set_soc_apb(soc_apb);   
+    bool idle_flag= true; 
+    auto enq_func = [](std::queue<reg_t>* q, uint64_t x) { q->push(x); };
+    std::queue<reg_t> fromhost_queue;
+    std::function<void(reg_t)> fromhost_callback =
+      std::bind(enq_func, &fromhost_queue, std::placeholders::_1);
+    while (!done())
+    {
+      current_processor->step(steps);
+      mulThreadStep[p] += steps;
+      if (mulThreadStep[p] >= INTERLEAVE){
+        mulThreadStep[p] = 0;
+        get_core_by_idxinsim(p)->get_mmu()->yield_load_reservation();
+        if ( p == (nprocs() - 1))
+          clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+        {
+          std::lock_guard<std::mutex> lock(switch_tasks_mutex);
+        
+          htif_t::check_tohost(&idle_flag, fromhost_queue, fromhost_callback);
+        }
+      }
+    }      
 }
 
 void sim_t::step(size_t n)
@@ -708,20 +751,67 @@ void sim_t::step(size_t n)
   for (size_t i = 0, steps = 0; i < n; i += steps)
   {
     steps = std::min(n - i, INTERLEAVE - current_step);
-    processor_t *current_processor = get_core_by_idxinsim(current_proc);     /* procs[current_proc] */
-    current_processor->set_soc_apb(soc_apb);
-    current_processor->step(steps);
-    current_step += steps;
-    if (current_step == INTERLEAVE)
-    {
-      current_step = 0;
-      get_core_by_idxinsim(current_proc)->get_mmu()->yield_load_reservation();
-      if (++current_proc == nprocs()) {
-        current_proc = 0;
-        clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+    if (multiCoreThreadFlag){
+      if(threadPool->emptyFinshTasks()){
+        for (size_t p = 0; p < nprocs(); p++){
+          threadPool->submitTask(p, &sim_t::stepTaskFunc, this, p, steps);
+          // mulThreadAray[p]->detach();
+        }
+        // host->switch_to();
+        // while(threadPool->emptyFinshTasks());
+        threadPool->waitForAllTasks();
+      }else{
+        threadPool->submitTask(current_proc, &sim_t::stepTaskFunc, this, current_proc, steps);
+      }
+      current_proc = threadPool->getFinshTasks();
+       
+      if (mulThreadStep[current_proc] >= INTERLEAVE){
+        mulThreadStep[current_proc] = 0;
+        get_core_by_idxinsim(current_proc)->get_mmu()->yield_load_reservation();
+        if ( current_proc == (nprocs() - 1))
+          clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+        
+        host->switch_to();
       }
 
+    }
+    else if(multiCoreThreadFlagAll){
+      std::vector<std::thread> thread_p(nprocs());
+      uint32_t stackSize = 1024 * 1024 *32;
+      rlimit stackLimit;
+      memset(&stackLimit, 0, sizeof(stackLimit));
+      stackLimit.rlim_cur = stackSize;
+      stackLimit.rlim_max = stackSize;
+      setrlimit(RLIMIT_STACK, &stackLimit);
+      for (size_t p = 0; p < nprocs(); p++){
+          thread_p.emplace_back(&sim_t::stepTaskFuncAll, this, p, steps);
+      }
+      for (auto& thread : thread_p) {
+        if (thread.joinable())
+          thread.join();
+      }
+      
       host->switch_to();
+      return;
+    }
+    else{
+      processor_t *current_processor = get_core_by_idxinsim(current_proc);     /* procs[current_proc] */
+      current_processor->set_soc_apb(soc_apb);
+      current_processor->step(steps);
+    
+      current_step += steps;
+      
+      if (current_step == INTERLEAVE)
+      {
+        current_step = 0;
+        get_core_by_idxinsim(current_proc)->get_mmu()->yield_load_reservation();
+        if (++current_proc == nprocs()) {
+          current_proc = 0;
+          clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
+        }
+
+        host->switch_to();
+      }
     }
   }
 

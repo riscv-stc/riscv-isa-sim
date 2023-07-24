@@ -27,7 +27,8 @@ class htif_t : public chunked_memif_t
   int run();
   bool done();
   int exit_code();
-
+  int check_tohost(bool *idle_flag, std::queue<reg_t> &fromhost_queue, \
+        std::function<void(reg_t)> &fromhost_callback);
   virtual memif_t& memif() { return mem; }
 
   template<typename T> inline T from_target(target_endian<T> n) const
@@ -98,6 +99,8 @@ class htif_t : public chunked_memif_t
   addr_t sig_len; // torture
   addr_t tohost_addr;
   addr_t fromhost_addr;
+  addr_t tohost_native = 0;
+  addr_t fromhost_native = 0;
   int exitcode;
   bool stopped;
   bool native = false;    /* native模式, 加载程序使用atu作地址映射 */

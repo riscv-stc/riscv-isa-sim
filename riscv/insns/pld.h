@@ -15,7 +15,8 @@ check_tcp_pld_invalid_coremap(p->get_id(), RS2);
 reg_t addr = zext_xlen(RS1);
 reg_t dst_addr = RD;
 reg_t rs2 = RS2;
-p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
+
+std::function<void()> pldFunc = [p, insn, pc, xlen, addr, dst_addr, e_size, rs2](){
   uint8_t* src = (uint8_t*)MMU.mte_addr_to_mem(addr);
   uint8_t* dst = (uint8_t*)MMU.mte_addr_to_mem(dst_addr);
   uint32_t core_map = (uint32_t)rs2;
@@ -80,6 +81,12 @@ p->run_async([p, insn, pc, xlen, addr, dst_addr, e_size, rs2]() {
     }
     //mte_vm_mov(addr, dst_addr, e_size, (const struct MteShapeStride *)&mte_ss, p, false, true);
   }
-}, true);
-
+};
+if (!p->get_sim()->getMultiCoreThreadFlag())
+  p->run_async(pldFunc, true);
+else{
+  p->set_run_async_state_start(true);
+  pldFunc();
+  p->set_run_async_state_finish(true);
+}
 wfi();
