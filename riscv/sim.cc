@@ -91,6 +91,11 @@ die_id(die_id),
         exit(1);
     }
 
+    if (0>(int)board_id || 32<=(int)board_id) {
+        printf("board-id %d not support \n", (int)board_id);
+        exit(1);
+    }
+
     /* 创建并添加 hs */
     if ('\0' == hwsync_masks[0]) {
         int i = 0;
@@ -136,7 +141,7 @@ die_id(die_id),
         /* PCIE_CTL_CFG (16MB) */
         glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_driver->get_pcie_ctl());
 
-        apifc = new apifc_t(this);
+        apifc = new apifc_t(this, board_id);
         soc_apb = new soc_apb_t(this, apifc);
         glb_bus.add_device(SOC_APB_BASE, soc_apb);
 
@@ -173,6 +178,10 @@ die_id(die_id),
         char *mem = addr_to_mem(STC_VALID_NPCS_BASE + i * 4);
         *(uint32_t *)mem = (coremask & (0xff << i * 8)) >> i * 8;
     }
+
+    /* die0 cluster数量写到 0xd3d80008, die0 cluster数量写到 0xd3d80010 */
+    *(uint32_t *)addr_to_mem(0xd3d80008) = (uint32_t)nbanks();
+    *(uint32_t *)addr_to_mem(0xd3d80010) = (uint32_t)0;
 
     make_dtb();
 
