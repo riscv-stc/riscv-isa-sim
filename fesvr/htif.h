@@ -27,8 +27,7 @@ class htif_t : public chunked_memif_t
   int run();
   bool done();
   int exit_code();
-  int check_tohost(bool *idle_flag, std::queue<reg_t> &fromhost_queue, \
-        std::function<void(reg_t)> &fromhost_callback);
+
   virtual memif_t& memif() { return mem; }
 
   template<typename T> inline T from_target(target_endian<T> n) const

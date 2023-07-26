@@ -38,7 +38,7 @@ public:
         const debug_module_config_t &dm_config, const char *log_path,
         bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, 
         size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini,
-        bool multiCoreThreadFlag, bool multiCoreThreadFlagAll);
+        bool multiCoreThreadFlag);
   ~sim_t();
 
   // run the simulation to completion
@@ -117,7 +117,7 @@ public:
   }
 
   bool getMultiCoreThreadFlag(void){
-    return multiCoreThreadFlag || multiCoreThreadFlagAll;
+    return multiCoreThreadFlag;
   }
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -149,7 +149,6 @@ private:
   bank_misc_dev_t *bank_misc[4] = {nullptr};
   volatile reg_t core_reset_n;
   std::mutex rst_mutex;
-  std::mutex switch_mutex;
 
   std::vector<std::string> exit_dump;
   std::string dump_path;
@@ -240,10 +239,9 @@ private:
   context_t* host;
   context_t target;
   bool multiCoreThreadFlag = false;
-  bool multiCoreThreadFlagAll = false;
   std::thread *mulThreadAray[64] = {};
   size_t mulThreadStep[64] = {};
-  std::mutex switch_tasks_mutex;
+  
   void reset();
   void idle();
   void read_chunk(addr_t taddr, size_t len, void* dst);
@@ -354,8 +352,6 @@ private:
 
   ThreadPool *threadPool;
   void stepTaskFunc(size_t p, size_t steps);
-  void stepTaskFuncAll(size_t p, size_t steps);
-  static void stepTaskFuncAll2(void* args);
 };
 
 extern volatile bool ctrlc_pressed;

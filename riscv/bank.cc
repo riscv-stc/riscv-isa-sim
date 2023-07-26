@@ -16,7 +16,7 @@
 bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
             hwsync_t *hwsync, FILE *log_file, size_t board_id, 
             size_t chip_id, int bank_nprocs,int bankid, 
-            const std::vector<int> hartids, bool halted, const char *atuini) : nprocs(bank_nprocs),
+            const std::vector<int> hartids, bool halted, const char *atuini, bool multiCoreThreadFlag) : nprocs(bank_nprocs),
             bank_id(bankid), procs(std::max(size_t(bank_nprocs),size_t(1)))
 {
     /* DDR */
@@ -28,7 +28,7 @@ bank_t::bank_t(const char* isa, const char* priv, const char* varch, simif_t* si
     for (int i = 0; i < nprocs; i++) {
         int hart_id = hartids.empty() ? (i + bank_id * nprocs) : hartids[bank_id*nprocs+i];
         procs[i] = new processor_t(isa, priv, varch, sim, this, hwsync, i,
-                    hart_id, bank_id, halted, atuini, log_file);
+                    hart_id, bank_id, halted, atuini, log_file, multiCoreThreadFlag);
     }
 
     /* 添加 sysdma */

@@ -330,7 +330,7 @@ int htif_t::run()
   std::queue<reg_t> fromhost_queue;
   std::function<void(reg_t)> fromhost_callback =
     std::bind(enq_func, &fromhost_queue, std::placeholders::_1);
-  bool idle_flag = false;
+
   if (tohost_addr == 0) {
     while (true) {
       idle();
@@ -360,25 +360,13 @@ int htif_t::run()
 
   while (!signal_exit && exitcode == 0)
   {
-    check_tohost(&idle_flag, fromhost_queue, fromhost_callback);
-    idle_flag = false;
-    idle();
-  }
-
-  stop();
-
-  return exit_code();
-}
-
-int htif_t::check_tohost(bool *idle_flag , std::queue<reg_t> &fromhost_queue, \
-        std::function<void(reg_t)> &fromhost_callback){
     if (native) {
         if (auto tohost = from_target(mem.read_uint64(tohost_native))) {
         mem.write_uint64(tohost_native, target_endian<uint64_t>::zero);
         command_t cmd(mem, tohost, fromhost_callback);
         device_list.handle_command(cmd);
         } else {
-          return 0;
+        idle();
         }
 
         if (signal_dump) {
@@ -406,7 +394,7 @@ int htif_t::check_tohost(bool *idle_flag , std::queue<reg_t> &fromhost_queue, \
                 command_t cmd(mem, tohost, fromhost_callback);
                 device_list.handle_command(cmd);
             } else {
-                return 0;
+                idle();
             }
         }
 
@@ -431,8 +419,8 @@ int htif_t::check_tohost(bool *idle_flag , std::queue<reg_t> &fromhost_queue, \
         mem.write_uint64(tohost_addr, target_endian<uint64_t>::zero);
         command_t cmd(mem, tohost, fromhost_callback);
         device_list.handle_command(cmd);
-        } else {      
-          return 0;
+        } else {
+        idle();
         }
 
         if (signal_dump) {
@@ -448,15 +436,11 @@ int htif_t::check_tohost(bool *idle_flag , std::queue<reg_t> &fromhost_queue, \
         fromhost_queue.pop();
         }
     }
-  if (*idle_flag == true)
-  {  
-    stop();
-    return exit_code();
   }
-  else{
-    *idle_flag = true;
-    return 0;
-  }
+
+  stop();
+
+  return exit_code();
 }
 
 bool htif_t::done()

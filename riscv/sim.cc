@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <sys/resource.h>
+
 //L1 buffer size adjust to 1.288M, 0xc0000000-0xc0148000
 //im buffer size adjust to 256K, 0xc0400000-0xc0440000
 //Index RAM size 80k, 0xc0500000-0xc0514000
@@ -49,7 +49,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              const char *log_path,
              bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id,
              size_t board_id,  size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini, 
-             bool multiCoreThreadFlag, bool multiCoreThreadFlagAll)
+             bool multiCoreThreadFlag)
   : htif_t(args, this),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -77,8 +77,7 @@ die_id(die_id),
     file_name_with_bank_id(file_name_with_bank_id),
     remote_bitbang(NULL),
     debug_module(this, dm_config),
-    multiCoreThreadFlag(multiCoreThreadFlag),
-    multiCoreThreadFlagAll(multiCoreThreadFlagAll)
+    multiCoreThreadFlag(multiCoreThreadFlag)
 {
     core_reset_n = 0;
     signal(SIGINT, &handle_signal);
@@ -95,7 +94,6 @@ die_id(die_id),
         printf("board-id %d not support \n", (int)board_id);
         exit(1);
     }
-
     /* 创建并添加 hs */
     if ('\0' == hwsync_masks[0]) {
         int i = 0;
@@ -132,7 +130,7 @@ die_id(die_id),
     for (size_t i = get_id_first_bank() ; i < nbanks()+get_id_first_bank() ; i++) {
         banks[i] = new bank_t(isa, priv, varch, this, ddr_size, hwsync,
                 log_file.get(), board_id, chip_id,core_num_of_bank, i,
-                hartids, halted, atuini);
+                hartids, halted, atuini, multiCoreThreadFlag);
     }
 
     /* pcie driver */
@@ -178,7 +176,6 @@ die_id(die_id),
         char *mem = addr_to_mem(STC_VALID_NPCS_BASE + i * 4);
         *(uint32_t *)mem = (coremask & (0xff << i * 8)) >> i * 8;
     }
-
     /* die0 cluster数量写到 0xd3d80008, die0 cluster数量写到 0xd3d80010 */
     *(uint32_t *)addr_to_mem(0xd3d80008) = (uint32_t)nbanks();
     *(uint32_t *)addr_to_mem(0xd3d80010) = (uint32_t)0;
@@ -256,6 +253,9 @@ die_id(die_id),
         pcie_driver->set_mStatus(ERROR_CONN);
     }
   }
+
+  if(nprocs <= 1)
+    multiCoreThreadFlag = false;
 
   if(multiCoreThreadFlag)
     threadPool = new ThreadPool(nprocs);
@@ -729,32 +729,6 @@ void sim_t::stepTaskFunc(size_t p, size_t steps){
     mulThreadStep[p] += steps;   
 }
 
-void sim_t::stepTaskFuncAll(size_t p, size_t steps){
-    processor_t *current_processor = get_core_by_idxinsim(p);
-    current_processor->set_soc_apb(soc_apb);   
-    bool idle_flag= true; 
-    auto enq_func = [](std::queue<reg_t>* q, uint64_t x) { q->push(x); };
-    std::queue<reg_t> fromhost_queue;
-    std::function<void(reg_t)> fromhost_callback =
-      std::bind(enq_func, &fromhost_queue, std::placeholders::_1);
-    while (!done())
-    {
-      current_processor->step(steps);
-      mulThreadStep[p] += steps;
-      if (mulThreadStep[p] >= INTERLEAVE){
-        mulThreadStep[p] = 0;
-        get_core_by_idxinsim(p)->get_mmu()->yield_load_reservation();
-        if ( p == (nprocs() - 1))
-          clint->increment(INTERLEAVE / INSNS_PER_RTC_TICK);
-        {
-          std::lock_guard<std::mutex> lock(switch_tasks_mutex);
-        
-          htif_t::check_tohost(&idle_flag, fromhost_queue, fromhost_callback);
-        }
-      }
-    }      
-}
-
 void sim_t::step(size_t n)
 {
   for (size_t i = 0, steps = 0; i < n; i += steps)
@@ -783,25 +757,6 @@ void sim_t::step(size_t n)
         host->switch_to();
       }
 
-    }
-    else if(multiCoreThreadFlagAll){
-      std::vector<std::thread> thread_p(nprocs());
-      uint32_t stackSize = 1024 * 1024 *32;
-      rlimit stackLimit;
-      memset(&stackLimit, 0, sizeof(stackLimit));
-      stackLimit.rlim_cur = stackSize;
-      stackLimit.rlim_max = stackSize;
-      setrlimit(RLIMIT_STACK, &stackLimit);
-      for (size_t p = 0; p < nprocs(); p++){
-          thread_p.emplace_back(&sim_t::stepTaskFuncAll, this, p, steps);
-      }
-      for (auto& thread : thread_p) {
-        if (thread.joinable())
-          thread.join();
-      }
-      
-      host->switch_to();
-      return;
     }
     else{
       processor_t *current_processor = get_core_by_idxinsim(current_proc);     /* procs[current_proc] */

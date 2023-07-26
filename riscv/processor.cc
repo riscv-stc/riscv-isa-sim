@@ -25,7 +25,7 @@
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
               simif_t* sim, bankif_t* bank, hwsync_t *hs, 
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
-              const char *atuini,FILE *log_file)
+              const char *atuini,FILE *log_file, bool multiCoreThreadFlag)
   : debug(false), halt_request(HR_NONE), sim(sim), bank(bank), hwsync(hs), ext(NULL), 
   idxinbank(idxinbank), bank_id(bank_id), id(id), xlen(0),histogram_enabled(false), 
   log_commits_enabled(false),log_file(log_file), halt_on_reset(halt_on_reset),
@@ -84,32 +84,34 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
 
   reset();
 
-  // start a thread for receive async tasks
-  async_thread = new std::thread([this] {
-    while (true) {
-      std::unique_lock<std::mutex> lock(async_mutex);
-      async_cond.wait(lock, [this]{
-        return async_function || !async_running;
-      });
+  if (!multiCoreThreadFlag){
+    // start a thread for receive async tasks
+    async_thread = new std::thread([this] {
+      while (true) {
+        std::unique_lock<std::mutex> lock(async_mutex);
+        async_cond.wait(lock, [this]{
+          return async_function || !async_running;
+        });
 
-      if (!async_running && !async_function) break;
+        if (!async_running && !async_function) break;
 
-      async_trap = nullptr;
-      try {
-        async_function();
-      } catch(trap_t& t) {
-        async_trap = std::current_exception();
+        async_trap = nullptr;
+        try {
+          async_function();
+        } catch(trap_t& t) {
+          async_trap = std::current_exception();
+        }
+
+        async_function = nullptr;
+        state.sync_stat = SYNC_FINISH;
+  #if 0
+        if (PLD_STARTED == state.pld) {
+          state.pld = PLD_FINISH;
+        }
+  #endif
       }
-
-      async_function = nullptr;
-      state.sync_stat = SYNC_FINISH;
-#if 0
-      if (PLD_STARTED == state.pld) {
-        state.pld = PLD_FINISH;
-      }
-#endif
-    }
-  });
+    });
+  }
 }
 
 processor_t::~processor_t()
@@ -134,9 +136,14 @@ processor_t::~processor_t()
     };
     usleep(10000);
   }
+  
+  
+  if (async_thread != nullptr){
+    if (async_thread->joinable())
+      async_thread->join();
 
-  async_thread->join();
-  delete async_thread;
+    delete async_thread;
+  }
 
   delete mmu;
   delete disassembler;

@@ -425,7 +425,7 @@ public:
   processor_t(const char* isa, const char* priv, const char* varch,
               simif_t* sim, bankif_t* bank, hwsync_t *hs,
               uint32_t idxinbank, uint32_t id, uint32_t bank_id, bool halt_on_reset,
-              const char *atuini,FILE *log_file);
+              const char *atuini,FILE *log_file, bool multiCoreThreadFlag);
   ~processor_t();
   
   void set_debug(bool value);

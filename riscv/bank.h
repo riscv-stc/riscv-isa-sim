@@ -27,7 +27,7 @@ public:
     bank_t(const char* isa, const char* priv, const char* varch, simif_t* sim,size_t ddr_size,
             hwsync_t *hwsync, FILE *log_file, size_t board_id, size_t chip_id, 
             int bank_nprocs, int bankid,const std::vector<int> hartids, bool halted,
-            const char *atuini);
+            const char *atuini, bool multiCoreThreadFlag);
     virtual ~bank_t();
 
     int get_bankid(void) {return bank_id;};
