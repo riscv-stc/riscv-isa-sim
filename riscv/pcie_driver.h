@@ -17,6 +17,7 @@ class bankif_t;
 #include <linux/netlink.h>
 #include <linux/socket.h>
 #include <semaphore.h>
+#include "pcie_socket_sim.h"
 
 #define PCIE_OK          (0)
 #define PCIE_UNINIT      (-1)
@@ -138,10 +139,11 @@ enum {
 #define XFER_LEN_ONCE_MAX       COMMAND_DATA_SIZE_MAX
 
 class pcie_ctl_device_t;
-
+class pcie_socket_sim_t;
 class pcie_driver_t {
  public:
-  pcie_driver_t(simif_t* sim, bool pcie_enabled, size_t board_id, size_t chip_id, const char *atuini);
+  pcie_driver_t(simif_t* sim, bool pcie_enabled, size_t board_id, size_t chip_id, 
+      const char *atuini, uint8_t board_connect_id ,const char *mccini);
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);
@@ -156,6 +158,8 @@ class pcie_driver_t {
 
   pcie_ctl_device_t *get_pcie_ctl(void) { return  pcie_ctl;};
   void process_data();
+  // void set_pcie_socket(pcie_socket_sim_t *ps) { pcie_socket = ps;};
+  pcie_socket_sim_t *get_pcie_socket_h(void) {return pcie_socket;};
 
  private:
   std::unique_ptr<std::thread> mDriverThread;
@@ -208,6 +212,7 @@ class pcie_driver_t {
   void read_host_notify_ok(struct command_head_t *cmd);
 
   pcie_ctl_device_t *pcie_ctl = nullptr;
+  pcie_socket_sim_t *pcie_socket = nullptr;
 };
 
 class pcie_dma_dev_t : public abstract_device_t {
@@ -225,6 +230,7 @@ class pcie_dma_dev_t : public abstract_device_t {
     atu_t *pcie_atu;
     atu_t *pcie_desc_atu;
     simif_t *sim = nullptr;
+    
     pcie_driver_t *pcie = nullptr;
     size_t len = 0x20*PCIE_DMA_CH_TOTAL;   /* PCIE_DMA_SIZE */
 
@@ -240,6 +246,7 @@ class pcie_dma_dev_t : public abstract_device_t {
     int write_host(uint64_t addr, uint8_t *data, int len);
     int read_host(uint64_t addr, uint8_t *data, int len);
     int pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_not_ib);
+    int write_other_npu_soc(uint64_t addr, uint8_t *data, int len);
 };
 
 class axi_master_common_t : public abstract_device_t {

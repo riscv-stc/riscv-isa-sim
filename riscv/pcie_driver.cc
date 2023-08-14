@@ -37,7 +37,8 @@
 #define NL_GROUPS        (0)
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
-        size_t board_id, size_t chip_id, const char *atuini) : mPSim(sim),
+        size_t board_id, size_t chip_id, const char *atuini, 
+        uint8_t board_connect_id ,const char *mccini) : mPSim(sim),
         pcie_enabled(pcie_enabled), board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
@@ -96,6 +97,9 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
   }
 
   pcie_ctl = new pcie_ctl_device_t(mPSim, this, atuini);
+  if(board_connect_id){
+    pcie_socket = new pcie_socket_sim_t(mPSim, board_id , board_connect_id, mccini);
+  }
 }
 
 int pcie_driver_t::initialize()
@@ -365,6 +369,27 @@ bool pcie_driver_t::pcie_bar_store_data(int barid, reg_t addr, size_t len, const
   
   axi_addr = pcie_ctl->bar_axi_addr(barid, addr);
 
+  if ((barid == 4) && (axi_addr & (1 << 63))){
+    /* 64位设备端地址：
+    * - [63]: 1表示是用于p2p传输，否则是本地；
+    * - [62:56]: 暂定7位，用于指定远端spike的target_id
+    * - [39:0]：ddr地址
+    * 例如：0x8100_0008_0000_0000
+    * 表示要传输到target=1的0x8_0000_0000。
+    * https://bjsvn01.streamcomputing.com/!/#Yu/view/head/Software/pcie/reg/axi_master_common_ep.html
+    * svn 对该寄存器作出了详细说明
+    * axi_master_common_t base addr = 0xe301_0000
+    * 返回该寄存器最高8位用于判断是否为跨npu传输
+    */
+
+    uint8_t npu_id = (axi_addr >> 56) & 0x7F;
+    uint64_t addr = axi_addr & 0xFFFFFFFFFF; // [39:0] ddr地址
+    // 通过socket 实现通信
+    // 设置开始传输标志，传输完成后设置结束标志。
+    
+    return true;
+  }
+
   paddr = axi_addr;
   if (2 != barid) {      /* pf bar2 不经过ATU */
     atu_t *at = pcie_ctl->get_atu(0);
@@ -551,6 +576,7 @@ void pcie_driver_t::process_data(void)
           case CODE_PF_BAR0_WRITE:
           case CODE_PF_BAR2_WRITE:
           case CODE_PF_BAR4_WRITE:
+            // 检查addr是否写入互联地址
             pcie_bar_store_data(CMD_CODE_TO_BARID(pCmd->code), pCmd->addr, pCmd->len, (const uint8_t*)pCmd->data);
             break;
           default:
@@ -946,6 +972,14 @@ int pcie_dma_dev_t::write_soc(uint64_t addr, uint8_t *data, int len)
   return 0;
 }
 
+/* 写其他NPU 地址根据 target_id, 成功返回0 */
+int pcie_dma_dev_t::write_other_npu_soc(uint64_t addr, uint8_t *data, int len)
+{
+  
+  uint8_t target_id = (addr >> 56) & 0x3f;
+  return   pcie->get_pcie_socket_h()->send_data(addr, len, data, target_id);
+}
+
 /* 读DDR, 成功返回0 */
 int pcie_dma_dev_t::read_soc(uint64_t addr, uint8_t *data, int len)
 {
@@ -1030,7 +1064,10 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
     if (XFER_DIR_H2D == ob_not_ib) {
         ret = read_host(pcie_addr, buf, len_once);
         if (0 == ret) {
-          ret = write_soc(soc_addr, buf, len_once);
+          if (soc_addr & (0x1 << 63))
+            ret = write_other_npu_soc(soc_addr, buf, len_once);
+          else
+            ret = write_soc(soc_addr, buf, len_once);
           }
     } else if (XFER_DIR_D2H == ob_not_ib) {
         ret = read_soc(soc_addr, buf, len_once);
@@ -1105,6 +1142,10 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
     }
 
     xfer_len = PDD_CTL_LEN(desc_addr) & 0xffffff;
+
+    if (xfer_len == 0 )
+      continue;
+
     soc_va = PDD_SOC_ADDR(desc_addr);
     soc_addr = soc_va;
     pcie_addr = PDD_PCIE_ADDR(desc_addr);

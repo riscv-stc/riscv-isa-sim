@@ -750,13 +750,13 @@ bool processor_t::in_npc_mem(reg_t addr, local_device_type type) {
 
 void processor_t::take_interrupt(reg_t pending_interrupts)
 {
-  reg_t enabled_interrupts, deleg, status, mie, m_enabled;
-  reg_t hsie, hs_enabled, vsie, vs_enabled;
-
   // Do nothing if no pending interrupts
   if (!pending_interrupts) {
     return;
   }
+
+  reg_t enabled_interrupts, deleg, status, mie, m_enabled;
+  reg_t hsie, hs_enabled, vsie, vs_enabled;
 
   // M-ints have higher priority over HS-ints and VS-ints
   mie = get_field(state.mstatus, MSTATUS_MIE);

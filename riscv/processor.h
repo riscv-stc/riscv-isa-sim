@@ -503,7 +503,6 @@ public:
   atu_t* get_np_atu() { return np_atu; }
   simif_t* get_sim() { return sim; };
   bankif_t* get_bank() { return bank; };
-  std::mutex& hwsync_test(void);
   uint32_t get_hwsync_status();
   uint32_t get_pld_status();
   void set_pld_finish(void) {state.pld = PLD_FINISH;};
