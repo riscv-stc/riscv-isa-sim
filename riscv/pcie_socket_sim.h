@@ -118,7 +118,7 @@ class pcie_socket_sim_t : public abstract_device_t {
   uint8_t board_connect_id;
   uint16_t logic_board_id = 0;
   uint8_t *reg_base = nullptr;
-  uint16_t port_number = 0; //socket 服务端绑定的端口
+  uint16_t local_port_number = 0; //socket 服务端绑定的端口
   size_t board_id;
   uint32_t msg_head_id; // 底8位为board_id，之后8位为组id,最后16位为逻辑id
   std::vector<struct con_cfg_table> route_table; //每次路由表更新都要向其他连接广播
@@ -147,8 +147,9 @@ class pcie_socket_sim_t : public abstract_device_t {
   void multicast_recv(void);
   void pcie_socket_recv(void);
   int send_server_cfg();
-  int read_file_cfg(const char *filename);
+  bool read_file_cfg(const char *filename);
   void tcp_server_recv();
+  void data_socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len);
 };
 
 #endif //__PCIE_SOCKET_SIM_H__
