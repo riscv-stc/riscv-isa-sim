@@ -143,7 +143,7 @@ class pcie_socket_sim_t;
 class pcie_driver_t {
  public:
   pcie_driver_t(simif_t* sim, bool pcie_enabled, size_t board_id, size_t chip_id, 
-      const char *atuini, uint8_t board_connect_id ,const char *mccini);
+      const char *atuini, uint8_t board_connect_id);
   ~pcie_driver_t();
 
   int send(const uint8_t* data, size_t len);

@@ -38,7 +38,7 @@ public:
         const debug_module_config_t &dm_config, const char *log_path,
         bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id, 
         size_t board_id, size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini,
-        bool multiCoreThreadFlag, uint8_t board_connect_id, const char *mccini);
+        bool multiCoreThreadFlag, uint8_t board_connect_id);
   ~sim_t();
 
   // run the simulation to completion
@@ -177,7 +177,6 @@ private:
   hwsync_t *hwsync;
   apifc_t *apifc = nullptr;
   uint8_t board_connect_id;
-  const char *mccini = nullptr;
   int sysdma_addr_to_bankid(reg_t addr);
 
   // memory-mapped I/O routines

@@ -38,7 +38,7 @@
 
 pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
         size_t board_id, size_t chip_id, const char *atuini, 
-        uint8_t board_connect_id ,const char *mccini) : mPSim(sim),
+        uint8_t board_connect_id) : mPSim(sim),
         pcie_enabled(pcie_enabled), board_id(board_id), chip_id(chip_id)
 {
   mStatus = PCIE_UNINIT;
@@ -98,7 +98,7 @@ pcie_driver_t::pcie_driver_t(simif_t* sim, bool pcie_enabled,
 
   pcie_ctl = new pcie_ctl_device_t(mPSim, this, atuini);
   if(board_connect_id){
-    pcie_socket = new pcie_socket_sim_t(mPSim, board_id , board_connect_id, mccini);
+    pcie_socket = new pcie_socket_sim_t(mPSim, board_id , board_connect_id);
   }
 }
 
@@ -368,27 +368,6 @@ bool pcie_driver_t::pcie_bar_store_data(int barid, reg_t addr, size_t len, const
   uint64_t paddr = 0;
   
   axi_addr = pcie_ctl->bar_axi_addr(barid, addr);
-
-  if ((barid == 4) && (axi_addr & (1 << 63))){
-    /* 64位设备端地址：
-    * - [63]: 1表示是用于p2p传输，否则是本地；
-    * - [62:56]: 暂定7位，用于指定远端spike的target_id
-    * - [39:0]：ddr地址
-    * 例如：0x8100_0008_0000_0000
-    * 表示要传输到target=1的0x8_0000_0000。
-    * https://bjsvn01.streamcomputing.com/!/#Yu/view/head/Software/pcie/reg/axi_master_common_ep.html
-    * svn 对该寄存器作出了详细说明
-    * axi_master_common_t base addr = 0xe301_0000
-    * 返回该寄存器最高8位用于判断是否为跨npu传输
-    */
-
-    uint8_t npu_id = (axi_addr >> 56) & 0x7F;
-    uint64_t addr = axi_addr & 0xFFFFFFFFFF; // [39:0] ddr地址
-    // 通过socket 实现通信
-    // 设置开始传输标志，传输完成后设置结束标志。
-    
-    return true;
-  }
 
   paddr = axi_addr;
   if (2 != barid) {      /* pf bar2 不经过ATU */
@@ -1064,7 +1043,17 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
     if (XFER_DIR_H2D == ob_not_ib) {
         ret = read_host(pcie_addr, buf, len_once);
         if (0 == ret) {
-          soc_addr = soc_addr |(0x81UL << 56);
+          /* 64位设备端地址：
+          * - [63]: 1表示是用于p2p传输，否则是本地；
+          * - [62:56]: 暂定7位，用于指定远端spike的target_id
+          * - [39:0]：ddr地址
+          * 例如：0x8100_0008_0000_0000
+          * 表示要传输到target=1的0x8_0000_0000。
+          * https://bjsvn01.streamcomputing.com/!/#Yu/view/head/Software/pcie/reg/axi_master_common_ep.html
+          * svn 对该寄存器作出了详细说明
+          * axi_master_common_t base addr = 0xe301_0000
+          * 返回该寄存器最高8位用于判断是否为跨npu传输
+          */
           if (soc_addr & (0x1UL << 63))
             ret = write_other_npu_soc(soc_addr, buf, len_once);
           else
