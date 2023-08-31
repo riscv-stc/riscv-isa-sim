@@ -64,8 +64,6 @@ pcie_socket_sim_t::pcie_socket_sim_t(simif_t* sim, size_t board_id, \
     if (!read_file_cfg(filename))
         exit(EXIT_FAILURE);
     socket_server(board_id, board_connect_id, true); //use tcp 
-
-    server_running = true;
     std::thread sv(&pcie_socket_sim_t::tcp_server_recv, this);
     sv.detach();
 }
@@ -399,9 +397,10 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
         exit(EXIT_FAILURE);
     }   
 
+
     // 检查该端口是否被占用，如果被占用则报错，并退出
     tcp_serv_addr.sin_family = AF_INET;
-    tcp_serv_addr.sin_addr.s_addr = INADDR_ANY;
+    tcp_serv_addr.sin_addr.s_addr = local_server_ip;
     tcp_serv_addr.sin_port = htons(local_port_number);
     // 绑定socket到端口
     if (bind(server_fd, (struct sockaddr *)&tcp_serv_addr, sizeof(address)) < 0) {
@@ -409,6 +408,7 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
         exit(EXIT_FAILURE);
     }   
     
+ 
     // 最多等待8个客户端连接
     if (listen(server_fd, MAX_SERVER_LISTEN_NUM) < 0) {
         std::cerr << "Listen failed" << std::endl;
@@ -417,8 +417,8 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
     
 }
 
-void pcie_socket_sim_t::socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len, pcie_socket_packet &bsend){
-    // pcie_socket_packet bsend;
+void pcie_socket_sim_t::data_socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len){
+    pcie_socket_packet bsend;
     // std::cout << "Received: " << buffer << std::endl;
     if (read(new_socket, (void *)&buffer, buf_len) < 0){
         std::cout << "Received error! while resent" << std::endl; 
@@ -441,9 +441,7 @@ void pcie_socket_sim_t::socket_process(int new_socket, pcie_socket_packet &buffe
         std::cout << "server recve to client msg error!" << std::endl;
         bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_RESEND;
     }
-    if (!server_running)
-        return;
-    if(write(new_socket, (void *)&bsend, (buf_len - PS_DATA_SIZE_MAX)) < 0){
+    if(send(new_socket, (void *)&bsend, (buf_len - PS_DATA_SIZE_MAX), 0) < 0){
         std::cout << "server send to client error!" << std::endl;
     }
 }
@@ -456,35 +454,18 @@ void pcie_socket_sim_t::tcp_server_recv(){
     uint32_t addrLen = sizeof(tcp_serv_addr);
     bsend.board_id = board_id;
     bsend.group_id = board_connect_id;
-    fd_set read_fds;
-    struct timeval tv;
-    tv.tv_sec = 5;
-    tv.tv_usec = 0;
-    
-    int maxfd = server_fd;
-    while (server_running) {
-        FD_ZERO(&read_fds);
-        FD_SET(server_fd, &read_fds);
-        int activity = select(maxfd + 1, &read_fds, NULL, NULL, &tv);
-        if (activity < 0){
-            perror("select error");
+    while (1) {
+        // std::cout << "Waiting for a connection..." << std::endl;
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&tcp_serv_addr, \
+                    &addrLen)) < 0) {
+            std::cerr << "Accept failed" << std::endl;
             exit(EXIT_FAILURE);
         }
-        if (FD_ISSET(server_fd, &read_fds)){
-            // std::cout << "Waiting for a connection..." << std::endl;
-            if ((new_socket = accept(server_fd, (struct sockaddr *)&tcp_serv_addr, \
-                        &addrLen)) < 0) {
-                std::cerr << "Accept failed" << std::endl;
-                exit(EXIT_FAILURE);
-            }
 
-            socket_process(new_socket, buffer, buf_len, bsend);
-            close(new_socket);
-            memset(&buffer, 0, buf_len);
-        }
-        
+        data_socket_process(new_socket, buffer, buf_len);
+        close(new_socket);
+        memset(&buffer, 0, buf_len);
     } 
-    close(server_fd);
 }
 
 int pcie_socket_sim_t::socket_client(in_addr_t ipaddr, uint16_t port_num, 
@@ -545,32 +526,6 @@ int pcie_socket_sim_t::socket_client(in_addr_t ipaddr, uint16_t port_num,
         }
     }
     return PCIE_SOCKET_OK;
-}
-
-int pcie_socket_sim_t::socket_client_connet(std::string ipaddr, uint16_t port_num){
-    
-    int client_socket = -1;
-    struct sockaddr_in server_addr;
-    
-    if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-        std::cerr << "Socket creation error" << std::endl;
-        return PCIE_SOCKET_ERR; 
-    }
-
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port_num);
-    
-    if (inet_pton(AF_INET, ipaddr.c_str(), &server_addr.sin_addr) <= 0) {
-        std::cerr << "Invalid address/ Address not supported" << std::endl;
-        return -1; 
-    }  
-    if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    {
-        std::cerr << "Connection failed" << std::endl;
-        return PCIE_SOCKET_CONNECT_ERR; 
-    }
-
-    return client_socket;
 }
 
 bool pcie_socket_sim_t::load(reg_t addr, size_t len, uint8_t* bytes){
@@ -682,64 +637,54 @@ int pcie_socket_sim_t::send_data(reg_t addr, size_t length, uint8_t *data, uint8
     struct pcie_socket_packet msg;
     int rv = PCIE_SOCKET_OK;
     int i;
-    int sock_fd;
     pcie_socket_packet bsend;
     msg.cmdWord = PCIE_SOCKET_WRITE_DDR;
     msg.addr = addr;
     msg.dataLen = length;
     msg.group_id = board_connect_id;
-    msg.board_id = target_id;
+    msg.board_id = board_id;
     memcpy(&msg.data, data, length);
 
-    for( i = 0; vec_serv_cfg.size(); i++)
+    for( i = 0; route_table.size(); i++)
     {
-        if (vec_serv_cfg[i].id == target_id)
+        if (route_table[i].emu_board_id == target_id)
             break;
     }
-    if (i == vec_serv_cfg.size())
+    if (i == route_table.size())
     {
         std::cout << "target npu " << target_id << "not set!" << std::endl;
         return PCIE_SOCKET_ERR;
     }
 
-    if ((sock_fd = socket_client_connet(vec_serv_cfg[i].ip.c_str(), vec_serv_cfg[i].port)) > 0)
+    rv = sender(route_table[i].server_connect_fd, &msg, sizeof(msg), (struct sockaddr*)&mult_addr, 
+        sizeof(mult_addr));
+    if (rv != PCIE_SOCKET_OK)
     {
-        rv = sender(sock_fd, &msg, sizeof(msg), (struct sockaddr*)&mult_addr, 
-            sizeof(mult_addr));
-        if (rv != PCIE_SOCKET_OK)
-        {
-            perror("msg send error, please check network!");
-            return rv;
-        }
-
-        rv = read(sock_fd, (void *)&bsend, sizeof(bsend) - PS_DATA_SIZE_MAX);
-        if (bsend.board_id != msg.board_id || bsend.group_id != board_connect_id)
-        {
-            perror("recv a not match msg!");
-        }
-
-        if (bsend.cmdWord != ps_command_code::PCIE_SOCKET_RECIVE_OK)
-        {
-            switch(bsend.cmdWord){
-                case PCIE_SOCKET_RECIVE_BOAID_ERR:
-                    perror("send ip addr or port error!");
-                    break;
-                case PCIE_SOCKET_RECIVE_GROID_ERR:
-                    perror("send group no match error!");
-                    break;
-                default:
-                    perror("can't not recongnized cmdword!");
-                    break;
-            }
-        }
-        close(sock_fd);
-    }else{
-        std::cout << "connect board " << board_id << " error ip is " << vec_serv_cfg[i].ip << " port is"
-            << vec_serv_cfg[i].port << "please check that!" << std::endl;
-        return PCIE_SOCKET_ERR;
+        perror("msg send error, please check network!");
+        return rv;
     }
-    
-    return PCIE_SOCKET_OK;
+
+    rv = read(route_table[i].server_connect_fd, (void *)&bsend, sizeof(bsend) - PS_DATA_SIZE_MAX);
+    if (bsend.board_id != board_id && bsend.group_id != board_connect_id)
+    {
+        perror("recv a not match msg!");
+    }
+
+    if (bsend.cmdWord != PCIE_SOCKET_OK)
+    {
+        switch(bsend.cmdWord){
+            case PCIE_SOCKET_RECIVE_BOAID_ERR:
+                perror("send ip addr or port error!");
+                break;
+            case PCIE_SOCKET_RECIVE_GROID_ERR:
+                perror("send group no match error!");
+                break;
+            default:
+                perror("can't not recongnized cmdword!");
+                break;
+        }
+    }
+    return rv;
 }
 
 pcie_socket_sim_t::~pcie_socket_sim_t(){

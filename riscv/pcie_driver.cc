@@ -1055,17 +1055,16 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
   }
 
   for (i = 0 ; i < len ; i += XFER_LEN_ONCE_MAX) {
-    soc_addr = (soc + i);
-    
+    soc_addr = soc + i;
     pcie_addr = pcie + i;
     len_once = (i+XFER_LEN_ONCE_MAX > len) ? len-i : XFER_LEN_ONCE_MAX;
     memset(buf, 0, XFER_LEN_ONCE_MAX);
+
     ret = -1;
     if (XFER_DIR_H2D == ob_not_ib) {
         ret = read_host(pcie_addr, buf, len_once);
         if (0 == ret) {
-          soc_addr = soc_addr |(0x81UL << 56);
-          if (soc_addr & (0x1UL << 63))
+          if (soc_addr & (0x1 << 63))
             ret = write_other_npu_soc(soc_addr, buf, len_once);
           else
             ret = write_soc(soc_addr, buf, len_once);

@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <thread>
-
+#include <iostream>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <ctime>
@@ -109,7 +109,6 @@ class pcie_socket_sim_t : public abstract_device_t {
   int npu_client_fd = -1;
   in_addr_t ipaddr ;
   simif_t *sim;
-  bool server_running = false;
   in_addr_t local_server_ip;
   struct sockaddr_in mult_addr;
   struct sockaddr_in tcp_serv_addr;
@@ -150,8 +149,7 @@ class pcie_socket_sim_t : public abstract_device_t {
   int send_server_cfg();
   bool read_file_cfg(const char *filename);
   void tcp_server_recv();
-  void socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len, pcie_socket_packet &bsend);
-  int socket_client_connet(std::string ipaddr, uint16_t port_num);
+  void data_socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len);
 };
 
 #endif //__PCIE_SOCKET_SIM_H__
