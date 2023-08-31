@@ -46,10 +46,9 @@ riscv_hdrs = \
 	mbox_device.h \
 	soc_apb.h \
 	pcie_socket_sim.h \
-	pcie_route.h \
 
 
-riscv_install_hdrs = mmio_plugin.h pcie_route.h
+riscv_install_hdrs = mmio_plugin.h
 
 riscv_precompiled_hdrs = \
 	insn_template.h \

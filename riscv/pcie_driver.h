@@ -247,7 +247,6 @@ class pcie_dma_dev_t : public abstract_device_t {
     int read_host(uint64_t addr, uint8_t *data, int len);
     int pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_not_ib);
     int write_other_npu_soc(uint64_t addr, uint8_t *data, int len);
-    int write_other_npu_soc_close_fd(uint64_t addr);
 };
 
 class axi_master_common_t : public abstract_device_t {

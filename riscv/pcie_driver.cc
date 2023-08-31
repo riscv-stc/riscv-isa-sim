@@ -951,33 +951,12 @@ int pcie_dma_dev_t::write_soc(uint64_t addr, uint8_t *data, int len)
   return 0;
 }
 
-/* 64位设备端地址：
-  * - [63]: 1表示是用于p2p传输，否则是本地；
-  * - [62:56]: 暂定7位，用于指定远端spike的target_id
-  * - [39:0]：ddr地址
-  * 例如：0x8100_0008_0000_0000
-  * 表示要传输到target=1的0x8_0000_0000。
-  * https://bjsvn01.streamcomputing.com/!/#Yu/view/head/Software/pcie/reg/axi_master_common_ep.html
-  * svn 对该寄存器作出了详细说明
-  * axi_master_common_t base addr = 0xe301_0000
-  * 返回该寄存器最高8位用于判断是否为跨npu传输
-  */
 /* 写其他NPU 地址根据 target_id, 成功返回0 */
 int pcie_dma_dev_t::write_other_npu_soc(uint64_t addr, uint8_t *data, int len)
 {
   
   uint8_t target_id = (addr >> 56) & 0x3f;
   return   pcie->get_pcie_socket_h()->send_data(addr, len, data, target_id);
-}
-
-/* 写其他NPU 地址根据 target_id, 成功返回0 */
-int pcie_dma_dev_t::write_other_npu_soc_close_fd(uint64_t addr)
-{
-  if (addr & (1UL << 63)){
-    uint8_t target_id = (addr >> 56) & 0x3f;
-    return   pcie->get_pcie_socket_h()->close_connect_fd(addr, target_id);
-  }
-  return 0;
 }
 
 /* 读DDR, 成功返回0 */
@@ -1064,8 +1043,17 @@ int pcie_dma_dev_t::pcie_dma_xfer(uint64_t soc, uint64_t pcie, int len, int ob_n
     if (XFER_DIR_H2D == ob_not_ib) {
         ret = read_host(pcie_addr, buf, len_once);
         if (0 == ret) {
-          // soc_addr = soc_addr |(0x81UL << 56);
-
+          /* 64位设备端地址：
+          * - [63]: 1表示是用于p2p传输，否则是本地；
+          * - [62:56]: 暂定7位，用于指定远端spike的target_id
+          * - [39:0]：ddr地址
+          * 例如：0x8100_0008_0000_0000
+          * 表示要传输到target=1的0x8_0000_0000。
+          * https://bjsvn01.streamcomputing.com/!/#Yu/view/head/Software/pcie/reg/axi_master_common_ep.html
+          * svn 对该寄存器作出了详细说明
+          * axi_master_common_t base addr = 0xe301_0000
+          * 返回该寄存器最高8位用于判断是否为跨npu传输
+          */
           if (soc_addr & (0x1UL << 63))
             ret = write_other_npu_soc(soc_addr, buf, len_once);
           else
@@ -1155,15 +1143,10 @@ void pcie_dma_dev_t::pcie_dma_go(int ch)
     if (pcie_atu && pcie_atu->is_ipa_enabled()) {
       soc_addr = pcie_atu->translate(soc_va, 1);
     }
-    
     ret = pcie_dma_xfer(soc_addr, pcie_addr, xfer_len, ob_not_ib);
     if (0 != ret) {
       break;
     }
-  }
-  
-  if (write_other_npu_soc_close_fd(soc_addr) != PCIE_SOCKET_OK){
-    std::cout << "close socket error!" << std::endl;
   }
 
   /* control.ready = 1 */
