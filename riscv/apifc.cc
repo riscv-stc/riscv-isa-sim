@@ -153,7 +153,6 @@ int apifc_t::sqmsg_spike_recv(long recv_type, struct command_head_t *cmd_data)
     struct sq_msg_t sq_msg = {};
 
     if (NULL == cmd_data) {
-        perror("cmd_data is null!\r\n");
         return -1;
     }
 
@@ -201,12 +200,10 @@ void apifc_t::sqmsg_req_recv_handle(void)
 {
     int ret = 0;
     long recv_type = 0;
-    struct command_head_t *cmd_data = new struct command_head_t;
-    if (NULL == cmd_data) {
-        perror("require memery error!");
-        return ;
-    }
+    
     while(1) {
+        struct command_head_t *cmd_data = new struct command_head_t;
+        memset(cmd_data, 0, sizeof(*cmd_data));
         /* 接收所有req消息， 不接收 rsp消息 */
         recv_type = -(SQ_MTYPE_RES(0)-1);
         ret = sqmsg_spike_recv(recv_type, cmd_data);

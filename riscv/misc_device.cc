@@ -352,7 +352,7 @@ bool bank_misc_dev_t::load(reg_t addr, size_t len, uint8_t* bytes)
     uint32_t val = 0;
     switch(addr) {
     case 0x310:
-        val = 0xff; // 0x310是在spike里特殊处理的，用于读取桥复位成功的状态。因为spike是模拟安全复位，所以直接返回0xff，让软件认为复位成功了。
+        val = 0xff;
         memcpy(bytes, &val, len);
         break;
     default:
@@ -361,7 +361,7 @@ bool bank_misc_dev_t::load(reg_t addr, size_t len, uint8_t* bytes)
     }
     return true;
 }
-// 写bank_misc其它部分对于spike没有意义，所以直接返回。但是芯片上是需要写好几个寄存器的。
+
 bool bank_misc_dev_t::store(reg_t addr, size_t len, const uint8_t* bytes)
 {
     return true;

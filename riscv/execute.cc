@@ -670,10 +670,8 @@ inline void processor_t::update_histogram(reg_t pc)
 // function calls.
 static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
 {
-#ifdef RISCV_ENABLE_COMMITLOG
   commit_log_reset(p);
   commit_log_stash_privilege(p);
-#endif
   reg_t npc;
 
   try {

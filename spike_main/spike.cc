@@ -56,14 +56,12 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --disable-dtb         Don't write the device tree blob into memory\n");
   fprintf(stderr, "  --bank-id=<n>         Single bank(-b=1):NPU Bank ID [default 0]. Multi bank(-b>1): id of the first bank [default 0].\n");
   fprintf(stderr, "  --board-id=<n>        Indicates the number of boards in a rack [default 0]\n");
-  fprintf(stderr, "  --board-connect-id=<n>   Board connect group id 1-255 [default 0]\n");
   fprintf(stderr, "  --chip-id=<n>         Several chips per board [default 0]\n");
   fprintf(stderr, "  --hwsync-masks=<0xxx,0xxx,>  HWsync masks \n");
   fprintf(stderr, "  --session-id=<n>      HWsync shared memory id [default 0]\n");
   fprintf(stderr, "  --core-mask=<n>         set core mask, bit0-bit31 for core0-core31 [default 0xffffffff all unmask]\n");
   fprintf(stderr, "  --ddr-size=<words>    DDR Memory size [default 0xa00000, 10MB]\n");
   fprintf(stderr, "  --atuini=<path>       Address translation configuration file for virtualization\n");
-  fprintf(stderr, "  --mccini=<path>       Multi npu connect configuration file for register ip and port\n");
   fprintf(stderr, "  --kernel=<path>       Load kernel flat image into memory\n");
   fprintf(stderr, "  --initrd=<path>       Load kernel initrd into memory\n");
   fprintf(stderr, "  --bootargs=<args>     Provide custom bootargs for kernel [default: console=hvc0 earlycon=sbi]\n");
@@ -250,7 +248,6 @@ int main(int argc, char** argv)
   bool file_name_with_bank_id = false;
   int nbanks = 1;
   size_t nprocs = 1;
-  uint8_t board_connect_id = 0;
   uint64_t ddr_size = 0x100000000; //4G ddr
   size_t board_id = 0;
   size_t chip_id = 0;
@@ -262,7 +259,7 @@ int main(int argc, char** argv)
   char masks_buf[178]={'\0'};
   char *hwsync_masks = masks_buf;
   const char* atuini = nullptr;         /* 地址转换单元的配置文件 */
-  const char* mccini = nullptr;         /* 多卡互联配置文件*/
+
   const char* kernel = NULL;
   reg_t kernel_offset, kernel_size;
   size_t initrd_size;
@@ -374,7 +371,6 @@ int main(int argc, char** argv)
   parser.option(0, "board-id", 1, [&](const char *s) { board_id = atoi(s); });
   parser.option(0, "chip-id", 1, [&](const char *s) { chip_id = atoi(s); });
   parser.option(0, "session-id", 1, [&](const char *s) { session_id = atoi(s); });
-  parser.option(0, "board-connect-id", 1, [&](const char *s) { board_connect_id = (atoi(s) & 0xFF); });
   parser.option(0, "core-mask", 1, [&](const char *s) { coremask = strtoull(s, NULL, 0); });
   parser.option(0, "hwsync-masks", 1, [&](const char *s) { hwsync_masks = (char *)s; });
   parser.option(0, "ddr-size", 1, [&](const char *s) { ddr_size = strtoull(s, NULL, 0); });
@@ -396,7 +392,6 @@ int main(int argc, char** argv)
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "dtb", 1, [&](const char *s){dtb_file = s;});
   parser.option(0, "atuini", 1, [&](const char* s){atuini = s;});
-  parser.option(0, "mccini", 1, [&](const char* s){mccini = s;});
   parser.option(0, "kernel", 1, [&](const char* s){kernel = s;});
   parser.option(0, "initrd", 1, [&](const char* s){initrd = s;});
   parser.option(0, "bootargs", 1, [&](const char* s){bootargs = s;});
@@ -484,7 +479,7 @@ int main(int argc, char** argv)
       initrd_start, initrd_end, bootargs, start_pc, mems, ddr_size, plugin_devices,
       htif_args, std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
       pcie_enabled, file_name_with_bank_id, board_id, chip_id, session_id, coremask, atuini, 
-      multiCoreThreadFlag, board_connect_id, mccini);
+      multiCoreThreadFlag);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
