@@ -728,7 +728,7 @@ inline freg_t f128_negate(freg_t a)
   unsigned csr_priv = get_field((which), 0x300); \
   unsigned csr_read_only = get_field((which), 0xC00) == 3; \
   /* 部分URO权限的csr在andes核中是可写的 */  \
-  if (csr_read_only && CSR_CYCLE<=which && CSR_HPMCOUNTER6>=which) {  \
+  if (csr_read_only && CSR_CYCLE<=which && CSR_HPMCOUNTER6>=which) {  \   
     csr_read_only = 0;  \
   } \
   if ((((write) && csr_read_only) || STATE.prv < csr_priv) && \

@@ -49,7 +49,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              const char *log_path,
              bool dtb_enabled, const char *dtb_file, bool pcie_enabled, bool file_name_with_bank_id,
              size_t board_id,  size_t chip_id, size_t session_id, uint32_t coremask, const char *atuini, 
-             bool multiCoreThreadFlag, uint8_t board_connect_id)
+             bool multiCoreThreadFlag, uint8_t board_connect_id, const char *mccini)
   : htif_t(args, this),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -78,7 +78,8 @@ die_id(die_id),
     remote_bitbang(NULL),
     debug_module(this, dm_config),
     multiCoreThreadFlag(multiCoreThreadFlag),
-	  board_connect_id(board_connect_id)
+	  board_connect_id(board_connect_id),
+    mccini(mccini)
 {
     core_reset_n = 0;
     signal(SIGINT, &handle_signal);
@@ -138,7 +139,7 @@ die_id(die_id),
     /* pcie driver */
     if(pcie_enabled) {      
           
-        pcie_driver = new pcie_driver_t(this, pcie_enabled, board_id, chip_id, atuini, board_connect_id);
+        pcie_driver = new pcie_driver_t(this, pcie_enabled, board_id, chip_id, atuini, board_connect_id, mccini);
 
         /* PCIE_CTL_CFG (16MB) */
         glb_bus.add_device(PCIE_CTL_CFG_BASE, pcie_driver->get_pcie_ctl());
