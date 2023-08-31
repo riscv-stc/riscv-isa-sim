@@ -3,7 +3,7 @@
 
 #define MAX_BUFFER 1518
 #define INIT_PORT_NUMBER 0xc000 //默认端口
-#define MAX_SERVER_LISTEN_NUM 256
+#define MAX_SERVER_LISTEN_NUM 8
 
 #define MULTICAST_IP "239.255.255.250"
 #define MULTICAST_PORT 0xb000 //多播端口
@@ -61,8 +61,7 @@ pcie_socket_sim_t::pcie_socket_sim_t(simif_t* sim, size_t board_id, \
     //2.等待信号允许通信
     #endif
 
-    if (!read_file_cfg(filename))
-        exit(EXIT_FAILURE);
+    read_file_cfg(filename);
     socket_server(board_id, board_connect_id, true); //use tcp 
     std::thread sv(&pcie_socket_sim_t::tcp_server_recv, this);
     sv.detach();
@@ -104,11 +103,11 @@ std::string processLine(const std::string& line) {
 }
 
 // reset 将会重新设置该表
-bool pcie_socket_sim_t::read_file_cfg(const char *filename){
+int pcie_socket_sim_t::read_file_cfg(const char *filename){
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Failed to open file." << std::endl;
-        return false;
+        return 1;
     }
 
     std::string line;
@@ -122,12 +121,11 @@ bool pcie_socket_sim_t::read_file_cfg(const char *filename){
         vec_serv_cfg.push_back(cfg);   
         if (cfg.id == board_id)
         {
-            local_port_number = cfg.port;
+            port_number = cfg.port;
             local_server_ip = inet_addr(cfg.ip.c_str());
         }
     }
     file.close();
-    return true;
 }
 
 // 这个是需要的时候再配置，可能需要根据HPE的配置来修改以及放置到信息处理位置
@@ -140,7 +138,7 @@ int pcie_socket_sim_t::send_server_cfg(){
     cfg.board_addr_start = 0;
     cfg.emu_board_id = ((board_id & 0xFF) | (board_connect_id << 8) | (logic_board_id << 16)) ;
     cfg.ipaddr = ipaddr;
-    cfg.port_num = local_port_number;
+    cfg.port_num = port_number;
 
     while(i < 3){
         rv = sender(multicast_client_fd, &cfg, sizeof(mult_addr), (struct sockaddr*)&mult_addr, 
@@ -386,7 +384,7 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
     struct sockaddr_in address, client_address;
     int addrlen = sizeof(address);
     int i;
- 
+    uint16_t listen_port = 0;
     pcie_socket_packet buffer, bsend;
     int buf_len = sizeof(struct pcie_socket_packet);
     memset(&buffer, 0, sizeof(struct pcie_socket_packet));
@@ -399,9 +397,10 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
 
 
     // 检查该端口是否被占用，如果被占用则报错，并退出
+    listen_port = port_number;
     tcp_serv_addr.sin_family = AF_INET;
-    tcp_serv_addr.sin_addr.s_addr = local_server_ip;
-    tcp_serv_addr.sin_port = htons(local_port_number);
+    tcp_serv_addr.sin_addr.s_addr = INADDR_ANY;
+    tcp_serv_addr.sin_port = htons(listen_port);
     // 绑定socket到端口
     if (bind(server_fd, (struct sockaddr *)&tcp_serv_addr, sizeof(address)) < 0) {
         std::cerr << "Bind failed" << std::endl;
@@ -417,40 +416,11 @@ void pcie_socket_sim_t::socket_server(size_t board_id, uint8_t board_connect_id,
     
 }
 
-void pcie_socket_sim_t::data_socket_process(int new_socket, pcie_socket_packet &buffer, uint32_t buf_len){
-    pcie_socket_packet bsend;
-    // std::cout << "Received: " << buffer << std::endl;
-    if (read(new_socket, (void *)&buffer, buf_len) < 0){
-        std::cout << "Received error! while resent" << std::endl; 
-        bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_RESEND;
-    }
-    else if (buffer.board_id != board_id){
-        std::cout << "Received error! board id error" << std::endl;
-        bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_BOAID_ERR;
-    }else if (buffer.board_id != board_id){
-        std::cout << "Received error! group id error" << std::endl;
-        bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_GROID_ERR;
-    }else if (buffer.cmdWord == PCIE_SOCKET_WRITE_DDR){
-        if (store_data(buffer.addr & 0xFFFFFFFFFF, buffer.dataLen, (uint8_t *)buffer.data)){
-            bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_OK;
-        }
-        else{
-            bsend.cmdWord = ps_command_code::PCIE_SOCKET_WRITE_DDR_ERR;
-        }
-    }else{
-        std::cout << "server recve to client msg error!" << std::endl;
-        bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_RESEND;
-    }
-    if(send(new_socket, (void *)&bsend, (buf_len - PS_DATA_SIZE_MAX), 0) < 0){
-        std::cout << "server send to client error!" << std::endl;
-    }
-}
-
 void pcie_socket_sim_t::tcp_server_recv(){
     int new_socket;
     pcie_socket_packet buffer, bsend;
     struct sockaddr_in address, client_address;
-    uint32_t buf_len = sizeof(struct pcie_socket_packet);
+    int buf_len = sizeof(struct pcie_socket_packet);
     uint32_t addrLen = sizeof(tcp_serv_addr);
     bsend.board_id = board_id;
     bsend.group_id = board_connect_id;
@@ -461,8 +431,34 @@ void pcie_socket_sim_t::tcp_server_recv(){
             std::cerr << "Accept failed" << std::endl;
             exit(EXIT_FAILURE);
         }
+        // std::cout << "Received: " << buffer << std::endl;
+        if (read(new_socket, (void *)&buffer, buf_len) < 0){
+            std::cout << "Received error! while resent" << std::endl; 
+            bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_RESEND;
+        }
+        else if (buffer.board_id != board_id){
+            std::cout << "Received error! board id error" << std::endl;
+            bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_BOAID_ERR;
+        }else if (buffer.board_id != board_id){
+            std::cout << "Received error! group id error" << std::endl;
+            bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_GROID_ERR;
+        }else if (buffer.cmdWord == PCIE_SOCKET_WRITE_DDR){
+            uint8_t *soc_addr = (uint8_t*)sim->addr_to_mem((reg_t)(buffer.addr & 0xFFFFFFFFFF));//将地址转换为本地地址
+            if (soc_addr != NULL){
+                bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_OK;
+                memcpy((void *)soc_addr, buffer.data, buffer.dataLen);
+            }
+            else{
+                bsend.cmdWord = ps_command_code::PCIE_SOCKET_WRITE_DDR_ERR;
+            }
 
-        data_socket_process(new_socket, buffer, buf_len);
+        }else{
+            std::cout << "server recve to client msg error!" << std::endl;
+            bsend.cmdWord = ps_command_code::PCIE_SOCKET_RECIVE_RESEND;
+        }
+        if(send(new_socket, (void *)&bsend, (buf_len - PS_DATA_SIZE_MAX), 0) < 0){
+            std::cout << "server send to client error!" << std::endl;
+        }
         close(new_socket);
         memset(&buffer, 0, buf_len);
     } 
