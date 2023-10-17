@@ -36,10 +36,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 #include "platform.h"
-#include "primitives.h"
 #include "specialize.h"
 #include "softfloat.h"
 
+#undef SOFTFLOAT_FAST_INT64
+#include "primitives.h"
 /*----------------------------------------------------------------------------
 | Assuming the 128-bit floating-point value pointed to by `aWPtr' is a NaN,
 | converts this NaN to the common NaN form, and stores the resulting common

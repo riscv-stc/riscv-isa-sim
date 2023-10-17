@@ -1,7 +1,7 @@
 #include "ap_mbox.h"
 
 ap_mbox_t::ap_mbox_t(simif_t *simif, apifc_t *apifc, int irq_num, sys_irq_t *sys_irq, mbox_identify_t type) :
-        sim(simif), apifc(apifc), sys_irq(sys_irq), irq(irq_num), mbox_device_t(simif, type)
+        mbox_device_t(simif, type), sim(simif), apifc(apifc), sys_irq(sys_irq), irq(irq_num)
 {
     reset();
 }

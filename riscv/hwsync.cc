@@ -98,7 +98,7 @@ bool hwsync_t::enter(unsigned core_id)
     for (int idx = 0; idx < group_count; idx++)
     {
         bool valid = getBitValue(*group_valid, idx);
-        if (valid && (sync_masks[idx] != MASK_INITIAL_VALUE) && is_group_all_sync(idx))
+        if (valid && (sync_masks[idx] != (uint32_t)MASK_INITIAL_VALUE) && is_group_all_sync(idx))
         {
             // all enter, clear enter requests
             *sync_status &= sync_masks[idx];

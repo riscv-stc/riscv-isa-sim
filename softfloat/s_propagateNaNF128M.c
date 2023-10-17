@@ -37,10 +37,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdbool.h>
 #include <stdint.h>
 #include "platform.h"
-#include "internals.h"
 #include "specialize.h"
 #include "softfloat.h"
 
+#undef SOFTFLOAT_FAST_INT64
+#include "internals.h"
 /*----------------------------------------------------------------------------
 | Assuming at least one of the two 128-bit floating-point values pointed to by
 | `aWPtr' and `bWPtr' is a NaN, stores the combined NaN result at the location

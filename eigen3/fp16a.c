@@ -50,22 +50,22 @@ static BIT16 func_RND_eval(BIT16 RND, BIT16 Sign, BIT16 l, BIT16 r, BIT16 STK)
   switch (RND)
   {
     case RND_NEAREST_EVEN:
-      RND_eval = RND_eval | 1<<2 | (r&(l|STK))&0x1;
+      RND_eval = RND_eval | 1<<2 | ((r&(l|STK))&0x1);
     break;
     case RND_TO_ZERO:
       RND_eval = RND_eval;
     break;
     case RND_UP:
-      RND_eval = RND_eval | (~Sign)<<3 | (~Sign)<<2 | (~Sign&(r|STK))&0x1;
+      RND_eval = RND_eval | (~Sign)<<3 | (~Sign)<<2 | ((~Sign&(r|STK))&0x1);
     break;
     case RND_DOWN:
-      RND_eval = RND_eval | (Sign)<<3 | (Sign)<<2 | (Sign&(r|STK))&0x1;
+      RND_eval = RND_eval | (Sign)<<3 | (Sign)<<2 | ((Sign&(r|STK))&0x1);
     break;
     case RND_NEAREST_UP:
-      RND_eval = RND_eval | 1<<2 | r&0x1;
+      RND_eval = RND_eval | 1<<2 | (r&0x1);
     break;
     case RND_FROM_ZERO:
-      RND_eval = RND_eval | 1<<3 | 1<<2 | (r&STK)&0x1;
+      RND_eval = RND_eval | 1<<3 | 1<<2 | ((r&STK)&0x1);
     break;
     default:
       printf("Unknown rounding mode!\n");
@@ -168,7 +168,7 @@ BIT16 DW_fp_add (BIT16 a,BIT16 b,BIT16 rnd)
     }
     //printf("E_S=%x,F_S=%x,M_S=%x\n",E_Small,F_Small,M_Small);
     // one of the in is a denormal, compensate
-    if ((Denormal_Large ^ Denormal_Small)&0x1 == 1)
+    if ((Denormal_Large ^ Denormal_Small)&0x1)
       E_Diff = E_Large - E_Small - 1;
     else
       E_Diff = E_Large - E_Small;
@@ -214,7 +214,7 @@ BIT16 DW_fp_add (BIT16 a,BIT16 b,BIT16 rnd)
       if ((((M_Z>>14)&0x1) == 0)&&(((M_Z>>13)&0x1) == 0))
         if (ieee_compliance == 1)
         {
-          z_temp = ((Large>>15)&0x1)<<15 | (M_Z>>3)&0x3ff;
+          z_temp = ((Large>>15)&0x1)<<15 | ((M_Z>>3)&0x3ff);
           status_int = status_int & 0xfff7;
           if ((STK == 1) || ((M_Z&0x7)!=0))
             status_int = status_int | 1<<5;

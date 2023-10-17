@@ -10523,8 +10523,8 @@ int CustomInsns::veargmax_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     half max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(max)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
@@ -10575,8 +10575,8 @@ int CustomInsns::veargmax_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t maxRow=0, maxCol=0;
     Bfloat16 max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             Bfloat16 tmp = rs1_matrix(j,i);
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(max)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
                 continue;
@@ -10626,8 +10626,8 @@ int CustomInsns::veargmax_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t maxRow=0, maxCol=0;
     float32_t max = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(max) && isNaNF32UI_stc(tmp)) {
                 continue;
@@ -11343,8 +11343,8 @@ int CustomInsns::veargmin_m(half *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     half min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             half tmp = rs1_matrix(j,i);
             if (isNaNF16UI_stc(half_to_float16_t(min)) && isNaNF16UI_stc(half_to_float16_t(tmp))) {
                 continue;
@@ -11395,8 +11395,8 @@ int CustomInsns::veargmin_m(Bfloat16 *rs1, uint32_t *rd, struct ShapeStride *ss)
 
     uint32_t minRow=0, minCol=0;
     Bfloat16 min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             Bfloat16 tmp = rs1_matrix(j,i);
             std::cout << "minRow:" << j <<  " minCol:" << i << std::endl;
             if (isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(min)) && isNaNBF16UI_stc(Bfloat16_to_bfloat16_t(tmp))) {
@@ -11447,8 +11447,8 @@ int CustomInsns::veargmin_m(float32_t *rs1, uint32_t *rd, struct ShapeStride *ss
 
     uint32_t minRow=0, minCol=0;
     float32_t min = rs1_matrix(0,0);
-    for (int i = 0; i < ss->shape1_column; i++) {
-        for(int j = 0; j < ss->shape1_row; j++) {
+    for (uint32_t i = 0; i < ss->shape1_column; i++) {
+        for(uint32_t j = 0; j < ss->shape1_row; j++) {
             float32_t tmp = rs1_matrix(j,i);
             if (isNaNF32UI_stc(min) && isNaNF32UI_stc(tmp)) {
                 continue;
@@ -12768,7 +12768,7 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
 
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        for (int k = 0; k < shape_x; k++)
+                        for (uint32_t k = 0; k < shape_x; k++)
                             dst_fp32[i * copy_stride_d_y + j * copy_stride_d_x + k] = f16_to_f32(src_fp16[i * copy_stride_s_y + j * copy_stride_s_x + k]);
                     }
                 }
@@ -12784,7 +12784,7 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
 
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        for (int k = 0; k < shape_x; k++)
+                        for (uint32_t k = 0; k < shape_x; k++)
                             dst_fp32[i * copy_stride_d_y + j * copy_stride_d_x + k] = bf16_to_f32(src_bf16[i * copy_stride_s_y + j * copy_stride_s_x + k]);
                     }
                 }
@@ -12800,7 +12800,7 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
 
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        for (int k = 0; k < shape_x; k++)
+                        for (uint32_t k = 0; k < shape_x; k++)
                             dst_bf16[i * copy_stride_d_y + j * copy_stride_d_x + k] = f32_to_bf16(src_f32[i * copy_stride_s_y + j * copy_stride_s_x + k]);
                     }
                 }
@@ -12816,7 +12816,7 @@ void dmae_mov(uint8_t* src, uint8_t *dst, uint32_t data_type, struct DmaeShapeSt
 
                 for (int i = 0; i < shape_z; i++) {
                     for (int j = 0; j < shape_y; j++ ) {
-                        for (int k = 0; k < shape_x; k++)
+                        for (uint32_t k = 0; k < shape_x; k++)
                             dst_fp16[i * copy_stride_d_y + j * copy_stride_d_x + k] = f32_to_f16(src_f32[i * copy_stride_s_y + j * copy_stride_s_x + k]);
                     }
                 }

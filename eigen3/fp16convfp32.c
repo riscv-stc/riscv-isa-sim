@@ -74,16 +74,16 @@ int fp32tofp16(int fp_data){
     fp_is_zero                = ((fp_data&0x7fffffff) == 0x0);
     fp_is_nan                 = (((fp_data>>23)&0xff) == 0xff) & ((fp_data&0x7fffff) != 0x0);
     fp_is_of                  = (((fp_data>>23)&0xff) > 142) & ~fp_is_infinite & ~fp_is_nan;
-    fp_exact_subnormal_value  = (((fp_data>>23)&0xff) == 112) & ((fp_data&0x3fff) == 0)
-                                | (((fp_data>>23)&0xff) == 111) & ((fp_data&0x7fff) == 0)
-                                | (((fp_data>>23)&0xff) == 110) & ((fp_data&0xffff) == 0)
-                                | (((fp_data>>23)&0xff) == 109) & ((fp_data&0x1ffff) == 0)
-                                | (((fp_data>>23)&0xff) == 108) & ((fp_data&0x3ffff) == 0)
-                                | (((fp_data>>23)&0xff) == 107) & ((fp_data&0x7ffff) == 0)
-                                | (((fp_data>>23)&0xff) == 106) & ((fp_data&0xfffff) == 0)
-                                | (((fp_data>>23)&0xff) == 105) & ((fp_data&0x1fffff) == 0)
-                                | (((fp_data>>23)&0xff) == 104) & ((fp_data&0x3fffff) == 0)
-                                | (((fp_data>>23)&0xff) == 103) & ((fp_data&0x7fffff) == 0);
+    fp_exact_subnormal_value  = ((((fp_data>>23)&0xff) == 112) & ((fp_data&0x3fff) == 0))
+                                | ((((fp_data>>23)&0xff) == 111) & ((fp_data&0x7fff) == 0))
+                                | ((((fp_data>>23)&0xff) == 110) & ((fp_data&0xffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 109) & ((fp_data&0x1ffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 108) & ((fp_data&0x3ffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 107) & ((fp_data&0x7ffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 106) & ((fp_data&0xfffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 105) & ((fp_data&0x1fffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 104) & ((fp_data&0x3fffff) == 0))
+                                | ((((fp_data>>23)&0xff) == 103) & ((fp_data&0x7fffff) == 0));
     fp_inexact_subnormal_value = (((fp_data>>23)&0xff) < 113) & (((fp_data>>23)&0xff) > 102) & ~fp_exact_subnormal_value;
     fp_is_uf                   = ((((fp_data>>23)&0xff) < 103) & ~fp_is_zero) | fp_is_subnormal | fp_inexact_subnormal_value;
 

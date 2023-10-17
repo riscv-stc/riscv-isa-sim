@@ -35,11 +35,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 =============================================================================*/
 
 #include <stdint.h>
+#include <stddef.h>
 #include "platform.h"
 
 #ifndef softfloat_shiftRightJamM
 
 #define softfloat_shiftRightJamM softfloat_shiftRightJamM
+#undef SOFTFLOAT_FAST_INT64
 #include "primitives.h"
 
 void
@@ -50,7 +52,7 @@ void
      uint32_t *zPtr
  )
 {
-    uint32_t wordJam, wordDist, *ptr;
+    uint32_t wordJam, wordDist, *ptr = NULL;
     uint_fast8_t i, innerDist;
 
     wordJam = 0;

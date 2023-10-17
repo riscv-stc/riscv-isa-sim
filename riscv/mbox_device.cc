@@ -5,7 +5,7 @@
 #include "pcie_driver.h"
 #include "mbox_device.h"
 
-mbox_device_t::mbox_device_t(simif_t *simif, mbox_identify_t type) : sim(simif),mbox_type(type)
+mbox_device_t::mbox_device_t(simif_t *simif, mbox_identify_t type) : mbox_type(type), sim(simif)
 {
 }
 
@@ -87,7 +87,7 @@ bool mbox_device_t::store(reg_t addr, size_t len, const uint8_t* bytes)
     case MBOX_TX_DATA:
     case MBOX_TX_DATA+4:
         memcpy(reg_base+addr, bytes, len);
-        if (((MBOX_TX_DATA==addr)&&(8==len)) || (MBOX_TX_DATA+4==addr)&&(4==len)) {
+        if (((MBOX_TX_DATA==addr)&&(8==len)) || ((MBOX_TX_DATA+4==addr)&&(4==len))) {
             load(MBOX_TX_CFG, 8, (uint8_t*)&txcfg);
             load(MBOX_TX_DATA, 8, (uint8_t*)&txdat);
             send_msg(txcfg, txdat);
@@ -218,7 +218,7 @@ void mbox_device_t::irq_generate(bool dir)
 }
 
 np_mbox_t::np_mbox_t(simif_t *simif, misc_device_t *misc_dev) : 
-    sim(simif), misc(misc_dev), mbox_device_t(simif, NP_MBOX)
+    mbox_device_t(simif, NP_MBOX), sim(simif), misc(misc_dev)
 {
     reset();
 }
@@ -256,7 +256,7 @@ void np_mbox_t::irq_generate(bool dir)
 }
 
 pcie_mbox_t::pcie_mbox_t(simif_t *simif, pcie_driver_t *pcie_driver) : 
-    sim(simif), pcie(pcie_driver), mbox_device_t(simif, PCIE_MBOX)
+    mbox_device_t(simif, PCIE_MBOX), sim(simif), pcie(pcie_driver)
 {
     reset();
 }

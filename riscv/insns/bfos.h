@@ -70,7 +70,7 @@ else
     {
         if ((rs1_val >> MSB) & 0x1)
         {
-            rd_val =  ((rs1_val >> LSB ) | ((~(1UL << lenm1 + 1)) + 1));
+            rd_val =  ((rs1_val >> LSB ) | ((~(1UL << (lenm1 + 1))) + 1));
         }
         else
         {

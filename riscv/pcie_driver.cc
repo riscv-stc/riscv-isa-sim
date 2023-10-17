@@ -31,7 +31,7 @@
 #define NL_BOARD_ADDR(board_id) (board_id << NL_BOARD_BIT)
 #define NL_CHIP_ADDR(chip_id)   (chip_id << NL_CHIP_BIT)
 
-#define NL_NETLINK_START_PORT(board_id,chip_id) (NL_BOARD_ADDR(board_id)|NL_CHIP_ADDR(chip_id) + NL_START_PORT)
+#define NL_NETLINK_START_PORT(board_id,chip_id) (NL_BOARD_ADDR(board_id)|(NL_CHIP_ADDR(chip_id) + NL_START_PORT))
 #define NL_NETLINK_PCIEDMA_PORT(board_id,chip_id) (NL_NETLINK_START_PORT(board_id,chip_id) + 21)   /* DRIVER_PORT in  driver*/
 /* netlink groups */
 #define NL_GROUPS        (0)

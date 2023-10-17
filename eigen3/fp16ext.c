@@ -8,23 +8,29 @@ int fp32tofp16(int fp_data);
 
 int fp16_to_int(BIT16 x)
 {
-    float result;
-    *(int *)&result = fp16tofp32(x);
-    return (int)result;
+    return fp16tofp32(x);
 }
 
 int fp16_to_int_floor(BIT16 x)
 {
-    float result;
-    *(int *)&result = fp16tofp32(x);
-    return floorf(result);
+    union {
+      int int_x;
+      float float_x;
+    } result;
+
+    result.int_x = fp16tofp32(x);
+    return floorf(result.float_x);
 }
 
 BIT16 int_to_fp16(int x)
 {
-    int f;
-    *(float*)&f = (float)x;
-    return fp32tofp16(f);
+    union {
+      int int_x;
+      float float_x;
+    } input;
+
+    input.float_x = (float)x;
+    return fp32tofp16(input.int_x);
 }
 
 BIT16 fp16_exp(BIT16 x) {

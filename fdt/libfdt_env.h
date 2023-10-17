@@ -12,7 +12,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#undef INT_MAX
 #define INT_MAX		INT32_MAX
+
+#undef UINT_MAX
 #define UINT_MAX	UINT32_MAX
 
 #ifdef __CHECKER__

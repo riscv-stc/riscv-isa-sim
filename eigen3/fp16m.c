@@ -193,13 +193,13 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
       status_reg = status_reg | 1<<4 | 1<<5;
       if(((RND_val>>RND_HugeInfinity)&0x1)==1)
       { // Infinity
-        MZ = (MZ&0xffe00000) | (Inf_Sig & 0x3ff) <<L | MZ & 0x7ff;
+        MZ = (MZ&0xffe00000) | (Inf_Sig & 0x3ff) <<L | (MZ & 0x7ff);
         EZ = ((((1 << (exp_width-1)) - 1) * 2) + 1);
         status_reg = status_reg | 1<<1;
       } else
       { // MaxNorm
         EZ = ((((1 << (exp_width-1)) - 1) * 2) + 1) - 1;
-        MZ = (MZ&0xffe00000) |  0x3ff <<L | MZ & 0x7ff;
+        MZ = (MZ&0xffe00000) |  0x3ff <<L | (MZ & 0x7ff);
       }
     } else if (EZ == 0 )
     { // Tiny
@@ -211,7 +211,7 @@ BIT16 DW_fp_mult (BIT16 a,BIT16 b,BIT16 rnd)
         status_reg = status_reg | 0x1;
     }
     //printf("final, EZ=%x,MZ=%x\n",EZ,MZ);
-    status_reg = status_reg | ( (RND_val>>1)&0x1
+    status_reg = status_reg | ( ((RND_val>>1)&0x1)
                               | ( ~(Zero_A | Zero_B) 
                                 & ((EZ&0x1f) == 0) 
                                 & (((MZ>>11)&0x3ff) == 0)

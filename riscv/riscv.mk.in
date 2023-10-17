@@ -65,7 +65,6 @@ riscv_srcs = \
 	mmu.cc \
 	bank.cc \
 	hwsync.cc \
-	disasm.cc \
 	extension.cc \
 	extensions.cc \
 	rocc.cc \

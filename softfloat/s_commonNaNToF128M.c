@@ -36,9 +36,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdint.h>
 #include "platform.h"
-#include "primitives.h"
 #include "specialize.h"
 
+#undef SOFTFLOAT_FAST_INT64
+#include "primitives.h"
 /*----------------------------------------------------------------------------
 | Converts the common NaN pointed to by `aPtr' into a 128-bit floating-point
 | NaN, and stores this NaN at the location pointed to by `zWPtr'.  Argument

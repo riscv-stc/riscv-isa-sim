@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef softfloat_shiftLeftM
 
 #define softfloat_shiftLeftM softfloat_shiftLeftM
+#undef SOFTFLOAT_FAST_INT64
 #include "primitives.h"
 
 void

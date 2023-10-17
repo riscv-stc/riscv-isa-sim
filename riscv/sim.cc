@@ -76,8 +76,8 @@ die_id(die_id),
     pcie_enabled(pcie_enabled),
     file_name_with_bank_id(file_name_with_bank_id),
     remote_bitbang(NULL),
-    debug_module(this, dm_config),
-    multiCoreThreadFlag(multiCoreThreadFlag)
+    multiCoreThreadFlag(multiCoreThreadFlag),
+    debug_module(this, dm_config)
 {
     core_reset_n = 0;
     signal(SIGINT, &handle_signal);
