@@ -132,7 +132,7 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
       #define TRANS_SIZE_ONCE   8
 
       addr_t paddr = 0;
-      const char* p_src = (char *)src;
+      const char* p_src = (const char *)src;
 
       if ((nullptr==np_atu) || (!np_atu->is_ipa_enabled())) {
         throw std::runtime_error("atu not enable");
@@ -143,12 +143,11 @@ std::map<std::string, uint64_t> htif_t::load_payload(const std::string& payload,
             throw std::runtime_error("atu addr error when load_program()");
         }
 
-        p_src += offset;
         paddr = np_atu->translate(taddr+offset, 1);
         if (offset + TRANS_SIZE_ONCE > len) {
-          memif_t::write(paddr, len-offset, (void*)p_src);
+          memif_t::write(paddr, len-offset, (const void *)(p_src + offset));
         } else {
-          memif_t::write(paddr, TRANS_SIZE_ONCE, (void*)p_src);
+          memif_t::write(paddr, TRANS_SIZE_ONCE, (const void *)(p_src + offset));
         }
       }
     }
