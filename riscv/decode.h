@@ -140,6 +140,10 @@ public:
   uint64_t v_vta() { return x(26, 1); }
   uint64_t v_vma() { return x(27, 1); }
   uint64_t v_mew() { return x(28, 1); }
+  uint64_t v_mimm13() { return x(15, 13); }
+  uint64_t v_mimm3() { return x(15, 3); }
+
+  uint64_t m_simm5() { return x(20, 5); }
   uint64_t v_zimm6() { return x(15, 5) + (x(26, 1) << 5); }
 
   uint64_t p_imm2() { return x(20, 2); }
@@ -232,6 +236,7 @@ private:
 
 #define set_field(reg, mask, val) \
   (((reg) & ~(std::remove_cv<decltype(reg)>::type)(mask)) | (((std::remove_cv<decltype(reg)>::type)(val) * ((mask) & ~((mask) << 1))) & (std::remove_cv<decltype(reg)>::type)(mask)))
+
 
 #define DEBUG_START             0x0
 #define DEBUG_END               (0x1000 - 1)

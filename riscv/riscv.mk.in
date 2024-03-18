@@ -44,6 +44,7 @@ riscv_install_hdrs = \
 	trap.h \
 	triggers.h \
 	vector_unit.h \
+	matrix_unit.h \
 
 riscv_precompiled_hdrs = \
 	insn_template.h \
@@ -70,6 +71,7 @@ riscv_srcs = \
 	csrs.cc \
 	triggers.cc \
 	vector_unit.cc \
+	matrix_unit.cc \
 	socketif.cc \
 	cfg.cc \
 	$(riscv_gen_srcs) \
@@ -885,45 +887,23 @@ riscv_insn_ext_h = \
 
 riscv_insn_ext_p_simd = \
 	add16 \
-	radd16 \
-	uradd16 \
-	kadd16 \
-	ukadd16 \
 	sub16 \
-	rsub16 \
-	ursub16 \
-	ksub16 \
-	uksub16 \
 	cras16 \
 	rcras16 \
-	urcras16 \
 	kcras16 \
-	ukcras16 \
-	crsa16 \
 	rcrsa16 \
-	urcrsa16 \
-	kcrsa16 \
-	ukcrsa16 \
 	stas16 \
 	rstas16 \
 	urstas16 \
-	kstas16 \
-	ukstas16 \
 	stsa16 \
 	rstsa16 \
 	urstsa16 \
-	kstsa16 \
-	ukstsa16 \
 	add8 \
 	radd8 \
-	uradd8 \
 	kadd8 \
-	ukadd8 \
 	sub8 \
 	rsub8 \
-	ursub8 \
 	ksub8 \
-	uksub8 \
 	sra16 \
 	srai16 \
 	sra16_u \
@@ -966,7 +946,6 @@ riscv_insn_ext_p_simd = \
 	smulx16 \
 	umul16 \
 	umulx16 \
-	khm16 \
 	khmx16 \
 	smul8 \
 	smulx8 \
@@ -974,18 +953,14 @@ riscv_insn_ext_p_simd = \
 	umulx8 \
 	khm8 \
 	khmx8 \
-	smin16 \
 	umin16 \
-	smax16 \
 	umax16 \
 	sclip16 \
 	uclip16 \
 	kabs16 \
 	clrs16 \
 	clz16 \
-	smin8 \
 	umin8 \
-	smax8 \
 	umax8 \
 	sclip8 \
 	uclip8 \
@@ -1034,9 +1009,6 @@ riscv_insn_ext_p_partial_simd = \
 	kmmawt2_u \
 	smbb16 \
 	smbt16 \
-	smtt16 \
-	kmda \
-	kmxda \
 	smds \
 	smdrs \
 	smxds \
@@ -1056,35 +1028,19 @@ riscv_insn_ext_p_partial_simd = \
 	clrs32 \
 	pbsad \
 	pbsada \
-	smaqa \
 	umaqa \
-	smaqa_su \
 
 riscv_insn_ext_p_64_bit_profile = \
-	add64 \
-	radd64 \
-	uradd64 \
-	kadd64 \
-	ukadd64 \
-	sub64 \
-	rsub64 \
-	ursub64 \
-	ksub64 \
-	uksub64 \
-	smar64 \
-	smsr64 \
 	umar64 \
 	umsr64 \
 	kmar64 \
 	kmsr64 \
 	ukmar64 \
 	ukmsr64 \
-	smalbb \
 	smalbt \
 	smaltt \
 	smalda \
 	smalxda \
-	smalds \
 	smaldrs \
 	smalxds \
 	smslda \
@@ -1098,17 +1054,10 @@ riscv_insn_ext_p_non_simd = \
 	khmtt \
 	ukaddh \
 	uksubh \
-	kaddw \
-	ukaddw \
-	ksubw \
-	uksubw \
 	kdmbb \
 	kdmbt \
-	kdmtt \
 	kslraw \
 	kslraw_u \
-	ksllw \
-	kslliw \
 	kdmabb \
 	kdmabt \
 	kdmatt \
@@ -1119,56 +1068,34 @@ riscv_insn_ext_p_non_simd = \
 	ursubw \
 	mulr64 \
 	mulsr64 \
-	msubr32 \
 	ave \
-	sra_u \
 	srai_u \
 	insb \
-	maddr32 \
 
 riscv_insn_ext_p_rv64_only = \
 	add32 \
-	radd32 \
-	uradd32 \
-	kadd32 \
-	ukadd32 \
 	sub32 \
-	rsub32 \
-	ursub32 \
-	ksub32 \
-	uksub32 \
 	cras32 \
 	rcras32 \
-	urcras32 \
 	kcras32 \
-	ukcras32 \
 	crsa32 \
 	rcrsa32 \
-	urcrsa32 \
 	kcrsa32 \
-	ukcrsa32 \
 	stas32 \
 	rstas32 \
 	urstas32 \
-	kstas32 \
-	ukstas32 \
 	stsa32 \
 	rstsa32 \
 	urstsa32 \
-	kstsa32 \
-	ukstsa32 \
 	sra32 \
 	srai32 \
 	sra32_u \
-	srai32_u \
 	srl32 \
 	srli32 \
 	srl32_u \
-	srli32_u \
 	sll32 \
 	slli32 \
 	ksll32 \
-	kslli32 \
 	kslra32 \
 	kslra32_u \
 	smin32 \
@@ -1181,17 +1108,13 @@ riscv_insn_ext_p_rv64_only = \
 	khmtt16 \
 	kdmbb16 \
 	kdmbt16 \
-	kdmtt16 \
 	kdmabb16 \
 	kdmabt16 \
 	kdmatt16 \
 	smbt32 \
-	smtt32 \
 	kmabb32 \
 	kmabt32 \
 	kmatt32 \
-	kmda32 \
-	kmxda32 \
 	kmaxda32 \
 	kmads32 \
 	kmadrs32 \
@@ -1201,7 +1124,6 @@ riscv_insn_ext_p_rv64_only = \
 	smds32 \
 	smdrs32 \
 	smxds32 \
-	sraiw_u \
 	pkbt32 \
 	pktb32 \
 	clz32 \
@@ -1227,6 +1149,209 @@ riscv_insn_priv = \
 	sfence_vma \
 	sret \
 	wfi \
+
+riscv_insn_ext_matrix = \
+	msettypei \
+	msettilemi \
+	msettileki \
+	msettileni \
+	msettype \
+	msettilem \
+	msettilek \
+	msettilen \
+	\
+	mlae8_m \
+	mlae16_m \
+	mlae32_m \
+	mlae64_m \
+	mlbe8_m \
+	mlbe16_m \
+	mlbe32_m \
+	mlbe64_m \
+	mlce8_m \
+	mlce16_m \
+	mlce32_m \
+	mlce64_m \
+	mlate8_m \
+	mlate16_m \
+	mlate32_m \
+	mlate64_m \
+	mlbte8_m \
+	mlbte16_m \
+	mlbte32_m \
+	mlbte64_m \
+	mlcte8_m \
+	mlcte16_m \
+	mlcte32_m \
+	mlcte64_m \
+	\
+	msae8_m \
+	msae16_m \
+	msae32_m \
+	msae64_m \
+	msbe8_m \
+	msbe16_m \
+	msbe32_m \
+	msbe64_m \
+	msce8_m \
+	msce16_m \
+	msce32_m \
+	msce64_m \
+	msate8_m \
+	msate16_m \
+	msate32_m \
+	msate64_m \
+	msbte8_m \
+	msbte16_m \
+	msbte32_m \
+	msbte64_m \
+	mscte8_m \
+	mscte16_m \
+	mscte32_m \
+	mscte64_m \
+	\
+	mma_mm \
+	mfma_mm \
+	mwma_mm \
+	mfwma_mm \
+	mqma_mm \
+	\
+	maddc_mm \
+	mfaddc_mm \
+	mwaddc_mm \
+	mfwaddc_mm \
+	mqaddc_mm \
+	\
+	msubc_mm \
+	mfsubc_mm \
+	mwsubc_mm \
+	mfwsubc_mm \
+	mqsubc_mm \
+	\
+	mrsubc_mm \
+	mfrsubc_mm \
+	mwrsubc_mm \
+	mfwrsubc_mm \
+	mqrsubc_mm \
+	\
+	memulc_mx \
+	mfemulc_mf \
+	mwemulc_mx \
+	mfwemulc_mf \
+	mqemulc_mx \
+	memulc_mi  \
+	mwemulc_mi \
+	mqemulc_mi \
+	\
+	memulc_mm \
+	mfemulc_mm \
+	mwemulc_mm \
+	mfwemulc_mm \
+	mqemulc_mm \
+	\
+	mfncvtc_f_fw_m  \
+	mfwcvtc_fw_f_m  \
+	mfcvtc_f_x_m    \
+	mfcvtc_x_f_m    \
+	mfncvtc_f_xw_m  \
+	mfwcvtc_xw_f_m  \
+	mfncvtc_f_xq_m  \
+	mfwcvtc_xq_f_m  \
+	mfwcvtc_fw_x_m  \
+	mfncvtc_x_fw_m  \
+	mfcvtc_fw_xw_m  \
+	mfcvtc_xw_fw_m  \
+	mfncvtc_fw_xq_m \
+	mfwcvtc_xq_fw_m \
+
+riscv_insn_ext_matrix_im2col = \
+	msetoutsh \
+	msetinsh \
+	msetsk \
+	mlufae8_m \
+	mlufae16_m \
+
+riscv_insn_ext_matrix_ext = \
+	mlae8_v   \
+	mlae16_v  \
+	mlae32_v  \
+	mlae64_v  \
+	mlbe8_v   \
+	mlbe16_v  \
+	mlbe32_v  \
+	mlbe64_v  \
+	mlce8_v   \
+	mlce16_v  \
+	mlce32_v  \
+	mlce64_v  \
+	msae8_v   \
+	msae16_v  \
+	msae32_v  \
+	msae64_v  \
+	msbe8_v   \
+	msbe16_v  \
+	msbe32_v  \
+	msbe64_v  \
+	msce8_v   \
+	msce16_v  \
+	msce32_v  \
+	msce64_v  \
+	\
+	mmvar_v_m    \
+	mmvar_m_v    \
+	mmvbr_v_m    \
+	mmvbr_m_v    \
+	mmvcr_v_m    \
+	mmvcr_m_v    \
+	mmvac_v_m    \
+	mmvac_m_v    \
+	mmvbc_v_m    \
+	mmvbc_m_v    \
+	mmvcc_v_m    \
+	mmvcc_m_v    \
+	mwmvcr_v_m   \
+	mwmvcr_m_v   \
+	mwmvcc_v_m   \
+	mwmvcc_m_v   \
+	mqmvcr_v_m   \
+	mqmvcr_m_v   \
+	mqmvcc_v_m   \
+	mqmvcc_m_v   \
+	\
+	mmvac_m_m    \
+	\
+	memulcr_mv   \
+	mfemulcr_mv  \
+	mwemulcr_mv  \
+	mfwemulcr_mv \
+	mqemulcr_mv  \
+	memulcc_mv   \
+	mfemulcc_mv  \
+	mwemulcc_mv  \
+	mfwemulcc_mv \
+	mqemulcc_mv  \
+	\
+	maddcr_mv   \
+	mfaddcr_mv  \
+	mwaddcr_mv  \
+	mfwaddcr_mv \
+	mqaddcr_mv  \
+	maddcc_mv   \
+	mfaddcc_mv  \
+	mwaddcc_mv  \
+	mfwaddcc_mv \
+	mqaddcc_mv  \
+	\
+	mmacccr_mv   \
+	mfmacccr_mv  \
+	mwmacccr_mv  \
+	mfwmacccr_mv \
+	mqmacccr_mv  \
+	mmacccc_mv   \
+	mfmacccc_mv  \
+	mwmacccc_mv  \
+	mfwmacccc_mv \
+	mqmacccc_mv  \
 
 riscv_insn_smrnmi = \
 	mnret \
@@ -1369,7 +1494,6 @@ riscv_insn_ext_zvkned = \
 	vaesef_vv \
 	vaesem_vs \
 	vaesem_vv \
-	vaeskf1_vi \
 	vaeskf2_vi \
 	vaesz_vs \
 
@@ -1380,13 +1504,11 @@ riscv_insn_ext_zvknh = \
 	vsha2ms_vv \
 
 riscv_insn_ext_zvksed = \
-	vsm4k_vi \
 	vsm4r_vs \
 	vsm4r_vv \
 
 riscv_insn_ext_zvksh = \
 	vsm3c_vi \
-	vsm3me_vv \
 
 riscv_insn_ext_zimop = \
 	mop_r_N \
@@ -1428,6 +1550,9 @@ riscv_insn_list = \
 	$(riscv_insn_ext_zicond) \
 	$(riscv_insn_ext_zvk) \
 	$(riscv_insn_priv) \
+	$(riscv_insn_ext_matrix) \
+	$(riscv_insn_ext_matrix_im2col) \
+	$(riscv_insn_ext_matrix_ext) \
 	$(riscv_insn_smrnmi) \
 	$(riscv_insn_svinval) \
 	$(riscv_insn_ext_zimop) \

@@ -11,6 +11,7 @@
 #include "disasm.h"
 #include "platform.h"
 #include "vector_unit.h"
+#include "matrix_unit.h"
 #include <cinttypes>
 #include <cmath>
 #include <cstdlib>
@@ -40,6 +41,7 @@ processor_t::processor_t(const isa_parser_t *isa, const cfg_t *cfg,
   last_pc(1), executions(1), TM(cfg->trigger_count)
 {
   VU.p = this;
+  MU.p = this;
   TM.proc = this;
 
 #ifndef HAVE_INT128
@@ -144,6 +146,8 @@ void processor_t::parse_varch_string(const char* s)
   size_t len = str.length();
   int vlen = 0;
   int elen = 0;
+  int mlen = 0;
+  int maccq = 1;
   int vstart_alu = 0;
 
   while (pos < len) {
@@ -157,6 +161,10 @@ void processor_t::parse_varch_string(const char* s)
       elen = get_int_token(str, ',', pos);
     else if (attr == "vstartalu")
       vstart_alu = get_int_token(str, ',', pos);
+    else if (attr == "mlen")
+      mlen = get_int_token(str, ',', pos);
+    else if (attr == "maccq")
+      maccq = get_int_token(str, ',', pos);
     else
       bad_varch_string(s, "Unsupported token");
 
@@ -180,6 +188,11 @@ void processor_t::parse_varch_string(const char* s)
   VU.ELEN = elen;
   VU.vlenb = vlen / 8;
   VU.vstart_alu = vstart_alu;
+  MU.MLEN = mlen;
+  MU.mlenb = mlen / 8;
+  MU.mrows = MU.MLEN / VU.VLEN;
+  MU.mcols = VU.VLEN;
+  MU.maccq = maccq;
 }
 
 static int xlen_to_uxl(int xlen)
@@ -617,6 +630,7 @@ void processor_t::reset()
   state.dcsr->halt = halt_on_reset;
   halt_on_reset = false;
   VU.reset();
+  MU.reset();
   in_wfi = false;
 
   if (n_pmp > 0) {

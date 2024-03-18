@@ -9,4 +9,5 @@
 #include "tracer.h"
 #include "p_ext_macros.h"
 #include "v_ext_macros.h"
+#include "m_ext_macros.h"
 #include <assert.h>

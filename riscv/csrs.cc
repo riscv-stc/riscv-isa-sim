@@ -1430,6 +1430,30 @@ bool vector_csr_t::unlogged_write(const reg_t val) noexcept {
   return basic_csr_t::unlogged_write(val & mask);
 }
 
+matrix_csr_t::matrix_csr_t(processor_t* const proc, const reg_t addr, const reg_t mask, const reg_t init):
+  basic_csr_t(proc, addr, init),
+  mask(mask) {
+}
+
+void matrix_csr_t::verify_permissions(insn_t insn, bool write) const {
+  require_vector_vs;
+  if (!proc->extension_enabled('V'))
+    throw trap_illegal_instruction(insn.bits());
+  basic_csr_t::verify_permissions(insn, write);
+}
+
+void matrix_csr_t::write_raw(const reg_t val) noexcept {
+  const bool success = basic_csr_t::unlogged_write(val);
+  if (success)
+    log_write();
+}
+
+bool matrix_csr_t::unlogged_write(const reg_t val) noexcept {
+  if (mask == 0) return false;
+  dirty_vs_state;
+  return basic_csr_t::unlogged_write(val & mask);
+}
+
 vxsat_csr_t::vxsat_csr_t(processor_t* const proc, const reg_t addr):
   masked_csr_t(proc, addr, /*mask*/ 1, /*init*/ 0) {
 }

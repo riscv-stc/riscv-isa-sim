@@ -40,7 +40,7 @@
     if (DECODE_MACRO_USAGE_LOGGED) STATE.log_reg_write[((reg) << 4) | 1] = wdata; \
     DO_WRITE_FREG(reg, wdata); \
   })
-#define WRITE_VSTATUS STATE.log_reg_write[3] = {0, 0};
+#define WRITE_VSTATUS STATE.log_reg_write[5] = {0, 0};
 
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
@@ -150,6 +150,12 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
       require(P.VU.vstart->read() == 0); \
     WRITE_VSTATUS; \
     dirty_vs_state; \
+  } while (0);
+#define require_matrix(alu) \
+  do { \
+    require_vector_vs; \
+    require_extension('V'); \
+    require(!P.MU.mill); \
   } while (0);
 #define require_vector_novtype(is_log) \
   do { \
@@ -313,6 +319,7 @@ inline long double to_f(float128_t f) { long double r; memcpy(&r, &f, sizeof(r))
 #define DEBUG_RVV_FP_VF 0
 #define DEBUG_RVV_FMA_VV 0
 #define DEBUG_RVV_FMA_VF 0
+#define DEBUG_MVV_FP_VV 0
 #endif
 
 #define DECLARE_XENVCFG_VARS(field) \

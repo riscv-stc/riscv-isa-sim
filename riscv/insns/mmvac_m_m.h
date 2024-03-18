@@ -1,0 +1,1 @@
+MMV_TR_FROM_ACC(1, 'a')

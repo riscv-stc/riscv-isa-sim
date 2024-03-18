@@ -1,0 +1,1 @@
+CLEAR_ACC(insn.rd())
