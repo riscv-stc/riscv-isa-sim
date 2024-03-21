@@ -146,6 +146,7 @@ void processor_t::parse_varch_string(const char* s)
   size_t len = str.length();
   int vlen = 0;
   int elen = 0;
+  int slen = 0;
   int mlen = 0;
   int maccq = 1;
   int vstart_alu = 0;
@@ -157,6 +158,8 @@ void processor_t::parse_varch_string(const char* s)
 
     if (attr == "vlen")
       vlen = get_int_token(str, ',', pos);
+    else if (attr == "slen")
+      slen = get_int_token(str, ',', pos);
     else if (attr == "elen")
       elen = get_int_token(str, ',', pos);
     else if (attr == "vstartalu")
