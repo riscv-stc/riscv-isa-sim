@@ -8,20 +8,26 @@
 
 #define MXU_PARAMS(x) \
   type_sew_t<x>::type &accd = P.MU.acc_elt<type_sew_t<x>::type>(accd_num, 0, i, j, true); \
-  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, false); \
-  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, false); \
+  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num, 0, i, k, mmax, kmax, false); \
+  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num, 0, k, j, kmax, nmax, false); \
 
 #define MTU_MV_LEN(trans, dim) \
   switch (dim) \
   { \
   case 'c' : \
     width = trans? P.MU.tile_m : P.MU.tile_n; \
+    rmax = P.MU.mrows; \
+    cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'a' : \
     width = trans? P.MU.tile_m : P.MU.tile_k; \
+    rmax = P.MU.mrows; \
+    cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
   case 'b' : \
     width = trans? P.MU.tile_k : P.MU.tile_n; \
+    cmax = (P.MU.mcols / P.MU.msew); \
+    rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
   default : \
     break; \
@@ -36,6 +42,7 @@
   reg_t rs1_num = insn.rs1(); \
   reg_t start_height = RS2; \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0; \
   MTU_MV_LEN(is_trans, dim); \
   float vemul = (float)P.MU.msew / P.VU.vsew * P.VU.vflmul; \
   height = vemul < 1 ? 1 : vemul; \
@@ -44,7 +51,7 @@
 
 #define MTU_VREG_TR_PARAMS(trans, x) \
   type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
-  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i+start_height, j); \
+  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i+start_height, j, rmax, cmax); \
 
 #define MTU_VREG_ACC_PARAMS(trans, x) \
   type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
@@ -52,7 +59,7 @@
 
 #define MTU_TR_VREG_PARAMS(trans, x) \
   type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j, true); \
+  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j, true, rmax, cmax); \
 
 #define MTU_ACC_VREG_PARAMS(trans, x) \
   type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j); \
@@ -142,7 +149,7 @@
   reg_t acc1_num = insn.rs1(); \
   for (reg_t i = 0; i < P.MU.mrows; i++) { \
     for (reg_t j = 0; j < P.MU.mcols / 8; j++) { \
-      P.MU.tr_elt<int8_t>(td_num, 0, i, j, true) = P.MU.acc_elt<int8_t>(acc1_num, 0, i, j); \
+      P.MU.tr_elt<int8_t>(td_num, 0, i, j, P.MU.mrows, P.MU.mcols / 8, true) = P.MU.acc_elt<int8_t>(acc1_num, 0, i, j); \
     } \
   }
 
@@ -169,6 +176,9 @@
   reg_t tile_m = P.MU.tile_m;\
   reg_t tile_k = P.MU.tile_k;\
   reg_t tile_n = P.MU.tile_n;\
+  reg_t mmax = P.MU.mrows;\
+  reg_t nmax = P.MU.mcols / P.MU.msew;\
+  reg_t kmax = std::min(nmax, P.MU.mrows);\
   reg_t sew = P.MU.msew; \
   reg_t accd_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -385,6 +395,9 @@
   reg_t accd_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
   reg_t ts2_num = insn.rs2(); \
+  reg_t mmax = P.MU.mrows;\
+  reg_t nmax = P.MU.mcols / P.MU.msew;\
+  reg_t kmax = std::min(nmax, P.MU.mrows);\
   softfloat_roundingMode = STATE.frm->read(); \
 
 #define MXU_VFP_LOOP_BASE \
@@ -407,24 +420,24 @@
   switch(P.MU.msew) { \
     case e16: { \
       float16_t &accd = P.MU.acc_elt<float16_t>(accd_num, 0, i, j, true); \
-      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false); \
-      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false); \
+      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, mmax, kmax, false); \
+      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, kmax, nmax, false); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float32_t &accd = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false); \
-      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false); \
+      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, mmax, kmax, false); \
+      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, kmax, nmax, false); \
       BODY32; \
       set_fp_exceptions; \
       break; \
     }\
     case e64: {\
       float64_t &accd = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, false); \
-      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, false); \
+      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, k, mmax, kmax, false); \
+      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num, 0, k, j, kmax, nmax, false); \
       BODY64; \
       set_fp_exceptions; \
       break; \
@@ -530,16 +543,16 @@
   switch(P.MU.msew) { \
     case e16: {\
       float32_t &accd_w = P.MU.acc_elt<float32_t>(accd_num, 0, i, j, true); \
-      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, false)); \
-      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, false)); \
+      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num, 0, i, k, mmax, kmax, false)); \
+      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num, 0, k, j, kmax, nmax, false)); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float64_t &accd_w = P.MU.acc_elt<float64_t>(accd_num, 0, i, j, true); \
-      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, false)); \
-      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, false)); \
+      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num, 0, i, k, mmax, kmax, false)); \
+      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num, 0, k, j, kmax, nmax, false)); \
       BODY32; \
       set_fp_exceptions; \
       break; \
@@ -1117,6 +1130,31 @@
   case 'c' : \
     height = trans? P.MU.tile_n : P.MU.tile_m; \
     width = trans? P.MU.tile_m : P.MU.tile_n; \
+    rmax = P.MU.mrows; \
+    cmax = (P.MU.mcols / P.MU.msew); \
+    break; \
+  case 'a' : \
+    height = trans? P.MU.tile_k : P.MU.tile_m; \
+    width = trans? P.MU.tile_m : P.MU.tile_k; \
+    rmax = P.MU.mrows; \
+    cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    break; \
+  case 'b' : \
+    height = trans? P.MU.tile_n : P.MU.tile_k; \
+    width = trans? P.MU.tile_k : P.MU.tile_n; \
+    cmax = (P.MU.mcols / P.MU.msew); \
+    rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    break; \
+  default : \
+    break; \
+  }; \
+
+#define MTU_LS_LEN_V(trans, ch) \
+  switch (ch) \
+  { \
+  case 'c' : \
+    height = trans? P.MU.tile_n : P.MU.tile_m; \
+    width = trans? P.MU.tile_m : P.MU.tile_n; \
     break; \
   case 'a' : \
     height = trans? P.MU.tile_k : P.MU.tile_m; \
@@ -1134,7 +1172,7 @@
 #define CLEAR_TILE(td) \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < P.MU.mcols / 8; j++) { \
-      P.MU.tr_elt<int8_t>(td, 0, i, j, true) = 0; \
+      P.MU.tr_elt<int8_t>(td, 0, i, j, rmax, cmax, true) = 0; \
     } \
   } \
 
@@ -1150,13 +1188,14 @@
   const reg_t stride2 = RS2; \
   const reg_t td = insn.rd(); \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0;\
   MTU_LS_LEN(is_trans, dim); \
   CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t j = 0; j < width; ++j) { \
         elt_width##_t val = MMU.load<elt_width##_t>( \
                   baseAddr + i * stride2 + j * sizeof(elt_width##_t)); \
-        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, true) = val; \
+        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, true) = val; \
     } \
   } \
 
@@ -1165,10 +1204,11 @@
   const reg_t stride2 = RS2; \
   const reg_t td = insn.rd(); \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t j = 0; j < width; ++j) { \
-        elt_width##_t val = P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, true); \
+        elt_width##_t val = P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, true); \
         MMU.store<elt_width##_t>( \
                   baseAddr + i * stride2 + j * sizeof(elt_width##_t), val); \
     } \
@@ -1179,6 +1219,7 @@
   const reg_t stride2 = RS2; \
   const reg_t accd = insn.rd(); \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
   CLEAR_ACC(accd); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1194,6 +1235,7 @@
   const reg_t stride2 = RS2; \
   const reg_t accd = insn.rd(); \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t j = 0; j < width; ++j) { \
@@ -1208,7 +1250,7 @@
   const reg_t stride2 = RS2; \
   const reg_t vd = insn.rd(); \
   reg_t height, width; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN_V(is_trans, dim); \
   reg_t veew = sizeof(elt_width##_t) * 8; \
   float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
   reg_t emul = vemul < 1 ? 1 : vemul; \
@@ -1228,7 +1270,7 @@
   const reg_t stride2 = RS2; \
   const reg_t vd = insn.rd(); \
   reg_t height, width; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN_V(is_trans, dim); \
   reg_t veew = sizeof(elt_width##_t) * 8; \
   float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
   reg_t emul = vemul < 1 ? 1 : vemul; \
@@ -1265,6 +1307,7 @@
   reg_t krposw = P.MU.mskout[1]; \
   reg_t outposw = P.MU.mskout[0]; \
   reg_t height, width; \
+  reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, 'a'); \
   CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1272,7 +1315,7 @@
       for (reg_t j = 0; j < width; ++j) { \
         elt_width##_t val = MMU.load<elt_width##_t>( \
                       baseAddr + j * sizeof(elt_width##_t)); \
-        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, true) = val; \
+        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, true) = val; \
       } \
     } \
     outposw++; \

@@ -37,20 +37,19 @@ class matrixUnit_t {
         is_write: write or read
       */
       template<class T>
-        T& tr_elt(reg_t td, reg_t tt, reg_t slice, reg_t n, bool is_write = false) {
+        T& tr_elt(reg_t td, reg_t tt, reg_t slice, reg_t n, reg_t rows, reg_t elts_per_slice, bool is_write = false) {
           assert(msew != 0);
           assert((mcols >> 3)/sizeof(T) > 0);
-          reg_t elts_per_slice = (mcols>> 3) / (sizeof(T));
 #ifdef RISCV_ENABLE_COMMITLOG
           if (is_write)
             p->get_state()->log_reg_write[((td) << 4) | 3] = {0, 0};
 #endif
-          T *regStart = ((T*)tr_file) + td * elts_per_slice * mrows;
+          T *regStart = ((T*)tr_file) + td * elts_per_slice * rows;
           if (tt & 1) { // col
             reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
             return regStart[elts_per_slice * n + new_slice];
           } else { //row
-            reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
+            reg_t new_slice = slice > (rows-1)? (slice % rows): slice;
             return regStart[elts_per_slice * new_slice + n];
           }
         }
@@ -99,6 +98,8 @@ class matrixUnit_t {
       reg_t set_moutsh(int rd, int rs1, int rs2);
       reg_t set_insh(int rd, int rs1, int rs2);
       reg_t set_msk(int rd, int rs1, int rs2);
+
+      reg_t get_mlen() {return MLEN;}
 
   };
 #endif // _RISCV_MATRIX_UNIT_H
