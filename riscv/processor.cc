@@ -163,7 +163,7 @@ void processor_t::parse_varch_string(const char* s)
     else if (attr == "mlen")
       mlen = get_int_token(str, ',', pos);
     else if (attr == "rlen")
-      mlen = get_int_token(str, ',', pos);
+      rlen = get_int_token(str, ',', pos);
     else
       bad_varch_string(s, "Unsupported token");
 
