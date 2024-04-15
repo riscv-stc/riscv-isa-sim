@@ -3,20 +3,29 @@
 
 #include "vector_unit.h"
 
+enum MRM{
+  MRNU = 0,
+  MRNE,
+  MRDN,
+  MROD,
+  MINVALID_RM
+};
+
 class matrixUnit_t {
     public:
       processor_t* p;
       void *tr_file;
-      void *acc_file;
 
       reg_t tile_m, tile_k, tile_n;
-      reg_t MLEN, mlenb;
-      reg_t mill, maccq;
-      reg_t msew;
-      reg_t mbf16, mtf32;
+      reg_t MLEN, mlenb, RLEN;
+      reg_t msew, mba;
+      reg_t mbf16, mtf32, mfp64, mfp8, mint4;
       reg_t mrows, mcols;
-      
-      matrix_csr_t_p mtype;
+      reg_t mrlenb;
+      reg_t mlmul;
+      reg_t mlmax;
+      csr_t_p mxsat;
+      matrix_csr_t_p mtype, mstart, mcsr, mxrm;
       // im2col register
       reg_t moutsh;
       reg_t minsh;
@@ -28,7 +37,8 @@ class matrixUnit_t {
       reg_t mdil_h, mdil_w, mstr_h, mstr_w;
       sreg_t mskin[2];
       reg_t mskout[2];
-
+      reg_t mpadv[2];
+      bool mill;
       /* matrix element for varies eew
         td: tile reg num
         tt: read row 6 or col 7
@@ -54,28 +64,15 @@ class matrixUnit_t {
           }
         }
 
-      template<class T>
-        T& acc_elt(reg_t td, reg_t tt, reg_t slice, reg_t n, bool is_write = false) {
+        char* board_elt(reg_t td, reg_t rows, reg_t elts_per_slice, bool is_write = false) {
           assert(msew != 0);
-          assert((mcols >> 3)/sizeof(T) > 0);
-          reg_t elts_per_slice;
-          if (maccq) {
-            elts_per_slice = (mcols * 4 >> 3) / (sizeof(T));
-          } else {
-            elts_per_slice = (mcols * 2 >> 3) / (sizeof(T));
-          }
+
 #ifdef RISCV_ENABLE_COMMITLOG
           if (is_write)
             p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
 #endif
-          T *regStart = (T *)((char*)acc_file + td * mlenb * 4);
-          if (tt & 1) { // col
-            // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
-            return *(regStart + elts_per_slice * n + slice);
-          } else { //row
-            // reg_t new_slice = slice > (mrows-1)? (slice % mrows): slice;
-            return *(regStart + elts_per_slice * slice + n);
-          }
+          char *regStart = ((char*)tr_file) + td * elts_per_slice * rows;
+          return regStart;
         }
 
     public:
@@ -84,13 +81,10 @@ class matrixUnit_t {
 
       matrixUnit_t() {
         tr_file = 0;
-        acc_file = 0;
       }
       ~matrixUnit_t(){
         free(tr_file);
-        free(acc_file);
         tr_file = 0;
-        acc_file = 0;
       }
 
       reg_t set_mtype(int rd, reg_t newType);
@@ -98,8 +92,10 @@ class matrixUnit_t {
       reg_t set_moutsh(int rd, int rs1, int rs2);
       reg_t set_insh(int rd, int rs1, int rs2);
       reg_t set_msk(int rd, int rs1, int rs2);
-
+      reg_t set_pad(int rd, int rs1);
       reg_t get_mlen() {return MLEN;}
-
+      MRM get_mround_mode() {
+        return (MRM)(mxrm->read());
+    }
   };
 #endif // _RISCV_MATRIX_UNIT_H

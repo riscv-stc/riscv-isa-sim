@@ -1,1 +1,0 @@
-MXU_MEMUL_MX_QUAD((int64_t)insn.m_simm5())

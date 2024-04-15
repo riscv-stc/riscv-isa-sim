@@ -88,6 +88,9 @@ public:
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
   uint64_t rs3() { return x(27, 5); }
+  uint64_t td() { return x(7, 3); }
+  uint64_t ts1() { return x(15, 3); }
+  uint64_t mlmul() { return x(10, 2); }
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
   uint64_t iorw() { return x(20, 8); }

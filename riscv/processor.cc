@@ -146,9 +146,7 @@ void processor_t::parse_varch_string(const char* s)
   size_t len = str.length();
   int vlen = 0;
   int elen = 0;
-  int slen = 0;
-  int mlen = 0;
-  int maccq = 1;
+  int mlen = 0, rlen = 0;
   int vstart_alu = 0;
 
   while (pos < len) {
@@ -158,16 +156,14 @@ void processor_t::parse_varch_string(const char* s)
 
     if (attr == "vlen")
       vlen = get_int_token(str, ',', pos);
-    else if (attr == "slen")
-      slen = get_int_token(str, ',', pos);
     else if (attr == "elen")
       elen = get_int_token(str, ',', pos);
     else if (attr == "vstartalu")
       vstart_alu = get_int_token(str, ',', pos);
     else if (attr == "mlen")
       mlen = get_int_token(str, ',', pos);
-    else if (attr == "maccq")
-      maccq = get_int_token(str, ',', pos);
+    else if (attr == "rlen")
+      mlen = get_int_token(str, ',', pos);
     else
       bad_varch_string(s, "Unsupported token");
 
@@ -193,9 +189,9 @@ void processor_t::parse_varch_string(const char* s)
   VU.vstart_alu = vstart_alu;
   MU.MLEN = mlen;
   MU.mlenb = mlen / 8;
-  MU.mrows = MU.MLEN / VU.VLEN;
-  MU.mcols = VU.VLEN;
-  MU.maccq = maccq;
+  MU.mrows = MU.MLEN / rlen;
+  MU.mcols = rlen;
+  MU.RLEN = rlen;
 }
 
 static int xlen_to_uxl(int xlen)

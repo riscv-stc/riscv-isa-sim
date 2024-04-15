@@ -1,1 +1,0 @@
-MTU_TR_ST(2, 'c', uint8);

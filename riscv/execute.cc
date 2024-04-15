@@ -114,8 +114,6 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
       break;
     case 4:
       size = p->MU.MLEN*4;
-      if (p->MU.maccq == 0)
-        size = p->MU.MLEN*2;
       prefix = 'a';
       is_accreg = true;
       break;
@@ -149,8 +147,6 @@ static void commit_log_print_insn(processor_t *p, reg_t pc, insn_t insn)
         commit_log_print_value(log_file, size, &p->VU.elt<uint8_t>(rd, 0));
       else if (is_mreg)
         commit_log_print_value(log_file, size, &p->MU.tr_elt<uint8_t>(rd, 0, 0, 0, 0, 0));
-      else if (is_accreg)
-        commit_log_print_value(log_file, size, &p->MU.acc_elt<uint8_t>(rd, 0, 0, 0));
       else
         commit_log_print_value(log_file, size, item.second.v);
     }

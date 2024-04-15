@@ -1,1 +1,0 @@
-MTU_ACC_ST(1, 'b', uint64);

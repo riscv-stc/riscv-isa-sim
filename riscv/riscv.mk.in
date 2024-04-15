@@ -887,23 +887,31 @@ riscv_insn_ext_h = \
 
 riscv_insn_ext_p_simd = \
 	add16 \
+	uradd16 \
+	ukadd16 \
 	sub16 \
+	ursub16 \
+	uksub16 \
 	cras16 \
-	rcras16 \
-	kcras16 \
-	rcrsa16 \
+	urcras16 \
+	ukcras16 \
+	crsa16 \
+	urcrsa16 \
+	ukcrsa16 \
 	stas16 \
 	rstas16 \
 	urstas16 \
+	ukstas16 \
 	stsa16 \
 	rstsa16 \
 	urstsa16 \
+	ukstsa16 \
 	add8 \
-	radd8 \
-	kadd8 \
+	uradd8 \
+	ukadd8 \
 	sub8 \
-	rsub8 \
-	ksub8 \
+	ursub8 \
+	uksub8 \
 	sra16 \
 	srai16 \
 	sra16_u \
@@ -933,12 +941,10 @@ riscv_insn_ext_p_simd = \
 	kslra8 \
 	kslra8_u \
 	cmpeq16 \
-	scmplt16 \
 	scmple16 \
 	ucmplt16 \
 	ucmple16 \
 	cmpeq8 \
-	scmplt8 \
 	scmple8 \
 	ucmplt8 \
 	ucmple8 \
@@ -951,7 +957,6 @@ riscv_insn_ext_p_simd = \
 	smulx8 \
 	umul8 \
 	umulx8 \
-	khm8 \
 	khmx8 \
 	umin16 \
 	umax16 \
@@ -979,7 +984,6 @@ riscv_insn_ext_p_simd = \
 	zunpkd832 \
 
 riscv_insn_ext_p_partial_simd = \
-	pkbb16 \
 	pkbt16 \
 	pktb16 \
 	pktt16 \
@@ -1007,8 +1011,9 @@ riscv_insn_ext_p_partial_simd = \
 	kmmawb2_u \
 	kmmawt2 \
 	kmmawt2_u \
-	smbb16 \
-	smbt16 \
+	smtt16 \
+	kmda \
+	kmxda \
 	smds \
 	smdrs \
 	smxds \
@@ -1031,6 +1036,12 @@ riscv_insn_ext_p_partial_simd = \
 	umaqa \
 
 riscv_insn_ext_p_64_bit_profile = \
+	uradd64 \
+	kadd64 \
+	ukadd64 \
+	ursub64 \
+	ksub64 \
+	uksub64 \
 	umar64 \
 	umsr64 \
 	kmar64 \
@@ -1047,17 +1058,13 @@ riscv_insn_ext_p_64_bit_profile = \
 	smslxda \
 
 riscv_insn_ext_p_non_simd = \
-	kaddh \
-	ksubh \
-	khmbb \
 	khmbt \
 	khmtt \
-	ukaddh \
-	uksubh \
-	kdmbb \
-	kdmbt \
+	kdmtt \
 	kslraw \
 	kslraw_u \
+	ksllw \
+	kslliw \
 	kdmabb \
 	kdmabt \
 	kdmatt \
@@ -1069,24 +1076,31 @@ riscv_insn_ext_p_non_simd = \
 	mulr64 \
 	mulsr64 \
 	ave \
+	sra_u \
 	srai_u \
 	insb \
 
 riscv_insn_ext_p_rv64_only = \
 	add32 \
+	uradd32 \
+	ukadd32 \
 	sub32 \
+	ursub32 \
+	uksub32 \
 	cras32 \
-	rcras32 \
-	kcras32 \
+	urcras32 \
+	ukcras32 \
 	crsa32 \
-	rcrsa32 \
-	kcrsa32 \
+	urcrsa32 \
+	ukcrsa32 \
 	stas32 \
 	rstas32 \
 	urstas32 \
+	ukstas32 \
 	stsa32 \
 	rstsa32 \
 	urstsa32 \
+	ukstsa32 \
 	sra32 \
 	srai32 \
 	sra32_u \
@@ -1108,13 +1122,16 @@ riscv_insn_ext_p_rv64_only = \
 	khmtt16 \
 	kdmbb16 \
 	kdmbt16 \
+	kdmtt16 \
 	kdmabb16 \
 	kdmabt16 \
 	kdmatt16 \
-	smbt32 \
+	smtt32 \
 	kmabb32 \
 	kmabt32 \
 	kmatt32 \
+	kmda32 \
+	kmxda32 \
 	kmaxda32 \
 	kmads32 \
 	kmadrs32 \
@@ -1124,6 +1141,7 @@ riscv_insn_ext_p_rv64_only = \
 	smds32 \
 	smdrs32 \
 	smxds32 \
+	sraiw_u \
 	pkbt32 \
 	pktb32 \
 	clz32 \
@@ -1159,6 +1177,22 @@ riscv_insn_ext_matrix = \
 	msettilem \
 	msettilek \
 	msettilen \
+	msettile \
+	\
+	mmv_x_s \
+	mmv_s_x \
+	mfmv_f_s \
+	mfmv_s_f \
+	\
+	mbcar_m \
+	mbcbr_m \
+	mbccr_m \
+	mbcac_m \
+	mbcbc_m \
+	mbccc_m \
+	mbcae_m \
+	mbcbe_m \
+	mbcce_m \
 	\
 	mlae8_m \
 	mlae16_m \
@@ -1172,6 +1206,12 @@ riscv_insn_ext_matrix = \
 	mlce16_m \
 	mlce32_m \
 	mlce64_m \
+	\
+	mlre8_m \
+	mlre16_m \
+	mlre32_m \
+	mlre64_m \
+	\
 	mlate8_m \
 	mlate16_m \
 	mlate32_m \
@@ -1197,6 +1237,12 @@ riscv_insn_ext_matrix = \
 	msce16_m \
 	msce32_m \
 	msce64_m \
+	\
+	msre8_m \
+	msre16_m \
+	msre32_m \
+	msre64_m \
+	\
 	msate8_m \
 	msate16_m \
 	msate32_m \
@@ -1211,65 +1257,100 @@ riscv_insn_ext_matrix = \
 	mscte64_m \
 	\
 	mma_mm \
+	msmau_mm \
+	msma_mm \
 	mfma_mm \
+	mwmau_mm \
+	mswmau_mm \
 	mwma_mm \
+	mswma_mm \
 	mfwma_mm \
+	mqmau_mm \
+	msqmau_mm \
 	mqma_mm \
+	msqma_mm \
 	\
-	maddc_mm \
-	mfaddc_mm \
-	mwaddc_mm \
-	mfwaddc_mm \
-	mqaddc_mm \
+	maddu_mm \
+	msaddu_mm \
+	madd_mm \
+	msadd_mm \
+	mfadd_mm \
+	mwaddu_mm \
+	mwadd_mm \
+	mfwadd_mm \
 	\
-	msubc_mm \
-	mfsubc_mm \
-	mwsubc_mm \
-	mfwsubc_mm \
-	mqsubc_mm \
+	msubu_mm \
+	mssubu_mm \
+	msub_mm \
+	mssub_mm \
+	mfsub_mm \
+	mwsub_mm \
+	mwsubu_mm \
+	mfwsub_mm \
 	\
-	mrsubc_mm \
-	mfrsubc_mm \
-	mwrsubc_mm \
-	mfwrsubc_mm \
-	mqrsubc_mm \
+	mminu_mm \
+	mmin_mm \
+	mfmin_mm \
+	mmaxu_mm \
+	mmax_mm \
+	mfmax_mm \
+	msmulu_mm \
+	mmul_mm \
 	\
-	memulc_mx \
-	mfemulc_mf \
-	mwemulc_mx \
-	mfwemulc_mf \
-	mqemulc_mx \
-	memulc_mi  \
-	mwemulc_mi \
-	mqemulc_mi \
+	msmul_mm \
+	mfmul_mm \
+	mmulhu_mm \
+	mmulh_mm \
+	mmulhsu_mm \
+	msmulsu_mm \
+	mwmulu_mm \
+	mwmul_mm \
+	mwmulsu_mm \
+	mfwmul_mm \
+	mfdiv_mm \
+	mfsqrt_mm \
 	\
-	memulc_mm \
-	mfemulc_mm \
-	mwemulc_mm \
-	mfwemulc_mm \
-	mqemulc_mm \
-	\
-	mfncvtc_f_fw_m  \
-	mfwcvtc_fw_f_m  \
-	mfcvtc_f_x_m    \
-	mfcvtc_x_f_m    \
-	mfncvtc_f_xw_m  \
-	mfwcvtc_xw_f_m  \
-	mfncvtc_f_xq_m  \
-	mfwcvtc_xq_f_m  \
-	mfwcvtc_fw_x_m  \
-	mfncvtc_x_fw_m  \
-	mfcvtc_fw_xw_m  \
-	mfcvtc_xw_fw_m  \
-	mfncvtc_fw_xq_m \
-	mfwcvtc_xq_fw_m \
+	mfncvt_f_fw_m  \
+	mfwcvt_fw_f_m  \
+	mfcvt_f_x_m    \
+	mfcvt_x_f_m    \
+	mfncvt_f_xw_m  \
+	mfwcvt_xw_f_m  \
+	mfncvt_f_xq_m  \
+	mfwcvt_xq_f_m  \
+	mfwcvt_fw_x_m  \
+	mfncvt_x_fw_m  \
+	mfcvt_fw_xw_m  \
+	mfcvt_xw_fw_m  \
+	mfncvt_fw_xq_m \
+	mfwcvt_xq_fw_m \
 
 riscv_insn_ext_matrix_im2col = \
 	msetoutsh \
 	msetinsh \
 	msetsk \
+	msetpadval \
 	mlufae8_m \
 	mlufae16_m \
+	mlufae32_m \
+	mlufae64_m \
+	mlufbe8_m \
+	mlufbe16_m \
+	mlufbe32_m \
+	mlufbe64_m \
+	mlufce8_m \
+	mlufce16_m \
+	mlufce32_m \
+	mlufce64_m \
+	\
+	msfdae8_m \
+	msfdae16_m \
+	msfdae32_m \
+	msfdae64_m \
+	msfdbe8_m \
+	msfdbe16_m \
+	msfdbe32_m \
+	msfdbe64_m \
 
 riscv_insn_ext_matrix_ext = \
 	mlae8_v   \
@@ -1318,40 +1399,8 @@ riscv_insn_ext_matrix_ext = \
 	mqmvcc_v_m   \
 	mqmvcc_m_v   \
 	\
-	mmvac_m_m    \
-	\
-	memulcr_mv   \
-	mfemulcr_mv  \
-	mwemulcr_mv  \
-	mfwemulcr_mv \
-	mqemulcr_mv  \
-	memulcc_mv   \
-	mfemulcc_mv  \
-	mwemulcc_mv  \
-	mfwemulcc_mv \
-	mqemulcc_mv  \
-	\
-	maddcr_mv   \
-	mfaddcr_mv  \
-	mwaddcr_mv  \
-	mfwaddcr_mv \
-	mqaddcr_mv  \
-	maddcc_mv   \
-	mfaddcc_mv  \
-	mwaddcc_mv  \
-	mfwaddcc_mv \
-	mqaddcc_mv  \
-	\
-	mmacccr_mv   \
-	mfmacccr_mv  \
-	mwmacccr_mv  \
-	mfwmacccr_mv \
-	mqmacccr_mv  \
-	mmacccc_mv   \
-	mfmacccc_mv  \
-	mwmacccc_mv  \
-	mfwmacccc_mv \
-	mqmacccc_mv  \
+	mfqma_mm    \
+
 
 riscv_insn_smrnmi = \
 	mnret \

@@ -1,10 +1,10 @@
 MXU_VFP_W_MM_ADD
 ({
-  accd = f16_mul(accd, acc1);
+  td = f16_mul(ts1, ts1);
 },
 {
-  accd = f32_mul(accd, acc1);
+  td = f32_mul(ts1, ts1);
 },
 {
-  accd = f64_mul(accd, acc1);
+  td = f64_mul(ts1, ts1);
 })

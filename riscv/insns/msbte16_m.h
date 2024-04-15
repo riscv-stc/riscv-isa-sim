@@ -1,1 +1,1 @@
-MTU_TR_ST(1, 'b', uint16);
+MTU_TR_ST(1, 'b', uint16, false);

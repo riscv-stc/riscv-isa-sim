@@ -154,7 +154,9 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define require_matrix(alu) \
   do { \
     require_vector_vs; \
-    require_extension('V'); \
+    require_extension('M'); \
+    if (alu) \
+      require(P.MU.mstart->read() == 0); \
     require(!P.MU.mill); \
   } while (0);
 #define require_vector_novtype(is_log) \
