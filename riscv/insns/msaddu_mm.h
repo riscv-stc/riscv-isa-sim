@@ -4,4 +4,4 @@ MI_MM_LOOP({
     sat = td < ts1;
     td |= -(td < ts1);
     P_SET_OM(sat);
-},XU)
+},XU, true)

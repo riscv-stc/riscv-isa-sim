@@ -3,4 +3,4 @@ MI_MM_LOOP({
         td = ts2;
     else
         td = ts1;
-}, X)
+}, X, true)

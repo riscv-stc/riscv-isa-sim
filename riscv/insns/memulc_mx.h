@@ -1,1 +1,0 @@
-MXU_MEMUL_MX(RS2)

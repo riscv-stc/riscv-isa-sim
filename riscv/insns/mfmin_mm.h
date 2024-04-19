@@ -1,5 +1,5 @@
 
-MXU_VFP_VV_LOOP({
+MI_VFP_MM_LOOP({
     td = f16_min(ts1, ts2);
 },
 {
