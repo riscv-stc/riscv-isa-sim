@@ -10,11 +10,11 @@ void matrixUnit_t::reset(){
   
   auto& csrmap = p->get_state()->csrmap;
   csrmap[CSR_MXSAT] = mxsat = std::make_shared<vxsat_csr_t>(p, CSR_MXSAT);
-  csrmap[CSR_MTILEM] = std::make_shared<matrix_csr_t>(p, CSR_MTILEM, 0);
-  csrmap[CSR_MTILEK] = std::make_shared<matrix_csr_t>(p, CSR_MTILEK, /*mask*/ 0);
-  csrmap[CSR_MTILEN] = std::make_shared<matrix_csr_t>(p, CSR_MTILEN, /*mask*/ 0);
+  csrmap[CSR_MTILEM] = tile_m = std::make_shared<matrix_csr_t>(p, CSR_MTILEM, 0);
+  csrmap[CSR_MTILEK] = tile_k = std::make_shared<matrix_csr_t>(p, CSR_MTILEK, /*mask*/ 0);
+  csrmap[CSR_MTILEN] = tile_n = std::make_shared<matrix_csr_t>(p, CSR_MTILEN, /*mask*/ 0);
   csrmap[CSR_MLENB] = std::make_shared<matrix_csr_t>(p, CSR_MLENB, /*mask*/ mlenb);
-  csrmap[CSR_MRLENB] = std::make_shared<matrix_csr_t>(p, CSR_MRLENB, /*mask*/ mlenb);
+  csrmap[CSR_MRLENB] = std::make_shared<matrix_csr_t>(p, CSR_MRLENB, /*mask*/ mrlenb);
   csrmap[CSR_MTYPE] = mtype = std::make_shared<matrix_csr_t>(p, CSR_MTYPE, /*mask*/ 0);
   csrmap[CSR_MSTART] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MSTART, /*mask*/ 0);
   csrmap[CSR_MCSR] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MCSR, /*mask*/ 0);
@@ -44,8 +44,7 @@ reg_t matrixUnit_t::set_mtype(int rd, reg_t newType) {
     mlmul = 1 << extract64(newType, 0, 2);
     mlmax = (MLEN/msew) * mlmul;
 
-    mill = (newType >> 11) != 0 || mfp64_ext;
-    
+    mill = (newType >> 11) != 0 || mfp64_ext || msew > RLEN;
 
     if (mill){
       mlmax = 0;
@@ -72,36 +71,36 @@ reg_t matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
   if (dim == 'm' || dim == 'M') {
     
     if (rs1 != 0) {
-      tile_m = newMlen > MMAX? MMAX : newMlen;
+      tile_m->write_raw(newMlen > MMAX? MMAX : newMlen);
     } else if (rs1 == 0 && rd != 0) {
-      tile_m = MMAX;
+      tile_m->write_raw(MMAX);
     }
-    return tile_m;
+    return tile_m->read();
   } else if (dim == 'k' || dim == 'K') {
     if (rs1 != 0) {
-      tile_k = newMlen > KMAX? KMAX : newMlen;
+      tile_k->write_raw(newMlen > KMAX? KMAX : newMlen);
     } else if (rs1 == 0 && rd != 0) {
-      tile_k = KMAX;
+      tile_k->write_raw(KMAX);
     }
-    return tile_k;
+    return tile_k->read();
   } else if (dim == 'n' || dim == 'N') {
     if (rs1 != 0) {
-      tile_n = newMlen > NMAX? NMAX : newMlen;
+      tile_n->write_raw(newMlen > NMAX? NMAX : newMlen);
     } else if (rs1 == 0 && rd != 0) {
-      tile_n = NMAX;
+      tile_n->write_raw(NMAX);
     }
-    return tile_n;
+    return tile_n->read();
   } else if(dim == 't' || dim == 'T'){
     if (rs1 != 0){
-      tile_m = (newMlen & 0xFF) > MMAX ? MMAX : (newMlen & 0xFF);
-      tile_n = ((newMlen >> 8) & 0xFF) > NMAX ? NMAX : ((newMlen >> 8) & 0xFF);
-      tile_k = (newMlen >> 16) > KMAX ? KMAX : (newMlen >> 16);
+      tile_m->write_raw((newMlen & 0xFF) > MMAX ? MMAX : (newMlen & 0xFF));
+      tile_n->write_raw(((newMlen >> 8) & 0xFF) > NMAX ? NMAX : ((newMlen >> 8) & 0xFF));
+      tile_k->write_raw((newMlen >> 16) > KMAX ? KMAX : (newMlen >> 16));
     }else if( rs1 == 0 &&rd != 0){
-      tile_k = KMAX;
-      tile_n = NMAX;
-      tile_m = MMAX;
+      tile_k->write_raw(KMAX);
+      tile_n->write_raw(NMAX);
+      tile_m->write_raw(MMAX);
     }
-    return (0xFF & tile_m) | (8 << (0xFF & tile_n)) | (16 << (0xFF & tile_k));
+    return (0xFF & tile_m->read()) | (8 << (0xFF & tile_n->read())) | (16 << (0xFF & tile_k->read()));
   } else {
     return 0;
   }

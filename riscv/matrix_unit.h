@@ -16,7 +16,6 @@ class matrixUnit_t {
       processor_t* p;
       void *tr_file;
 
-      reg_t tile_m, tile_k, tile_n;
       reg_t MLEN, mlenb, RLEN;
       reg_t msew, mba;
       reg_t mbf16, mtf32, mfp64, mfp8, mint4;
@@ -25,7 +24,7 @@ class matrixUnit_t {
       reg_t mlmul;
       reg_t mlmax;
       csr_t_p mxsat;
-      matrix_csr_t_p mtype, mstart, mcsr, mxrm;
+      matrix_csr_t_p mtype, mstart, mcsr, mxrm, tile_m, tile_k, tile_n;
       // im2col register
       reg_t moutsh;
       reg_t minsh;

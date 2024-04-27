@@ -162,17 +162,17 @@
   switch (dim) \
   { \
   case 'c' : \
-    width = trans? P.MU.tile_m : P.MU.tile_n; \
+    width = trans? P.MU.tile_m->read() : P.MU.tile_n->read(); \
     rmax = P.MU.mrows; \
     cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'a' : \
-    width = trans? P.MU.tile_m : P.MU.tile_k; \
+    width = trans? P.MU.tile_m->read() : P.MU.tile_k->read(); \
     rmax = P.MU.mrows; \
     cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
   case 'b' : \
-    width = trans? P.MU.tile_k : P.MU.tile_n; \
+    width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
     rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
@@ -254,9 +254,9 @@
 
 #define MXU_GENERAL_LOOP_BASE(ins) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_k = P.MU.tile_k;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_k = P.MU.tile_k->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / P.MU.msew;\
   reg_t kmax = std::min(nmax, P.MU.mrows);\
@@ -313,8 +313,8 @@
 
 #define MX_2D_GENERAL_LOOP_BASE \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / P.MU.msew;\
   reg_t sew = P.MU.msew; \
@@ -340,8 +340,8 @@
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
   require_align(insn.rs2(), lmul); \
-  reg_t tile_m = P.MU.tile_m * lmul;\
-  reg_t tile_n = P.MU.tile_n * lmul;\
+  reg_t tile_m = P.MU.tile_m->read() * lmul;\
+  reg_t tile_n = P.MU.tile_n->read() * lmul;\
   reg_t sew = P.MU.msew; \
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / P.MU.msew;\
@@ -391,8 +391,8 @@
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
   require_align(insn.rs2(), lmul); \
-  reg_t tile_m = P.MU.tile_m * lmul;\
-  reg_t tile_n = P.MU.tile_n * lmul;\
+  reg_t tile_m = P.MU.tile_m->read() * lmul;\
+  reg_t tile_n = P.MU.tile_n->read() * lmul;\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
@@ -431,8 +431,8 @@
 
 #define MXU_Q_MM_ADD(opd, op0, sign, type, td_type) \
   require(P.MU.msew >= e8 && P.MU.msew <= e16); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
@@ -549,9 +549,9 @@
           (P.MU.msew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_k = P.MU.tile_k;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_k = P.MU.tile_k->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
@@ -624,8 +624,8 @@
           (P.MU.msew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
@@ -680,8 +680,8 @@
           (P.MU.msew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / P.MU.msew;\
@@ -775,8 +775,8 @@
 
 #define MXU_MEMUL_MX(factor) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -813,8 +813,8 @@
 
 #define MXU_MEMUL_MX_WIDEN(factor) \
   require(P.MU.msew >= e8 && P.MU.msew <= e32); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -845,8 +845,8 @@
 
 #define MXU_MEMUL_MX_QUAD(factor) \
   require(P.MU.msew >= e8 && P.MU.msew <= e16); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -872,8 +872,8 @@
 
 #define MXU_MEMUL_MFP(BODY16, BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -902,8 +902,8 @@
 
 #define MXU_MEMUL_MFP_WIDEN(BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e32); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -941,8 +941,8 @@
 
 #define MXU_MEMUL_MV(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -985,8 +985,8 @@
 
 #define MXU_MEMUL_MV_WIDEN(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e32); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -1021,8 +1021,8 @@
 
 #define MXU_MEMUL_MV_QUAD(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e16); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -1050,8 +1050,8 @@
 
 #define MXU_MEMUL_MVFP(is_trans, BODY16, BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -1095,8 +1095,8 @@
 
 #define MXU_MEMUL_MVFP_WIDEN(is_trans, BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e32); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
@@ -1130,8 +1130,8 @@
 
 #define MXU_MMACC_MV(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t vs1_num = insn.rs1(); \
@@ -1174,8 +1174,8 @@
 
 #define MXU_MMACC_MV_WIDEN(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e32); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t vs1_num = insn.rs1(); \
@@ -1211,8 +1211,8 @@
 
 #define MXU_MMACC_MV_QUAD(is_trans, BODY) \
   require(P.MU.msew >= e8 && P.MU.msew <= e16); \
-  reg_t height = P.MU.tile_m;\
-  reg_t width = P.MU.tile_n;\
+  reg_t height = P.MU.tile_m->read();\
+  reg_t width = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t vs1_num = insn.rs1(); \
@@ -1240,8 +1240,8 @@
 
 #define MXU_MMACC_MVFP(is_trans, BODY16, BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t vs1_num = insn.rs1(); \
@@ -1289,8 +1289,8 @@
 
 #define MXU_MMACC_MVFP_WIDEN(is_trans, BODY32, BODY64) \
   require(P.MU.msew >= e16 && P.MU.msew <= e32); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.rd(); \
   reg_t vs1_num = insn.rs1(); \
@@ -1338,20 +1338,20 @@
   switch (ch) \
   { \
   case 'c' : \
-    height = trans? P.MU.tile_n : P.MU.tile_m; \
-    width = trans? P.MU.tile_m : P.MU.tile_n; \
+    height = trans? P.MU.tile_n->read() : P.MU.tile_m->read(); \
+    width = trans? P.MU.tile_m->read() : P.MU.tile_n->read(); \
     rmax = P.MU.mrows; \
     cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'a' : \
-    height = trans? P.MU.tile_k : P.MU.tile_m; \
-    width = trans? P.MU.tile_m : P.MU.tile_k; \
+    height = trans? P.MU.tile_k->read() : P.MU.tile_m->read(); \
+    width = trans? P.MU.tile_m->read() : P.MU.tile_k->read(); \
     rmax = P.MU.mrows; \
     cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
   case 'b' : \
-    height = trans? P.MU.tile_n : P.MU.tile_k; \
-    width = trans? P.MU.tile_k : P.MU.tile_n; \
+    height = trans? P.MU.tile_n->read() : P.MU.tile_k->read(); \
+    width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
     rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
     break; \
@@ -1559,8 +1559,8 @@
   const reg_t td_num = insn.td(); \
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / P.MU.msew; \
-  reg_t tile_m = P.MU.tile_m; \
-  reg_t tile_n = P.MU.tile_n; \
+  reg_t tile_m = P.MU.tile_m->read(); \
+  reg_t tile_n = P.MU.tile_n->read(); \
   reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; \
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
@@ -1692,9 +1692,9 @@
 
 #define MB_PARAM_BASE \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_k = P.MU.tile_k;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_k = P.MU.tile_k->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t rmax = 0; \
   reg_t cmax = 0; \
   reg_t height, width; \
@@ -1744,8 +1744,8 @@
 
 #define MI_LOOP_BASE \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
-  reg_t tile_m = P.MU.tile_m; \
-  reg_t tile_n = P.MU.tile_n; \
+  reg_t tile_m = P.MU.tile_m->read(); \
+  reg_t tile_n = P.MU.tile_n->read(); \
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = (P.MU.mcols / P.MU.msew) ; \
   reg_t sew = P.MU.msew; \
@@ -1853,8 +1853,8 @@
           (P.MU.msew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
-  reg_t tile_m = P.MU.tile_m;\
-  reg_t tile_n = P.MU.tile_n;\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
   reg_t sew = P.MU.msew; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
