@@ -497,6 +497,14 @@ struct : public arg_t {
 } v_vtype;
 
 struct : public arg_t {
+  std::string to_string(insn_t insn) const {
+    std::stringstream s;
+    int lmul = insn.mlmul();
+    s << "m" << ( 1 << lmul);
+    return s.str();
+  }
+} insn_group;
+struct : public arg_t {
   std::string to_string(insn_t UNUSED insn) const {
     return "x0";
   }
@@ -1924,8 +1932,8 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
       add_insn(new disasm_insn_t(#name #abc "e64.m" ,   match_##name##abc##e64_m,     mask_##name##abc##e64_m,  fmt)); \
       
 
-    std::vector<const arg_t *> tr_ld_unit = {&td, &v_address, &xrs2};
-    std::vector<const arg_t *> tr_st_unit = {&td, &v_address, &xrs2};
+    std::vector<const arg_t *> tr_ld_unit = {&td, &v_address, &xrs2, &insn_group};
+    std::vector<const arg_t *> tr_st_unit = {&td, &v_address, &xrs2, &insn_group};
     
     // ml{a-c}{r/s}e{8-64}.m -- mlae8.m lsae8.m
     DISASM_MMEM_TR_INSN(ml, tr_ld_unit, a);
@@ -2026,44 +2034,44 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
   DISASM_INSN("mqma.mm",   mqma_mm,   0, {&td, &ts1, &ts2});
   DISASM_INSN("msqmau.mm", msqmau_mm, 0, {&td, &ts1, &ts2});
 
-  DISASM_INSN("madd.mm",    madd_mm,     0, {&td, &ts1});
-  DISASM_INSN("msadd.mm",   msadd_mm,    0, {&td, &ts1});
-  DISASM_INSN("mfadd.mm",   mfadd_mm,    0, {&td, &ts1});
-  DISASM_INSN("mwaddu.mm",  mwaddu_mm,   0, {&td, &ts1});
-  DISASM_INSN("mwadd.mm",   mwadd_mm,    0, {&td, &ts1});
-  DISASM_INSN("mfwadd.mm",  mfwadd_mm,   0, {&td, &ts1});
+  DISASM_INSN("madd.mm",    madd_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("msadd.mm",   msadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfadd.mm",   mfadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwaddu.mm",  mwaddu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwadd.mm",   mwadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfwadd.mm",  mfwadd_mm,   0, {&td, &ts1, &ts2, &insn_group});
 
-  DISASM_INSN("msubu.mm",   msubu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mssubu.mm",  mssubu_mm,   0, {&td, &ts1});
-  DISASM_INSN("msub.mm",    msub_mm,     0, {&td, &ts1});
-  DISASM_INSN("mfsub.mm",   mfsub_mm,    0, {&td, &ts1});
-  DISASM_INSN("mwsubu.mm",  mwsubu_mm,   0, {&td, &ts1});
-  DISASM_INSN("mwsub.mm",   mwsub_mm,    0, {&td, &ts1});
-  DISASM_INSN("mfwsub.mm",  mfwsub_mm,   0, {&td, &ts1});
-  DISASM_INSN("mminu.mm",   mminu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mmin.mm",    mmin_mm,     0, {&td, &ts1});
-  DISASM_INSN("mfmin.mm",   mfmin_mm,    0, {&td, &ts1});
-  DISASM_INSN("mmaxu.mm",   mmaxu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mmax.mm",    mmax_mm,     0, {&td, &ts1});
-  DISASM_INSN("mfmax.mm",   mfmax_mm,    0, {&td, &ts1});
+  DISASM_INSN("msubu.mm",   msubu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mssubu.mm",  mssubu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("msub.mm",    msub_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfsub.mm",   mfsub_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwsubu.mm",  mwsubu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwsub.mm",   mwsub_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfwsub.mm",  mfwsub_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mminu.mm",   mminu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmin.mm",    mmin_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfmin.mm",   mfmin_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmaxu.mm",   mmaxu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmax.mm",    mmax_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfmax.mm",   mfmax_mm,    0, {&td, &ts1, &ts2, &insn_group});
 
-  DISASM_INSN("msmulu.mm",  msmulu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mmul.mm",    mmul_mm,      0, {&td, &ts1});
-  DISASM_INSN("msmul.mm",   msmul_mm,     0, {&td, &ts1});
-  DISASM_INSN("mfmul.mm",   mfmul_mm,     0, {&td, &ts1});
-  DISASM_INSN("mmulhu.mm",  mmulhu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mmulh.mm",   mmulh_mm,     0, {&td, &ts1});
-  DISASM_INSN("mmulhsu.mm", mmulhsu_mm,   0, {&td, &ts1});
-  DISASM_INSN("msmulsu.mm", msmulsu_mm,   0, {&td, &ts1});
-  DISASM_INSN("mwmulu.mm",  mwmulu_mm,    0, {&td, &ts1});
-  DISASM_INSN("mwmul.mm",   mwmul_mm,     0, {&td, &ts1});
-  DISASM_INSN("mwmulsu.mm", mwmulsu_mm,   0, {&td, &ts1});
-  DISASM_INSN("mfwmul.mm",  mfwmul_mm,    0, {&td, &ts1});
-  DISASM_INSN("mfdiv.mm",   mfdiv_mm,     0, {&td, &ts1});
-  DISASM_INSN("mfsqrt.mm",  mfsqrt_mm,    0, {&td, &ts1});
+  DISASM_INSN("msmulu.mm",  msmulu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmul.mm",    mmul_mm,      0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("msmul.mm",   msmul_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfmul.mm",   mfmul_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmulhu.mm",  mmulhu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmulh.mm",   mmulh_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mmulhsu.mm", mmulhsu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("msmulsu.mm", msmulsu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwmulu.mm",  mwmulu_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwmul.mm",   mwmul_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mwmulsu.mm", mwmulsu_mm,   0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfwmul.mm",  mfwmul_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfdiv.mm",   mfdiv_mm,     0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("mfsqrt.mm",  mfsqrt_mm,    0, {&td, &ts1, &ts2, &insn_group});
 
 #define DISASM_MXU_CVT(name, mname) \
-  add_insn(new disasm_insn_t(#name,  match_##mname,    mask_##mname,   {&td, &ts1})); \
+  add_insn(new disasm_insn_t(#name,  match_##mname,    mask_##mname,   {&td, &ts1, &insn_group})); \
 
   DISASM_MXU_CVT("mfncvt.f.fw.m",  mfncvt_f_fw_m);
   DISASM_MXU_CVT("mfwcvt.fw.f.m",  mfwcvt_fw_f_m);

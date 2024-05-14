@@ -192,6 +192,7 @@ void processor_t::parse_varch_string(const char* s)
   MU.mrows = MU.MLEN / rlen;
   MU.mcols = rlen;
   MU.RLEN = rlen;
+  MU.mrlenb = rlen / 8;
 }
 
 static int xlen_to_uxl(int xlen)

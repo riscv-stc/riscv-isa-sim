@@ -22,6 +22,7 @@ typedef float128_t freg_t;
 const int NXPR = 32;
 const int NFPR = 32;
 const int NVPR = 32;
+const int NMPR = 8;
 const int NCSR = 4096;
 
 #define X_RA 1

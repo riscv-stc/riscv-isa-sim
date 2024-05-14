@@ -1,15 +1,21 @@
   MXU_MFP_CVT_SCALE
   ({
-    auto ts1 = P.MU.tr_elt<float16_t>(ts1_num, 0, i, j, mmax, nmax, false);
-    P.MU.tr_elt<int8_t>(td_num, 0, i, j, mmax, nmax, true) = f16_to_i8(ts1, softfloat_roundingMode, true);
+    ;
+  },
+    {
+    auto ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax, false);
+    P.MU.tr_elt<int8_t>(td_num + m, 0, i, j, mmax, nmax * 2, true) = f16_to_i8(ts1, softfloat_roundingMode, true);
   },
   {
-    auto ts1 = P.MU.tr_elt<float32_t>(ts1_num, 0, i, j, mmax, nmax, false);
-    P.MU.tr_elt<int16_t>(td_num, 0, i, j, mmax, nmax, true) = f32_to_i16(ts1, softfloat_roundingMode, true);
+    auto ts1 = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, j, mmax, nmax, false);
+    P.MU.tr_elt<int16_t>(td_num + m, 0, i, j, mmax, nmax * 2, true) = f32_to_i16(ts1, softfloat_roundingMode, true);
   },
   {
-    auto ts1 = P.MU.tr_elt<float64_t>(ts1_num, 0, i, j, mmax, nmax, false);
-    P.MU.tr_elt<int32_t>(td_num, 0, i, j, mmax, nmax, true) = f64_to_i32(ts1, softfloat_roundingMode, true);
+    auto ts1 = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, j, mmax, nmax, false);
+    P.MU.tr_elt<int32_t>(td_num + m, 0, i, j, mmax, nmax * 2, true) = f64_to_i32(ts1, softfloat_roundingMode, true);
+  },
+  {
+    ;
   },
   {
     require(p->extension_enabled(EXT_ZFH));

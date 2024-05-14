@@ -100,7 +100,8 @@ reg_t matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
       tile_n->write_raw(NMAX);
       tile_m->write_raw(MMAX);
     }
-    return (0xFF & tile_m->read()) | (8 << (0xFF & tile_n->read())) | (16 << (0xFF & tile_k->read()));
+
+    return (0xFF & tile_m->read()) | ((0xFF & tile_n->read()) << 8) | ((0xFF & tile_k->read()) << 16);
   } else {
     return 0;
   }

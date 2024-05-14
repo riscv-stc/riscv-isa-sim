@@ -7,13 +7,13 @@
 
 #define LMUL_RESERVE 3
 #define MX_PARAMS(x) \
-  type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, kmax, false); \
+  type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
   type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
   type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
 
 
 #define MXSU_PARAMS(x) \
-  type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, kmax, false); \
+  type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
   type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
   type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
 
@@ -174,7 +174,7 @@
   case 'b' : \
     width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
-    rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    rmax = std::min(P.MU.mrows, (P.MU.mcols / P.MU.msew)); \
     break; \
   default : \
     break; \
@@ -404,23 +404,26 @@
     for (reg_t i = 0; i < tile_m; ++i) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
         if (sew == e8){ \
-          auto &td = P.MU.tr_elt<sign<e16>::type>(td_num + m, 0, i, j, mmax, nmax, true); \
-          auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax/2; \
+          auto &td = P.MU.tr_elt<sign<e16>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
+          auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           MXU_CHECK_OVERFLOW(e16) \
           td = (td_type##16_t)res; \
         }else if(sew == e16){ \
-          auto &td = P.MU.tr_elt<sign<e32>::type>(td_num + m, 0, i, j, mmax, nmax, true); \
-          auto ts1  = P.MU.tr_elt<sign<e32>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          auto ts2  = P.MU.tr_elt<sign<e32>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax/2; \
+          auto &td = P.MU.tr_elt<sign<e32>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
+          auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           MXU_CHECK_OVERFLOW(e32) \
           td = (td_type##32_t)res; \
         }else if(sew == e32){ \
-          auto &td = P.MU.tr_elt<sign<e64>::type>(td_num + m, 0, i, j, mmax, nmax, true); \
-          auto ts1  = P.MU.tr_elt<sign<e64>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          auto ts2  = P.MU.tr_elt<sign<e64>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax/2; \
+          auto &td = P.MU.tr_elt<sign<e64>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          auto ts1  = P.MU.tr_elt<sign<e32>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
+          auto ts2  = P.MU.tr_elt<sign<e32>::type>(ts2_num + m, 0, i, j, mmax, nmax, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           MXU_CHECK_OVERFLOW(e64) \
           td = (td_type##64_t)res; \
@@ -441,16 +444,18 @@
   for (reg_t i = 0; i < tile_m; ++i) { \
     for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
-        auto &td = P.MU.tr_elt<sign<e32>::type>(td_num, 0, i, j, mmax, nmax, true); \
-        auto ts1  = P.MU.tr_elt<sign<e32>::type>(ts1_num, 0, i, j, mmax, nmax, false); \
-        auto ts2  = P.MU.tr_elt<sign<e32>::type>(ts2_num, 0, i, j, mmax, nmax, false); \
+        reg_t des_nmax = nmax / 4; \
+        auto &td = P.MU.tr_elt<sign<e32>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+        auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num, 0, i, j, mmax, nmax, false); \
+        auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num, 0, i, j, mmax, nmax, false); \
         res = (type)ts1 op0 (type)ts2; \
         MXU_CHECK_OVERFLOW(e32) \
         td = (td_type##32_t)res; \
       }else if(sew == e16){ \
-        auto &td = P.MU.tr_elt<sign<e64>::type>(td_num, 0, i, j, mmax, nmax, true); \
-        auto ts1  = P.MU.tr_elt<sign<e64>::type>(ts1_num, 0, i, j, mmax, nmax, false); \
-        auto ts2  = P.MU.tr_elt<sign<e64>::type>(ts2_num, 0, i, j, mmax, nmax, false); \
+        reg_t des_nmax = nmax / 4; \
+        auto &td = P.MU.tr_elt<sign<e64>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+        auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num, 0, i, j, mmax, nmax, false); \
+        auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num, 0, i, j, mmax, nmax, false); \
         res = (type)ts1 op0 (type)ts2; \
         MXU_CHECK_OVERFLOW(e64) \
         td = (td_type##64_t)res; \
@@ -463,20 +468,23 @@
 #define MXU_WIDE_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign) \
   switch(P.MU.msew) { \
   case e8: { \
-    sign##16_t td_w = P.MU.tr_elt<sign##16_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint16_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    sign##16_t td_w = P.MU.tr_elt<sign##16_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint16_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign##16_t)(sign##8_t)var0 op0 (sign##16_t)(sign##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
-    sign##32_t td_w = P.MU.tr_elt<sign##32_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint32_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    sign##32_t td_w = P.MU.tr_elt<sign##32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign##32_t)(sign##16_t)var0 op0 (sign##32_t)(sign##16_t)var1) + var2; \
     } \
     break; \
   default: { \
-    sign##64_t td_w = P.MU.tr_elt<sign##64_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint64_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    sign##64_t td_w = P.MU.tr_elt<sign##64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign##64_t)(sign##32_t) var0 op0 (sign##64_t)(sign##32_t)var1) + var2; \
     } \
     break; \
@@ -485,20 +493,23 @@
 #define MXU_WIDE_OP_AND_ASSIGN_MIX(var0, var1, var2, op0, op1, signd, sign_1, sign_2) \
   switch(P.MU.msew) { \
   case e8: { \
-    signd##16_t UNUSED td_w = P.MU.tr_elt<signd##16_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint16_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    signd##16_t UNUSED td_w = P.MU.tr_elt<signd##16_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint16_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign_1##16_t)(sign_1##8_t)var0 op0 (sign_2##16_t)(sign_2##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
-    signd##32_t td_w = P.MU.tr_elt<signd##32_t>(td_num, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint32_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    signd##32_t td_w = P.MU.tr_elt<signd##32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign_1##32_t)(sign_1##16_t)var0 op0 (sign_2##32_t)(sign_2##16_t)var1) + var2; \
     } \
     break; \
   default: { \
-    signd##64_t td_w = P.MU.tr_elt<signd##64_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint64_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax / 2; \
+    signd##64_t td_w = P.MU.tr_elt<signd##64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign_1##64_t)(sign_1##32_t) var0 op0 (sign_2##64_t)(sign_2##32_t)var1) + var2; \
     } \
     break; \
@@ -507,14 +518,16 @@
 #define MXU_QUAD_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign) \
   switch(P.MU.msew) { \
   case e8: { \
-    sign##32_t td_q = P.MU.tr_elt<sign##32_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint32_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax/4; \
+    sign##32_t td_q = P.MU.tr_elt<sign##32_t>(td_num + m + j/des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint32_t>(td_num + m + j/des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign##32_t)(sign##8_t)var0 op0 (sign##32_t)(sign##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
-    sign##64_t td_q = P.MU.tr_elt<sign##64_t>(td_num + m, 0, i, j, mmax, nmax); \
-    P.MU.tr_elt<uint64_t>(td_num + m, 0, i, j, mmax, nmax, true) = \
+    reg_t des_nmax = nmax/4; \
+    sign##64_t td_q = P.MU.tr_elt<sign##64_t>(td_num + m + j/des_nmax, 0, i, j % des_nmax, mmax, des_nmax); \
+    P.MU.tr_elt<uint64_t>(td_num + m + j/des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true) = \
       op1((sign##64_t)(sign##16_t)var0 op0 (sign##64_t)(sign##16_t)var1) + var2; \
     } \
     break; \
@@ -698,25 +711,28 @@
       for (reg_t j=0; j<tile_n; ++j) { \
         switch(P.MU.msew) { \
         case e8: { \
-          float16_t &td = P.MU.tr_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-          float16_t ts1  = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          float16_t ts2  = P.MU.tr_elt<float16_t>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax / 2; \
+          float16_t &td = P.MU.tr_elt<float16_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          float16_t ts1  = i32_to_f16(P.MU.tr_elt<int8_t>(ts1_num + m, 0, i, j, mmax, nmax, false)); \
+          float16_t ts2  = i32_to_f16(P.MU.tr_elt<int8_t>(ts2_num + m, 0, i, j, mmax, nmax, false)); \
           BODY16; \
           set_fp_exceptions; \
           break; \
         }\
         case e16: {\
-          float32_t &td = P.MU.tr_elt<float32_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-          float32_t ts1  = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          float32_t ts2  = P.MU.tr_elt<float32_t>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax / 2; \
+          float32_t &td = P.MU.tr_elt<float32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          float32_t ts1  = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax, false)); \
+          float32_t ts2  = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, i, j, mmax, nmax, false)); \
           BODY32; \
           set_fp_exceptions; \
           break; \
         }\
         case e32: {\
-          float64_t &td = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-          float64_t ts1  = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, j, mmax, nmax, false); \
-          float64_t ts2  = P.MU.tr_elt<float64_t>(ts2_num + m, 0, i, j, mmax, nmax, false); \
+          reg_t des_nmax = nmax / 2; \
+          float64_t &td = P.MU.tr_elt<float64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
+          float64_t ts1  = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, j, mmax, nmax, false)); \
+          float64_t ts2  = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num + m, 0, i, j, mmax, nmax, false)); \
           BODY64; \
           set_fp_exceptions; \
           break; \
@@ -733,7 +749,8 @@
   MXU_VFP_LOOP_BASE \
   switch(P.MU.msew) { \
     case e16: {\
-      float32_t &td_w = P.MU.tr_elt<float32_t>(td_num + m, 0, i, j, mmax, nmax, true); \
+      reg_t des_nmax = nmax / 2; \
+      float32_t &td_w = P.MU.tr_elt<float32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
       float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, kmax, false)); \
       float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, kmax, nmax, false)); \
       BODY16; \
@@ -741,7 +758,8 @@
       break; \
     }\
     case e32: {\
-      float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax, true); \
+      reg_t des_nmax = nmax / 2; \
+      float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
       float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, kmax, false)); \
       float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, kmax, nmax, false)); \
       BODY32; \
@@ -1353,7 +1371,7 @@
     height = trans? P.MU.tile_n->read() : P.MU.tile_k->read(); \
     width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
-    rmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    rmax = std::min(P.MU.mrows, (P.MU.mcols / P.MU.msew)); \
     break; \
   default : \
     break; \
@@ -1362,7 +1380,7 @@
 #define CLEAR_TILE(td) \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < P.MU.mcols / 8; j++) { \
-      P.MU.tr_elt<int8_t>(td, 0, i, j, rmax, cmax, true) = 0; \
+      P.MU.tr_elt<int8_t>(td, 0, i, j, P.MU.mrows, P.MU.mcols >> 3, true) = 0; \
     } \
   } \
 
@@ -1565,16 +1583,18 @@
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
   softfloat_roundingMode = STATE.frm->read(); \
-  for (reg_t i = 0; i < tile_m; ++i) { \
-    for (reg_t j = 0; j < tile_n; ++j) { \
+  for (reg_t m = 0; m < lmul; m++) { \
+    for (reg_t i = 0; i < tile_m; ++i) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
 
 
 #define MU_MFP_LOOP_END \
     } \
   } \
+  } \
 
-#define MXU_MFP_CVT_SCALE(BODY8, BODY16, BODY32, \
-                         CHECK8, CHECK16, CHECK32, \
+#define MXU_MFP_CVT_SCALE(BODY8, BODY16, BODY32, BODY64,\
+                         CHECK8, CHECK16, CHECK32, CHECK64,\
                          is_widen, eew_check) \
   require(eew_check); \
   switch(P.MU.msew) { \
@@ -1598,6 +1618,14 @@
       CHECK32 \
       MU_MFP_LOOP_SCALE_BASE \
         BODY32 \
+        set_fp_exceptions; \
+      MU_MFP_LOOP_END \
+      } \
+      break; \
+    case e64: {\
+      CHECK64 \
+      MU_MFP_LOOP_SCALE_BASE \
+        BODY64 \
         set_fp_exceptions; \
       MU_MFP_LOOP_END \
       } \
