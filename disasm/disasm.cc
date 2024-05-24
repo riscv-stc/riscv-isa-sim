@@ -1901,10 +1901,10 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
     DEFINE_R1TYPE(msetpadval);
 
     //Data Move
-    DISASM_INSN("mmv.x.s",  mmv_x_s,  0, {&md, &ms1, &ts2});
-    DISASM_INSN("mmv.s.x",  mmv_s_x,  0, {&md, &ms1, &ts2});
-    DISASM_INSN("mfmv.f.s", mfmv_f_s, 0, {&md, &ms1, &ts2});
-    DISASM_INSN("mfmv.s.f", mfmv_s_f, 0, {&md, &ms1, &ts2});
+    DISASM_INSN("mmv.x.s",  mmv_x_s,  0, {&xrd, &ms1, &xrs2});
+    DISASM_INSN("mmv.s.x",  mmv_s_x,  0, {&md, &ms1, &xrs2});
+    DISASM_INSN("mfmv.f.s", mfmv_f_s, 0, {&frd, &ms1, &xrs2});
+    DISASM_INSN("mfmv.s.f", mfmv_s_f, 0, {&md, &frs1, &xrs2});
 
     #define DISASM_M_BRODCAT_INSN(name, fmt, abc) \
       add_insn(new disasm_insn_t(#name #abc "r.m" ,    match_##name##abc##r_m,      mask_##name##abc##r_m,   fmt)); \

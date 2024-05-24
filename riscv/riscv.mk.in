@@ -1257,6 +1257,7 @@ riscv_insn_ext_matrix = \
 	mscte64_m \
 	\
 	mma_mm \
+	mmau_mm \
 	msmau_mm \
 	msma_mm \
 	mfma_mm \

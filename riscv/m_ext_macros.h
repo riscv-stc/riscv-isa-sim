@@ -8,26 +8,26 @@
 #define LMUL_RESERVE 3
 #define MX_PARAMS(x) \
   type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
-  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 
 #define MXSU_PARAMS(x) \
   type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
-  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MX_TS1_PARAMS(x) \
-  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
 
 #define MXU_TS1_PARAMS(x) \
-  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
+  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
 
 #define MX_TS2_PARAMS(x) \
-  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, i, k, mmax, kmax, false); \
+  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, i, k, mmax, nmax, false); \
 
 #define MXU_TS2_PARAMS(x) \
-  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, i, k, mmax, kmax, false); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, i, k, mmax, nmax, false); \
 
 #define MXU_PARAMS(x) \
   type_usew_t<x>::type &td  = P.MU.tr_elt<type_usew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
@@ -35,12 +35,12 @@
   type_usew_t<x>::type &ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MX_PARAM_BASE(x) \
-  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MXU_PARAM_BASE(x) \
-  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MMULXU_PARAMS(x, mult) \
   type_usew_t<x * mult>::type &td  = P.MU.tr_elt<type_usew_t<x * mult>::type>(td_num + m, 0, i, j, mmax, nmax, false); \
@@ -70,8 +70,8 @@
   type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MXDS_PARAMS(x) \
-  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+  type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+  type_sew_t<x>::type &ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false); \
 
 #define MXX_PARAMS_TR1(x) \
   type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, j, mmax, nmax, false); \
@@ -97,6 +97,8 @@
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / sew; \
   reg_t m = 0; \
+  if (i >mmax || j > nmax) \
+    require(0); \
   switch (sew) { \
     case e8: { \
       MXX_PARAMS_TR1(8); \
@@ -113,12 +115,9 @@
       BODY; \
       break; \
     } \
-    case e64: { \
+    default : \
       MXX_PARAMS_TR1(64); \
       BODY; \
-      break; \
-    } \
-    default : \
       break; \
   } \
 
@@ -162,19 +161,22 @@
   switch (dim) \
   { \
   case 'c' : \
+    height = trans? P.MU.tile_n->read() : P.MU.tile_m->read(); \
     width = trans? P.MU.tile_m->read() : P.MU.tile_n->read(); \
     rmax = P.MU.mrows; \
     cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'a' : \
+    height = trans? P.MU.tile_k->read() : P.MU.tile_m->read(); \
     width = trans? P.MU.tile_m->read() : P.MU.tile_k->read(); \
     rmax = P.MU.mrows; \
-    cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'b' : \
+    height = trans? P.MU.tile_n->read() : P.MU.tile_k->read(); \
     width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
-    rmax = std::min(P.MU.mrows, (P.MU.mcols / P.MU.msew)); \
+    rmax = P.MU.mrows; \
     break; \
   default : \
     break; \
@@ -193,22 +195,19 @@
   reg_t lmul = P.MU.mlmul; \
   require_align(insn.rs1(), lmul); \
   MTU_MV_LEN(is_trans, dim); \
-  float vemul = (float)P.MU.msew / P.VU.vsew * P.VU.vflmul; \
-  height = vemul < 1 ? 1 : vemul; \
-  for (reg_t i = 0; i < height; ++i) { \
-    for (reg_t j = 0; j < width; ++j) { \
+  if (height < start_height) \
+    require(0); \
+  for (reg_t i = 0; i < height - start_height; i++){ \
+    for (reg_t j = 0; j < width; j++) { \
 
 #define MTU_VREG_TR_PARAMS(trans, x) \
   type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
-  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i+start_height, j, rmax, cmax); \
+  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i + start_height, j, rmax, cmax); \
 
 #define MTU_TR_VREG_PARAMS(trans, x) \
   type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j, true, rmax, cmax); \
+  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i + start_height, j, rmax, cmax, true); \
 
-#define MTU_ACC_VREG_PARAMS(trans, x) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i+start_height, j, true, rmax, cmax); \
 
 #define MTU_VM_LOOP_END \
     } \
@@ -600,24 +599,24 @@
   switch(P.MU.msew) { \
     case e16: { \
       float16_t &td = P.MU.tr_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+      float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+      float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false); \
       BODY16; \
       set_fp_exceptions; \
       break; \
     }\
     case e32: {\
       float32_t &td = P.MU.tr_elt<float32_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+      float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+      float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, mmax, nmax, false); \
       BODY32; \
       set_fp_exceptions; \
       break; \
     }\
     case e64: {\
       float64_t &td = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, k, mmax, kmax, false); \
-      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num + m, 0, k, j, kmax, nmax, false); \
+      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, k, mmax, nmax, false); \
+      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num + m, 0, k, j, mmax, nmax, false); \
       BODY64; \
       set_fp_exceptions; \
       break; \
@@ -751,8 +750,8 @@
     case e16: {\
       reg_t des_nmax = nmax / 2; \
       float32_t &td_w = P.MU.tr_elt<float32_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
-      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, kmax, false)); \
-      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, kmax, nmax, false)); \
+      float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false)); \
+      float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false)); \
       BODY16; \
       set_fp_exceptions; \
       break; \
@@ -760,8 +759,8 @@
     case e32: {\
       reg_t des_nmax = nmax / 2; \
       float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, true); \
-      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, kmax, false)); \
-      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, kmax, nmax, false)); \
+      float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, nmax, false)); \
+      float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, mmax, nmax, false)); \
       BODY32; \
       set_fp_exceptions; \
       break; \
@@ -778,8 +777,8 @@
   switch(P.MU.msew) { \
     case e16: {\
       float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax, true); \
-      float64_t ts1 = f16_to_f64(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, kmax, false)); \
-      float64_t ts2 = f16_to_f64(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, kmax, nmax, false)); \
+      float64_t ts1 = f16_to_f64(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false)); \
+      float64_t ts2 = f16_to_f64(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false)); \
       BODY16; \
       set_fp_exceptions; \
       break; \
@@ -1365,13 +1364,13 @@
     height = trans? P.MU.tile_k->read() : P.MU.tile_m->read(); \
     width = trans? P.MU.tile_m->read() : P.MU.tile_k->read(); \
     rmax = P.MU.mrows; \
-    cmax = std::min(rmax, (P.MU.mcols / P.MU.msew)); \
+    cmax = (P.MU.mcols / P.MU.msew); \
     break; \
   case 'b' : \
     height = trans? P.MU.tile_n->read() : P.MU.tile_k->read(); \
     width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
     cmax = (P.MU.mcols / P.MU.msew); \
-    rmax = std::min(P.MU.mrows, (P.MU.mcols / P.MU.msew)); \
+    rmax = P.MU.mrows; \
     break; \
   default : \
     break; \
@@ -1682,29 +1681,29 @@
 #define MB_BOARD_CORE(dir, parm_type) \
   switch(dir){ \
     case 'r' : \
-    MB_GENERAL_LOOP_BASE(height) \
+      MB_GENERAL_LOOP_BASE(height) \
       if (!i && !m){ \
         if (td_num == ts1_num) \
           continue; \
       } \
-      memcpy(tr_elt_td + (i * width) * sew / 8 + ( m * rmax * cmax), tr_elt_start, sew * width / 8); \
-    MB_GENERAL_LOOP_BASE_END \
+      memcpy(tr_elt_td + (i * cmax) * sew / 8 + ( m * rmax * cmax), tr_elt_start, sew * width / 8); \
+      MB_GENERAL_LOOP_BASE_END \
       break; \
     case 'c' : \
-    MB_GENERAL_LOOP_BASE(height) \
+      MB_GENERAL_LOOP_BASE(height) \
       val  = P.MU.tr_elt<type_sew_t<parm_type>::type>(ts1_num + m, 0, i, 0, rmax, cmax, false); \
       temp.assign(width, val); \
-      memcpy(tr_elt_td + (i * width) * sew / 8 + ( m * rmax * cmax), temp.data(), sew * width / 8); \
+      memcpy(tr_elt_td + (i * cmax) * sew / 8 + ( m * rmax * cmax), temp.data(), sew * width / 8); \
+      MB_GENERAL_LOOP_BASE_END \
       break; \
-    MB_GENERAL_LOOP_BASE_END \
     case 'f' : \
-    MB_GENERAL_LOOP_BASE(height) \
+      MB_GENERAL_LOOP_BASE(height) \
       if (!i && !m){ \
         val  = P.MU.tr_elt<type_sew_t<parm_type>::type>(ts1_num, 0, 0, 0, rmax, cmax, false); \
         temp.assign(width, val); \
       } \
-      memcpy(tr_elt_td + (i * width) * sew / 8 + ( m * rmax * cmax), temp.data(), width * sew / 8); \
-    MB_GENERAL_LOOP_BASE_END \
+      memcpy(tr_elt_td + (i * cmax) * sew / 8 + ( m * rmax * cmax), temp.data(), width * sew / 8); \
+      MB_GENERAL_LOOP_BASE_END \
       break; \
     default  :\
       break; \
