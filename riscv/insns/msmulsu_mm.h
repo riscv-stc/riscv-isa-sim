@@ -1,4 +1,4 @@
-require(P.MU.mstart == 0);
+// require(P.MU.mstart == 0);
 
 MRM xrm = P.MU.get_mround_mode();
 int64_t int_max = INT64_MAX >> (64 - P.MU.msew) ;
@@ -12,12 +12,12 @@ MI_MM_LOOP
   int128_t result = (int128_t)ts1 * (uint128_t)ts2;
 
   // rounding
-  INT_ROUNDING(result, xrm, sew - 1);
+  // INT_ROUNDING(result, xrm, sew - 1);
 
-  if (result >= int_max){
+  if (result > int_max){
     result = int_max;
     overflow = true;
-  } else if  (result <= int_min) {
+  } else if  (result < int_min) {
     overflow = true;
     result = int_min;
   }

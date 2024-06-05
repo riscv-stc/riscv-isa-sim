@@ -6,7 +6,9 @@
 void matrixUnit_t::reset(){
   free(tr_file);
   tr_file = malloc(mlenb * 8);
+  tr_renamefile = malloc(mlenb * NMPR);
   memset(tr_file, 0, mlenb * 8);
+  memset(tr_renamefile, 0, mlenb * NMPR);
   
   auto& csrmap = p->get_state()->csrmap;
   csrmap[CSR_MXSAT] = mxsat = std::make_shared<vxsat_csr_t>(p, CSR_MXSAT);

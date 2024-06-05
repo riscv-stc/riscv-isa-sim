@@ -1391,14 +1391,6 @@ riscv_insn_ext_matrix_ext = \
 	mmvbc_m_v    \
 	mmvcc_v_m    \
 	mmvcc_m_v    \
-	mwmvcr_v_m   \
-	mwmvcr_m_v   \
-	mwmvcc_v_m   \
-	mwmvcc_m_v   \
-	mqmvcr_v_m   \
-	mqmvcr_m_v   \
-	mqmvcc_v_m   \
-	mqmvcc_m_v   \
 	\
 	mfqma_mm    \
 

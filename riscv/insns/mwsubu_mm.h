@@ -1,1 +1,1 @@
-MXU_W_MM_ADD(+, -, type_usew_t, uint128_t, uint)
+MXU_W_MM_ADD(+, -, type_usew_t, int128_t, int, false)

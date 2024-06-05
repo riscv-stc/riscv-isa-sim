@@ -11,7 +11,7 @@ MI_MM_LOOP
   uint128_t result = (uint128_t)ts1 * (uint128_t)ts2;
 
   // rounding
-  INT_ROUNDING(result, xrm, sew - 1);
+  // INT_ROUNDING(result, xrm, sew - 1);
   // remove guard bits
 //   result = result >> (sew - 1);
   
@@ -29,4 +29,4 @@ MI_MM_LOOP
   }
 
 //   td = result;
-}, XU, true)
+}, XU2D, true)

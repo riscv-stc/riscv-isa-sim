@@ -1,15 +1,15 @@
 MRM xrm = P.MU.get_mround_mode();
 uint64_t int_max = UINT64_MAX >> (64 - P.MU.msew * 4);
-bool overflow = false;
-MI_MM_LOOP_QUEN
+
+MXU_MM_LOOP_QUEN
 ({
   if (P.MU.msew > e16)
     throw trap_illegal_instruction(insn.bits()); 
-
+  bool overflow = false;
   uint128_t result = (uint128_t)ts1 * (uint128_t)ts2 + (uint128_t)td;
 
   // rounding
-  INT_ROUNDING(result, xrm, sew - 1);
+  // INT_ROUNDING(result, xrm, sew - 1);
 
   // remove guard bits
   // result = result >> (sew - 1);

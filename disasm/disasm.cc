@@ -2036,6 +2036,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 
   DISASM_INSN("madd.mm",    madd_mm,     0, {&td, &ts1, &ts2, &insn_group});
   DISASM_INSN("msadd.mm",   msadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
+  DISASM_INSN("msaddu.mm",  msaddu_mm,    0, {&td, &ts1, &ts2, &insn_group});
   DISASM_INSN("mfadd.mm",   mfadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
   DISASM_INSN("mwaddu.mm",  mwaddu_mm,   0, {&td, &ts1, &ts2, &insn_group});
   DISASM_INSN("mwadd.mm",   mwadd_mm,    0, {&td, &ts1, &ts2, &insn_group});
