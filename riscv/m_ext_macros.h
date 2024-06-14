@@ -227,19 +227,21 @@
   if (height < start_height) \
     require(0); \
   for (reg_t i = 0; i < height - start_height; i++){ \
-    for (reg_t j = 0; j < width; j++) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < width; j++) { \
 
 #define MTU_VREG_TR_PARAMS(trans, x) \
-  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num, i*width+j, true); \
-  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num, trans, i + start_height, j, rmax, cmax, false, false); \
+  type_sew_t<x>::type &vd = P.VU.elt<type_sew_t<x>::type>(rd_num + m, i*width+j, true); \
+  type_sew_t<x>::type ts1 = P.MU.tr_elt<type_sew_t<x>::type>(rs1_num + m, trans, i + start_height, j, rmax, cmax, false, false); \
 
 #define MTU_TR_VREG_PARAMS(trans, x) \
-  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num, i*width+j); \
-  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num, trans, i + start_height, j, rmax, cmax, false, true); \
+  type_sew_t<x>::type vs1 = P.VU.elt<type_sew_t<x>::type>(rs1_num + m, i*width+j); \
+  type_sew_t<x>::type &td = P.MU.tr_elt<type_sew_t<x>::type>(rd_num + m, trans, i + start_height, j, rmax, cmax, false, true); \
 
 
 #define MTU_VM_LOOP_END \
     } \
+  } \
   } \
 
 // vreg <-- tr
@@ -301,8 +303,8 @@
     reg_rename = true; \
   } \
   bool only_one_fix_reg_sum = false; \
-  for (reg_t m = 0 ; m < lmul; m++) { \
-    for (reg_t i = 0; i < tile_m; ++i) { \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
         for (reg_t k = 0; k < tile_k; ++k) { \
 
@@ -365,8 +367,7 @@
 #define MXU_CHECK_OVERFLOW(eew) \
   res = res > std::numeric_limits<eew>::max()? std::numeric_limits<eew>::max() : res; \
   res = res < std::numeric_limits<eew>::min()? std::numeric_limits<eew>::min() : res; \
-    
-
+  
 
 #define MX_2D_GENERAL_LOOP_BASE(ins) \
   require(P.MU.msew >= e8 && P.MU.msew <= e64); \
@@ -375,7 +376,7 @@
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / P.MU.msew;\
   reg_t sew = P.MU.msew; \
-  reg_t td_num = insn.rd(); \
+  reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
   reg_t ts2_num = insn.rs2(); \
   reg_t lmul = P.MU.mlmul; \
@@ -387,9 +388,9 @@
     reg_rename = true; \
   } \
   bool only_one_fix_reg_sum = false; \
-  for (reg_t m = 0 ; m < lmul; m++) { \
   for (reg_t i = 0; i < tile_m; ++i) { \
-    for (reg_t j = 0; j < tile_n; ++j) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
 
 #define MX_2D_LOOP_ELEMENT_SKIP(BODY)
 
@@ -423,8 +424,8 @@
   if (td_num == ts1_num || td_num == ts2_num){ \
     reg_rename = true; \
   } \
-  for (reg_t m = 0; m < lmul; m++) {\
-    for (reg_t i = 0; i < tile_m; ++i) { \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) {\
       for (reg_t j = 0; j < tile_n; ++j) { \
         if (sew == e8){ \
           auto &td = P.MU.tr_elt<sign<e8>::type>(td_num + m , 0, i, j, mmax, nmax, reg_rename, true); \
@@ -489,8 +490,8 @@
   } \
   reg_t des_nmax = nmax/2; \
   reg_t reg_sum = 1 + (tile_n - 1) / des_nmax; \
-  for (reg_t m = 0; m < lmul; m++) { \
-    for (reg_t i = 0; i < tile_m; ++i) { \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
         if (sew == e8){ \
           auto &td = P.MU.tr_elt<sign<e16>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, reg_rename, true); \
@@ -541,23 +542,25 @@
   reg_t des_nmax = nmax / 4; \
   reg_t reg_sum = 1 + (tile_n - 1) / des_nmax; \
   for (reg_t i = 0; i < tile_m; ++i) { \
-    for (reg_t j = 0; j < tile_n; ++j) { \
+    for (reg_t m = 0; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
       if (sew == e8){ \
         auto &td = P.MU.tr_elt<sign<e32>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, reg_rename, true); \
-        auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num, 0, i, j, mmax, nmax, false, false); \
-        auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num, 0, i, j, mmax, nmax, false, false); \
+        auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax, false, false); \
+        auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax, false, false); \
         res = (type)ts1 op0 (type)ts2; \
         MXU_CHECK_OVERFLOW(td_type##32_t) \
         td = (td_type##32_t)res; \
       }else if(sew == e16){ \
         auto &td = P.MU.tr_elt<sign<e64>::type>(td_num + m + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, reg_rename, true); \
-        auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num, 0, i, j, mmax, nmax, false, false); \
-        auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num, 0, i, j, mmax, nmax, false, false); \
+        auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num + m, 0, i, j, mmax, nmax, false, false); \
+        auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num + m, 0, i, j, mmax, nmax, false, false); \
         res = (type)ts1 op0 (type)ts2; \
         MXU_CHECK_OVERFLOW(td_type##64_t) \
         td = (td_type##64_t)res; \
       }\
     } \
+  } \
   } \
   REGNAME_WRITE_BAKE(mmax, nmax, reg_sum); \
 
@@ -685,8 +688,8 @@
 #define MXU_VFP_LOOP_BASE \
   MXU_VFP_COMMON \
   /*printf("m,k,n = %d, %d, %d\n", tile_m, tile_k, tile_n);*/ \
-  for (reg_t m = 0; m < lmul; m++) { \
-    for (reg_t i=0; i<tile_m; ++i) { \
+  for (reg_t i=0; i<tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j=0; j<tile_n; ++j) { \
         for (reg_t k = 0; k < tile_k; ++k) { \
 
@@ -751,8 +754,8 @@
     reg_rename = true; \
   } \
   reg_t reg_sum = 1; \
-  for (reg_t m = 0 ; m < lmul; m++) { \
-    for (reg_t i=0; i<tile_m; ++i) { \
+  for (reg_t i=0; i<tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j=0; j<tile_n; ++j) { \
         switch(P.MU.msew) { \
         case e16: { \
@@ -814,8 +817,8 @@
   } \
   reg_t des_nmax = nmax / 2; \
   reg_t reg_sum = 1 + (tile_n - 1) / des_nmax; \
-  for (reg_t m = 0; m < lmul; m++) { \
-    for (reg_t i=0; i<tile_m; ++i) { \
+  for (reg_t i=0; i<tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j=0; j<tile_n; ++j) { \
         switch(P.MU.msew) { \
         case e8: { \
@@ -941,11 +944,13 @@
   }; \
 
 #define CLEAR_TILE(td) \
+for (reg_t m = 0; m < lmul; m++) {\
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < P.MU.mcols / 8; j++) { \
-      P.MU.tr_elt<int8_t>(td, 0, i, j, P.MU.mrows, P.MU.mcols >> 3, false, true) = 0; \
+      P.MU.tr_elt<int8_t>(td + m, 0, i, j, P.MU.mrows, P.MU.mcols >> 3, false, true) = 0; \
     } \
   } \
+}\
 
 #define WHOLE_MATRIX(is_true) \
   if (is_true) { \
@@ -964,8 +969,8 @@
   MTU_LS_LEN(is_trans, dim); \
   WHOLE_MATRIX(is_max) \
   CLEAR_TILE(td); \
-  for (reg_t m = 0; m < lmul; m++) {\
-    for (reg_t i = 0; i < height; ++i) { \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) {\
       for (reg_t j = 0; j < width; ++j) { \
           elt_width##_t val = MMU.load<elt_width##_t>( \
                     baseAddr + i * stride2 + j * sizeof(elt_width##_t) + \
@@ -985,8 +990,8 @@
   reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
   WHOLE_MATRIX(is_max) \
-  for (reg_t m = 0; m < lmul; m++) {\
-    for (reg_t i = 0; i < height; ++i) { \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) {\
       for (reg_t j = 0; j < width; ++j) { \
           elt_width##_t val = P.MU.tr_elt<elt_width##_t>(td + m, is_trans, i, j, rmax, cmax, false, true); \
           MMU.store<elt_width##_t>( \
@@ -1003,12 +1008,6 @@
   reg_t height, width; \
   reg_t cmax = 0, rmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
-  reg_t veew = sizeof(elt_width##_t) * 8; \
-  float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
-  reg_t emul = vemul < 1 ? 1 : vemul; \
-  height = emul; \
-  require(vemul >= 0.125 && vemul <= 8); \
-  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * emul); \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < width; j++) { \
       elt_width##_t val = MMU.load<elt_width##_t>( \
@@ -1024,12 +1023,6 @@
   reg_t height, width; \
   reg_t cmax = 0, rmax = 0; \
   MTU_LS_LEN(is_trans, dim); \
-  reg_t veew = sizeof(elt_width##_t) * 8; \
-  float vemul = ((float)veew / P.VU.vsew * P.VU.vflmul); \
-  reg_t emul = vemul < 1 ? 1 : vemul; \
-  height = emul; \
-  require(vemul >= 0.125 && vemul <= 8); \
-  require(height*width*sizeof(elt_width##_t) <= P.VU.vlenb * vemul); \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < width; j++) { \
       elt_width##_t val = P.VU.elt<elt_width##_t>(vd, i * width + j); \
@@ -1061,6 +1054,7 @@
   reg_t outposw = P.MU.mskout[0]; \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
+  reg_t lmul = 1; \
   MTU_LS_LEN(is_trans, dim); \
   CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1106,6 +1100,7 @@
   reg_t outposw = P.MU.mskout[0]; \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
+  reg_t lmul = 1; \
   MTU_LS_LEN(is_trans, dim); \
   CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1145,8 +1140,8 @@
   } \
   reg_t reg_sum = 1; \
   bool only_one_fix_reg_sum = false; \
-  for (reg_t m = 0; m < lmul; m++) { \
-    for (reg_t i = 0; i < tile_m; ++i) { \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
 
 
@@ -1433,8 +1428,8 @@
 #define MI_2D_VFP_LOOP_BASE \
   MI_2D_VFP_COMMON \
   /*printf("m,k,n = %d, %d, %d\n", tile_m, tile_k, tile_n);*/ \
-  for (reg_t m = 0 ; m < lmul; m++ ) { \
-    for (reg_t i=0; i<tile_m; ++i) { \
+  for (reg_t i=0; i<tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++ ) { \
       for (reg_t j=0; j<tile_n; ++j) { \
 
 

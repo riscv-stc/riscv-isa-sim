@@ -5,9 +5,9 @@
 
 void matrixUnit_t::reset(){
   free(tr_file);
-  tr_file = malloc(mlenb * 8);
+  tr_file = malloc(mlenb * NMPR);
   tr_renamefile = malloc(mlenb * NMPR);
-  memset(tr_file, 0, mlenb * 8);
+  memset(tr_file, 0, mlenb * NMPR);
   memset(tr_renamefile, 0, mlenb * NMPR);
   
   auto& csrmap = p->get_state()->csrmap;
@@ -21,6 +21,13 @@ void matrixUnit_t::reset(){
   csrmap[CSR_MSTART] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MSTART, /*mask*/ 0);
   csrmap[CSR_MCSR] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MCSR, /*mask*/ 0);
   csrmap[CSR_MXRM] = mxrm = std::make_shared<matrix_csr_t>(p, CSR_MXRM, /*mask*/ 0x3ul);
+  csrmap[CSR_MOUTSH] = moutshape = std::make_shared<matrix_csr_t>(p, CSR_MOUTSH, 0);
+  csrmap[CSR_MINSH] = minshape = std::make_shared<matrix_csr_t>(p, CSR_MINSH, 0);
+  csrmap[CSR_MSTDI] = mstdi = std::make_shared<matrix_csr_t>(p, CSR_MSTDI, 0);
+  csrmap[CSR_MPAD] = mpad = std::make_shared<matrix_csr_t>(p, CSR_MPAD, 0);
+  csrmap[CSR_MINSK] = minsk = std::make_shared<matrix_csr_t>(p, CSR_MINSK, 0);
+  csrmap[CSR_MOUTSK] = moutsk = std::make_shared<matrix_csr_t>(p, CSR_MOUTSK, 0);
+  csrmap[CSR_MPADVAL] = mpadval = std::make_shared<matrix_csr_t>(p, CSR_MPADVAL, 0);
   mtype->write_raw(0);
 
   set_mtype(0, -1);
@@ -111,27 +118,27 @@ reg_t matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
 }
 
 reg_t matrixUnit_t::set_moutsh(int rd, int rs1, int rs2){
+  outshape[1] = extract64(rs1, 16,  16);
   outshape[0] = extract64(rs1, 0,  16);
-  outshape[1] = extract64(rs1, 16, 16);
-
   mstr_w = extract64(rs2, 0,  8);
   mstr_h = extract64(rs2, 8,  8);
   mdil_w = extract64(rs2, 16, 8);
   mdil_h = extract64(rs2, 24, 8);
+  mstdi->write_raw(rs2 & 0xFFFFFFFF);
+  moutshape->write_raw(rs1 & 0xFFFFFFFF);
 
-  return outshape[0] | (outshape[1] << 16);
+  return moutshape->read();
 }
 
 reg_t matrixUnit_t::set_insh(int rd, int rs1, int rs2) {
-  inshape[0] = extract64(rs1, 0,  16);
   inshape[1] = extract64(rs1, 16, 16);
-
+  inshape[0] = extract64(rs1, 0, 16);
   mpad_right  = extract64(rs2, 0,  8);
   mpad_left   = extract64(rs2, 8,  8);
   mpad_bottom = extract64(rs2, 16, 8);
   mpad_top    = extract64(rs2, 24, 8);
-
-  return inshape[0] | (inshape[1] << 16);
+  minshape->write_raw(rs1 & 0xFFFFFFFF);
+  return minshape->read();
 }
 
 reg_t matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
@@ -140,14 +147,15 @@ reg_t matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
 
   mskout[0] = extract64(rs2, 0,  16);
   mskout[1] = extract64(rs2, 16, 16);
-
-  return mskin[0] | (mskin[1] << 16);
+  minsk->write_raw(rs1 & 0xFFFFFFFF);
+  moutsk->write_raw(rs2 & 0xFFFFFFFF);
+  return minsk->read();
 }
 
 reg_t matrixUnit_t::set_pad(int rd, int rs1) {
   mpadv[0] = short(extract64(rs1, 0,  16));
   mpadv[1] = short(extract64(rs1, 16, 16));
-
-  return mpadv[0] | (mpadv[1] << 16);
+  mpadval->write_raw(rs1 & 0xFFFFFFFF);
+  return mpadval->read();
 }
 

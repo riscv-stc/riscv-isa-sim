@@ -960,8 +960,6 @@ riscv_insn_ext_p_simd = \
 	khmx8 \
 	umin16 \
 	umax16 \
-	sclip16 \
-	uclip16 \
 	kabs16 \
 	clrs16 \
 	clz16 \

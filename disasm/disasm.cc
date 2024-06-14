@@ -2251,8 +2251,8 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
     DISASM_8_AND_16_RINSN(umin);
     // DISASM_8_AND_16_RINSN(smax);
     DISASM_8_AND_16_RINSN(umax);
-    DISASM_8_AND_16_PIINSN(sclip);
-    DISASM_8_AND_16_PIINSN(uclip);
+    // DISASM_8_AND_16_PIINSN(sclip);
+    // DISASM_8_AND_16_PIINSN(uclip);
     DEFINE_R1TYPE(kabs16);
     DEFINE_R1TYPE(clrs16);
     DEFINE_R1TYPE(clz16);

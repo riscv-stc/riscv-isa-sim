@@ -26,10 +26,8 @@ class matrixUnit_t {
       csr_t_p mxsat;
       matrix_csr_t_p mtype, mstart, mcsr, mxrm, tile_m, tile_k, tile_n;
       // im2col register
-      reg_t moutsh;
-      reg_t minsh;
-      reg_t mpad, mstdi;
-      reg_t msk;
+
+      matrix_csr_t_p moutshape, minshape, mstdi, mpad, minsk, moutsk, mpadval;
       reg_t outshape[2];
       reg_t inshape[2];
       reg_t mpad_top, mpad_bottom, mpad_left, mpad_right;
