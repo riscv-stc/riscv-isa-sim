@@ -142,8 +142,8 @@ reg_t matrixUnit_t::set_insh(int rd, int rs1, int rs2) {
 }
 
 reg_t matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
-  mskin[0] = short(extract64(rs1, 0,  16));
-  mskin[1] = short(extract64(rs1, 16, 16));
+  mskin[0] = int16_t(extract64(rs1, 0,  16));
+  mskin[1] = int16_t(extract64(rs1, 16, 16));
 
   mskout[0] = extract64(rs2, 0,  16);
   mskout[1] = extract64(rs2, 16, 16);
@@ -153,8 +153,6 @@ reg_t matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
 }
 
 reg_t matrixUnit_t::set_pad(int rd, int rs1) {
-  mpadv[0] = short(extract64(rs1, 0,  16));
-  mpadv[1] = short(extract64(rs1, 16, 16));
   mpadval->write_raw(rs1 & 0xFFFFFFFF);
   return mpadval->read();
 }

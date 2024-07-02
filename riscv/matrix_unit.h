@@ -34,7 +34,6 @@ class matrixUnit_t {
       reg_t mdil_h, mdil_w, mstr_h, mstr_w;
       sreg_t mskin[2];
       reg_t mskout[2];
-      reg_t mpadv[2];
       bool mill;
       /* matrix element for varies eew
         td: tile reg num

@@ -1350,6 +1350,10 @@ riscv_insn_ext_matrix_im2col = \
 	msfdbe16_m \
 	msfdbe32_m \
 	msfdbe64_m \
+	msfdce8_m \
+	msfdce16_m \
+	msfdce32_m \
+	msfdce64_m \
 
 riscv_insn_ext_matrix_ext = \
 	mlae8_v   \

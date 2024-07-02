@@ -504,6 +504,7 @@ struct : public arg_t {
     return s.str();
   }
 } insn_group;
+
 struct : public arg_t {
   std::string to_string(insn_t UNUSED insn) const {
     return "x0";
@@ -2658,6 +2659,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 disassembler_t::disassembler_t(const isa_parser_t *isa)
 {
   // highest priority: instructions explicitly enabled
+
   add_instructions(isa);
 
   // next-highest priority: other instructions in same base ISA

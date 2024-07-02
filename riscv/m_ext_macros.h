@@ -952,6 +952,15 @@ for (reg_t m = 0; m < lmul; m++) {\
   } \
 }\
 
+#define PAD_TILE(td, elt_width, val) \
+for (reg_t m = 0; m < lmul; m++) {\
+  for (reg_t i = 0; i < height; i++) { \
+    for (reg_t j = 0; j < width; j++) { \
+      P.MU.tr_elt<elt_width##_t>(td + m, 0, i, j, rmax, cmax, false, true) = (elt_width##_t)val; \
+    } \
+  } \
+}\
+
 #define WHOLE_MATRIX(is_true) \
   if (is_true) { \
     height = rmax ; \
@@ -1045,18 +1054,19 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t pt = P.MU.mpad_top; \
   reg_t pb = P.MU.mpad_bottom; \
   reg_t pl = P.MU.mpad_left; \
-  reg_t pr = P.MU.mpad_bottom; \
+  reg_t pr = P.MU.mpad_right; \
   reg_t outh = P.MU.outshape[1]; \
   reg_t outw = P.MU.outshape[0]; \
   sreg_t inposh = P.MU.mskin[1]; \
   sreg_t inposw = P.MU.mskin[0]; \
   reg_t krposw = P.MU.mskout[1]; \
   reg_t outposw = P.MU.mskout[0]; \
+  reg_t mpadv = P.MU.mpadval->read(); \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
   MTU_LS_LEN(is_trans, dim); \
-  CLEAR_TILE(td); \
+  PAD_TILE(td, elt_width, mpadv); \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
       for (reg_t j = 0; j < width; ++j) { \
@@ -1091,7 +1101,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t pt = P.MU.mpad_top; \
   reg_t pb = P.MU.mpad_bottom; \
   reg_t pl = P.MU.mpad_left; \
-  reg_t pr = P.MU.mpad_bottom; \
+  reg_t pr = P.MU.mpad_right; \
   reg_t outh = P.MU.outshape[1]; \
   reg_t outw = P.MU.outshape[0]; \
   sreg_t inposh = P.MU.mskin[1]; \
@@ -1102,7 +1112,6 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
   MTU_LS_LEN(is_trans, dim); \
-  CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
       for (reg_t j = 0; j < width; ++j) { \
