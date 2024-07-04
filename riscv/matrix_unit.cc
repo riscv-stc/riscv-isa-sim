@@ -12,11 +12,11 @@ void matrixUnit_t::reset(){
   
   auto& csrmap = p->get_state()->csrmap;
   csrmap[CSR_MXSAT] = mxsat = std::make_shared<vxsat_csr_t>(p, CSR_MXSAT);
-  csrmap[CSR_MTILEM] = tile_m = std::make_shared<matrix_csr_t>(p, CSR_MTILEM, 0);
-  csrmap[CSR_MTILEK] = tile_k = std::make_shared<matrix_csr_t>(p, CSR_MTILEK, /*mask*/ 0);
-  csrmap[CSR_MTILEN] = tile_n = std::make_shared<matrix_csr_t>(p, CSR_MTILEN, /*mask*/ 0);
-  csrmap[CSR_MLENB] = std::make_shared<matrix_csr_t>(p, CSR_MLENB, /*mask*/ mlenb);
-  csrmap[CSR_MRLENB] = std::make_shared<matrix_csr_t>(p, CSR_MRLENB, /*mask*/ mrlenb);
+  csrmap[CSR_MTILEM] = tile_m = std::make_shared<matrix_csr_t>(p, CSR_MTILEM, 0, 0);
+  csrmap[CSR_MTILEK] = tile_k = std::make_shared<matrix_csr_t>(p, CSR_MTILEK, /*mask*/ 0, 0);
+  csrmap[CSR_MTILEN] = tile_n = std::make_shared<matrix_csr_t>(p, CSR_MTILEN, /*mask*/ 0, 0);
+  csrmap[CSR_MLENB] = std::make_shared<matrix_csr_t>(p, CSR_MLENB, /*mask*/ 0, /*init*/ mlenb);
+  csrmap[CSR_MRLENB] = std::make_shared<matrix_csr_t>(p, CSR_MRLENB, /*mask*/ 0, mrlenb);
   csrmap[CSR_MTYPE] = mtype = std::make_shared<matrix_csr_t>(p, CSR_MTYPE, /*mask*/ 0);
   csrmap[CSR_MSTART] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MSTART, /*mask*/ 0);
   csrmap[CSR_MCSR] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MCSR, /*mask*/ 0);
