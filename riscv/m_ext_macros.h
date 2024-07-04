@@ -1066,6 +1066,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
   MTU_LS_LEN(is_trans, dim); \
+  CLEAR_TILE(td); \
   PAD_TILE(td, elt_width, mpadv); \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
