@@ -262,6 +262,8 @@ void processor_t::step(size_t n)
     {
       take_pending_interrupt();
 
+      check_if_lpad_required();
+
       if (unlikely(slow_path()))
       {
         // Main simulation loop, slow path.

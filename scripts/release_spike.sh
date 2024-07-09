@@ -49,10 +49,10 @@ mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
 chmod 644 ~/.ssh/known_hosts
 
-ssh $DEPLOY_USER@$DEPLOY_SERVER "if [ ! -d ~/files/simulator/spike/$OS_VERSION ]; then mkdir -p ~/files/simulator/spike/$OS_VERSION; fi"
-tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike/$OS_VERSION"
+ssh $DEPLOY_USER@$DEPLOY_SERVER "if [ ! -d ~/files/simulator/spike_matrix/$OS_VERSION ]; then mkdir -p ~/files/simulator/spike_matrix/$OS_VERSION; fi"
+tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike_matrix/$OS_VERSION"
 
 # Set the ubuntu18.04 version as default spike release
 if [ x"$OS_VERSION" == x"ubuntu18.04" ]; then
-	tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike"
+	tar -c archive $LINK | ssh $DEPLOY_USER@$DEPLOY_SERVER "tar -xvC ~/files/simulator/spike_matrix"
 fi

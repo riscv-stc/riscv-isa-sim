@@ -12,6 +12,7 @@
 #include "platform.h"
 #include "vector_unit.h"
 #include "matrix_unit.h"
+#include "debug_defines.h"
 #include <cinttypes>
 #include <cmath>
 #include <cstdlib>
@@ -45,7 +46,7 @@ processor_t::processor_t(const isa_parser_t *isa, const cfg_t *cfg,
   TM.proc = this;
 
 #ifndef HAVE_INT128
-  if (isa->extension_enabled('V')) {
+  if (isa->has_any_vector()) {
     fprintf(stderr, "V extension is not supported on platforms without __int128 type\n");
     abort();
   }
@@ -56,7 +57,18 @@ processor_t::processor_t(const isa_parser_t *isa, const cfg_t *cfg,
   }
 #endif
 
-  parse_varch_string(cfg->varch);
+  VU.VLEN = isa->get_vlen();
+  VU.ELEN = isa->get_elen();
+  VU.vlenb = isa->get_vlen() / 8;
+  VU.vstart_alu = 0;
+
+  MU.MLEN = isa->get_mlen();
+  MU.RLEN = isa->get_mrlen();
+  MU.mlenb = isa->get_mlen() / 8;
+
+  MU.mrows = MU.MLEN / MU.RLEN;
+  MU.mcols = MU.RLEN;
+  MU.mrlenb = MU.RLEN / 8;
 
   register_base_instructions();
   mmu = new mmu_t(sim, cfg->endianness, this);
@@ -103,27 +115,11 @@ static void bad_option_string(const char *option, const char *value,
   abort();
 }
 
-static void bad_varch_string(const char* varch, const char *msg)
-{
-  bad_option_string("--varch", varch, msg);
-}
-
 static std::string get_string_token(std::string str, const char delimiter, size_t& pos)
 {
   size_t _pos = pos;
   while (pos < str.length() && str[pos] != delimiter) ++pos;
   return str.substr(_pos, pos - _pos);
-}
-
-static int get_int_token(std::string str, const char delimiter, size_t& pos)
-{
-  size_t _pos = pos;
-  while (pos < str.length() && str[pos] != delimiter) {
-    if (!isdigit(str[pos]))
-      bad_varch_string(str.c_str(), "Unsupported value"); // An integer is expected
-    ++pos;
-  }
-  return (pos == _pos) ? 0 : stoi(str.substr(_pos, pos - _pos));
 }
 
 static bool check_pow2(int val)
@@ -137,62 +133,6 @@ static std::string strtolower(const char* str)
   for (const char *r = str; *r; r++)
     res += std::tolower(*r);
   return res;
-}
-
-void processor_t::parse_varch_string(const char* s)
-{
-  std::string str = strtolower(s);
-  size_t pos = 0;
-  size_t len = str.length();
-  int vlen = 0;
-  int elen = 0;
-  int mlen = 0, rlen = 0;
-  int vstart_alu = 0;
-
-  while (pos < len) {
-    std::string attr = get_string_token(str, ':', pos);
-
-    ++pos;
-
-    if (attr == "vlen")
-      vlen = get_int_token(str, ',', pos);
-    else if (attr == "elen")
-      elen = get_int_token(str, ',', pos);
-    else if (attr == "vstartalu")
-      vstart_alu = get_int_token(str, ',', pos);
-    else if (attr == "mlen")
-      mlen = get_int_token(str, ',', pos);
-    else if (attr == "rlen")
-      rlen = get_int_token(str, ',', pos);
-    else
-      bad_varch_string(s, "Unsupported token");
-
-    ++pos;
-  }
-
-  // The integer should be the power of 2
-  if (!check_pow2(vlen) || !check_pow2(elen)) {
-    bad_varch_string(s, "The integer value should be the power of 2");
-  }
-
-  /* Vector spec requirements. */
-  if (vlen < elen)
-    bad_varch_string(s, "vlen must be >= elen");
-
-  /* spike requirements. */
-  if (vlen > 4096)
-    bad_varch_string(s, "vlen must be <= 4096");
-
-  VU.VLEN = vlen;
-  VU.ELEN = elen;
-  VU.vlenb = vlen / 8;
-  VU.vstart_alu = vstart_alu;
-  MU.MLEN = mlen;
-  MU.mlenb = mlen / 8;
-  MU.mrows = MU.MLEN / rlen;
-  MU.mcols = rlen;
-  MU.RLEN = rlen;
-  MU.mrlenb = rlen / 8;
 }
 
 static int xlen_to_uxl(int xlen)
@@ -387,7 +327,8 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
     (1 << CAUSE_USER_ECALL) |
     (1 << CAUSE_FETCH_PAGE_FAULT) |
     (1 << CAUSE_LOAD_PAGE_FAULT) |
-    (1 << CAUSE_STORE_PAGE_FAULT);
+    (1 << CAUSE_STORE_PAGE_FAULT) |
+    (1 << CAUSE_SOFTWARE_CHECK_FAULT);
   csrmap[CSR_HEDELEG] = hedeleg = std::make_shared<masked_csr_t>(proc, CSR_HEDELEG, hedeleg_mask, 0);
   csrmap[CSR_HCOUNTEREN] = hcounteren = std::make_shared<masked_csr_t>(proc, CSR_HCOUNTEREN, counteren_mask, 0);
   htimedelta = std::make_shared<basic_csr_t>(proc, CSR_HTIMEDELTA, 0);
@@ -415,13 +356,15 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
     csrmap[CSR_TDATA2] = tdata2 = std::make_shared<tdata2_csr_t>(proc, CSR_TDATA2);
     csrmap[CSR_TDATA3] = std::make_shared<tdata3_csr_t>(proc, CSR_TDATA3);
     csrmap[CSR_TINFO] = std::make_shared<tinfo_csr_t>(proc, CSR_TINFO);
+    csrmap[CSR_TCONTROL] = tcontrol = std::make_shared<masked_csr_t>(proc, CSR_TCONTROL, CSR_TCONTROL_MPTE | CSR_TCONTROL_MTE, 0);
   } else {
     csrmap[CSR_TDATA1] = std::make_shared<const_csr_t>(proc, CSR_TDATA1, 0);
     csrmap[CSR_TDATA2] = tdata2 = std::make_shared<const_csr_t>(proc, CSR_TDATA2, 0);
     csrmap[CSR_TDATA3] = std::make_shared<const_csr_t>(proc, CSR_TDATA3, 0);
     csrmap[CSR_TINFO] = std::make_shared<const_csr_t>(proc, CSR_TINFO, 0);
+    csrmap[CSR_TCONTROL] = tcontrol = std::make_shared<const_csr_t>(proc, CSR_TCONTROL, 0);
   }
-  unsigned scontext_length = (xlen == 32 ? 16 : 34); // debug spec suggests 16-bit for RV32 and 34-bit for RV64
+  unsigned scontext_length = (xlen == 32 ? 16 : 32); // debug spec suggests 16-bit for RV32 and 32-bit for RV64
   csrmap[CSR_SCONTEXT] = scontext = std::make_shared<masked_csr_t>(proc, CSR_SCONTEXT, (reg_t(1) << scontext_length) - 1, 0);
   unsigned hcontext_length = (xlen == 32 ? 6 : 13) + (proc->extension_enabled('H') ? 1 : 0); // debug spec suggest 7-bit (6-bit) for RV32 and 14-bit (13-bit) for RV64 with (without) H extension
   csrmap[CSR_HCONTEXT] = std::make_shared<masked_csr_t>(proc, CSR_HCONTEXT, (reg_t(1) << hcontext_length) - 1, 0);
@@ -456,7 +399,9 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
                               (proc->extension_enabled(EXT_ZICBOZ) ? MENVCFG_CBZE : 0) |
                               (proc->extension_enabled(EXT_SVADU) ? MENVCFG_ADUE: 0) |
                               (proc->extension_enabled(EXT_SVPBMT) ? MENVCFG_PBMTE : 0) |
-                              (proc->extension_enabled(EXT_SSTC) ? MENVCFG_STCE : 0);
+                              (proc->extension_enabled(EXT_SSTC) ? MENVCFG_STCE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? MENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? MENVCFG_SSE : 0);
     const reg_t menvcfg_init = (proc->extension_enabled(EXT_SVPBMT) ? MENVCFG_PBMTE : 0);
     menvcfg = std::make_shared<envcfg_csr_t>(proc, CSR_MENVCFG, menvcfg_mask, menvcfg_init);
     if (xlen == 32) {
@@ -466,13 +411,17 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
       csrmap[CSR_MENVCFG] = menvcfg;
     }
     const reg_t senvcfg_mask = (proc->extension_enabled(EXT_ZICBOM) ? SENVCFG_CBCFE | SENVCFG_CBIE : 0) |
-                              (proc->extension_enabled(EXT_ZICBOZ) ? SENVCFG_CBZE : 0);
+                              (proc->extension_enabled(EXT_ZICBOZ) ? SENVCFG_CBZE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? SENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? SENVCFG_SSE : 0);
     csrmap[CSR_SENVCFG] = senvcfg = std::make_shared<senvcfg_csr_t>(proc, CSR_SENVCFG, senvcfg_mask, 0);
     const reg_t henvcfg_mask = (proc->extension_enabled(EXT_ZICBOM) ? HENVCFG_CBCFE | HENVCFG_CBIE : 0) |
                               (proc->extension_enabled(EXT_ZICBOZ) ? HENVCFG_CBZE : 0) |
                               (proc->extension_enabled(EXT_SVADU) ? HENVCFG_ADUE: 0) |
                               (proc->extension_enabled(EXT_SVPBMT) ? HENVCFG_PBMTE : 0) |
-                              (proc->extension_enabled(EXT_SSTC) ? HENVCFG_STCE : 0);
+                              (proc->extension_enabled(EXT_SSTC) ? HENVCFG_STCE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? HENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? HENVCFG_SSE : 0);
     const reg_t henvcfg_init = (proc->extension_enabled(EXT_SVPBMT) ? HENVCFG_PBMTE : 0);
     henvcfg = std::make_shared<henvcfg_csr_t>(proc, CSR_HENVCFG, henvcfg_mask, henvcfg_init, menvcfg);
     if (xlen == 32) {
@@ -536,6 +485,11 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
 
   if (proc->extension_enabled(EXT_ZCMT))
     csrmap[CSR_JVT] = jvt = std::make_shared<jvt_csr_t>(proc, CSR_JVT, 0);
+
+  if (proc->extension_enabled(EXT_ZICFISS)) {
+    reg_t ssp_mask = -reg_t(xlen / 8);
+    csrmap[CSR_SSP] = ssp = std::make_shared<ssp_csr_t>(proc, CSR_SSP, ssp_mask, 0);
+  }
 
 
   // Smcsrind / Sscsrind
@@ -603,6 +557,8 @@ void state_t::reset(processor_t* const proc, reg_t max_isa)
   last_inst_priv = 0;
   last_inst_xlen = 0;
   last_inst_flen = 0;
+
+  elp = elp_t::NO_LP_EXPECTED;
 }
 
 void processor_t::set_debug(bool value)
@@ -824,8 +780,10 @@ const char* processor_t::get_privilege_string()
 
 void processor_t::enter_debug_mode(uint8_t cause)
 {
+  const bool has_zicfilp = extension_enabled(EXT_ZICFILP);
   state.debug_mode = true;
-  state.dcsr->write_cause_and_prv(cause, state.prv, state.v);
+  state.dcsr->update_fields(cause, state.prv, state.v, state.elp);
+  state.elp = elp_t::NO_LP_EXPECTED;
   set_privilege(PRV_M, false);
   state.dpc->write(state.pc);
   state.pc = DEBUG_ROM_ENTRY;
@@ -894,6 +852,8 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
     s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE));
     s = set_field(s, MSTATUS_SPP, state.prv);
     s = set_field(s, MSTATUS_SIE, 0);
+    s = set_field(s, MSTATUS_SPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
     state.sstatus->write(s);
     set_privilege(PRV_S, true);
   } else if (state.prv <= PRV_S && bit < max_xlen && ((hsdeleg >> bit) & 1)) {
@@ -910,6 +870,8 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
     s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE));
     s = set_field(s, MSTATUS_SPP, state.prv);
     s = set_field(s, MSTATUS_SIE, 0);
+    s = set_field(s, MSTATUS_SPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
     state.nonvirtual_sstatus->write(s);
     if (extension_enabled('H')) {
       s = state.hstatus->read();
@@ -941,8 +903,11 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
     s = set_field(s, MSTATUS_MIE, 0);
     s = set_field(s, MSTATUS_MPV, curr_virt);
     s = set_field(s, MSTATUS_GVA, t.has_gva());
+    s = set_field(s, MSTATUS_MPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
     state.mstatus->write(s);
     if (state.mstatush) state.mstatush->write(s >> 32);  // log mstatush change
+    state.tcontrol->write((state.tcontrol->read() & CSR_TCONTROL_MTE) ? CSR_TCONTROL_MPTE : 0);
     set_privilege(PRV_M, false);
   }
 }
@@ -973,6 +938,15 @@ void processor_t::take_trigger_action(triggers::action_t action, reg_t breakpoin
 const char* processor_t::get_symbol(uint64_t addr)
 {
   return sim->get_symbol(addr);
+}
+
+void processor_t::check_if_lpad_required()
+{
+  if (unlikely(state.elp == elp_t::LP_EXPECTED)) {
+    // also see insns/lpad.h for more checks performed
+    insn_fetch_t fetch = mmu->load_insn(state.pc);
+    software_check((fetch.insn.bits() & MASK_LPAD) == MATCH_LPAD, LANDING_PAD_FAULT);
+  }
 }
 
 void processor_t::disasm(insn_t insn)
@@ -1043,6 +1017,12 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
   throw trap_illegal_instruction(insn.bits());
 }
 
+const insn_desc_t insn_desc_t::illegal_instruction = {
+  0, 0,
+  &::illegal_instruction, &::illegal_instruction, &::illegal_instruction, &::illegal_instruction,
+  &::illegal_instruction, &::illegal_instruction, &::illegal_instruction, &::illegal_instruction
+};
+
 reg_t illegal_instruction(processor_t UNUSED *p, insn_t insn, reg_t UNUSED pc)
 {
   // The illegal instruction can be longer than ILEN bits, where the tval will
@@ -1051,51 +1031,30 @@ reg_t illegal_instruction(processor_t UNUSED *p, insn_t insn, reg_t UNUSED pc)
   throw trap_illegal_instruction(insn.bits() & 0xffffffffULL);
 }
 
-static insn_desc_t
-propagate_instruction_in_vector(std::vector<insn_desc_t> &instructions,
-                                std::vector<insn_desc_t>::iterator it) {
-  assert(it != instructions.end());
-  insn_desc_t desc = *it;
-  if (it->mask != 0 && it != instructions.begin() &&
-      std::next(it) != instructions.end()) {
-    if (it->match != std::prev(it)->match &&
-        it->match != std::next(it)->match) {
-      // move to front of opcode list to reduce miss penalty
-      while (--it >= instructions.begin())
-        *std::next(it) = *it;
-      instructions[0] = desc;
-    }
-  }
-  return desc;
-}
-
 insn_func_t processor_t::decode_insn(insn_t insn)
 {
   // look up opcode in hash table
   size_t idx = insn.bits() % OPCODE_CACHE_SIZE;
-  insn_desc_t desc = opcode_cache[idx];
+  auto [hit, desc] = opcode_cache[idx].lookup(insn.bits());
 
   bool rve = extension_enabled('E');
 
-  if (unlikely(insn.bits() != desc.match)) {
+  if (unlikely(!hit)) {
     // fall back to linear search
     auto matching = [insn_bits = insn.bits()](const insn_desc_t &d) {
       return (insn_bits & d.mask) == d.match;
     };
     auto p = std::find_if(custom_instructions.begin(),
                           custom_instructions.end(), matching);
-    if (p != custom_instructions.end()) {
-      desc = propagate_instruction_in_vector(custom_instructions, p);
-    } else {
+    if (p == custom_instructions.end()) {
       p = std::find_if(instructions.begin(), instructions.end(), matching);
       assert(p != instructions.end());
-      desc = propagate_instruction_in_vector(instructions, p);
     }
-    opcode_cache[idx] = desc;
-    opcode_cache[idx].match = insn.bits();
+    desc = &*p;
+    opcode_cache[idx].replace(insn.bits(), desc);
   }
 
-  return desc.func(xlen, rve, log_commits_enabled);
+  return desc->func(xlen, rve, log_commits_enabled);
 }
 
 void processor_t::register_insn(insn_desc_t desc, bool is_custom) {
@@ -1110,19 +1069,8 @@ void processor_t::register_insn(insn_desc_t desc, bool is_custom) {
 
 void processor_t::build_opcode_map()
 {
-  struct cmp {
-    bool operator()(const insn_desc_t& lhs, const insn_desc_t& rhs) {
-      if (lhs.match == rhs.match)
-        return lhs.mask > rhs.mask;
-      return lhs.match > rhs.match;
-    }
-  };
-
-  std::sort(instructions.begin(), instructions.end(), cmp());
-  std::sort(custom_instructions.begin(), custom_instructions.end(), cmp());
-
   for (size_t i = 0; i < OPCODE_CACHE_SIZE; i++)
-    opcode_cache[i] = insn_desc_t::illegal();
+    opcode_cache[i].reset();
 }
 
 void processor_t::register_extension(extension_t *x) {
@@ -1144,14 +1092,11 @@ void processor_t::register_base_instructions()
 {
   #define DECLARE_INSN(name, match, mask) \
     insn_bits_t name##_match = (match), name##_mask = (mask); \
-    bool name##_supported = true;
+    isa_extension_t name##_ext = NUM_ISA_EXTENSIONS; \
+    bool name##_overlapping = false;
 
   #include "encoding.h"
   #undef DECLARE_INSN
-
-  #define DECLARE_OVERLAP_INSN(name, ext) { name##_supported = isa->extension_enabled(ext); }
-  #include "overlap_list.h"
-  #undef DECLARE_OVERLAP_INSN
 
   #define DEFINE_INSN(name) \
     extern reg_t fast_rv32i_##name(processor_t*, insn_t, reg_t); \
@@ -1161,8 +1106,14 @@ void processor_t::register_base_instructions()
     extern reg_t logged_rv32i_##name(processor_t*, insn_t, reg_t); \
     extern reg_t logged_rv64i_##name(processor_t*, insn_t, reg_t); \
     extern reg_t logged_rv32e_##name(processor_t*, insn_t, reg_t); \
-    extern reg_t logged_rv64e_##name(processor_t*, insn_t, reg_t); \
-    if (name##_supported) { \
+    extern reg_t logged_rv64e_##name(processor_t*, insn_t, reg_t);
+  #include "insn_list.h"
+  #undef DEFINE_INSN
+
+  // add overlapping instructions first, in order
+  #define DECLARE_OVERLAP_INSN(name, ext) \
+    name##_overlapping = true; \
+    if (isa->extension_enabled(ext)) \
       register_base_insn((insn_desc_t) { \
         name##_match, \
         name##_mask, \
@@ -1173,11 +1124,31 @@ void processor_t::register_base_instructions()
         logged_rv32i_##name, \
         logged_rv64i_##name, \
         logged_rv32e_##name, \
-        logged_rv64e_##name}); \
-    }
+        logged_rv64e_##name});
+  #include "overlap_list.h"
+  #undef DECLARE_OVERLAP_INSN
+
+  // add all other instructions.  since they are non-overlapping, the order
+  // does not affect correctness, but more frequent instructions should
+  // appear earlier to improve search time on opcode_cache misses.
+  #define DEFINE_INSN(name) \
+    if (!name##_overlapping) \
+      register_base_insn((insn_desc_t) { \
+        name##_match, \
+        name##_mask, \
+        fast_rv32i_##name, \
+        fast_rv64i_##name, \
+        fast_rv32e_##name, \
+        fast_rv64e_##name, \
+        logged_rv32i_##name, \
+        logged_rv64i_##name, \
+        logged_rv32e_##name, \
+        logged_rv64e_##name});
   #include "insn_list.h"
+  #undef DEFINE_INSN
+
   // terminate instruction list with a catch-all
-  register_base_insn(insn_desc_t::illegal());
+  register_base_insn(insn_desc_t::illegal_instruction);
 
   build_opcode_map();
 }

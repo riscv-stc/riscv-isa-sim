@@ -6,6 +6,10 @@
 #include <math.h>
 
 #define LMUL_RESERVE 3
+
+#define P_SET_OM(ov) \
+  if (ov) P.MU.mxsat->write(1);
+
 #define MX_PARAMS(x) \
   type_sew_t<x>::type &td  = P.MU.tr_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, reg_rename, true); \
   type_sew_t<x>::type &ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \

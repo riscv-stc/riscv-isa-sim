@@ -42,6 +42,15 @@
   })
 #define WRITE_VSTATUS STATE.log_reg_write[5] = {0, 0};
 
+/* the value parameter needs to be evaluated before writing to the registers */
+#define WRITE_REG_PAIR(reg, value) \
+  if (reg != 0) { \
+    require((reg) % 2 == 0); \
+    uint64_t val = (value); \
+    WRITE_REG(reg, sext32(val)); \
+    WRITE_REG((reg) + 1, (sreg_t(val)) >> 32); \
+  }
+
 // RVC macros
 #define WRITE_RVC_RS1S(value) WRITE_REG(insn.rvc_rs1s(), value)
 #define WRITE_RVC_RS2S(value) WRITE_REG(insn.rvc_rs2s(), value)
@@ -59,6 +68,25 @@
 #define RVC_R2S (Sn(insn.rvc_r2sc()))
 #define SP READ_REG(X_SP)
 #define RA READ_REG(X_RA)
+
+// Zdinx macros
+#define READ_REG_PAIR(reg) ({ \
+  require((reg) % 2 == 0); \
+  (reg) == 0 ? reg_t(0) : \
+  (READ_REG((reg) + 1) << 32) + zext32(READ_REG(reg)); })
+
+#define RS1_PAIR READ_REG_PAIR(insn.rs1())
+#define RS2_PAIR READ_REG_PAIR(insn.rs2())
+#define RD_PAIR READ_REG_PAIR(insn.rd())
+#define WRITE_RD_PAIR(value) WRITE_REG_PAIR(insn.rd(), value)
+
+// Zilsd macros
+#define WRITE_RD_D(value) (xlen == 32 ? WRITE_RD_PAIR(value) : WRITE_RD(value))
+
+// Zcmlsd macros
+#define WRITE_RVC_RS2S_PAIR(value) WRITE_REG_PAIR(insn.rvc_rs2s(), value)
+#define RVC_RS2S_PAIR READ_REG_PAIR(insn.rvc_rs2s())
+#define RVC_RS2_PAIR READ_REG_PAIR(insn.rvc_rs2())
 
 // FPU macros
 #define READ_ZDINX_REG(reg) (xlen == 32 ? f64(READ_REG_PAIR(reg)) : f64(STATE.XPR[reg] & (uint64_t)-1))
@@ -105,8 +133,7 @@ do { \
 do { \
   if (p->extension_enabled(EXT_ZFINX)) { \
     if (xlen == 32) { \
-      uint64_t val = (value).v; \
-      WRITE_RD_PAIR(val); \
+      WRITE_RD_PAIR((value).v); \
     } else { \
       WRITE_REG(insn.rd(), (value).v); \
     } \
@@ -144,7 +171,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define require_vector(alu) \
   do { \
     require_vector_vs; \
-    require_extension('V'); \
     require(!P.VU.vill); \
     if (alu && !P.VU.vstart_alu) \
       require(P.VU.vstart->read() == 0); \
@@ -162,7 +188,6 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define require_vector_novtype(is_log) \
   do { \
     require_vector_vs; \
-    require_extension('V'); \
     if (is_log) \
       WRITE_VSTATUS; \
     dirty_vs_state; \
@@ -330,3 +355,23 @@ inline long double to_f(float128_t f) { long double r; memcpy(&r, &f, sizeof(r))
   reg_t h##field = get_field(STATE.henvcfg->read(), HENVCFG_##field)
 
 #endif
+
+#define software_check(x, tval) (unlikely(!(x)) ? throw trap_software_check(tval) : (void) 0)
+#define ZICFILP_xLPE(v, prv) \
+  ({ \
+    reg_t lpe = 0ULL; \
+    if (p->extension_enabled(EXT_ZICFILP)) { \
+      DECLARE_XENVCFG_VARS(LPE); \
+      const reg_t msecLPE = get_field(STATE.mseccfg->read(), MSECCFG_MLPE); \
+      switch (prv) { \
+      case PRV_U: lpe = p->extension_enabled('S') ? sLPE : mLPE; break; \
+      case PRV_S: lpe = (v) ? hLPE : mLPE; break; \
+      case PRV_M: lpe = msecLPE; break; \
+      default: abort(); \
+      } \
+    } \
+    lpe; \
+  })
+#define ZICFILP_IS_LP_EXPECTED(reg_num) \
+  (((reg_num) != 1 && (reg_num) != 5 && (reg_num) != 7) ? \
+   elp_t::LP_EXPECTED : elp_t::NO_LP_EXPECTED)

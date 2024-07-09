@@ -184,6 +184,8 @@ riscv_insn_ext_c = \
 	c_jr \
 	c_li \
 	c_lui \
+	c_ld \
+	c_ldsp \
 	c_lw \
 	c_lwsp \
 	c_mv \
@@ -193,6 +195,8 @@ riscv_insn_ext_c = \
 	c_srli \
 	c_sub \
 	c_subw \
+	c_sd \
+	c_sdsp \
 	c_sw \
 	c_swsp \
 	c_xor \
@@ -405,12 +409,8 @@ riscv_insn_ext_b = \
 	clmulr \
 	clz \
 	clzw \
-	cmix \
 	ctz \
 	ctzw \
-	fsr \
-	fsri \
-	fsrw \
 	gorci \
 	grevi \
 	max \
@@ -420,7 +420,6 @@ riscv_insn_ext_b = \
 	orn \
 	pack \
 	packh \
-	packu \
 	packw \
 	cpop \
 	cpopw \
@@ -1175,7 +1174,6 @@ riscv_insn_ext_matrix = \
 	msettilem \
 	msettilek \
 	msettilen \
-	msettile \
 	\
 	mmv_x_s \
 	mmv_s_x \
@@ -1491,6 +1489,10 @@ riscv_insn_ext_zabha = \
 	amoxor_h \
 	amocas_h \
 
+riscv_insn_ext_zawrs = \
+	wrs_sto \
+	wrs_nto \
+
 riscv_insn_ext_zalasr = \
 	lb_aq \
 	lh_aq \
@@ -1558,6 +1560,23 @@ riscv_insn_ext_zimop = \
 	mop_r_N \
 	mop_rr_N \
 
+riscv_insn_ext_zcmop = \
+	c_mop_N \
+
+riscv_insn_ext_zicfilp = \
+	lpad
+
+riscv_insn_ext_zicfiss = \
+	sspush_x1 \
+	sspush_x5 \
+	sspopchk_x1 \
+	sspopchk_x5 \
+	ssrdp \
+	ssamoswap_w \
+	ssamoswap_d \
+	c_sspush_x1 \
+	c_sspopchk_x5 \
+
 riscv_insn_ext_zvk = \
 	$(riscv_insn_ext_zvbb) \
 	$(riscv_insn_ext_zvbc) \
@@ -1568,25 +1587,25 @@ riscv_insn_ext_zvk = \
 	$(riscv_insn_ext_zvksh) \
 
 riscv_insn_list = \
-	$(if $(HAVE_INT128),$(riscv_insn_ext_v),) \
-	$(riscv_insn_ext_a) \
-	$(riscv_insn_ext_b) \
-	$(riscv_insn_ext_bf16) \
+	$(riscv_insn_ext_i) \
 	$(riscv_insn_ext_c) \
-	$(riscv_insn_ext_cmo) \
-	$(riscv_insn_ext_d) \
-	$(riscv_insn_ext_d_zfa) \
 	$(riscv_insn_ext_f) \
+	$(riscv_insn_ext_d) \
+	$(riscv_insn_ext_m) \
+	$(riscv_insn_ext_b) \
+	$(riscv_insn_ext_a) \
+	$(if $(HAVE_INT128),$(riscv_insn_ext_v),) \
+	$(riscv_insn_ext_bf16) \
+	$(riscv_insn_ext_cmo) \
+	$(riscv_insn_ext_d_zfa) \
 	$(riscv_insn_ext_f_zfa) \
 	$(riscv_insn_ext_h) \
-	$(riscv_insn_ext_i) \
 	$(riscv_insn_ext_k) \
-	$(riscv_insn_ext_m) \
-	$(riscv_insn_ext_p) \
 	$(riscv_insn_ext_q) \
 	$(riscv_insn_ext_q_zfa) \
 	$(riscv_insn_ext_zacas) \
 	$(riscv_insn_ext_zabha) \
+	$(riscv_insn_ext_zawrs) \
 	$(riscv_insn_ext_zalasr) \
 	$(riscv_insn_ext_zce) \
 	$(riscv_insn_ext_zfh) \
@@ -1600,6 +1619,9 @@ riscv_insn_list = \
 	$(riscv_insn_smrnmi) \
 	$(riscv_insn_svinval) \
 	$(riscv_insn_ext_zimop) \
+	$(riscv_insn_ext_zcmop) \
+	$(riscv_insn_ext_zicfilp) \
+	$(riscv_insn_ext_zicfiss) \
 
 riscv_gen_srcs = $(addsuffix .cc,$(riscv_insn_list))
 
