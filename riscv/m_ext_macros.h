@@ -987,7 +987,7 @@ for (reg_t m = 0; m < lmul; m++) {\
       for (reg_t j = 0; j < width; ++j) { \
           elt_width##_t val = MMU.load<elt_width##_t>( \
                     baseAddr + i * stride2 + j * sizeof(elt_width##_t) + \
-                      m * (height *stride2 + width * sizeof(elt_width##_t))); \
+                      m * (width * sizeof(elt_width##_t))); \
           P.MU.tr_elt<elt_width##_t>(td + m, is_trans, i, j, rmax, cmax, false, true) = val; \
       } \
     } \
@@ -1009,7 +1009,7 @@ for (reg_t m = 0; m < lmul; m++) {\
           elt_width##_t val = P.MU.tr_elt<elt_width##_t>(td + m, is_trans, i, j, rmax, cmax, false, true); \
           MMU.store<elt_width##_t>( \
                     baseAddr + i * stride2 + j * sizeof(elt_width##_t) + \
-                    m * (height *stride2 + width * sizeof(elt_width##_t)), val); \
+                    m * (width * sizeof(elt_width##_t)), val); \
       } \
     } \
   } \
