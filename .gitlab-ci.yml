@@ -32,20 +32,20 @@ build_ubuntu_2004:
 
 # Run rvpvp tests on ubuntu 20.04
 # tensorflow can't be installed on ubuntu 18.04 and centos 7
-# test_ubuntu_2004:
-#   image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
-#   stage : test
-#   script:
-#     - bash -xe scripts/test_spike.sh -b build_matrix_ubuntu_2004 
-#   artifacts:
-#     paths:
-#       - build_matrix_ubuntu_2004
-#       - VERSION
-#       - log
-#     name: test_output_ubuntu_2004
-#   dependencies:
-#     - build_ubuntu_2004
-#   timeout: 6h
+test_ubuntu_2004:
+  image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
+  stage : test
+  script:
+    - bash -xe scripts/test_spike_matrix.sh -b build_matrix_ubuntu_2004 -s specs/matrix/madd.yml,specs/matrix/mfcvt.yml,specs/matrix/mldst.yml,specs/matrix/mma.yml,specs/matrix/mmv.yml,specs/matrix/mset.yml
+  artifacts:
+    paths:
+      - build_matrix_ubuntu_2004
+      - VERSION
+      - log
+    name: test_output_ubuntu_2004
+  dependencies:
+    - build_ubuntu_2004
+  timeout: 6h
 
 package_ubuntu_2004:
   image: 'harbor.streamcomputing.com/simulator/ubuntu:20.04-stc'
