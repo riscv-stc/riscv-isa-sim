@@ -46,13 +46,18 @@ if [ -n "$SPEC_LIST" ]; then
     SPEC_LIST="--specs $SPEC_LIST"
 fi
 
+echo "Download riscv-gnu-toolchain.tar.gz"
 wget http://172.16.31.70/ci/spike_matrix_ci/riscv-gnu-toolchain.tar.gz
 if [ -f "riscv-gnu-toolchain.tar.gz" ]; then
-    tar zxvf riscv-gnu-toolchain.tar.gz
+    tar zxf riscv-gnu-toolchain.tar.gz
     pushd riscv-gnu-toolchain
     mkdir build && cd build
     ../configure --prefix=$RISCV
     make -j`nproc`
+    if [ $? -ne 0 ];then
+        echo "compile toolchain error!"
+        exit 1
+    fi
     popd
 else
     echo "riscv-gnu-toolchain.tar.gz not exist, please check "
@@ -68,24 +73,28 @@ mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$RISCV \
     -DLLVM_ENABLE_PROJECTS="clang;compiler-rt;lld;clang-tools-extra" \
     -DLLVM_TARGETS_TO_BUILD="X86;RISCV" ../llvm
 
-make -j`nproc` && make install
+make -j`nproc` >/dev/null && make install >/dev/null
 
 popd
 
 # create python3 envriment
 # load python3 package
+echo "download ython-3.10.13.tgz"
 wget http://172.16.31.70/pack/Python-3.10.13.tgz
 
 # uncompress 
 if [ -f "Python-3.10.13.tgz" ];then
-    tar zxvf Python-3.10.13.tgz
+    tar zxf Python-3.10.13.tgz
     pushd Python-3.10.13
 
     mkdir build && cd build
     ../configure --enable-optimizations
 
-    make altinstall -j`nproc`
-
+    make altinstall -j`nproc` >/dev/null
+    if [ $? -ne 0 ];then
+        echo "compile python error!"
+        exit 1
+    fi
     # update python3.10.13
     update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 1
     pip install "numpy<2"
