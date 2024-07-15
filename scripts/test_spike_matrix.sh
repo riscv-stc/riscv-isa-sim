@@ -65,7 +65,7 @@ else
 fi
 
 # get toolchain
-git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com:simulator/llvm-project.git && pushd llvm-project
+git clone --recursive  http://gitlab-ci-token:${CI_JOB_TOKEN}@code.streamcomputing.com/simulator/llvm-project.git && pushd llvm-project
 git checkout matrix-0.3.1
 
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$RISCV \
