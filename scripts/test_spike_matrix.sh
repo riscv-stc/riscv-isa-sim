@@ -53,7 +53,7 @@ if [ -f "riscv-gnu-toolchain.tar.gz" ]; then
     pushd riscv-gnu-toolchain
     mkdir build && cd build
     ../configure --prefix=$RISCV
-    make -j`nproc`
+    make -j`nproc` >/dev/null 2>&1
     if [ $? -ne 0 ];then
         echo "compile toolchain error!"
         exit 1
@@ -73,7 +73,7 @@ mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$RISCV \
     -DLLVM_ENABLE_PROJECTS="clang;compiler-rt;lld;clang-tools-extra" \
     -DLLVM_TARGETS_TO_BUILD="X86;RISCV" ../llvm
 
-make -j`nproc` >/dev/null && make install >/dev/null
+make -j`nproc` >/dev/null && make install >/dev/null 2>&1
 
 popd
 
@@ -90,7 +90,7 @@ if [ -f "Python-3.10.13.tgz" ];then
     mkdir build && cd build
     ../configure --enable-optimizations
 
-    make altinstall -j`nproc` >/dev/null
+    make altinstall -j`nproc` >/dev/null 2>&1
     if [ $? -ne 0 ];then
         echo "compile python error!"
         exit 1
