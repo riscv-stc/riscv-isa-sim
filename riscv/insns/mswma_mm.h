@@ -3,7 +3,7 @@ int64_t int_max = INT64_MAX >> (64 - P.MU.msew * 2);
 int64_t int_min = INT64_MIN >> (64 - P.MU.msew * 2);
 
 
-MXU_MM_LOOP_WIDEN
+MXU_MM_LOOP_WIDE
 ({
    if (P.MU.msew > e32)
     throw trap_illegal_instruction(insn.bits()); 
@@ -36,4 +36,4 @@ MXU_MM_LOOP_WIDEN
   }
 
   
-}, MULX)
+}, MULX, 2)

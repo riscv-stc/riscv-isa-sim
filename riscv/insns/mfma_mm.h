@@ -7,4 +7,4 @@ MXU_VFP_VV_LOOP
 },
 {
   td = f64_mulAdd(ts1, ts2, td);
-})
+}, 1)

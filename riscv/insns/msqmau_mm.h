@@ -23,4 +23,4 @@ MXU_MM_LOOP_QUEN
   }
 
   td = result;
-}, MULXU)
+}, MULXU, 4)

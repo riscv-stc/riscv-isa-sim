@@ -24,4 +24,4 @@
   {
    require(p->extension_enabled(EXT_ZFH));
   },
-  false, (P.MU.msew >= 64))
+  1, (P.MU.msew >= 64))

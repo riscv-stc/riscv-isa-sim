@@ -6,4 +6,4 @@ MI_VFP_MM_LOOP({
 },
 {
     td = f64_mul(ts1, ts2);
-})
+}, 1)

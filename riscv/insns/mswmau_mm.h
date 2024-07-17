@@ -2,7 +2,7 @@ MRM xrm = P.MU.get_mround_mode();
 uint64_t uint_max = UINT64_MAX >> (64 - P.MU.msew * 2);
 
 
-MXU_MM_LOOP_WIDEN
+MXU_MM_LOOP_WIDE
 ({
 
    if (P.MU.msew > e32)
@@ -27,4 +27,4 @@ MXU_MM_LOOP_WIDEN
   }
 
   td = result;
-}, MULXU)
+}, MULXU, 2)

@@ -26,4 +26,4 @@
   {
     require(p->extension_enabled('D'));
   },
-  false, (P.MU.msew >= 8))
+  1, (P.MU.msew >= 8))
