@@ -1,7 +1,10 @@
 // See LICENSE for license details.
 
+#include "config.h"
 #include "dts.h"
 #include "libfdt.h"
+#include "platform.h"
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <signal.h>
@@ -12,8 +15,11 @@
 std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
                      reg_t initrd_start, reg_t initrd_end,
                      const char* bootargs,
+                     size_t pmpregions,
+                     size_t pmpgranularity,
                      std::vector<processor_t*> procs,
-                     std::vector<std::pair<reg_t, mem_t*>> mems)
+                     std::vector<std::pair<reg_t, abstract_mem_t*>> mems,
+                     std::string device_nodes)
 {
   std::stringstream s;
   s << std::dec <<
@@ -24,15 +30,16 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "  #size-cells = <2>;\n"
          "  compatible = \"ucbbar,spike-bare-dev\";\n"
          "  model = \"ucbbar,spike-bare\";\n"
-         "  chosen {\n";
+         "  chosen {\n"
+         "    stdout-path = &SERIAL0;\n";
   if (initrd_start < initrd_end) {
     s << "    linux,initrd-start = <" << (size_t)initrd_start << ">;\n"
          "    linux,initrd-end = <" << (size_t)initrd_end << ">;\n";
     if (!bootargs)
-      bootargs = "root=/dev/ram console=hvc0 earlycon=sbi";
+      bootargs = "root=/dev/ram " DEFAULT_KERNEL_BOOTARGS;
   } else {
     if (!bootargs)
-      bootargs = "console=hvc0 earlycon=sbi";
+      bootargs = DEFAULT_KERNEL_BOOTARGS;
   }
     s << "    bootargs = \"";
   for (size_t i = 0; i < strlen(bootargs); i++) {
@@ -53,12 +60,13 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "      reg = <" << i << ">;\n"
          "      status = \"okay\";\n"
          "      compatible = \"riscv\";\n"
-         "      riscv,isa = \"" << procs[i]->get_isa_string() << "\";\n"
-         "      mmu-type = \"riscv," << (procs[i]->get_max_xlen() <= 32 ? "sv32" : "sv48") << "\";\n"
-         "      riscv,pmpregions = <16>;\n"
-         "      riscv,pmpgranularity = <4>;\n"
+         "      riscv,isa = \"" << procs[i]->get_isa().get_isa_string() << "\";\n"
+         "      mmu-type = \"riscv," << (procs[i]->get_isa().get_max_xlen() <= 32 ? "sv32" : "sv57") << "\";\n"
+         "      riscv,pmpregions = <" << pmpregions << ">;\n"
+         "      riscv,pmpgranularity = <" << pmpgranularity << ">;\n"
          "      clock-frequency = <" << cpu_hz << ">;\n"
          "      CPU" << i << "_intc: interrupt-controller {\n"
+         "        #address-cells = <2>;\n"
          "        #interrupt-cells = <1>;\n"
          "        interrupt-controller;\n"
          "        compatible = \"riscv,cpu-intc\";\n"
@@ -79,18 +87,8 @@ std::string make_dts(size_t insns_per_rtc_tick, size_t cpu_hz,
          "    #size-cells = <2>;\n"
          "    compatible = \"ucbbar,spike-bare-soc\", \"simple-bus\";\n"
          "    ranges;\n"
-         "    clint@" << CLINT_BASE << " {\n"
-         "      compatible = \"riscv,clint0\";\n"
-         "      interrupts-extended = <" << std::dec;
-  for (size_t i = 0; i < procs.size(); i++)
-    s << "&CPU" << i << "_intc 3 &CPU" << i << "_intc 7 ";
-  reg_t clintbs = CLINT_BASE;
-  reg_t clintsz = CLINT_SIZE;
-  s << std::hex << ">;\n"
-         "      reg = <0x" << (clintbs >> 32) << " 0x" << (clintbs & (uint32_t)-1) <<
-                     " 0x" << (clintsz >> 32) << " 0x" << (clintsz & (uint32_t)-1) << ">;\n"
-         "    };\n"
-         "  };\n"
+    << device_nodes
+    <<   "  };\n"
          "  htif {\n"
          "    compatible = \"ucb,htif0\";\n"
          "  };\n"
@@ -141,7 +139,7 @@ std::string dts_compile(const std::string& dts)
     close(dts_pipe[1]);
     close(dtb_pipe[0]);
     close(dtb_pipe[1]);
-    execlp(DTC, DTC, "-O", "dtb", 0);
+    execlp(DTC, DTC, "-O", "dtb", (char *)0);
     std::cerr << "Failed to run " DTC ": " << strerror(errno) << std::endl;
     exit(1);
   }
@@ -180,9 +178,8 @@ std::string dts_compile(const std::string& dts)
   return dtb.str();
 }
 
-
-static int fdt_get_node_addr_size(void *fdt, int node, reg_t *addr,
-                                  unsigned long *size, const char *field)
+int fdt_get_node_addr_size(const void *fdt, int node, reg_t *addr,
+                           unsigned long *size, const char *field)
 {
   int parent, len, i;
   int cell_addr, cell_size;
@@ -225,7 +222,7 @@ static int fdt_get_node_addr_size(void *fdt, int node, reg_t *addr,
   return 0;
 }
 
-static int check_cpu_node(void *fdt, int cpu_offset)
+static int check_cpu_node(const void *fdt, int cpu_offset)
 {
   int len;
   const void *prop;
@@ -242,23 +239,22 @@ static int check_cpu_node(void *fdt, int cpu_offset)
   return 0;
 }
 
-
-int fdt_get_offset(void *fdt, const char *field)
+int fdt_get_offset(const void *fdt, const char *field)
 {
   return fdt_path_offset(fdt, field);
 }
 
-int fdt_get_first_subnode(void *fdt, int node)
+int fdt_get_first_subnode(const void *fdt, int node)
 {
   return fdt_first_subnode(fdt, node);
 }
 
-int fdt_get_next_subnode(void *fdt, int node)
+int fdt_get_next_subnode(const void *fdt, int node)
 {
   return fdt_next_subnode(fdt, node);
 }
 
-int fdt_parse_clint(void *fdt, reg_t *clint_addr,
+int fdt_parse_clint(const void *fdt, reg_t *clint_addr,
                     const char *compatible)
 {
   int nodeoffset, rc;
@@ -274,7 +270,75 @@ int fdt_parse_clint(void *fdt, reg_t *clint_addr,
   return 0;
 }
 
-int fdt_parse_pmp_num(void *fdt, int cpu_offset, reg_t *pmp_num)
+int fdt_parse_plic(const void *fdt, reg_t *plic_addr, uint32_t *ndev,
+                   const char *compatible)
+{
+  int nodeoffset, len, rc;
+  const fdt32_t *ndev_p;
+
+  nodeoffset = fdt_node_offset_by_compatible(fdt, -1, compatible);
+  if (nodeoffset < 0)
+    return nodeoffset;
+
+  rc = fdt_get_node_addr_size(fdt, nodeoffset, plic_addr, NULL, "reg");
+  if (rc < 0 || !plic_addr)
+    return -ENODEV;
+
+  ndev_p = (fdt32_t *)fdt_getprop(fdt, nodeoffset, "riscv,ndev", &len);
+  if (!ndev || !ndev_p)
+    return -ENODEV;
+  *ndev = fdt32_to_cpu(*ndev_p);
+
+  return 0;
+}
+
+int fdt_parse_ns16550(const void *fdt, reg_t *ns16550_addr,
+                      uint32_t *reg_shift, uint32_t *reg_io_width,
+                      uint32_t* reg_int_id,
+                      const char *compatible)
+{
+  int nodeoffset, len, rc;
+  const fdt32_t *reg_p;
+
+  nodeoffset = fdt_node_offset_by_compatible(fdt, -1, compatible);
+  if (nodeoffset < 0)
+    return nodeoffset;
+
+  rc = fdt_get_node_addr_size(fdt, nodeoffset, ns16550_addr, NULL, "reg");
+  if (rc < 0 || !ns16550_addr)
+    return -ENODEV;
+
+  reg_p = (fdt32_t *)fdt_getprop(fdt, nodeoffset, "reg-shift", &len);
+  if (reg_shift) {
+    if (reg_p) {
+      *reg_shift = fdt32_to_cpu(*reg_p);
+    } else {
+      *reg_shift = NS16550_REG_SHIFT;
+    }
+  }
+
+  reg_p = (fdt32_t *)fdt_getprop(fdt, nodeoffset, "reg-io-width", &len);
+  if (reg_io_width) {
+    if (reg_p) {
+      *reg_io_width = fdt32_to_cpu(*reg_p);
+    } else {
+      *reg_io_width = NS16550_REG_IO_WIDTH;
+    }
+  }
+
+  reg_p = (fdt32_t *)fdt_getprop(fdt, nodeoffset, "interrupts", &len);
+  if (reg_int_id) {
+    if (reg_p) {
+      *reg_int_id = fdt32_to_cpu(*reg_p);
+    } else {
+      *reg_int_id = NS16550_INTERRUPT_ID;
+    }
+  }
+
+  return 0;
+}
+
+int fdt_parse_pmp_num(const void *fdt, int cpu_offset, reg_t *pmp_num)
 {
   int rc;
 
@@ -289,7 +353,7 @@ int fdt_parse_pmp_num(void *fdt, int cpu_offset, reg_t *pmp_num)
   return 0;
 }
 
-int fdt_parse_pmp_alignment(void *fdt, int cpu_offset, reg_t *pmp_align)
+int fdt_parse_pmp_alignment(const void *fdt, int cpu_offset, reg_t *pmp_align)
 {
   int rc;
 
@@ -304,8 +368,10 @@ int fdt_parse_pmp_alignment(void *fdt, int cpu_offset, reg_t *pmp_align)
   return 0;
 }
 
-int fdt_parse_mmu_type(void *fdt, int cpu_offset, char *mmu_type)
+int fdt_parse_mmu_type(const void *fdt, int cpu_offset, const char **mmu_type)
 {
+  assert(mmu_type);
+
   int len, rc;
   const void *prop;
 
@@ -316,7 +382,7 @@ int fdt_parse_mmu_type(void *fdt, int cpu_offset, char *mmu_type)
   if (!prop || !len)
     return -EINVAL;
 
-  strcpy(mmu_type, (char *)prop);
+  *mmu_type = (const char *)prop;
 
   return 0;
 }

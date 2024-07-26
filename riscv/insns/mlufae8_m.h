@@ -1,1 +1,1 @@
-MTU_UF_TR_LD(0, uint8);
+MTU_UF_TR_LD(0, uint8, 'a');

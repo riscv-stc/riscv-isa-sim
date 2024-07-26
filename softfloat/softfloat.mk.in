@@ -1,15 +1,14 @@
 softfloat_subproject_deps =
 
-softfloat_hdrs = \
-  internals.h \
-  platform.h \
-  primitives.h \
-  primitiveTypes.h \
-  softfloat.h \
-  softfloat_types.h \
-  specialize.h \
-
 softfloat_c_srcs = \
+	bf16_add.c \
+	bf16_div.c \
+	bf16_mul.c \
+	bf16_mulAdd.c \
+	bf16_sqrt.c \
+	bf16_sub.c \
+	bf16_to_f32.c \
+	bf16_to_f64.c \
 	f128_add.c \
 	f128_classify.c \
 	f128_div.c \
@@ -84,6 +83,7 @@ softfloat_c_srcs = \
 	f32_roundToInt.c \
 	f32_sqrt.c \
 	f32_sub.c \
+	f32_to_bf16.c \
 	f32_to_f128.c \
 	f32_to_f16.c \
 	f32_to_f64.c \
@@ -113,6 +113,7 @@ softfloat_c_srcs = \
 	f64_roundToInt.c \
 	f64_sqrt.c \
 	f64_sub.c \
+	f64_to_bf16.c \
 	f64_to_f128.c \
 	f64_to_f16.c \
 	f64_to_f32.c \
@@ -190,6 +191,7 @@ softfloat_c_srcs = \
 	s_roundMToUI64.c \
 	s_roundPackMToI64.c \
 	s_roundPackMToUI64.c \
+	s_roundPackToBF16.c \
 	s_roundPackToF128.c \
 	s_roundPackToF16.c \
 	s_roundPackToF32.c \
@@ -234,10 +236,15 @@ softfloat_c_srcs = \
 	ui64_to_f32.c \
 	ui64_to_f64.c \
 
-softfloat_CFLAGS = -fPIC
-
 softfloat_install_shared_lib = yes
 
 softfloat_test_srcs =
 
-softfloat_install_prog_srcs =
+softfloat_install_hdrs = \
+	softfloat.h \
+	softfloat_types.h \
+	primitives.h \
+	internals.h \
+	platform.h \
+	primitiveTypes.h \
+	specialize.h \

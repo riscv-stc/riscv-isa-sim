@@ -1,1 +1,1 @@
-MMV_VREG_FROM_ACC(0, 'c')
+MMV_VREG_FROM_TR(0, 'c')

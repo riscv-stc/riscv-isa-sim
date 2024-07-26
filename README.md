@@ -10,6 +10,7 @@ completion of the US transcontinental railway.
 
 Spike supports the following RISC-V ISA features:
   - RV32I and RV64I base ISAs, v2.1
+  - RV32E and RV64E base ISAs, v1.9
   - Zifencei extension, v2.0
   - Zicsr extension, v2.0
   - M extension, v2.0
@@ -18,15 +19,50 @@ Spike supports the following RISC-V ISA features:
   - D extension, v2.2
   - Q extension, v2.2
   - C extension, v2.0
-  - B extension, v0.92
-  - K extension, v0.8.1 ([Scalar Cryptography](https://github.com/riscv/riscv-crypto))
-  - V extension, v0.10, w/ Zvlsseg/Zvamo (_requires a 64-bit host_)
-  - Bi-endianness
+  - Zbkb, Zbkc, Zbkx, Zknd, Zkne, Zknh, Zksed, Zksh scalar cryptography extensions (Zk, Zkn, and Zks groups), v1.0
+  - Zkr virtual entropy source emulation, v1.0
+  - V extension, v1.0 (_requires a 64-bit host_)
+  - P extension, v0.9.2
+  - Zba extension, v1.0
+  - Zbb extension, v1.0
+  - Zbc extension, v1.0
+  - Zbs extension, v1.0
+  - Zfh and Zfhmin half-precision floating-point extensions, v1.0
+  - Zfinx extension, v1.0
+  - Zmmul integer multiplication extension, v1.0
+  - Zicbom, Zicbop, Zicboz cache-block maintenance extensions, v1.0
   - Conformance to both RVWMO and RVTSO (Spike is sequentially consistent)
   - Machine, Supervisor, and User modes, v1.11
-  - Hypervisor extension, v0.6.1
-  - Svnapot extension, v0.1
-  - Debug v0.14
+  - Hypervisor extension, v1.0
+  - Svnapot extension, v1.0
+  - Svpbmt extension, v1.0
+  - Svinval extension, v1.0
+  - Sdext extension, v1.0-STABLE
+  - Sdtrig extension, v1.0-STABLE
+  - Smepmp extension v1.0
+  - Smstateen extension, v1.0
+  - Sscofpmf v0.5.2
+  - Zca extension, v1.0
+  - Zcb extension, v1.0
+  - Zcf extension, v1.0
+  - Zcd extension, v1.0
+  - Zcmp extension, v1.0
+  - Zcmt extension, v1.0
+  - Zfbfmin extension, v0.6
+  - Zvfbfmin extension, v0.6
+  - Zvfbfwma extension, v0.6
+  - Zvbb extension, v1.0
+  - Zvbc extension, v1.0
+  - Zvkg extension, v1.0
+  - Zvkned extension, v1.0
+  - Zvknha, Zvknhb extension, v1.0
+  - Zvksed extension, v1.0
+  - Zvksh extension, v1.0
+  - Zvkt  extension, v1.0
+  - Zvkn, Zvknc, Zvkng extension, v1.0
+  - Zvks, Zvksc, Zvksg extension, v1.0 
+  - Zilsd extension, v0.9.0
+  - Zcmlsd extension, v0.9.0
 
 Versioning and APIs
 -------------------
@@ -50,7 +86,7 @@ Build Steps
 We assume that the RISCV environment variable is set to the RISC-V tools
 install path.
 
-    $ apt-get install device-tree-compiler
+    $ apt-get install device-tree-compiler libboost-regex-dev libboost-system-dev
     $ mkdir build
     $ cd build
     $ ../configure --prefix=$RISCV
@@ -105,7 +141,10 @@ Adding an instruction to the simulator requires two steps:
          $ make install
         ```
 
-  3.  Rebuild the simulator.
+  3.  Add the instruction to riscv/riscv.mk.in. Otherwise, the instruction
+      will not be included in the build and will be treated as an illegal instruction.
+
+  4.  Rebuild the simulator.
 
 Interactive Debug Mode
 ---------------------------
@@ -140,6 +179,7 @@ You can advance by one instruction by pressing the enter key. You can also
 execute until a desired equality is reached:
 
     : until pc 0 2020                   (stop when pc=2020)
+    : until reg 0 mie a                 (stop when register mie=0xa)
     : until mem 2020 50a9907311096993   (stop when mem[2020]=50a9907311096993)
 
 Alternatively, you can execute as long as an equality is true:
@@ -197,7 +237,7 @@ OUTPUT_ARCH( "riscv" )
 
 SECTIONS
 {
-  . = 0x10010000;
+  . = 0x10110000;
   .text : { *(.text) }
   .data : { *(.data) }
 }
@@ -207,19 +247,19 @@ $ riscv64-unknown-elf-gcc -g -Og -T spike.lds -nostartfiles -o rot13-64 rot13-64
 
 To debug this program, first run spike telling it to listen for OpenOCD:
 ```
-$ spike --rbb-port=9824 -m0x10000000:0x20000 rot13-64
+$ spike --rbb-port=9824 -m0x10100000:0x20000 rot13-64
 Listening for remote bitbang connection on port 9824.
 ```
 
 In a separate shell run OpenOCD with the appropriate configuration file:
 ```
 $ cat spike.cfg 
-interface remote_bitbang
-remote_bitbang_host localhost
-remote_bitbang_port 9824
+adapter driver remote_bitbang
+remote_bitbang host localhost
+remote_bitbang port 9824
 
 set _CHIPNAME riscv
-jtag newtap $_CHIPNAME cpu -irlen 5 -expected-id 0x10e31913
+jtag newtap $_CHIPNAME cpu -irlen 5 -expected-id 0xdeadbeef
 
 set _TARGETNAME $_CHIPNAME.cpu
 target create $_TARGETNAME riscv -chain-position $_TARGETNAME
@@ -263,7 +303,7 @@ $2 = 0
 (gdb) print text
 $3 = "Vafgehpgvba frgf jnag gb or serr!"
 (gdb) b done 
-Breakpoint 1 at 0x10010064: file rot13.c, line 22.
+Breakpoint 1 at 0x10110064: file rot13.c, line 22.
 (gdb) c
 Continuing.
 Disabling abstract command writes to CSRs.

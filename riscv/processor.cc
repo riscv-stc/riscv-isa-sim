@@ -5,66 +5,104 @@
 #include "extension.h"
 #include "common.h"
 #include "config.h"
+#include "decode_macros.h"
 #include "simif.h"
 #include "mmu.h"
 #include "disasm.h"
+#include "platform.h"
+#include "vector_unit.h"
+#include "matrix_unit.h"
+#include "debug_defines.h"
 #include <cinttypes>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <assert.h>
 #include <limits.h>
 #include <stdexcept>
 #include <string>
 #include <algorithm>
 
+#ifdef __GNUC__
+# pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
 #undef STATE
 #define STATE state
 
-processor_t::processor_t(const char* isa, const char* priv, const char* varch,
+processor_t::processor_t(const isa_parser_t *isa, const cfg_t *cfg,
                          simif_t* sim, uint32_t id, bool halt_on_reset,
-                         FILE* log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), id(id), xlen(0),
+                         FILE* log_file, std::ostream& sout_)
+  : debug(false), halt_request(HR_NONE), isa(isa), cfg(cfg), sim(sim), id(id), xlen(0),
   histogram_enabled(false), log_commits_enabled(false),
-  log_file(log_file), halt_on_reset(halt_on_reset),
-  extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
+  log_file(log_file), sout_(sout_.rdbuf()), halt_on_reset(halt_on_reset),
+  in_wfi(false), check_triggers_icount(false),
+  impl_table(256, false), extension_enable_table(isa->get_extension_table()),
+  last_pc(1), executions(1), TM(cfg->trigger_count)
 {
   VU.p = this;
   MU.p = this;
+  TM.proc = this;
 
-  parse_isa_string(isa);
-  parse_priv_string(priv);
-  parse_varch_string(varch);
+#ifndef HAVE_INT128
+  if (isa->has_any_vector()) {
+    fprintf(stderr, "V extension is not supported on platforms without __int128 type\n");
+    abort();
+  }
+
+  if (isa->extension_enabled(EXT_ZACAS) && isa->get_max_xlen() == 64) {
+    fprintf(stderr, "Zacas extension is not supported on 64-bit platforms without __int128 type\n");
+    abort();
+  }
+#endif
+
+  VU.VLEN = isa->get_vlen();
+  VU.ELEN = isa->get_elen();
+  VU.vlenb = isa->get_vlen() / 8;
+  VU.vstart_alu = 0;
+
+  MU.MLEN = isa->get_mlen();
+  MU.RLEN = isa->get_mrlen();
+  MU.mlenb = isa->get_mlen() / 8;
+
+  MU.mrows = MU.MLEN / MU.RLEN;
+  MU.mcols = MU.RLEN;
+  MU.mrlenb = MU.RLEN / 8;
 
   register_base_instructions();
-  mmu = new mmu_t(sim, this);
+  mmu = new mmu_t(sim, cfg->endianness, this);
 
-  disassembler = new disassembler_t(max_xlen);
-  for (auto e : custom_extensions)
-    for (auto disasm_insn : e.second->get_disasms())
-      disassembler->add_insn(disasm_insn);
+  disassembler = new disassembler_t(isa);
+  for (auto e : isa->get_extensions())
+    register_extension(find_extension(e.c_str())());
 
-  set_pmp_granularity(1 << PMP_SHIFT);
-  set_pmp_num(state.max_pmp);
+  set_pmp_granularity(cfg->pmpgranularity);
+  set_pmp_num(cfg->pmpregions);
 
-  if (max_xlen == 32)
+  if (isa->get_max_xlen() == 32)
     set_mmu_capability(IMPL_MMU_SV32);
-  else if (max_xlen == 64)
-    set_mmu_capability(IMPL_MMU_SV48);
+  else if (isa->get_max_xlen() == 64)
+    set_mmu_capability(IMPL_MMU_SV57);
+
+  set_impl(IMPL_MMU_ASID, true);
+  set_impl(IMPL_MMU_VMID, true);
 
   reset();
 }
 
 processor_t::~processor_t()
 {
-#ifdef RISCV_ENABLE_HISTOGRAM
   if (histogram_enabled)
   {
-    fprintf(stderr, "PC Histogram size:%zu\n", pc_histogram.size());
-    for (auto it : pc_histogram)
+    std::vector<std::pair<reg_t, uint64_t>> ordered_histo(pc_histogram.begin(), pc_histogram.end());
+    std::sort(ordered_histo.begin(), ordered_histo.end(),
+              [](auto& lhs, auto& rhs) { return lhs.second < rhs.second; });
+
+    fprintf(stderr, "PC Histogram size:%zu\n", ordered_histo.size());
+    for (auto it : ordered_histo)
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
-#endif
 
   delete mmu;
   delete disassembler;
@@ -77,22 +115,6 @@ static void bad_option_string(const char *option, const char *value,
   abort();
 }
 
-static void bad_isa_string(const char* isa, const char* msg)
-{
-  bad_option_string("--isa", isa, msg);
-}
-
-static void bad_priv_string(const char* priv)
-{
-  fprintf(stderr, "error: bad --priv option %s\n", priv);
-  abort();
-}
-
-static void bad_varch_string(const char* varch, const char *msg)
-{
-  bad_option_string("--varch", varch, msg);
-}
-
 static std::string get_string_token(std::string str, const char delimiter, size_t& pos)
 {
   size_t _pos = pos;
@@ -100,87 +122,9 @@ static std::string get_string_token(std::string str, const char delimiter, size_
   return str.substr(_pos, pos - _pos);
 }
 
-static int get_int_token(std::string str, const char delimiter, size_t& pos)
-{
-  size_t _pos = pos;
-  while (pos < str.length() && str[pos] != delimiter) {
-    if (!isdigit(str[pos]))
-      bad_varch_string(str.c_str(), "Unsupported value"); // An integer is expected
-    ++pos;
-  }
-  return (pos == _pos) ? 0 : stoi(str.substr(_pos, pos - _pos));
-}
-
 static bool check_pow2(int val)
 {
   return ((val & (val - 1))) == 0;
-}
-
-void processor_t::parse_varch_string(const char* s)
-{
-  std::string str, tmp;
-  for (const char *r = s; *r; r++)
-    str += std::tolower(*r);
-
-  size_t pos = 0;
-  size_t len = str.length();
-  int vlen = 0;
-  int elen = 0;
-  int slen = 0;
-  int mlen = 0;
-  int maccq = 1;
-  int vstart_alu = 1;
-
-  while (pos < len) {
-    std::string attr = get_string_token(str, ':', pos);
-
-    ++pos;
-
-    if (attr == "vlen")
-      vlen = get_int_token(str, ',', pos);
-    else if (attr == "slen")
-      slen = get_int_token(str, ',', pos);
-    else if (attr == "elen")
-      elen = get_int_token(str, ',', pos);
-    else if (attr == "vstartalu")
-      vstart_alu = get_int_token(str, ',', pos);
-    else if (attr == "mlen")
-      mlen = get_int_token(str, ',', pos);
-    else if (attr == "maccq")
-      maccq = get_int_token(str, ',', pos);
-    else
-      bad_varch_string(s, "Unsupported token");
-
-    ++pos;
-  }
-
-  // The integer should be the power of 2
-  if (!check_pow2(vlen) || !check_pow2(elen) || !check_pow2(slen)){
-    bad_varch_string(s, "The integer value should be the power of 2");
-  }
-
-  if (slen == 0)
-    slen = vlen;
-
-  /* Vector spec requirements. */
-  if (vlen < elen)
-    bad_varch_string(s, "vlen must be >= elen");
-  if (vlen != slen)
-    bad_varch_string(s, "vlen must be == slen for current limitation");
-
-  /* spike requirements. */
-  if (vlen > 4096)
-    bad_varch_string(s, "vlen must be <= 4096");
-
-  VU.VLEN = vlen;
-  VU.ELEN = elen;
-  VU.vlenb = vlen / 8;
-  VU.vstart_alu = vstart_alu;
-  MU.MLEN = mlen;
-  MU.mlenb = mlen / 8;
-  MU.mrows = MU.MLEN / VU.VLEN;
-  MU.mcols = VU.VLEN;
-  MU.maccq = maccq;
 }
 
 static std::string strtolower(const char* str)
@@ -191,339 +135,431 @@ static std::string strtolower(const char* str)
   return res;
 }
 
-void processor_t::parse_priv_string(const char* str)
+static int xlen_to_uxl(int xlen)
 {
-  std::string lowercase = strtolower(str);
-  bool user = false, supervisor = false;
-
-  if (lowercase == "m")
-    ;
-  else if (lowercase == "mu")
-    user = true;
-  else if (lowercase == "msu")
-    user = supervisor = true;
-  else
-    bad_priv_string(str);
-
-  if (user) {
-    max_isa |= reg_t(user) << ('u' - 'a');
-    extension_table['U'] = true;
-  }
-
-  if (supervisor) {
-    max_isa |= reg_t(supervisor) << ('s' - 'a');
-    extension_table['S'] = true;
-  }
+  if (xlen == 32)
+    return 1;
+  if (xlen == 64)
+    return 2;
+  abort();
 }
 
-void processor_t::parse_isa_string(const char* str)
-{
-  std::string lowercase = strtolower(str), tmp;
-
-  char error_msg[256];
-  const char* p = lowercase.c_str();
-  const char* all_subsets = "imafdqcbkh"
-#ifdef __SIZEOF_INT128__
-    "v"
-#endif
-    "";
-
-  max_xlen = 64;
-  max_isa = reg_t(2) << 62;
-
-  if (strncmp(p, "rv32", 4) == 0)
-    max_xlen = 32, max_isa = reg_t(1) << 30, p += 4;
-  else if (strncmp(p, "rv64", 4) == 0)
-    p += 4;
-  else if (strncmp(p, "rv", 2) == 0)
-    p += 2;
-
-  if (!*p) {
-    p = "imafdc";
-  } else if (*p == 'g') { // treat "G" as "IMAFD"
-    tmp = std::string("imafd") + (p+1);
-    p = &tmp[0];
-  }
-
-  isa_string = "rv" + std::to_string(max_xlen) + p;
-
-  while (*p) {
-    if (islower(*p)) {
-      max_isa |= 1L << (*p - 'a');
-      extension_table[toupper(*p)] = true;
-
-      if (strchr(all_subsets, *p)) {
-        p++;
-      } else if (*p == 'x') {
-        const char* ext = p + 1, *end = ext;
-        while (islower(*end) || *end == '_')
-          end++;
-
-        auto ext_str = std::string(ext, end - ext);
-        if (ext_str != "dummy")
-          register_extension(find_extension(ext_str.c_str())());
-
-        p = end;
-      } else {
-        sprintf(error_msg, "unsupported extension '%c'", *p);
-        bad_isa_string(str, error_msg);
-      }
-    } else if (*p == '_') {
-      const char* ext = p + 1, *end = ext;
-      if (*ext == 'x') {
-        p++;
-        continue;
-      }
-
-      while (islower(*end))
-        end++;
-
-      auto ext_str = std::string(ext, end - ext);
-      if (ext_str == "zfh") {
-        extension_table[EXT_ZFH] = true;
-      } else {
-        sprintf(error_msg, "unsupported extension '%s'", ext_str.c_str());
-        bad_isa_string(str, error_msg);
-      }
-
-      p = end;
-    } else {
-      sprintf(error_msg, "can't parse '%c(%d)'", *p, *p);
-      bad_isa_string(str, error_msg);
-    }
-  }
-
-  state.misa = max_isa;
-
-  if (!supports_extension('I'))
-    bad_isa_string(str, "'I' extension is required");
-
-  if (supports_extension(EXT_ZFH) && !supports_extension('F'))
-    bad_isa_string(str, "'Zfh' extension requires 'F'");
-
-  if (supports_extension('D') && !supports_extension('F'))
-    bad_isa_string(str, "'D' extension requires 'F'");
-
-  if (supports_extension('Q') && !supports_extension('D'))
-    bad_isa_string(str, "'Q' extension requires 'D'");
-}
-
-void state_t::reset(reg_t max_isa)
+void state_t::reset(processor_t* const proc, reg_t max_isa)
 {
   pc = DEFAULT_RSTVEC;
   XPR.reset();
   FPR.reset();
 
-  prv = PRV_M;
-  v = false;
-  misa = max_isa;
-  mstatus = 0;
-  mepc = 0;
-  mtval = 0;
-  mscratch = 0;
-  mtvec = 0;
-  mcause = 0;
-  minstret = 0;
-  mie = 0;
-  mip = 0;
-  medeleg = 0;
-  mideleg = 0;
-  mcounteren = 0;
-  scounteren = 0;
-  sepc = 0;
-  stval = 0;
-  sscratch = 0;
-  stvec = 0;
-  satp = 0;
-  scause = 0;
-  mtval2 = 0;
-  mtinst = 0;
-  hstatus = 0;
-  hideleg = 0;
-  hedeleg = 0;
-  hcounteren = 0;
-  htval = 0;
-  htinst = 0;
-  hgatp = 0;
-  vsstatus = 0;
-  vstvec = 0;
-  vsscratch = 0;
-  vsepc = 0;
-  vscause = 0;
-  vstval = 0;
-  vsatp = 0;
+  // This assumes xlen is always max_xlen, which is true today (see
+  // mstatus_csr_t::unlogged_write()):
+  auto xlen = proc->get_isa().get_max_xlen();
 
-  dpc = 0;
-  dscratch0 = 0;
-  dscratch1 = 0;
-  memset(&this->dcsr, 0, sizeof(this->dcsr));
+  prv = prev_prv = PRV_M;
+  v = prev_v = false;
+  prv_changed = false;
+  v_changed = false;
+  csrmap[CSR_MISA] = misa = std::make_shared<misa_csr_t>(proc, CSR_MISA, max_isa);
+  mstatus = std::make_shared<mstatus_csr_t>(proc, CSR_MSTATUS);
 
-  tselect = 0;
-  memset(this->mcontrol, 0, sizeof(this->mcontrol));
-  for (auto &item : mcontrol)
-    item.type = 2;
+  if (xlen == 32) {
+    csrmap[CSR_MSTATUS] = std::make_shared<rv32_low_csr_t>(proc, CSR_MSTATUS, mstatus);
+    csrmap[CSR_MSTATUSH] = mstatush = std::make_shared<rv32_high_csr_t>(proc, CSR_MSTATUSH, mstatus);
+  } else {
+    csrmap[CSR_MSTATUS] = mstatus;
+  }
+  csrmap[CSR_MEPC] = mepc = std::make_shared<epc_csr_t>(proc, CSR_MEPC);
+  csrmap[CSR_MTVAL] = mtval = std::make_shared<basic_csr_t>(proc, CSR_MTVAL, 0);
+  csrmap[CSR_MSCRATCH] = std::make_shared<basic_csr_t>(proc, CSR_MSCRATCH, 0);
+  csrmap[CSR_MTVEC] = mtvec = std::make_shared<tvec_csr_t>(proc, CSR_MTVEC);
+  csrmap[CSR_MCAUSE] = mcause = std::make_shared<cause_csr_t>(proc, CSR_MCAUSE);
 
-  memset(this->tdata2, 0, sizeof(this->tdata2));
+  auto smcntrpmf_enabled = proc->extension_enabled_const(EXT_SMCNTRPMF);
+  const reg_t mask = smcntrpmf_enabled ? MHPMEVENT_MINH | MHPMEVENT_SINH |
+                                         MHPMEVENT_UINH | MHPMEVENT_VSINH | MHPMEVENT_VUINH : 0;
+  auto minstretcfg = std::make_shared<smcntrpmf_csr_t>(proc, CSR_MINSTRETCFG, mask, 0);
+  auto mcyclecfg = std::make_shared<smcntrpmf_csr_t>(proc, CSR_MCYCLECFG, mask, 0);
+
+  minstret = std::make_shared<wide_counter_csr_t>(proc, CSR_MINSTRET, minstretcfg);
+  mcycle = std::make_shared<wide_counter_csr_t>(proc, CSR_MCYCLE, mcyclecfg);
+  time = std::make_shared<time_counter_csr_t>(proc, CSR_TIME);
+  if (proc->extension_enabled_const(EXT_ZICNTR)) {
+    csrmap[CSR_INSTRET] = std::make_shared<counter_proxy_csr_t>(proc, CSR_INSTRET, minstret);
+    csrmap[CSR_CYCLE] = std::make_shared<counter_proxy_csr_t>(proc, CSR_CYCLE, mcycle);
+    csrmap[CSR_TIME] = time_proxy = std::make_shared<counter_proxy_csr_t>(proc, CSR_TIME, time);
+  }
+  if (xlen == 32) {
+    csr_t_p minstreth, mcycleh;
+    csrmap[CSR_MINSTRET] = std::make_shared<rv32_low_csr_t>(proc, CSR_MINSTRET, minstret);
+    csrmap[CSR_MINSTRETH] = minstreth = std::make_shared<rv32_high_csr_t>(proc, CSR_MINSTRETH, minstret);
+    csrmap[CSR_MCYCLE] = std::make_shared<rv32_low_csr_t>(proc, CSR_MCYCLE, mcycle);
+    csrmap[CSR_MCYCLEH] = mcycleh = std::make_shared<rv32_high_csr_t>(proc, CSR_MCYCLEH, mcycle);
+    if (proc->extension_enabled_const(EXT_ZICNTR)) {
+      auto timeh = std::make_shared<rv32_high_csr_t>(proc, CSR_TIMEH, time);
+      csrmap[CSR_INSTRETH] = std::make_shared<counter_proxy_csr_t>(proc, CSR_INSTRETH, minstreth);
+      csrmap[CSR_CYCLEH] = std::make_shared<counter_proxy_csr_t>(proc, CSR_CYCLEH, mcycleh);
+      csrmap[CSR_TIMEH] = std::make_shared<counter_proxy_csr_t>(proc, CSR_TIMEH, timeh);
+    }
+  } else {
+    csrmap[CSR_MINSTRET] = minstret;
+    csrmap[CSR_MCYCLE] = mcycle;
+  }
+  for (reg_t i = 3; i < N_HPMCOUNTERS + 3; ++i) {
+    const reg_t which_mevent = CSR_MHPMEVENT3 + i - 3;
+    const reg_t which_meventh = CSR_MHPMEVENT3H + i - 3;
+    const reg_t which_mcounter = CSR_MHPMCOUNTER3 + i - 3;
+    const reg_t which_mcounterh = CSR_MHPMCOUNTER3H + i - 3;
+    const reg_t which_counter = CSR_HPMCOUNTER3 + i - 3;
+    const reg_t which_counterh = CSR_HPMCOUNTER3H + i - 3;
+    mevent[i - 3] = std::make_shared<mevent_csr_t>(proc, which_mevent);
+    auto mcounter = std::make_shared<const_csr_t>(proc, which_mcounter, 0);
+    csrmap[which_mcounter] = mcounter;
+
+    if (proc->extension_enabled_const(EXT_ZIHPM)) {
+      auto counter = std::make_shared<counter_proxy_csr_t>(proc, which_counter, mcounter);
+      csrmap[which_counter] = counter;
+    }
+    if (xlen == 32) {
+      csrmap[which_mevent] = std::make_shared<rv32_low_csr_t>(proc, which_mevent, mevent[i - 3]);;
+      auto mcounterh = std::make_shared<const_csr_t>(proc, which_mcounterh, 0);
+      csrmap[which_mcounterh] = mcounterh;
+      if (proc->extension_enabled_const(EXT_ZIHPM)) {
+        auto counterh = std::make_shared<counter_proxy_csr_t>(proc, which_counterh, mcounterh);
+        csrmap[which_counterh] = counterh;
+      }
+      if (proc->extension_enabled_const(EXT_SSCOFPMF)) {
+        auto meventh = std::make_shared<rv32_high_csr_t>(proc, which_meventh, mevent[i - 3]);
+        csrmap[which_meventh] = meventh;
+      }
+    } else {
+      csrmap[which_mevent] = mevent[i - 3];
+    }
+  }
+  csrmap[CSR_MCOUNTINHIBIT] = std::make_shared<const_csr_t>(proc, CSR_MCOUNTINHIBIT, 0);
+  if (proc->extension_enabled_const(EXT_SSCOFPMF))
+    csrmap[CSR_SCOUNTOVF] = std::make_shared<scountovf_csr_t>(proc, CSR_SCOUNTOVF);
+  csrmap[CSR_MIE] = mie = std::make_shared<mie_csr_t>(proc, CSR_MIE);
+  csrmap[CSR_MIP] = mip = std::make_shared<mip_csr_t>(proc, CSR_MIP);
+  auto sip_sie_accr = std::make_shared<generic_int_accessor_t>(
+    this,
+    ~MIP_HS_MASK,  // read_mask
+    MIP_SSIP | MIP_LCOFIP,  // ip_write_mask
+    ~MIP_HS_MASK,  // ie_write_mask
+    generic_int_accessor_t::mask_mode_t::MIDELEG,
+    0              // shiftamt
+  );
+
+  auto hip_hie_accr = std::make_shared<generic_int_accessor_t>(
+    this,
+    MIP_HS_MASK,   // read_mask
+    MIP_VSSIP,     // ip_write_mask
+    MIP_HS_MASK,   // ie_write_mask
+    generic_int_accessor_t::mask_mode_t::MIDELEG,
+    0              // shiftamt
+  );
+
+  auto vsip_vsie_accr = std::make_shared<generic_int_accessor_t>(
+    this,
+    MIP_VS_MASK,   // read_mask
+    MIP_VSSIP,     // ip_write_mask
+    MIP_VS_MASK,   // ie_write_mask
+    generic_int_accessor_t::mask_mode_t::HIDELEG,
+    1              // shiftamt
+  );
+
+  auto nonvirtual_sip = std::make_shared<mip_proxy_csr_t>(proc, CSR_SIP, sip_sie_accr);
+  auto vsip = std::make_shared<mip_proxy_csr_t>(proc, CSR_VSIP, vsip_vsie_accr);
+  csrmap[CSR_VSIP] = vsip;
+  csrmap[CSR_SIP] = std::make_shared<virtualized_csr_t>(proc, nonvirtual_sip, vsip);
+  csrmap[CSR_HIP] = std::make_shared<mip_proxy_csr_t>(proc, CSR_HIP, hip_hie_accr);
+  csrmap[CSR_HVIP] = hvip = std::make_shared<hvip_csr_t>(proc, CSR_HVIP, 0);
+
+  auto nonvirtual_sie = std::make_shared<mie_proxy_csr_t>(proc, CSR_SIE, sip_sie_accr);
+  auto vsie = std::make_shared<mie_proxy_csr_t>(proc, CSR_VSIE, vsip_vsie_accr);
+  csrmap[CSR_VSIE] = vsie;
+  csrmap[CSR_SIE] = std::make_shared<virtualized_csr_t>(proc, nonvirtual_sie, vsie);
+  csrmap[CSR_HIE] = std::make_shared<mie_proxy_csr_t>(proc, CSR_HIE, hip_hie_accr);
+
+  csrmap[CSR_MEDELEG] = medeleg = std::make_shared<medeleg_csr_t>(proc, CSR_MEDELEG);
+  csrmap[CSR_MIDELEG] = mideleg = std::make_shared<mideleg_csr_t>(proc, CSR_MIDELEG);
+  const reg_t counteren_mask = (proc->extension_enabled_const(EXT_ZICNTR) ? 0x7UL : 0x0) | (proc->extension_enabled_const(EXT_ZIHPM) ? 0xfffffff8ULL : 0x0);
+  mcounteren = std::make_shared<masked_csr_t>(proc, CSR_MCOUNTEREN, counteren_mask, 0);
+  if (proc->extension_enabled_const('U')) csrmap[CSR_MCOUNTEREN] = mcounteren;
+  csrmap[CSR_SCOUNTEREN] = scounteren = std::make_shared<masked_csr_t>(proc, CSR_SCOUNTEREN, counteren_mask, 0);
+  nonvirtual_sepc = std::make_shared<epc_csr_t>(proc, CSR_SEPC);
+  csrmap[CSR_VSEPC] = vsepc = std::make_shared<epc_csr_t>(proc, CSR_VSEPC);
+  csrmap[CSR_SEPC] = sepc = std::make_shared<virtualized_csr_t>(proc, nonvirtual_sepc, vsepc);
+  nonvirtual_stval = std::make_shared<basic_csr_t>(proc, CSR_STVAL, 0);
+  csrmap[CSR_VSTVAL] = vstval = std::make_shared<basic_csr_t>(proc, CSR_VSTVAL, 0);
+  csrmap[CSR_STVAL] = stval = std::make_shared<virtualized_csr_t>(proc, nonvirtual_stval, vstval);
+  auto sscratch = std::make_shared<basic_csr_t>(proc, CSR_SSCRATCH, 0);
+  auto vsscratch = std::make_shared<basic_csr_t>(proc, CSR_VSSCRATCH, 0);
+  // Note: if max_isa does not include H, we don't really need this virtualized_csr_t at all (though it doesn't hurt):
+  csrmap[CSR_SSCRATCH] = std::make_shared<virtualized_csr_t>(proc, sscratch, vsscratch);
+  csrmap[CSR_VSSCRATCH] = vsscratch;
+  nonvirtual_stvec = std::make_shared<tvec_csr_t>(proc, CSR_STVEC);
+  csrmap[CSR_VSTVEC] = vstvec = std::make_shared<tvec_csr_t>(proc, CSR_VSTVEC);
+  csrmap[CSR_STVEC] = stvec = std::make_shared<virtualized_csr_t>(proc, nonvirtual_stvec, vstvec);
+  auto nonvirtual_satp = std::make_shared<satp_csr_t>(proc, CSR_SATP);
+  csrmap[CSR_VSATP] = vsatp = std::make_shared<base_atp_csr_t>(proc, CSR_VSATP);
+  csrmap[CSR_SATP] = satp = std::make_shared<virtualized_satp_csr_t>(proc, nonvirtual_satp, vsatp);
+  nonvirtual_scause = std::make_shared<cause_csr_t>(proc, CSR_SCAUSE);
+  csrmap[CSR_VSCAUSE] = vscause = std::make_shared<cause_csr_t>(proc, CSR_VSCAUSE);
+  csrmap[CSR_SCAUSE] = scause = std::make_shared<virtualized_csr_t>(proc, nonvirtual_scause, vscause);
+  csrmap[CSR_MTVAL2] = mtval2 = std::make_shared<hypervisor_csr_t>(proc, CSR_MTVAL2);
+  csrmap[CSR_MTINST] = mtinst = std::make_shared<hypervisor_csr_t>(proc, CSR_MTINST);
+  const reg_t hstatus_init = set_field((reg_t)0, HSTATUS_VSXL, xlen_to_uxl(proc->get_const_xlen()));
+  const reg_t hstatus_mask = HSTATUS_VTSR | HSTATUS_VTW
+    | (proc->supports_impl(IMPL_MMU) ? HSTATUS_VTVM : 0)
+    | HSTATUS_HU | HSTATUS_SPVP | HSTATUS_SPV | HSTATUS_GVA;
+  csrmap[CSR_HSTATUS] = hstatus = std::make_shared<masked_csr_t>(proc, CSR_HSTATUS, hstatus_mask, hstatus_init);
+  csrmap[CSR_HGEIE] = std::make_shared<const_csr_t>(proc, CSR_HGEIE, 0);
+  csrmap[CSR_HGEIP] = std::make_shared<const_csr_t>(proc, CSR_HGEIP, 0);
+  csrmap[CSR_HIDELEG] = hideleg = std::make_shared<hideleg_csr_t>(proc, CSR_HIDELEG, mideleg);
+  const reg_t hedeleg_mask =
+    (1 << CAUSE_MISALIGNED_FETCH) |
+    (1 << CAUSE_FETCH_ACCESS) |
+    (1 << CAUSE_ILLEGAL_INSTRUCTION) |
+    (1 << CAUSE_BREAKPOINT) |
+    (1 << CAUSE_MISALIGNED_LOAD) |
+    (1 << CAUSE_LOAD_ACCESS) |
+    (1 << CAUSE_MISALIGNED_STORE) |
+    (1 << CAUSE_STORE_ACCESS) |
+    (1 << CAUSE_USER_ECALL) |
+    (1 << CAUSE_FETCH_PAGE_FAULT) |
+    (1 << CAUSE_LOAD_PAGE_FAULT) |
+    (1 << CAUSE_STORE_PAGE_FAULT) |
+    (1 << CAUSE_SOFTWARE_CHECK_FAULT);
+  csrmap[CSR_HEDELEG] = hedeleg = std::make_shared<masked_csr_t>(proc, CSR_HEDELEG, hedeleg_mask, 0);
+  csrmap[CSR_HCOUNTEREN] = hcounteren = std::make_shared<masked_csr_t>(proc, CSR_HCOUNTEREN, counteren_mask, 0);
+  htimedelta = std::make_shared<basic_csr_t>(proc, CSR_HTIMEDELTA, 0);
+  if (xlen == 32) {
+    csrmap[CSR_HTIMEDELTA] = std::make_shared<rv32_low_csr_t>(proc, CSR_HTIMEDELTA, htimedelta);
+    csrmap[CSR_HTIMEDELTAH] = std::make_shared<rv32_high_csr_t>(proc, CSR_HTIMEDELTAH, htimedelta);
+  } else {
+    csrmap[CSR_HTIMEDELTA] = htimedelta;
+  }
+  csrmap[CSR_HTVAL] = htval = std::make_shared<basic_csr_t>(proc, CSR_HTVAL, 0);
+  csrmap[CSR_HTINST] = htinst = std::make_shared<basic_csr_t>(proc, CSR_HTINST, 0);
+  csrmap[CSR_HGATP] = hgatp = std::make_shared<hgatp_csr_t>(proc, CSR_HGATP);
+  nonvirtual_sstatus = std::make_shared<sstatus_proxy_csr_t>(proc, CSR_SSTATUS, mstatus);
+  csrmap[CSR_VSSTATUS] = vsstatus = std::make_shared<vsstatus_csr_t>(proc, CSR_VSSTATUS);
+  csrmap[CSR_SSTATUS] = sstatus = std::make_shared<sstatus_csr_t>(proc, nonvirtual_sstatus, vsstatus);
+
+  csrmap[CSR_DPC] = dpc = std::make_shared<dpc_csr_t>(proc, CSR_DPC);
+  csrmap[CSR_DSCRATCH0] = std::make_shared<debug_mode_csr_t>(proc, CSR_DSCRATCH0);
+  csrmap[CSR_DSCRATCH1] = std::make_shared<debug_mode_csr_t>(proc, CSR_DSCRATCH1);
+  csrmap[CSR_DCSR] = dcsr = std::make_shared<dcsr_csr_t>(proc, CSR_DCSR);
+
+  csrmap[CSR_TSELECT] = tselect = std::make_shared<tselect_csr_t>(proc, CSR_TSELECT);
+  if (proc->get_cfg().trigger_count > 0) {
+    csrmap[CSR_TDATA1] = std::make_shared<tdata1_csr_t>(proc, CSR_TDATA1);
+    csrmap[CSR_TDATA2] = tdata2 = std::make_shared<tdata2_csr_t>(proc, CSR_TDATA2);
+    csrmap[CSR_TDATA3] = std::make_shared<tdata3_csr_t>(proc, CSR_TDATA3);
+    csrmap[CSR_TINFO] = std::make_shared<tinfo_csr_t>(proc, CSR_TINFO);
+    csrmap[CSR_TCONTROL] = tcontrol = std::make_shared<masked_csr_t>(proc, CSR_TCONTROL, CSR_TCONTROL_MPTE | CSR_TCONTROL_MTE, 0);
+  } else {
+    csrmap[CSR_TDATA1] = std::make_shared<const_csr_t>(proc, CSR_TDATA1, 0);
+    csrmap[CSR_TDATA2] = tdata2 = std::make_shared<const_csr_t>(proc, CSR_TDATA2, 0);
+    csrmap[CSR_TDATA3] = std::make_shared<const_csr_t>(proc, CSR_TDATA3, 0);
+    csrmap[CSR_TINFO] = std::make_shared<const_csr_t>(proc, CSR_TINFO, 0);
+    csrmap[CSR_TCONTROL] = tcontrol = std::make_shared<const_csr_t>(proc, CSR_TCONTROL, 0);
+  }
+  unsigned scontext_length = (xlen == 32 ? 16 : 32); // debug spec suggests 16-bit for RV32 and 32-bit for RV64
+  csrmap[CSR_SCONTEXT] = scontext = std::make_shared<masked_csr_t>(proc, CSR_SCONTEXT, (reg_t(1) << scontext_length) - 1, 0);
+  unsigned hcontext_length = (xlen == 32 ? 6 : 13) + (proc->extension_enabled('H') ? 1 : 0); // debug spec suggest 7-bit (6-bit) for RV32 and 14-bit (13-bit) for RV64 with (without) H extension
+  csrmap[CSR_HCONTEXT] = std::make_shared<masked_csr_t>(proc, CSR_HCONTEXT, (reg_t(1) << hcontext_length) - 1, 0);
+  csrmap[CSR_MCONTEXT] = mcontext = std::make_shared<proxy_csr_t>(proc, CSR_MCONTEXT, csrmap[CSR_HCONTEXT]);
   debug_mode = false;
   single_step = STEP_NONE;
 
-  memset(this->pmpcfg, 0, sizeof(this->pmpcfg));
-  memset(this->pmpaddr, 0, sizeof(this->pmpaddr));
+  csrmap[CSR_MSECCFG] = mseccfg = std::make_shared<mseccfg_csr_t>(proc, CSR_MSECCFG);
 
-  fflags = 0;
-  frm = 0;
+  for (int i = 0; i < max_pmp; ++i) {
+    csrmap[CSR_PMPADDR0 + i] = pmpaddr[i] = std::make_shared<pmpaddr_csr_t>(proc, CSR_PMPADDR0 + i);
+  }
+  for (int i = 0; i < max_pmp; i += xlen / 8) {
+    reg_t addr = CSR_PMPCFG0 + i / 4;
+    csrmap[addr] = std::make_shared<pmpcfg_csr_t>(proc, addr);
+  }
+
+  csrmap[CSR_FFLAGS] = fflags = std::make_shared<float_csr_t>(proc, CSR_FFLAGS, FSR_AEXC >> FSR_AEXC_SHIFT, 0);
+  csrmap[CSR_FRM] = frm = std::make_shared<float_csr_t>(proc, CSR_FRM, FSR_RD >> FSR_RD_SHIFT, 0);
+  assert(FSR_AEXC_SHIFT == 0);  // composite_csr_t assumes fflags begins at bit 0
+  csrmap[CSR_FCSR] = std::make_shared<composite_csr_t>(proc, CSR_FCSR, frm, fflags, FSR_RD_SHIFT);
+
+  csrmap[CSR_SEED] = std::make_shared<seed_csr_t>(proc, CSR_SEED);
+
+  csrmap[CSR_MARCHID] = std::make_shared<const_csr_t>(proc, CSR_MARCHID, 5);
+  csrmap[CSR_MIMPID] = std::make_shared<const_csr_t>(proc, CSR_MIMPID, 0);
+  csrmap[CSR_MVENDORID] = std::make_shared<const_csr_t>(proc, CSR_MVENDORID, 0);
+  csrmap[CSR_MHARTID] = std::make_shared<const_csr_t>(proc, CSR_MHARTID, proc->get_id());
+  csrmap[CSR_MCONFIGPTR] = std::make_shared<const_csr_t>(proc, CSR_MCONFIGPTR, 0);
+  if (proc->extension_enabled_const('U')) {
+    const reg_t menvcfg_mask = (proc->extension_enabled(EXT_ZICBOM) ? MENVCFG_CBCFE | MENVCFG_CBIE : 0) |
+                              (proc->extension_enabled(EXT_ZICBOZ) ? MENVCFG_CBZE : 0) |
+                              (proc->extension_enabled(EXT_SVADU) ? MENVCFG_ADUE: 0) |
+                              (proc->extension_enabled(EXT_SVPBMT) ? MENVCFG_PBMTE : 0) |
+                              (proc->extension_enabled(EXT_SSTC) ? MENVCFG_STCE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? MENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? MENVCFG_SSE : 0);
+    const reg_t menvcfg_init = (proc->extension_enabled(EXT_SVPBMT) ? MENVCFG_PBMTE : 0);
+    menvcfg = std::make_shared<envcfg_csr_t>(proc, CSR_MENVCFG, menvcfg_mask, menvcfg_init);
+    if (xlen == 32) {
+      csrmap[CSR_MENVCFG] = std::make_shared<rv32_low_csr_t>(proc, CSR_MENVCFG, menvcfg);
+      csrmap[CSR_MENVCFGH] = std::make_shared<rv32_high_csr_t>(proc, CSR_MENVCFGH, menvcfg);
+    } else {
+      csrmap[CSR_MENVCFG] = menvcfg;
+    }
+    const reg_t senvcfg_mask = (proc->extension_enabled(EXT_ZICBOM) ? SENVCFG_CBCFE | SENVCFG_CBIE : 0) |
+                              (proc->extension_enabled(EXT_ZICBOZ) ? SENVCFG_CBZE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? SENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? SENVCFG_SSE : 0);
+    csrmap[CSR_SENVCFG] = senvcfg = std::make_shared<senvcfg_csr_t>(proc, CSR_SENVCFG, senvcfg_mask, 0);
+    const reg_t henvcfg_mask = (proc->extension_enabled(EXT_ZICBOM) ? HENVCFG_CBCFE | HENVCFG_CBIE : 0) |
+                              (proc->extension_enabled(EXT_ZICBOZ) ? HENVCFG_CBZE : 0) |
+                              (proc->extension_enabled(EXT_SVADU) ? HENVCFG_ADUE: 0) |
+                              (proc->extension_enabled(EXT_SVPBMT) ? HENVCFG_PBMTE : 0) |
+                              (proc->extension_enabled(EXT_SSTC) ? HENVCFG_STCE : 0) |
+                              (proc->extension_enabled(EXT_ZICFILP) ? HENVCFG_LPE : 0) |
+                              (proc->extension_enabled(EXT_ZICFISS) ? HENVCFG_SSE : 0);
+    const reg_t henvcfg_init = (proc->extension_enabled(EXT_SVPBMT) ? HENVCFG_PBMTE : 0);
+    henvcfg = std::make_shared<henvcfg_csr_t>(proc, CSR_HENVCFG, henvcfg_mask, henvcfg_init, menvcfg);
+    if (xlen == 32) {
+      csrmap[CSR_HENVCFG] = std::make_shared<rv32_low_csr_t>(proc, CSR_HENVCFG, henvcfg);
+      csrmap[CSR_HENVCFGH] = std::make_shared<rv32_high_csr_t>(proc, CSR_HENVCFGH, henvcfg);
+    } else {
+      csrmap[CSR_HENVCFG] = henvcfg;
+    }
+  }
+  if (proc->extension_enabled_const(EXT_SMSTATEEN)) {
+    const reg_t sstateen0_mask = (proc->extension_enabled(EXT_ZFINX) ? SSTATEEN0_FCSR : 0) |
+                                 (proc->extension_enabled(EXT_ZCMT) ? SSTATEEN0_JVT : 0) |
+                                 SSTATEEN0_CS;
+    const reg_t hstateen0_mask = sstateen0_mask | HSTATEEN0_SENVCFG | HSTATEEN_SSTATEEN;
+    const reg_t mstateen0_mask = hstateen0_mask | (proc->extension_enabled(EXT_SSQOSID) ?  MSTATEEN0_PRIV114 : 0);
+    for (int i = 0; i < 4; i++) {
+      const reg_t mstateen_mask = i == 0 ? mstateen0_mask : MSTATEEN_HSTATEEN;
+      mstateen[i] = std::make_shared<masked_csr_t>(proc, CSR_MSTATEEN0 + i, mstateen_mask, 0);
+      if (xlen == 32) {
+        csrmap[CSR_MSTATEEN0 + i] = std::make_shared<rv32_low_csr_t>(proc, CSR_MSTATEEN0 + i, mstateen[i]);
+        csrmap[CSR_MSTATEEN0H + i] = std::make_shared<rv32_high_csr_t>(proc, CSR_MSTATEEN0H + i, mstateen[i]);
+      } else {
+        csrmap[CSR_MSTATEEN0 + i] = mstateen[i];
+      }
+
+      const reg_t hstateen_mask = i == 0 ? hstateen0_mask : HSTATEEN_SSTATEEN;
+      hstateen[i] = std::make_shared<hstateen_csr_t>(proc, CSR_HSTATEEN0 + i, hstateen_mask, 0, i);
+      if (xlen == 32) {
+        csrmap[CSR_HSTATEEN0 + i] = std::make_shared<rv32_low_csr_t>(proc, CSR_HSTATEEN0 + i, hstateen[i]);
+        csrmap[CSR_HSTATEEN0H + i] = std::make_shared<rv32_high_csr_t>(proc, CSR_HSTATEEN0H + i, hstateen[i]);
+      } else {
+        csrmap[CSR_HSTATEEN0 + i] = hstateen[i];
+      }
+
+      const reg_t sstateen_mask = i == 0 ? sstateen0_mask : 0;
+      csrmap[CSR_SSTATEEN0 + i] = sstateen[i] = std::make_shared<sstateen_csr_t>(proc, CSR_SSTATEEN0 + i, sstateen_mask, 0, i);
+    }
+  }
+
+  if (proc->extension_enabled_const(EXT_SMRNMI)) {
+    csrmap[CSR_MNSCRATCH] = std::make_shared<basic_csr_t>(proc, CSR_MNSCRATCH, 0);
+    csrmap[CSR_MNEPC] = mnepc = std::make_shared<epc_csr_t>(proc, CSR_MNEPC);
+    csrmap[CSR_MNCAUSE] = std::make_shared<const_csr_t>(proc, CSR_MNCAUSE, (reg_t)1 << (xlen - 1));
+    csrmap[CSR_MNSTATUS] = mnstatus = std::make_shared<mnstatus_csr_t>(proc, CSR_MNSTATUS);
+  }
+
+  if (proc->extension_enabled_const(EXT_SSTC)) {
+    stimecmp = std::make_shared<stimecmp_csr_t>(proc, CSR_STIMECMP, MIP_STIP);
+    vstimecmp = std::make_shared<stimecmp_csr_t>(proc, CSR_VSTIMECMP, MIP_VSTIP);
+    auto virtualized_stimecmp = std::make_shared<virtualized_stimecmp_csr_t>(proc, stimecmp, vstimecmp);
+    if (xlen == 32) {
+      csrmap[CSR_STIMECMP] = std::make_shared<rv32_low_csr_t>(proc, CSR_STIMECMP, virtualized_stimecmp);
+      csrmap[CSR_STIMECMPH] = std::make_shared<rv32_high_csr_t>(proc, CSR_STIMECMPH, virtualized_stimecmp);
+      csrmap[CSR_VSTIMECMP] = std::make_shared<rv32_low_csr_t>(proc, CSR_VSTIMECMP, vstimecmp);
+      csrmap[CSR_VSTIMECMPH] = std::make_shared<rv32_high_csr_t>(proc, CSR_VSTIMECMPH, vstimecmp);
+    } else {
+      csrmap[CSR_STIMECMP] = virtualized_stimecmp;
+      csrmap[CSR_VSTIMECMP] = vstimecmp;
+    }
+  }
+
+  if (proc->extension_enabled(EXT_ZCMT))
+    csrmap[CSR_JVT] = jvt = std::make_shared<jvt_csr_t>(proc, CSR_JVT, 0);
+
+  if (proc->extension_enabled(EXT_ZICFISS)) {
+    reg_t ssp_mask = -reg_t(xlen / 8);
+    csrmap[CSR_SSP] = ssp = std::make_shared<ssp_csr_t>(proc, CSR_SSP, ssp_mask, 0);
+  }
+
+
+  // Smcsrind / Sscsrind
+  sscsrind_reg_csr_t::sscsrind_reg_csr_t_p mireg[6];
+  sscsrind_reg_csr_t::sscsrind_reg_csr_t_p sireg[6];
+  sscsrind_reg_csr_t::sscsrind_reg_csr_t_p vsireg[6];
+
+  if (proc->extension_enabled_const(EXT_SMCSRIND)) {
+    csr_t_p miselect = std::make_shared<basic_csr_t>(proc, CSR_MISELECT, 0);
+    csrmap[CSR_MISELECT] = miselect;
+
+    const reg_t mireg_csrs[] = { CSR_MIREG, CSR_MIREG2, CSR_MIREG3, CSR_MIREG4, CSR_MIREG5, CSR_MIREG6 };
+    auto i = 0;
+    for (auto csr : mireg_csrs) {
+      csrmap[csr] = mireg[i] = std::make_shared<sscsrind_reg_csr_t>(proc, csr, miselect);
+      i++;
+    }
+  }
+
+  if (proc->extension_enabled_const(EXT_SSCSRIND)) {
+    csr_t_p vsiselect = std::make_shared<basic_csr_t>(proc, CSR_VSISELECT, 0);
+    csrmap[CSR_VSISELECT] = vsiselect;
+    csr_t_p siselect = std::make_shared<basic_csr_t>(proc, CSR_SISELECT, 0);
+    csrmap[CSR_SISELECT] = std::make_shared<virtualized_csr_t>(proc, siselect, vsiselect);
+
+    const reg_t vsireg_csrs[] = { CSR_VSIREG, CSR_VSIREG2, CSR_VSIREG3, CSR_VSIREG4, CSR_VSIREG5, CSR_VSIREG6 };
+    auto i = 0;
+    for (auto csr : vsireg_csrs) {
+      csrmap[csr] = vsireg[i] = std::make_shared<sscsrind_reg_csr_t>(proc, csr, vsiselect);
+      i++;
+    }
+
+    const reg_t sireg_csrs[] = { CSR_SIREG, CSR_SIREG2, CSR_SIREG3, CSR_SIREG4, CSR_SIREG5, CSR_SIREG6 };
+    i = 0;
+    for (auto csr : sireg_csrs) {
+      sireg[i] = std::make_shared<sscsrind_reg_csr_t>(proc, csr, siselect);
+      csrmap[csr] = std::make_shared<virtualized_indirect_csr_t>(proc, sireg[i], vsireg[i]);
+      i++;
+    }
+  }
+
+  if (smcntrpmf_enabled) {
+      if (xlen == 32) {
+        csrmap[CSR_MCYCLECFG] = std::make_shared<rv32_low_csr_t>(proc, CSR_MCYCLECFG, mcyclecfg);
+        csrmap[CSR_MCYCLECFGH] = std::make_shared<rv32_high_csr_t>(proc, CSR_MCYCLECFGH, mcyclecfg);
+        csrmap[CSR_MINSTRETCFG] = std::make_shared<rv32_low_csr_t>(proc, CSR_MINSTRETCFG, minstretcfg);
+        csrmap[CSR_MINSTRETCFGH] = std::make_shared<rv32_high_csr_t>(proc, CSR_MINSTRETCFGH, minstretcfg);
+      } else {
+        csrmap[CSR_MCYCLECFG] = mcyclecfg;
+        csrmap[CSR_MINSTRETCFG] = minstretcfg;
+      }
+  }
+
+  if (proc->extension_enabled_const(EXT_SSQOSID)) {
+    const reg_t srmcfg_mask = SRMCFG_MCID | SRMCFG_RCID;
+    srmcfg = std::make_shared<srmcfg_csr_t>(proc, CSR_SRMCFG, srmcfg_mask, 0);
+    csrmap[CSR_SRMCFG] = srmcfg;
+  }
+
   serialized = false;
 
-#ifdef RISCV_ENABLE_COMMITLOG
   log_reg_write.clear();
   log_mem_read.clear();
   log_mem_write.clear();
   last_inst_priv = 0;
   last_inst_xlen = 0;
   last_inst_flen = 0;
-#endif
+
+  elp = elp_t::NO_LP_EXPECTED;
 }
-
-void processor_t::vectorUnit_t::reset(){
-  free(reg_file);
-  VLEN = get_vlen();
-  ELEN = get_elen();
-  reg_file = malloc(NVPR * vlenb);
-  memset(reg_file, 0, NVPR * vlenb);
-
-  vtype = 0;
-  set_vl(0, 0, 0, -1); // default to illegal configuration
-}
-
-reg_t processor_t::vectorUnit_t::set_vl(int rd, int rs1, reg_t reqVL, reg_t newType){
-  int new_vlmul = 0;
-  if (vtype != newType){
-    vtype = newType;
-    vsew = 1 << (extract64(newType, 3, 3) + 3);
-    new_vlmul = int8_t(extract64(newType, 0, 3) << 5) >> 5;
-    vflmul = new_vlmul >= 0 ? 1 << new_vlmul : 1.0 / (1 << -new_vlmul);
-    vlmax = (VLEN/vsew) * vflmul;
-    vta = extract64(newType, 6, 1);
-    vma = extract64(newType, 7, 1);
-
-    vill = !(vflmul >= 0.125 && vflmul <= 8)
-           || vsew > std::min(vflmul, 1.0f) * ELEN
-           || (newType >> 8) != 0;
-
-    if (vill) {
-      vlmax = 0;
-      vtype = UINT64_MAX << (p->get_xlen() - 1);
-    }
-  }
-
-  // set vl
-  if (vlmax == 0) {
-    vl = 0;
-  } else if (rd == 0 && rs1 == 0) {
-    vl = vl > vlmax ? vlmax : vl;
-  } else if (rd != 0 && rs1 == 0) {
-    vl = vlmax;
-  } else if (rs1 != 0) {
-    vl = reqVL > vlmax ? vlmax : reqVL;
-  }
-
-  vstart = 0;
-  setvl_count++;
-  return vl;
-}
-
-void processor_t::matrixUnit_t::reset(){
-  free(tr_file);
-  free(acc_file);
-  tr_file = malloc(mlenb * 8);
-  memset(tr_file, 0, mlenb * 8);
-  
-  acc_file = malloc(mlenb * 4 * 16);
-  memset(acc_file, 0, mlenb * 4 * 16);
-
-  mtype = 0;
-  tile_m = 0;
-  tile_n = 0;
-  tile_k = 0;
-}
-
-reg_t processor_t::matrixUnit_t::set_mtype(int rd, reg_t newType) {
-  mtype = newType;
-  msew = 1 << (extract64(newType, 0, 3) + 3);
-  maccq = extract64(newType, 3, 1);
-  mbf16 = extract64(newType, 4, 1);
-  mtf32 = extract64(newType, 5, 1);
-
-  return mtype;
-}
-
-
-reg_t processor_t::matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
-  reg_t MMAX = mrows;
-  reg_t NMAX = mcols / msew;
-  reg_t KMAX = std::min(MMAX, NMAX);
-
-  if (dim == 'm' || dim == 'M') {
-    if (rs1 != 0 && rd != 0) {
-      tile_m = newMlen > MMAX? MMAX : newMlen;
-    } else if (rs1 == 0 && rd != 0) {
-      tile_m = MMAX;
-    }
-    return tile_m;
-  } else if (dim == 'k' || dim == 'K') {
-    if (rs1 != 0 && rd != 0) {
-      tile_k = newMlen > KMAX? KMAX : newMlen;
-    } else if (rs1 == 0 && rd != 0) {
-      tile_k = KMAX;
-    }
-    return tile_k;
-  } else if (dim == 'n' || dim == 'N') {
-    if (rs1 != 0 && rd != 0) {
-      tile_n = newMlen > NMAX? NMAX : newMlen;
-    } else if (rs1 == 0 && rd != 0) {
-      tile_n = NMAX;
-    }
-    return tile_n;
-  } else {
-    return 0;
-  }
-
-}
-
-reg_t processor_t::matrixUnit_t::set_moutsh(int rd, int rs1, int rs2){
-  outshape[0] = extract64(rs1, 0,  16);
-  outshape[1] = extract64(rs1, 16, 16);
-
-  mstr_w = extract64(rs2, 0,  8);
-  mstr_h = extract64(rs2, 8,  8);
-  mdil_w = extract64(rs2, 16, 8);
-  mdil_h = extract64(rs2, 24, 8);
-
-  return outshape[0] || outshape[1] << 16;
-}
-
-reg_t processor_t::matrixUnit_t::set_insh(int rd, int rs1, int rs2) {
-  inshape[0] = extract64(rs1, 0,  16);
-  inshape[1] = extract64(rs1, 16, 16);
-
-  mpad_right  = extract64(rs2, 0,  8);
-  mpad_left   = extract64(rs2, 8,  8);
-  mpad_bottom = extract64(rs2, 16, 8);
-  mpad_top    = extract64(rs2, 24, 8);
-
-  return inshape[0] || inshape[1] << 16;
-}
-
-reg_t processor_t::matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
-  mskin[0] = short(extract64(rs1, 0,  16));
-  mskin[1] = short(extract64(rs1, 16, 16));
-
-  mskout[0] = extract64(rs2, 0,  16);
-  mskout[1] = extract64(rs2, 16, 16);
-
-  return mskin[0] || mskin[1] << 16;
-}
-
 
 void processor_t::set_debug(bool value)
 {
@@ -536,48 +572,31 @@ void processor_t::set_debug(bool value)
 void processor_t::set_histogram(bool value)
 {
   histogram_enabled = value;
-#ifndef RISCV_ENABLE_HISTOGRAM
-  if (value) {
-    fprintf(stderr, "PC Histogram support has not been properly enabled;");
-    fprintf(stderr, " please re-build the riscv-isa-sim project using \"configure --enable-histogram\".\n");
-    abort();
-  }
-#endif
 }
 
-#ifdef RISCV_ENABLE_COMMITLOG
 void processor_t::enable_log_commits()
 {
   log_commits_enabled = true;
 }
-#endif
 
 void processor_t::reset()
 {
-  state.reset(max_isa);
-#ifdef RISCV_ENABLE_DUAL_ENDIAN
-  if (mmu->is_target_big_endian())
-    state.mstatus |= MSTATUS_UBE | MSTATUS_SBE | MSTATUS_MBE;
-#endif
-
-  state.mideleg = supports_extension('H') ? MIDELEG_FORCED_MASK : 0;
-
-  state.dcsr.halt = halt_on_reset;
+  xlen = isa->get_max_xlen();
+  state.reset(this, isa->get_max_isa());
+  state.dcsr->halt = halt_on_reset;
   halt_on_reset = false;
-  set_csr(CSR_MSTATUS, state.mstatus);
-  state.vsstatus = state.mstatus & SSTATUS_VS_MASK;  // set UXL
-  set_csr(CSR_HSTATUS, state.hstatus);  // set VSXL
   VU.reset();
   MU.reset();
+  in_wfi = false;
 
   if (n_pmp > 0) {
     // For backwards compatibility with software that is unaware of PMP,
     // initialize PMP to permit unprivileged access to all of memory.
-    set_csr(CSR_PMPADDR0, ~reg_t(0));
-    set_csr(CSR_PMPCFG0, PMP_R | PMP_W | PMP_X | PMP_NAPOT);
+    put_csr(CSR_PMPADDR0, ~reg_t(0));
+    put_csr(CSR_PMPCFG0, PMP_R | PMP_W | PMP_X | PMP_NAPOT);
   }
 
-   for (auto e : custom_extensions) // reset any extensions
+  for (auto e : custom_extensions) // reset any extensions
     e.second->reset();
 
   if (sim)
@@ -608,16 +627,18 @@ void processor_t::set_pmp_num(reg_t n)
 {
   // check the number of pmp is in a reasonable range
   if (n > state.max_pmp) {
-    fprintf(stderr, "error: bad number of pmp regions: '%ld' from the dtb\n", (unsigned long)n);
+    fprintf(stderr, "error: number of PMP regions requested (%" PRIu64 ") exceeds maximum (%d)\n", n, state.max_pmp);
     abort();
   }
   n_pmp = n;
 }
 
-void processor_t::set_pmp_granularity(reg_t gran) {
+void processor_t::set_pmp_granularity(reg_t gran)
+{
   // check the pmp granularity is set from dtb(!=0) and is power of 2
-  if (gran < (1 << PMP_SHIFT) || (gran & (gran - 1)) != 0) {
-    fprintf(stderr, "error: bad pmp granularity '%ld' from the dtb\n", (unsigned long)gran);
+  unsigned min = 1 << PMP_SHIFT;
+  if (gran < min || (gran & (gran - 1)) != 0) {
+    fprintf(stderr, "error: PMP granularity (%" PRIu64 ") must be a power of two and at least %u\n", gran, min);
     abort();
   }
 
@@ -628,15 +649,16 @@ void processor_t::set_mmu_capability(int cap)
 {
   switch (cap) {
     case IMPL_MMU_SV32:
-      set_impl(cap, true);
+      set_impl(IMPL_MMU_SV32, true);
       set_impl(IMPL_MMU, true);
       break;
-    case IMPL_MMU_SV39:
-      set_impl(cap, true);
-      set_impl(IMPL_MMU, true);
-      break;
+    case IMPL_MMU_SV57:
+      set_impl(IMPL_MMU_SV57, true);
+      // Fall through
     case IMPL_MMU_SV48:
-      set_impl(cap, true);
+      set_impl(IMPL_MMU_SV48, true);
+      // Fall through
+    case IMPL_MMU_SV39:
       set_impl(IMPL_MMU_SV39, true);
       set_impl(IMPL_MMU, true);
       break;
@@ -644,6 +666,7 @@ void processor_t::set_mmu_capability(int cap)
       set_impl(IMPL_MMU_SV32, false);
       set_impl(IMPL_MMU_SV39, false);
       set_impl(IMPL_MMU_SV48, false);
+      set_impl(IMPL_MMU_SV57, false);
       set_impl(IMPL_MMU, false);
       break;
   }
@@ -651,38 +674,37 @@ void processor_t::set_mmu_capability(int cap)
 
 void processor_t::take_interrupt(reg_t pending_interrupts)
 {
-  reg_t enabled_interrupts, deleg, status, mie, m_enabled;
-  reg_t hsie, hs_enabled, vsie, vs_enabled;
-
   // Do nothing if no pending interrupts
   if (!pending_interrupts) {
     return;
   }
 
+  // Exit WFI if there are any pending interrupts
+  in_wfi = false;
+
   // M-ints have higher priority over HS-ints and VS-ints
-  mie = get_field(state.mstatus, MSTATUS_MIE);
-  m_enabled = state.prv < PRV_M || (state.prv == PRV_M && mie);
-  enabled_interrupts = pending_interrupts & ~state.mideleg & -m_enabled;
+  const reg_t mie = get_field(state.mstatus->read(), MSTATUS_MIE);
+  const reg_t m_enabled = state.prv < PRV_M || (state.prv == PRV_M && mie);
+  reg_t enabled_interrupts = pending_interrupts & ~state.mideleg->read() & -m_enabled;
   if (enabled_interrupts == 0) {
     // HS-ints have higher priority over VS-ints
-    deleg = state.mideleg & ~state.hideleg;
-    status = (state.v) ? state.vsstatus : state.mstatus;
-    hsie = get_field(status, MSTATUS_SIE);
-    hs_enabled = state.v || state.prv < PRV_S || (state.prv == PRV_S && hsie);
-    enabled_interrupts = pending_interrupts & deleg & -hs_enabled;
+    const reg_t deleg_to_hs = state.mideleg->read() & ~state.hideleg->read();
+    const reg_t sie = get_field(state.sstatus->read(), MSTATUS_SIE);
+    const reg_t hs_enabled = state.v || state.prv < PRV_S || (state.prv == PRV_S && sie);
+    enabled_interrupts = pending_interrupts & deleg_to_hs & -hs_enabled;
     if (state.v && enabled_interrupts == 0) {
       // VS-ints have least priority and can only be taken with virt enabled
-      deleg = state.mideleg & state.hideleg;
-      vsie = get_field(state.mstatus, MSTATUS_SIE);
-      vs_enabled = state.prv < PRV_S || (state.prv == PRV_S && vsie);
-      enabled_interrupts = pending_interrupts & deleg & -vs_enabled;
+      const reg_t deleg_to_vs = state.hideleg->read();
+      const reg_t vs_enabled = state.prv < PRV_S || (state.prv == PRV_S && sie);
+      enabled_interrupts = pending_interrupts & deleg_to_vs & -vs_enabled;
     }
   }
 
-  if (!state.debug_mode && enabled_interrupts) {
+  const bool nmie = !(state.mnstatus && !get_field(state.mnstatus->read(), MNSTATUS_NMIE));
+  if (!state.debug_mode && nmie && enabled_interrupts) {
     // nonstandard interrupts have highest priority
-    if (enabled_interrupts >> IRQ_M_EXT)
-      enabled_interrupts = enabled_interrupts >> IRQ_M_EXT << IRQ_M_EXT;
+    if (enabled_interrupts >> (IRQ_M_EXT + 1))
+      enabled_interrupts = enabled_interrupts >> (IRQ_M_EXT + 1) << (IRQ_M_EXT + 1);
     // standard interrupt priority is MEI, MSI, MTI, SEI, SSI, STI
     else if (enabled_interrupts & MIP_MEIP)
       enabled_interrupts = MIP_MEIP;
@@ -696,6 +718,8 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
       enabled_interrupts = MIP_SSIP;
     else if (enabled_interrupts & MIP_STIP)
       enabled_interrupts = MIP_STIP;
+    else if (enabled_interrupts & MIP_LCOFIP)
+      enabled_interrupts = MIP_LCOFIP;
     else if (enabled_interrupts & MIP_VSEIP)
       enabled_interrupts = MIP_VSEIP;
     else if (enabled_interrupts & MIP_VSSIP)
@@ -705,79 +729,91 @@ void processor_t::take_interrupt(reg_t pending_interrupts)
     else
       abort();
 
-    throw trap_t(((reg_t)1 << (max_xlen-1)) | ctz(enabled_interrupts));
+    if (check_triggers_icount) TM.detect_icount_match();
+    throw trap_t(((reg_t)1 << (isa->get_max_xlen() - 1)) | ctz(enabled_interrupts));
   }
-}
-
-static int xlen_to_uxl(int xlen)
-{
-  if (xlen == 32)
-    return 1;
-  if (xlen == 64)
-    return 2;
-  abort();
 }
 
 reg_t processor_t::legalize_privilege(reg_t prv)
 {
   assert(prv <= PRV_M);
 
-  if (!supports_extension('U'))
+  if (!extension_enabled('U'))
     return PRV_M;
 
-  if (prv == PRV_HS || (prv == PRV_S && !supports_extension('S')))
+  if (prv == PRV_HS || (prv == PRV_S && !extension_enabled('S')))
     return PRV_U;
 
   return prv;
 }
 
-void processor_t::set_privilege(reg_t prv)
+void processor_t::set_privilege(reg_t prv, bool virt)
 {
   mmu->flush_tlb();
+  state.prev_prv = state.prv;
+  state.prev_v = state.v;
   state.prv = legalize_privilege(prv);
+  state.v = virt && state.prv != PRV_M;
+  state.prv_changed = state.prv != state.prev_prv;
+  state.v_changed = state.v != state.prev_v;
 }
 
-void processor_t::set_virt(bool virt)
+const char* processor_t::get_privilege_string()
 {
-  reg_t tmp, mask;
-
-  if (state.prv == PRV_M)
-    return;
-
-  if (state.v != virt) {
-    /*
-     * Ideally, we should flush TLB here but we don't need it because
-     * set_virt() is always used in conjucter with set_privilege() and
-     * set_privilege() will flush TLB unconditionally.
-     */
-    mask = SSTATUS_VS_MASK;
-    mask |= (supports_extension('V') ? SSTATUS_VS : 0);
-    mask |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-    tmp = state.mstatus & mask;
-    state.mstatus = (state.mstatus & ~mask) | (state.vsstatus & mask);
-    state.vsstatus = tmp;
-    state.v = virt;
+  if (state.debug_mode)
+    return "D";
+  if (state.v) {
+    switch (state.prv) {
+    case 0x0: return "VU";
+    case 0x1: return "VS";
+    }
+  } else {
+    switch (state.prv) {
+    case 0x0: return "U";
+    case 0x1: return "S";
+    case 0x3: return "M";
+    }
   }
+  fprintf(stderr, "Invalid prv=%lx v=%x\n", (unsigned long)state.prv, state.v);
+  abort();
 }
 
 void processor_t::enter_debug_mode(uint8_t cause)
 {
+  const bool has_zicfilp = extension_enabled(EXT_ZICFILP);
   state.debug_mode = true;
-  state.dcsr.cause = cause;
-  state.dcsr.prv = state.prv;
-  set_privilege(PRV_M);
-  state.dpc = state.pc;
+  state.dcsr->update_fields(cause, state.prv, state.v, state.elp);
+  state.elp = elp_t::NO_LP_EXPECTED;
+  set_privilege(PRV_M, false);
+  state.dpc->write(state.pc);
   state.pc = DEBUG_ROM_ENTRY;
+  in_wfi = false;
+}
+
+void processor_t::debug_output_log(std::stringstream *s)
+{
+  if (log_file == stderr) {
+    std::ostream out(sout_.rdbuf());
+    out << s->str(); // handles command line options -d -s -l
+  } else {
+    fputs(s->str().c_str(), log_file); // handles command line option --log
+  }
 }
 
 void processor_t::take_trap(trap_t& t, reg_t epc)
 {
+  unsigned max_xlen = isa->get_max_xlen();
+
   if (debug) {
-    fprintf(log_file, "core %3d: exception %s, epc 0x%0*" PRIx64 "\n",
-            id, t.name(), max_xlen/4, zext(epc, max_xlen));
+    std::stringstream s; // first put everything in a string, later send it to output
+    s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+      << ": exception " << t.name() << ", epc 0x"
+      << std::hex << std::setfill('0') << std::setw(max_xlen/4) << zext(epc, max_xlen) << std::endl;
     if (t.has_tval())
-      fprintf(log_file, "core %3d:           tval 0x%0*" PRIx64 "\n",
-              id, max_xlen/4, zext(t.get_tval(), max_xlen));
+       s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+         << ":           tval 0x" << std::hex << std::setfill('0') << std::setw(max_xlen / 4)
+         << zext(t.get_tval(), max_xlen) << std::endl;
+    debug_output_log(&s);
   }
 
   if (state.debug_mode) {
@@ -789,106 +825,157 @@ void processor_t::take_trap(trap_t& t, reg_t epc)
     return;
   }
 
-  if (t.cause() == CAUSE_BREAKPOINT && (
-              (state.prv == PRV_M && state.dcsr.ebreakm) ||
-              (state.prv == PRV_S && state.dcsr.ebreaks) ||
-              (state.prv == PRV_U && state.dcsr.ebreaku))) {
-    enter_debug_mode(DCSR_CAUSE_SWBP);
-    return;
-  }
-
   // By default, trap to M-mode, unless delegated to HS-mode or VS-mode
   reg_t vsdeleg, hsdeleg;
   reg_t bit = t.cause();
   bool curr_virt = state.v;
-  bool interrupt = (bit & ((reg_t)1 << (max_xlen-1))) != 0;
+  const reg_t interrupt_bit = (reg_t)1 << (max_xlen - 1);
+  bool interrupt = (bit & interrupt_bit) != 0;
   if (interrupt) {
-    vsdeleg = (curr_virt && state.prv <= PRV_S) ? (state.mideleg & state.hideleg) : 0;
-    hsdeleg = (state.prv <= PRV_S) ? state.mideleg : 0;
-    bit &= ~((reg_t)1 << (max_xlen-1));
+    vsdeleg = (curr_virt && state.prv <= PRV_S) ? state.hideleg->read() : 0;
+    hsdeleg = (state.prv <= PRV_S) ? state.mideleg->read() : 0;
+    bit &= ~((reg_t)1 << (max_xlen - 1));
   } else {
-    vsdeleg = (curr_virt && state.prv <= PRV_S) ? (state.medeleg & state.hedeleg) : 0;
-    hsdeleg = (state.prv <= PRV_S) ? state.medeleg : 0;
+    vsdeleg = (curr_virt && state.prv <= PRV_S) ? (state.medeleg->read() & state.hedeleg->read()) : 0;
+    hsdeleg = (state.prv <= PRV_S) ? state.medeleg->read() : 0;
   }
   if (state.prv <= PRV_S && bit < max_xlen && ((vsdeleg >> bit) & 1)) {
     // Handle the trap in VS-mode
-    reg_t vector = (state.vstvec & 1) && interrupt ? 4*bit : 0;
-    state.pc = (state.vstvec & ~(reg_t)1) + vector;
-    state.vscause = (interrupt) ? (t.cause() - 1) : t.cause();
-    state.vsepc = epc;
-    state.vstval = t.get_tval();
+    const reg_t adjusted_cause = interrupt ? bit - 1 : bit;  // VSSIP -> SSIP, etc
+    reg_t vector = (state.vstvec->read() & 1) && interrupt ? 4 * adjusted_cause : 0;
+    state.pc = (state.vstvec->read() & ~(reg_t)1) + vector;
+    state.vscause->write(adjusted_cause | (interrupt ? interrupt_bit : 0));
+    state.vsepc->write(epc);
+    state.vstval->write(t.get_tval());
 
-    reg_t s = state.mstatus;
+    reg_t s = state.sstatus->read();
     s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE));
     s = set_field(s, MSTATUS_SPP, state.prv);
     s = set_field(s, MSTATUS_SIE, 0);
-    set_csr(CSR_MSTATUS, s);
-    set_privilege(PRV_S);
+    s = set_field(s, MSTATUS_SPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
+    state.sstatus->write(s);
+    set_privilege(PRV_S, true);
   } else if (state.prv <= PRV_S && bit < max_xlen && ((hsdeleg >> bit) & 1)) {
     // Handle the trap in HS-mode
-    set_virt(false);
-    reg_t vector = (state.stvec & 1) && interrupt ? 4*bit : 0;
-    state.pc = (state.stvec & ~(reg_t)1) + vector;
-    state.scause = t.cause();
-    state.sepc = epc;
-    state.stval = t.get_tval();
-    state.htval = t.get_tval2();
-    state.htinst = t.get_tinst();
+    reg_t vector = (state.nonvirtual_stvec->read() & 1) && interrupt ? 4 * bit : 0;
+    state.pc = (state.nonvirtual_stvec->read() & ~(reg_t)1) + vector;
+    state.nonvirtual_scause->write(t.cause());
+    state.nonvirtual_sepc->write(epc);
+    state.nonvirtual_stval->write(t.get_tval());
+    state.htval->write(t.get_tval2());
+    state.htinst->write(t.get_tinst());
 
-    reg_t s = state.mstatus;
+    reg_t s = state.nonvirtual_sstatus->read();
     s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE));
     s = set_field(s, MSTATUS_SPP, state.prv);
     s = set_field(s, MSTATUS_SIE, 0);
-    set_csr(CSR_MSTATUS, s);
-    s = state.hstatus;
-    if (curr_virt)
-      s = set_field(s, HSTATUS_SPVP, state.prv);
-    s = set_field(s, HSTATUS_SPV, curr_virt);
-    s = set_field(s, HSTATUS_GVA, t.has_gva());
-    set_csr(CSR_HSTATUS, s);
-    set_privilege(PRV_S);
+    s = set_field(s, MSTATUS_SPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
+    state.nonvirtual_sstatus->write(s);
+    if (extension_enabled('H')) {
+      s = state.hstatus->read();
+      if (curr_virt)
+        s = set_field(s, HSTATUS_SPVP, state.prv);
+      s = set_field(s, HSTATUS_SPV, curr_virt);
+      s = set_field(s, HSTATUS_GVA, t.has_gva());
+      state.hstatus->write(s);
+    }
+    set_privilege(PRV_S, false);
   } else {
     // Handle the trap in M-mode
-    set_virt(false);
-    reg_t vector = (state.mtvec & 1) && interrupt ? 4*bit : 0;
-    state.pc = (state.mtvec & ~(reg_t)1) + vector;
-    state.mepc = epc;
-    state.mcause = t.cause();
-    state.mtval = t.get_tval();
-    state.mtval2 = t.get_tval2();
-    state.mtinst = t.get_tinst();
+    const reg_t vector = (state.mtvec->read() & 1) && interrupt ? 4 * bit : 0;
+    const reg_t trap_handler_address = (state.mtvec->read() & ~(reg_t)1) + vector;
+    // RNMI exception vector is implementation-defined.  Since we don't model
+    // RNMI sources, the feature isn't very useful, so pick an invalid address.
+    const reg_t rnmi_trap_handler_address = 0;
+    const bool nmie = !(state.mnstatus && !get_field(state.mnstatus->read(), MNSTATUS_NMIE));
+    state.pc = !nmie ? rnmi_trap_handler_address : trap_handler_address;
+    state.mepc->write(epc);
+    state.mcause->write(t.cause());
+    state.mtval->write(t.get_tval());
+    state.mtval2->write(t.get_tval2());
+    state.mtinst->write(t.get_tinst());
 
-    reg_t s = state.mstatus;
+    reg_t s = state.mstatus->read();
     s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_MIE));
     s = set_field(s, MSTATUS_MPP, state.prv);
     s = set_field(s, MSTATUS_MIE, 0);
     s = set_field(s, MSTATUS_MPV, curr_virt);
     s = set_field(s, MSTATUS_GVA, t.has_gva());
-    set_csr(CSR_MSTATUS, s);
-    set_privilege(PRV_M);
+    s = set_field(s, MSTATUS_MPELP, state.elp);
+    state.elp = elp_t::NO_LP_EXPECTED;
+    state.mstatus->write(s);
+    if (state.mstatush) state.mstatush->write(s >> 32);  // log mstatush change
+    state.tcontrol->write((state.tcontrol->read() & CSR_TCONTROL_MTE) ? CSR_TCONTROL_MPTE : 0);
+    set_privilege(PRV_M, false);
+  }
+}
+
+void processor_t::take_trigger_action(triggers::action_t action, reg_t breakpoint_tval, reg_t epc, bool virt)
+{
+  if (debug) {
+    std::stringstream s; // first put everything in a string, later send it to output
+    s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+      << ": trigger action " << (int)action << std::endl;
+    debug_output_log(&s);
+  }
+
+  switch (action) {
+    case triggers::ACTION_DEBUG_MODE:
+      enter_debug_mode(DCSR_CAUSE_HWBP);
+      break;
+    case triggers::ACTION_DEBUG_EXCEPTION: {
+      trap_breakpoint trap(virt, breakpoint_tval);
+      take_trap(trap, epc);
+      break;
+    }
+    default:
+      abort();
+  }
+}
+
+const char* processor_t::get_symbol(uint64_t addr)
+{
+  return sim->get_symbol(addr);
+}
+
+void processor_t::check_if_lpad_required()
+{
+  if (unlikely(state.elp == elp_t::LP_EXPECTED)) {
+    // also see insns/lpad.h for more checks performed
+    insn_fetch_t fetch = mmu->load_insn(state.pc);
+    software_check((fetch.insn.bits() & MASK_LPAD) == MATCH_LPAD, LANDING_PAD_FAULT);
   }
 }
 
 void processor_t::disasm(insn_t insn)
 {
-  uint64_t bits = insn.bits() & ((1ULL << (8 * insn_length(insn.bits()))) - 1);
+  uint64_t bits = insn.bits();
   if (last_pc != state.pc || last_bits != bits) {
+    std::stringstream s;  // first put everything in a string, later send it to output
 
-#ifdef RISCV_ENABLE_COMMITLOG
     const char* sym = get_symbol(state.pc);
     if (sym != nullptr)
     {
-      fprintf(log_file, "core %3d: >>>>  %s\n", id, sym);
+      s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+        << ": >>>>  " << sym << std::endl;
     }
-#endif
 
     if (executions != 1) {
-      fprintf(log_file, "core %3d: Executed %" PRIx64 " times\n", id, executions);
+      s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+        << ": Executed " << executions << " times" << std::endl;
     }
 
-    fprintf(log_file, "core %3d: 0x%0*" PRIx64 " (0x%08" PRIx64 ") %s\n",
-            id, max_xlen/4, zext(state.pc, max_xlen), bits,
-            disassembler->disassemble(insn).c_str());
+    unsigned max_xlen = isa->get_max_xlen();
+
+    s << "core " << std::dec << std::setfill(' ') << std::setw(3) << id
+      << std::hex << ": 0x" << std::setfill('0') << std::setw(max_xlen / 4)
+      << zext(state.pc, max_xlen) << " (0x" << std::setw(8) << bits << ") "
+      << disassembler->disassemble(insn) << std::endl;
+
+    debug_output_log(&s);
+
     last_pc = state.pc;
     last_bits = bits;
     executions = 1;
@@ -899,583 +986,19 @@ void processor_t::disasm(insn_t insn)
 
 int processor_t::paddr_bits()
 {
+  unsigned max_xlen = isa->get_max_xlen();
   assert(xlen == max_xlen);
   return max_xlen == 64 ? 50 : 34;
 }
 
-reg_t processor_t::cal_satp(reg_t val) const
+void processor_t::put_csr(int which, reg_t val)
 {
-  reg_t reg_val = 0;
-  reg_t rv64_ppn_mask = (reg_t(1) << (MAX_PADDR_BITS - PGSHIFT)) - 1;
-  mmu->flush_tlb();
-  if (max_xlen == 32) {
-    reg_val = val & (SATP32_PPN |
-                    (supports_impl(IMPL_MMU_SV32) ? SATP32_MODE : 0));
-  }
-
-  if (max_xlen == 64 && (get_field(val, SATP64_MODE) == SATP_MODE_OFF ||
-                         get_field(val, SATP64_MODE) == SATP_MODE_SV39 ||
-                         get_field(val, SATP64_MODE) == SATP_MODE_SV48)) {
-    reg_val = val & (SATP64_PPN | rv64_ppn_mask);
-    reg_t mode = get_field(val, SATP64_MODE);
-
-    switch(mode) {
-      case SATP_MODE_OFF:
-      default:
-        mode = SATP_MODE_OFF;
-        break;
-      case SATP_MODE_SV39:
-        mode = supports_impl(IMPL_MMU_SV39) ? SATP_MODE_SV39 : SATP_MODE_OFF;
-        break;
-      case SATP_MODE_SV48:
-        mode = supports_impl(IMPL_MMU_SV48) ? SATP_MODE_SV48 : SATP_MODE_OFF;
-        break;
-    }
-    reg_val = set_field(reg_val, SATP64_MODE, mode);
-  }
-
-  return reg_val;
-}
-void processor_t::set_csr(int which, reg_t val)
-{
-#if defined(RISCV_ENABLE_COMMITLOG)
-#define LOG_CSR(rd) \
-  STATE.log_reg_write[((which) << 4) | 6] = {get_csr(rd), 0};
-#else
-#define LOG_CSR(rd)
-#endif
-
   val = zext_xlen(val);
-  reg_t supervisor_ints = supports_extension('S') ? MIP_SSIP | MIP_STIP | MIP_SEIP : 0;
-  reg_t vssip_int = supports_extension('H') ? MIP_VSSIP : 0;
-  reg_t hypervisor_ints = supports_extension('H') ? MIP_HS_MASK : 0;
-  reg_t coprocessor_ints = (!custom_extensions.empty()) << IRQ_COP;
-  reg_t delegable_ints = supervisor_ints | coprocessor_ints;
-  reg_t all_ints = delegable_ints | hypervisor_ints | MIP_MSIP | MIP_MTIP | MIP_MEIP;
-
-  if (which >= CSR_PMPADDR0 && which < CSR_PMPADDR0 + state.max_pmp) {
-    // If no PMPs are configured, disallow access to all.  Otherwise, allow
-    // access to all, but unimplemented ones are hardwired to zero.
-    if (n_pmp == 0)
-      return;
-
-    size_t i = which - CSR_PMPADDR0;
-    bool locked = state.pmpcfg[i] & PMP_L;
-    bool next_locked = i+1 < state.max_pmp && (state.pmpcfg[i+1] & PMP_L);
-    bool next_tor = i+1 < state.max_pmp && (state.pmpcfg[i+1] & PMP_A) == PMP_TOR;
-    if (i < n_pmp && !locked && !(next_locked && next_tor)) {
-      state.pmpaddr[i] = val & ((reg_t(1) << (MAX_PADDR_BITS - PMP_SHIFT)) - 1);
-      LOG_CSR(which);
-    }
-
-    mmu->flush_tlb();
+  auto search = state.csrmap.find(which);
+  if (search != state.csrmap.end()) {
+    search->second->write(val);
+    return;
   }
-
-  if (which >= CSR_PMPCFG0 && which < CSR_PMPCFG0 + state.max_pmp / 4) {
-    if (n_pmp == 0)
-      return;
-
-    for (size_t i0 = (which - CSR_PMPCFG0) * 4, i = i0; i < i0 + xlen / 8; i++) {
-      if (i < n_pmp && !(state.pmpcfg[i] & PMP_L)) {
-        uint8_t cfg = (val >> (8 * (i - i0))) & (PMP_R | PMP_W | PMP_X | PMP_A | PMP_L);
-        cfg &= ~PMP_W | ((cfg & PMP_R) ? PMP_W : 0); // Disallow R=0 W=1
-        if (lg_pmp_granularity != PMP_SHIFT && (cfg & PMP_A) == PMP_NA4)
-          cfg |= PMP_NAPOT; // Disallow A=NA4 when granularity > 4
-        state.pmpcfg[i] = cfg;
-        LOG_CSR(which);
-      }
-    }
-    mmu->flush_tlb();
-  }
-
-  switch (which)
-  {
-    case CSR_MENTROPY:
-      es.set_mentropy(val);
-      break;
-    case CSR_MNOISE:
-      es.set_mnoise(val);
-      break;
-    case CSR_FFLAGS:
-      dirty_fp_state;
-      state.fflags = val & (FSR_AEXC >> FSR_AEXC_SHIFT);
-      break;
-    case CSR_FRM:
-      dirty_fp_state;
-      state.frm = val & (FSR_RD >> FSR_RD_SHIFT);
-      break;
-    case CSR_FCSR:
-      dirty_fp_state;
-      state.fflags = (val & FSR_AEXC) >> FSR_AEXC_SHIFT;
-      state.frm = (val & FSR_RD) >> FSR_RD_SHIFT;
-      break;
-    case CSR_VCSR:
-      dirty_vs_state;
-      VU.vxsat = (val & VCSR_VXSAT) >> VCSR_VXSAT_SHIFT;
-      VU.vxrm = (val & VCSR_VXRM) >> VCSR_VXRM_SHIFT;
-      break;
-    case CSR_MSTATUS: {
-      bool has_page = supports_extension('S') && supports_impl(IMPL_MMU);
-      if ((val ^ state.mstatus) &
-          (MSTATUS_MPP | MSTATUS_MPRV
-           | (has_page ? (MSTATUS_MXR | MSTATUS_SUM) : 0)
-           | MSTATUS_MXR))
-        mmu->flush_tlb();
-
-      bool has_fs = supports_extension('S') || supports_extension('F')
-                  || supports_extension('V');
-      bool has_vs = supports_extension('V');
-      bool has_mpv = supports_extension('S') && supports_extension('H');
-      bool has_gva = has_mpv;
-
-      reg_t mask = MSTATUS_MIE | MSTATUS_MPIE | MSTATUS_MPRV
-                 | (supports_extension('S') ? (MSTATUS_SIE | MSTATUS_SPIE) : 0)
-                 | MSTATUS_TW | MSTATUS_TSR
-                 | (has_page ? (MSTATUS_MXR | MSTATUS_SUM | MSTATUS_TVM) : 0)
-                 | (has_fs ? MSTATUS_FS : 0)
-                 | (has_vs ? MSTATUS_VS : 0)
-                 | (!custom_extensions.empty() ? MSTATUS_XS : 0)
-                 | (has_gva ? MSTATUS_GVA : 0)
-                 | (has_mpv ? MSTATUS_MPV : 0);
-
-      reg_t requested_mpp = legalize_privilege(get_field(val, MSTATUS_MPP));
-      state.mstatus = set_field(state.mstatus, MSTATUS_MPP, requested_mpp);
-      if (supports_extension('S'))
-        mask |= MSTATUS_SPP;
-
-      state.mstatus = (state.mstatus & ~mask) | (val & mask);
-
-      bool dirty = (state.mstatus & MSTATUS_FS) == MSTATUS_FS;
-      dirty |= (state.mstatus & MSTATUS_XS) == MSTATUS_XS;
-      dirty |= (state.mstatus & MSTATUS_VS) == MSTATUS_VS;
-      if (max_xlen == 32)
-        state.mstatus = set_field(state.mstatus, MSTATUS32_SD, dirty);
-      else
-        state.mstatus = set_field(state.mstatus, MSTATUS64_SD, dirty);
-
-      if (supports_extension('U'))
-        state.mstatus = set_field(state.mstatus, MSTATUS_UXL, xlen_to_uxl(max_xlen));
-      if (supports_extension('S'))
-        state.mstatus = set_field(state.mstatus, MSTATUS_SXL, xlen_to_uxl(max_xlen));
-      // U-XLEN == S-XLEN == M-XLEN
-      xlen = max_xlen;
-      break;
-    }
-    case CSR_MIP: {
-      reg_t mask = (supervisor_ints | hypervisor_ints) & (MIP_SSIP | MIP_STIP | vssip_int);
-      state.mip = (state.mip & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_MIE:
-      state.mie = (state.mie & ~all_ints) | (val & all_ints);
-      break;
-    case CSR_MIDELEG:
-      state.mideleg = (state.mideleg & ~delegable_ints) | (val & delegable_ints);
-      break;
-    case CSR_MEDELEG: {
-      reg_t mask =
-        (1 << CAUSE_MISALIGNED_FETCH) |
-        (1 << CAUSE_BREAKPOINT) |
-        (1 << CAUSE_USER_ECALL) |
-        (1 << CAUSE_SUPERVISOR_ECALL) |
-        (1 << CAUSE_FETCH_PAGE_FAULT) |
-        (1 << CAUSE_LOAD_PAGE_FAULT) |
-        (1 << CAUSE_STORE_PAGE_FAULT);
-      mask |= supports_extension('H') ?
-        (1 << CAUSE_VIRTUAL_SUPERVISOR_ECALL) |
-        (1 << CAUSE_FETCH_GUEST_PAGE_FAULT) |
-        (1 << CAUSE_LOAD_GUEST_PAGE_FAULT) |
-        (1 << CAUSE_VIRTUAL_INSTRUCTION) |
-        (1 << CAUSE_STORE_GUEST_PAGE_FAULT)
-        : 0;
-      state.medeleg = (state.medeleg & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_MINSTRET:
-    case CSR_MCYCLE:
-      if (xlen == 32)
-        state.minstret = (state.minstret >> 32 << 32) | (val & 0xffffffffU);
-      else
-        state.minstret = val;
-      // The ISA mandates that if an instruction writes instret, the write
-      // takes precedence over the increment to instret.  However, Spike
-      // unconditionally increments instret after executing an instruction.
-      // Correct for this artifact by decrementing instret here.
-      state.minstret--;
-      break;
-    case CSR_MINSTRETH:
-    case CSR_MCYCLEH:
-      state.minstret = (val << 32) | (state.minstret << 32 >> 32);
-      state.minstret--; // See comment above.
-      break;
-    case CSR_SCOUNTEREN:
-      state.scounteren = val;
-      break;
-    case CSR_MCOUNTEREN:
-      state.mcounteren = val;
-      break;
-    case CSR_SSTATUS: {
-      reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_SPP | SSTATUS_FS
-                 | SSTATUS_XS | SSTATUS_SUM | SSTATUS_MXR
-                 | (supports_extension('V') ? SSTATUS_VS : 0);
-      return set_csr(CSR_MSTATUS, (state.mstatus & ~mask) | (val & mask));
-    }
-    case CSR_SIP: {
-      reg_t mask;
-      if (state.v) {
-        mask = state.hideleg & MIP_VSSIP;
-        val = val << 1;
-      } else {
-        mask = state.mideleg & MIP_SSIP;
-      }
-      state.mip = (state.mip & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_SIE: {
-      reg_t mask;
-      if (state.v) {
-        mask = state.hideleg & MIP_VS_MASK;
-        val = val << 1;
-      } else {
-        mask = state.mideleg & ~MIP_HS_MASK;
-      }
-      state.mie = (state.mie & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_SATP:
-      if (!supports_impl(IMPL_MMU))
-        val = 0;
-
-      if (state.v)
-        state.vsatp = cal_satp(val);
-      else
-        state.satp = cal_satp(val);
-      break;
-    case CSR_SEPC:
-      if (state.v)
-        state.vsepc = val & ~(reg_t)1;
-      else
-        state.sepc = val & ~(reg_t)1;
-      break;
-    case CSR_STVEC:
-      if (state.v)
-        state.vstvec = val & ~(reg_t)2;
-      else
-        state.stvec = val & ~(reg_t)2;
-      break;
-    case CSR_SSCRATCH:
-      if (state.v)
-        state.vsscratch = val;
-      else
-        state.sscratch = val;
-      break;
-    case CSR_SCAUSE:
-      if (state.v)
-        state.vscause = val;
-      else
-        state.scause = val;
-      break;
-    case CSR_STVAL:
-      if (state.v)
-        state.vstval = val;
-      else
-        state.stval = val;
-      break;
-    case CSR_MEPC: state.mepc = val & ~(reg_t)1; break;
-    case CSR_MTVEC: state.mtvec = val & ~(reg_t)2; break;
-    case CSR_MSCRATCH: state.mscratch = val; break;
-    case CSR_MCAUSE: state.mcause = val; break;
-    case CSR_MTVAL: state.mtval = val; break;
-    case CSR_MTVAL2: state.mtval2 = val; break;
-    case CSR_MTINST: state.mtinst = val; break;
-    case CSR_MISA: {
-      // the write is ignored if increasing IALIGN would misalign the PC
-      if (!(val & (1L << ('C' - 'A'))) && (state.pc & 2))
-        break;
-
-      if (!(val & (1L << ('F' - 'A'))))
-        val &= ~(1L << ('D' - 'A'));
-
-      // allow MAFDCB bits in MISA to be modified
-      reg_t mask = 0;
-      mask |= 1L << ('M' - 'A');
-      mask |= 1L << ('A' - 'A');
-      mask |= 1L << ('F' - 'A');
-      mask |= 1L << ('D' - 'A');
-      mask |= 1L << ('C' - 'A');
-      mask |= 1L << ('H' - 'A');
-      mask |= 1L << ('B' - 'A');
-      mask &= max_isa;
-
-      state.misa = (val & mask) | (state.misa & ~mask);
-
-      // update the forced bits in MIDELEG
-      if (supports_extension('H'))
-          state.mideleg |= MIDELEG_FORCED_MASK;
-      else
-          state.mideleg &= ~MIDELEG_FORCED_MASK;
-      break;
-    }
-    case CSR_HSTATUS: {
-      reg_t mask = HSTATUS_VTSR | HSTATUS_VTW
-                   | (supports_impl(IMPL_MMU) ? HSTATUS_VTVM : 0)
-                   | HSTATUS_HU | HSTATUS_SPVP | HSTATUS_SPV | HSTATUS_GVA;
-      state.hstatus = set_field(state.hstatus, HSTATUS_VSXL, xlen_to_uxl(max_xlen));
-      state.hstatus = (state.hstatus & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HEDELEG: {
-      reg_t mask =
-        (1 << CAUSE_MISALIGNED_FETCH) |
-        (1 << CAUSE_FETCH_ACCESS) |
-        (1 << CAUSE_ILLEGAL_INSTRUCTION) |
-        (1 << CAUSE_BREAKPOINT) |
-        (1 << CAUSE_MISALIGNED_LOAD) |
-        (1 << CAUSE_LOAD_ACCESS) |
-        (1 << CAUSE_MISALIGNED_STORE) |
-        (1 << CAUSE_STORE_ACCESS) |
-        (1 << CAUSE_USER_ECALL) |
-        (1 << CAUSE_FETCH_PAGE_FAULT) |
-        (1 << CAUSE_LOAD_PAGE_FAULT) |
-        (1 << CAUSE_STORE_PAGE_FAULT);
-      state.hedeleg = (state.hedeleg & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HIDELEG: {
-      reg_t mask = MIP_VS_MASK;
-      state.hideleg = (state.hideleg & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HIE: {
-      reg_t mask = MIP_HS_MASK;
-      state.mie = (state.mie & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HCOUNTEREN:
-      state.hcounteren = val;
-      break;
-    case CSR_HGEIE:
-      /* Ignore */
-      break;
-    case CSR_HTVAL:
-      state.htval = val;
-      break;
-    case CSR_HIP: {
-      reg_t mask = MIP_VSSIP;
-      state.mip = (state.mip & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HVIP: {
-      reg_t mask = MIP_VS_MASK;
-      state.mip = (state.mip & ~mask) | (val & mask);
-      break;
-    }
-    case CSR_HTINST:
-      state.htinst = val;
-      break;
-    case CSR_HGATP: {
-      reg_t reg_val = 0;
-      reg_t rv64_ppn_mask = (reg_t(1) << (MAX_PADDR_BITS - PGSHIFT)) - 1;
-      mmu->flush_tlb();
-      if (max_xlen == 32)
-        reg_val = val & (HGATP32_PPN | HGATP32_MODE);
-      if (max_xlen == 64 && (get_field(val, HGATP64_MODE) == HGATP_MODE_OFF ||
-                             get_field(val, HGATP64_MODE) == HGATP_MODE_SV39X4 ||
-                             get_field(val, HGATP64_MODE) == HGATP_MODE_SV48X4))
-        reg_val = val & (HGATP64_MODE | (HGATP64_PPN & rv64_ppn_mask));
-      state.hgatp = reg_val;
-      break;
-    }
-    case CSR_VSSTATUS: {
-      reg_t mask = SSTATUS_VS_MASK;
-      mask |= (supports_extension('V') ? SSTATUS_VS : 0);
-      state.vsstatus = (state.vsstatus & ~mask) | (val & mask);
-      state.vsstatus &= (xlen == 64 ? ~SSTATUS64_SD : ~SSTATUS32_SD);
-      if (((state.vsstatus & SSTATUS_FS) == SSTATUS_FS) ||
-          ((state.vsstatus & SSTATUS_VS) == SSTATUS_VS) ||
-          ((state.vsstatus & SSTATUS_XS) == SSTATUS_XS)) {
-         state.vsstatus |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-      }
-      state.vsstatus = set_field(state.vsstatus, SSTATUS_UXL, xlen_to_uxl(max_xlen));
-      break;
-    }
-    case CSR_VSIE: {
-      reg_t mask = state.hideleg & MIP_VS_MASK;
-      state.mie = (state.mie & ~mask) | ((val << 1) & mask);
-      break;
-    }
-    case CSR_VSTVEC: state.vstvec = val & ~(reg_t)2; break;
-    case CSR_VSSCRATCH: state.vsscratch = val; break;
-    case CSR_VSEPC: state.vsepc = val & ~(reg_t)1; break;
-    case CSR_VSCAUSE: state.vscause = val; break;
-    case CSR_VSTVAL: state.vstval = val; break;
-    case CSR_VSIP: {
-      reg_t mask = state.hideleg & MIP_VSSIP;
-      state.mip = (state.mip & ~mask) | ((val << 1) & mask);
-      break;
-    }
-    case CSR_VSATP:
-      if (!supports_impl(IMPL_MMU))
-        val = 0;
-
-      state.vsatp = cal_satp(val);
-      break;
-    case CSR_TSELECT:
-      if (val < state.num_triggers) {
-        state.tselect = val;
-      }
-      break;
-    case CSR_TDATA1:
-      {
-        mcontrol_t *mc = &state.mcontrol[state.tselect];
-        if (mc->dmode && !state.debug_mode) {
-          break;
-        }
-        mc->dmode = get_field(val, MCONTROL_DMODE(xlen));
-        mc->select = get_field(val, MCONTROL_SELECT);
-        mc->timing = get_field(val, MCONTROL_TIMING);
-        mc->action = (mcontrol_action_t) get_field(val, MCONTROL_ACTION);
-        mc->chain = get_field(val, MCONTROL_CHAIN);
-        mc->match = (mcontrol_match_t) get_field(val, MCONTROL_MATCH);
-        mc->m = get_field(val, MCONTROL_M);
-        mc->h = get_field(val, MCONTROL_H);
-        mc->s = get_field(val, MCONTROL_S);
-        mc->u = get_field(val, MCONTROL_U);
-        mc->execute = get_field(val, MCONTROL_EXECUTE);
-        mc->store = get_field(val, MCONTROL_STORE);
-        mc->load = get_field(val, MCONTROL_LOAD);
-        // Assume we're here because of csrw.
-        if (mc->execute)
-          mc->timing = 0;
-        trigger_updated();
-      }
-      break;
-    case CSR_TDATA2:
-      if (state.mcontrol[state.tselect].dmode && !state.debug_mode) {
-        break;
-      }
-      if (state.tselect < state.num_triggers) {
-        state.tdata2[state.tselect] = val;
-      }
-      break;
-    case CSR_DCSR:
-      state.dcsr.prv = get_field(val, DCSR_PRV);
-      state.dcsr.step = get_field(val, DCSR_STEP);
-      // TODO: ndreset and fullreset
-      state.dcsr.ebreakm = get_field(val, DCSR_EBREAKM);
-      state.dcsr.ebreakh = get_field(val, DCSR_EBREAKH);
-      state.dcsr.ebreaks = get_field(val, DCSR_EBREAKS);
-      state.dcsr.ebreaku = get_field(val, DCSR_EBREAKU);
-      state.dcsr.halt = get_field(val, DCSR_HALT);
-      break;
-    case CSR_DPC:
-      state.dpc = val & ~(reg_t)1;
-      break;
-    case CSR_DSCRATCH0:
-      state.dscratch0 = val;
-      break;
-    case CSR_DSCRATCH1:
-      state.dscratch1 = val;
-      break;
-    case CSR_VSTART:
-      dirty_vs_state;
-      VU.vstart = val & (VU.get_vlen() - 1);
-      break;
-    case CSR_VXSAT:
-      dirty_vs_state;
-      VU.vxsat = val & 0x1ul;
-      break;
-    case CSR_VXRM:
-      dirty_vs_state;
-      VU.vxrm = val & 0x3ul;
-      break;
-  }
-
-#if defined(RISCV_ENABLE_COMMITLOG)
-  switch (which)
-  {
-    case CSR_FFLAGS:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_FFLAGS);
-      break;
-    case CSR_FRM:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_FRM);
-      break;
-    case CSR_FCSR:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_FFLAGS);
-      LOG_CSR(CSR_FRM);
-      LOG_CSR(CSR_FCSR);
-      break;
-    case CSR_VCSR:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_VXSAT);
-      LOG_CSR(CSR_VXRM);
-      break;
-
-    case CSR_VSTART:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_VSTART);
-      break;
-    case CSR_VXSAT:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_VXSAT);
-      break;
-    case CSR_VXRM:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_VXRM);
-      break;
-
-    case CSR_SSTATUS:
-      LOG_CSR(CSR_MSTATUS);
-      LOG_CSR(CSR_SSTATUS);
-      break;
-    case CSR_SIP:
-      LOG_CSR(CSR_MIP);
-      LOG_CSR(CSR_SIP);
-      break;
-    case CSR_SIE:
-      LOG_CSR(CSR_MIE);
-      LOG_CSR(CSR_SIE);
-      break;
-
-    case CSR_MSTATUS:
-    case CSR_MIP:
-    case CSR_MIE:
-    case CSR_MIDELEG:
-    case CSR_MEDELEG:
-    case CSR_MINSTRET:
-    case CSR_MCYCLE:
-    case CSR_MINSTRETH:
-    case CSR_MCYCLEH:
-    case CSR_SCOUNTEREN:
-    case CSR_MCOUNTEREN:
-    case CSR_SATP:
-    case CSR_SEPC:
-    case CSR_STVEC:
-    case CSR_SSCRATCH:
-    case CSR_SCAUSE:
-    case CSR_STVAL:
-    case CSR_MEPC:
-    case CSR_MTVEC:
-    case CSR_MSCRATCH:
-    case CSR_MCAUSE:
-    case CSR_MTVAL:
-    case CSR_MISA:
-    case CSR_TSELECT:
-    case CSR_TDATA1:
-    case CSR_TDATA2:
-    case CSR_DCSR:
-    case CSR_DPC:
-    case CSR_DSCRATCH0:
-    case CSR_DSCRATCH1:
-    case CSR_MENTROPY:
-    case CSR_MNOISE:
-      LOG_CSR(which);
-      break;
-  }
-#endif
 }
 
 // Note that get_csr is sometimes called when read side-effects should not
@@ -1483,477 +1006,85 @@ void processor_t::set_csr(int which, reg_t val)
 // side effects on reads.
 reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
 {
-  uint32_t ctr_en = -1;
-  if (state.prv < PRV_M)
-    ctr_en &= state.mcounteren;
-  if (state.prv < PRV_S)
-    ctr_en &= state.scounteren;
-  bool ctr_ok = (ctr_en >> (which & 31)) & 1;
-  if (state.v)
-    ctr_en &= state.hcounteren;
-  bool ctr_v_ok = (ctr_en >> (which & 31)) & 1;
-
-  reg_t res = 0;
-#define ret(n) do { \
-    res = (n); \
-    goto out; \
-  } while (false)
-
-  if ((which >= CSR_HPMCOUNTER3 && which <= CSR_HPMCOUNTER31) ||
-      (xlen == 32 && which >= CSR_HPMCOUNTER3H && which <= CSR_HPMCOUNTER31H)) {
-    if (!ctr_ok)
-      goto throw_illegal;
-    if (!ctr_v_ok)
-      goto throw_virtual;
-    ret(0);
+  auto search = state.csrmap.find(which);
+  if (search != state.csrmap.end()) {
+    if (!peek)
+      search->second->verify_permissions(insn, write);
+    return search->second->read();
   }
-  if (which >= CSR_MHPMCOUNTER3 && which <= CSR_MHPMCOUNTER31)
-    ret(0);
-  if (xlen == 32 && which >= CSR_MHPMCOUNTER3H && which <= CSR_MHPMCOUNTER31H)
-    ret(0);
-  if (which >= CSR_MHPMEVENT3 && which <= CSR_MHPMEVENT31)
-    ret(0);
-
-  if (which >= CSR_PMPADDR0 && which < CSR_PMPADDR0 + state.max_pmp) {
-    // If n_pmp is zero, that means pmp is not implemented hence raise trap if it tries to access the csr
-    if (n_pmp == 0)
-      goto throw_illegal;
-    reg_t i = which - CSR_PMPADDR0;
-    if ((state.pmpcfg[i] & PMP_A) >= PMP_NAPOT)
-      ret(state.pmpaddr[i] | (~pmp_tor_mask() >> 1));
-    else
-      ret(state.pmpaddr[i] & pmp_tor_mask());
-  }
-
-  if (which >= CSR_PMPCFG0 && which < CSR_PMPCFG0 + state.max_pmp / 4) {
-    require((which & ((xlen / 32) - 1)) == 0);
-
-    reg_t cfg_res = 0;
-    for (size_t i0 = (which - CSR_PMPCFG0) * 4, i = i0; i < i0 + xlen / 8 && i < state.max_pmp; i++)
-      cfg_res |= reg_t(state.pmpcfg[i]) << (8 * (i - i0));
-    ret(cfg_res);
-  }
-
-  switch (which)
-  {
-    case CSR_MENTROPY:
-      if(!supports_extension('K'))
-          break;
-      ret(es.get_mentropy());
-    case CSR_MNOISE:
-      if(!supports_extension('K'))
-          break;
-      ret(es.get_mnoise());
-    case CSR_FFLAGS:
-      require_fp;
-      if (!supports_extension('F'))
-        break;
-      ret(state.fflags);
-    case CSR_FRM:
-      require_fp;
-      if (!supports_extension('F'))
-        break;
-      ret(state.frm);
-    case CSR_FCSR:
-      require_fp;
-      if (!supports_extension('F'))
-        break;
-      ret((state.fflags << FSR_AEXC_SHIFT) | (state.frm << FSR_RD_SHIFT));
-    case CSR_VCSR:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret((VU.vxsat << VCSR_VXSAT_SHIFT) | (VU.vxrm << VCSR_VXRM_SHIFT));
-    case CSR_INSTRET:
-    case CSR_CYCLE:
-      if (!ctr_ok)
-        goto throw_illegal;
-      if (!ctr_v_ok)
-        goto throw_virtual;
-      ret(state.minstret);
-    case CSR_MINSTRET:
-    case CSR_MCYCLE:
-      ret(state.minstret);
-    case CSR_INSTRETH:
-    case CSR_CYCLEH:
-      if (!ctr_ok || xlen != 32)
-        goto throw_illegal;
-      if (!ctr_v_ok)
-        goto throw_virtual;
-      ret(state.minstret >> 32);
-    case CSR_MINSTRETH:
-    case CSR_MCYCLEH:
-      if (xlen == 32)
-        ret(state.minstret >> 32);
-      break;
-    case CSR_SCOUNTEREN: ret(state.scounteren);
-    case CSR_MCOUNTEREN:
-      if (!supports_extension('U'))
-        break;
-      ret(state.mcounteren);
-    case CSR_MCOUNTINHIBIT: ret(0);
-    case CSR_SSTATUS: {
-      reg_t mask = SSTATUS_SIE | SSTATUS_SPIE | SSTATUS_UBE | SSTATUS_SPP
-                 | SSTATUS_FS | (supports_extension('V') ? SSTATUS_VS : 0)
-                 | SSTATUS_XS | SSTATUS_SUM | SSTATUS_MXR | SSTATUS_UXL;
-      reg_t sstatus = state.mstatus & mask;
-      if ((sstatus & SSTATUS_FS) == SSTATUS_FS ||
-          (sstatus & SSTATUS_XS) == SSTATUS_XS ||
-          (sstatus & SSTATUS_VS) == SSTATUS_VS)
-        sstatus |= (xlen == 32 ? SSTATUS32_SD : SSTATUS64_SD);
-      ret(sstatus);
-    }
-    case CSR_SIP: {
-      if (state.v) {
-        ret((state.mip & state.hideleg & MIP_VS_MASK) >> 1);
-      } else {
-        ret(state.mip & state.mideleg & ~MIP_HS_MASK);
-      }
-    }
-    case CSR_SIE: {
-      if (state.v) {
-        ret((state.mie & state.hideleg & MIP_VS_MASK) >> 1);
-      } else {
-        ret(state.mie & state.mideleg & ~MIP_HS_MASK);
-      }
-    }
-    case CSR_SEPC: {
-      if (state.v) {
-        ret(state.vsepc & pc_alignment_mask());
-      } else {
-        ret(state.sepc & pc_alignment_mask());
-      }
-    }
-    case CSR_STVAL: {
-      if (state.v) {
-        ret(state.vstval);
-      } else {
-        ret(state.stval);
-      }
-    }
-    case CSR_STVEC: {
-      if (state.v) {
-        ret(state.vstvec);
-      } else {
-        ret(state.stvec);
-      }
-    }
-    case CSR_SCAUSE: {
-      if (state.v) {
-        if (max_xlen > xlen)
-          ret(state.vscause | ((state.vscause >> (max_xlen-1)) << (xlen-1)));
-        ret(state.vscause);
-      } else {
-        if (max_xlen > xlen)
-          ret(state.scause | ((state.scause >> (max_xlen-1)) << (xlen-1)));
-        ret(state.scause);
-      }
-    }
-    case CSR_SATP: {
-      if (state.v) {
-        if (get_field(state.hstatus, HSTATUS_VTVM))
-          goto throw_virtual;
-        ret(state.vsatp);
-      } else {
-        if (get_field(state.mstatus, MSTATUS_TVM))
-          require_privilege(PRV_M);
-        ret(state.satp);
-      }
-    }
-    case CSR_SSCRATCH: {
-      if (state.v) {
-        ret(state.vsscratch);
-      } else {
-        ret(state.sscratch);
-      }
-    }
-    case CSR_MSTATUS: ret(state.mstatus);
-    case CSR_MSTATUSH:
-      if (xlen == 32)
-        ret((state.mstatus >> 32) & (MSTATUSH_SBE | MSTATUSH_MBE));
-      break;
-    case CSR_MIP: ret(state.mip);
-    case CSR_MIE: ret(state.mie);
-    case CSR_MEPC: ret(state.mepc & pc_alignment_mask());
-    case CSR_MSCRATCH: ret(state.mscratch);
-    case CSR_MCAUSE: ret(state.mcause);
-    case CSR_MTVAL: ret(state.mtval);
-    case CSR_MTVAL2:
-      if (supports_extension('H'))
-        ret(state.mtval2);
-      break;
-    case CSR_MTINST:
-      if (supports_extension('H'))
-        ret(state.mtinst);
-      break;
-    case CSR_MISA: ret(state.misa);
-    case CSR_MARCHID: ret(5);
-    case CSR_MIMPID: ret(0);
-    case CSR_MVENDORID: ret(0);
-    case CSR_MHARTID: ret(id);
-    case CSR_MTVEC: ret(state.mtvec);
-    case CSR_MEDELEG:
-      if (!supports_extension('S'))
-        break;
-      ret(state.medeleg);
-    case CSR_MIDELEG:
-      if (!supports_extension('S'))
-        break;
-      ret(state.mideleg);
-    case CSR_HSTATUS: ret(state.hstatus);
-    case CSR_HEDELEG: ret(state.hedeleg);
-    case CSR_HIDELEG: ret(state.hideleg);
-    case CSR_HIE: ret(state.mie & MIP_HS_MASK);
-    case CSR_HCOUNTEREN: ret(state.hcounteren);
-    case CSR_HGEIE: ret(0);
-    case CSR_HTVAL: ret(state.htval);
-    case CSR_HIP: ret(state.mip & MIP_HS_MASK);
-    case CSR_HVIP: ret(state.mip & MIP_VS_MASK);
-    case CSR_HTINST: ret(state.htinst);
-    case CSR_HGATP: {
-      if (!state.v && get_field(state.mstatus, MSTATUS_TVM))
-        require_privilege(PRV_M);
-      ret(state.hgatp);
-    }
-    case CSR_HGEIP: ret(0);
-    case CSR_VSSTATUS: {
-      reg_t mask = SSTATUS_VS_MASK;
-      mask |= (supports_extension('V') ? SSTATUS_VS : 0);
-      mask |= (xlen == 64 ? SSTATUS64_SD : SSTATUS32_SD);
-      ret(state.vsstatus & mask);
-    }
-    case CSR_VSIE: ret((state.mie & state.hideleg & MIP_VS_MASK) >> 1);
-    case CSR_VSTVEC: ret(state.vstvec);
-    case CSR_VSSCRATCH: ret(state.vsscratch);
-    case CSR_VSEPC: ret(state.vsepc & pc_alignment_mask());
-    case CSR_VSCAUSE: ret(state.vscause);
-    case CSR_VSTVAL: ret(state.vstval);
-    case CSR_VSIP: ret((state.mip & state.hideleg & MIP_VS_MASK) >> 1);
-    case CSR_VSATP: ret(state.vsatp);
-    case CSR_TSELECT: ret(state.tselect);
-    case CSR_TDATA1:
-      if (state.tselect < state.num_triggers) {
-        reg_t v = 0;
-        mcontrol_t *mc = &state.mcontrol[state.tselect];
-        v = set_field(v, MCONTROL_TYPE(xlen), mc->type);
-        v = set_field(v, MCONTROL_DMODE(xlen), mc->dmode);
-        v = set_field(v, MCONTROL_MASKMAX(xlen), mc->maskmax);
-        v = set_field(v, MCONTROL_SELECT, mc->select);
-        v = set_field(v, MCONTROL_TIMING, mc->timing);
-        v = set_field(v, MCONTROL_ACTION, mc->action);
-        v = set_field(v, MCONTROL_CHAIN, mc->chain);
-        v = set_field(v, MCONTROL_MATCH, mc->match);
-        v = set_field(v, MCONTROL_M, mc->m);
-        v = set_field(v, MCONTROL_H, mc->h);
-        v = set_field(v, MCONTROL_S, mc->s);
-        v = set_field(v, MCONTROL_U, mc->u);
-        v = set_field(v, MCONTROL_EXECUTE, mc->execute);
-        v = set_field(v, MCONTROL_STORE, mc->store);
-        v = set_field(v, MCONTROL_LOAD, mc->load);
-        ret(v);
-      } else {
-        ret(0);
-      }
-      break;
-    case CSR_TDATA2:
-      if (state.tselect < state.num_triggers) {
-        ret(state.tdata2[state.tselect]);
-      } else {
-        ret(0);
-      }
-      break;
-    case CSR_TDATA3: ret(0);
-    case CSR_DCSR:
-      {
-        if (!state.debug_mode)
-          break;
-        uint32_t v = 0;
-        v = set_field(v, DCSR_XDEBUGVER, 1);
-        v = set_field(v, DCSR_EBREAKM, state.dcsr.ebreakm);
-        v = set_field(v, DCSR_EBREAKH, state.dcsr.ebreakh);
-        v = set_field(v, DCSR_EBREAKS, state.dcsr.ebreaks);
-        v = set_field(v, DCSR_EBREAKU, state.dcsr.ebreaku);
-        v = set_field(v, DCSR_STOPCYCLE, 0);
-        v = set_field(v, DCSR_STOPTIME, 0);
-        v = set_field(v, DCSR_CAUSE, state.dcsr.cause);
-        v = set_field(v, DCSR_STEP, state.dcsr.step);
-        v = set_field(v, DCSR_PRV, state.dcsr.prv);
-        ret(v);
-      }
-    case CSR_DPC:
-      if (!state.debug_mode)
-        break;
-      ret(state.dpc & pc_alignment_mask());
-    case CSR_DSCRATCH0:
-      if (!state.debug_mode)
-        break;
-      ret(state.dscratch0);
-    case CSR_DSCRATCH1:
-      if (!state.debug_mode)
-        break;
-      ret(state.dscratch1);
-    case CSR_VSTART:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vstart);
-    case CSR_VXSAT:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vxsat);
-    case CSR_VXRM:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vxrm);
-    case CSR_VL:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vl);
-    case CSR_VTYPE:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vtype);
-    case CSR_VLENB:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(VU.vlenb);
-    case CSR_TILE_M:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(MU.tile_m);
-    case CSR_TILE_K:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(MU.tile_k);
-    case CSR_TILE_N:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(MU.tile_n);
-    case CSR_MTYPE:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(MU.mtype);
-    case CSR_MLENB:
-      require_vector_vs;
-      if (!supports_extension('V'))
-        break;
-      ret(MU.mlenb);
-  }
-
-#undef ret
-
   // If we get here, the CSR doesn't exist.  Unimplemented CSRs always throw
   // illegal-instruction exceptions, not virtual-instruction exceptions.
-throw_illegal:
   throw trap_illegal_instruction(insn.bits());
-
-throw_virtual:
-  throw trap_virtual_instruction(insn.bits());
-
-out:
-  // Check permissions.  Raise virtual-instruction exception if V=1,
-  // privileges are insufficient, and the CSR belongs to supervisor or
-  // hypervisor.  Raise illegal-instruction exception otherwise.
-
-  if (peek)
-    return res;
-
-  unsigned csr_priv = get_field(which, 0x300);
-  bool csr_read_only = get_field(which, 0xC00) == 3;
-  unsigned priv = state.prv == PRV_S && !state.v ? PRV_HS : state.prv;
-
-  if ((csr_priv == PRV_S && !supports_extension('S')) ||
-      (csr_priv == PRV_HS && !supports_extension('H')))
-    goto throw_illegal;
-
-  if ((write && csr_read_only) || priv < csr_priv) {
-    if (state.v && csr_priv <= PRV_HS)
-      goto throw_virtual;
-    goto throw_illegal;
-  }
-
-  return res;
 }
 
-reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc)
+const insn_desc_t insn_desc_t::illegal_instruction = {
+  0, 0,
+  &::illegal_instruction, &::illegal_instruction, &::illegal_instruction, &::illegal_instruction,
+  &::illegal_instruction, &::illegal_instruction, &::illegal_instruction, &::illegal_instruction
+};
+
+reg_t illegal_instruction(processor_t UNUSED *p, insn_t insn, reg_t UNUSED pc)
 {
-  throw trap_illegal_instruction(insn.bits());
+  // The illegal instruction can be longer than ILEN bits, where the tval will
+  // contain the first ILEN bits of the faulting instruction. We hard-code the
+  // ILEN to 32 bits since all official instructions have at most 32 bits.
+  throw trap_illegal_instruction(insn.bits() & 0xffffffffULL);
 }
 
 insn_func_t processor_t::decode_insn(insn_t insn)
 {
   // look up opcode in hash table
   size_t idx = insn.bits() % OPCODE_CACHE_SIZE;
-  insn_desc_t desc = opcode_cache[idx];
+  auto [hit, desc] = opcode_cache[idx].lookup(insn.bits());
 
-  if (unlikely(insn.bits() != desc.match || !(xlen == 64 ? desc.rv64 : desc.rv32))) {
+  bool rve = extension_enabled('E');
+
+  if (unlikely(!hit)) {
     // fall back to linear search
-    int cnt = 0;
-    insn_desc_t* p = &instructions[0];
-    while ((insn.bits() & p->mask) != p->match || !(xlen == 64 ? p->rv64 : p->rv32))
-      p++, cnt++;
-    desc = *p;
-
-    if (p->mask != 0 && p > &instructions[0]) {
-      if (p->match != (p-1)->match && p->match != (p+1)->match) {
-        // move to front of opcode list to reduce miss penalty
-        while (--p >= &instructions[0])
-          *(p+1) = *p;
-        instructions[0] = desc;
-      }
+    auto matching = [insn_bits = insn.bits()](const insn_desc_t &d) {
+      return (insn_bits & d.mask) == d.match;
+    };
+    auto p = std::find_if(custom_instructions.begin(),
+                          custom_instructions.end(), matching);
+    if (p == custom_instructions.end()) {
+      p = std::find_if(instructions.begin(), instructions.end(), matching);
+      assert(p != instructions.end());
     }
-
-    opcode_cache[idx] = desc;
-    opcode_cache[idx].match = insn.bits();
+    desc = &*p;
+    opcode_cache[idx].replace(insn.bits(), desc);
   }
 
-  return xlen == 64 ? desc.rv64 : desc.rv32;
+  return desc->func(xlen, rve, log_commits_enabled);
 }
 
-void processor_t::register_insn(insn_desc_t desc)
-{
-  instructions.push_back(desc);
+void processor_t::register_insn(insn_desc_t desc, bool is_custom) {
+  assert(desc.fast_rv32i && desc.fast_rv64i && desc.fast_rv32e && desc.fast_rv64e &&
+         desc.logged_rv32i && desc.logged_rv64i && desc.logged_rv32e && desc.logged_rv64e);
+
+  if (is_custom)
+    custom_instructions.push_back(desc);
+  else
+    instructions.push_back(desc);
 }
 
 void processor_t::build_opcode_map()
 {
-  struct cmp {
-    bool operator()(const insn_desc_t& lhs, const insn_desc_t& rhs) {
-      if (lhs.match == rhs.match)
-        return lhs.mask > rhs.mask;
-      return lhs.match > rhs.match;
-    }
-  };
-  std::sort(instructions.begin(), instructions.end(), cmp());
-
   for (size_t i = 0; i < OPCODE_CACHE_SIZE; i++)
-    opcode_cache[i] = {0, 0, &illegal_instruction, &illegal_instruction};
+    opcode_cache[i].reset();
 }
 
-void processor_t::register_extension(extension_t* x)
-{
+void processor_t::register_extension(extension_t *x) {
   for (auto insn : x->get_instructions())
-    register_insn(insn);
+    register_custom_insn(insn);
   build_opcode_map();
 
-  if (disassembler)
-    for (auto disasm_insn : x->get_disasms())
-      disassembler->add_insn(disasm_insn);
+  for (auto disasm_insn : x->get_disasms())
+    disassembler->add_insn(disasm_insn);
 
   if (!custom_extensions.insert(std::make_pair(x->name(), x)).second) {
     fprintf(stderr, "extensions must have unique names (got two named \"%s\"!)\n", x->name());
     abort();
   }
-
   x->set_processor(this);
 }
 
@@ -1961,27 +1092,64 @@ void processor_t::register_base_instructions()
 {
   #define DECLARE_INSN(name, match, mask) \
     insn_bits_t name##_match = (match), name##_mask = (mask); \
-    unsigned name##_arch_en = (unsigned)-1;
-  #define DECLARE_RV32_ONLY(name) {name##_arch_en = 32;}
-  #define DECLARE_RV64_ONLY(name) {name##_arch_en = 64;}
+    isa_extension_t name##_ext = NUM_ISA_EXTENSIONS; \
+    bool name##_overlapping = false;
 
   #include "encoding.h"
-  #undef DECLARE_RV64_INSN
-  #undef DECLARE_RV32_INSN
   #undef DECLARE_INSN
 
   #define DEFINE_INSN(name) \
-    extern reg_t rv32_##name(processor_t*, insn_t, reg_t); \
-    extern reg_t rv64_##name(processor_t*, insn_t, reg_t); \
-    register_insn((insn_desc_t){ \
-      name##_match, \
-      name##_mask, \
-      (name##_arch_en & 32) ? rv32_##name : nullptr, \
-      (name##_arch_en & 64) ? rv64_##name : nullptr});
+    extern reg_t fast_rv32i_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t fast_rv64i_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t fast_rv32e_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t fast_rv64e_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t logged_rv32i_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t logged_rv64i_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t logged_rv32e_##name(processor_t*, insn_t, reg_t); \
+    extern reg_t logged_rv64e_##name(processor_t*, insn_t, reg_t);
   #include "insn_list.h"
   #undef DEFINE_INSN
 
-  register_insn({0, 0, &illegal_instruction, &illegal_instruction});
+  // add overlapping instructions first, in order
+  #define DECLARE_OVERLAP_INSN(name, ext) \
+    name##_overlapping = true; \
+    if (isa->extension_enabled(ext)) \
+      register_base_insn((insn_desc_t) { \
+        name##_match, \
+        name##_mask, \
+        fast_rv32i_##name, \
+        fast_rv64i_##name, \
+        fast_rv32e_##name, \
+        fast_rv64e_##name, \
+        logged_rv32i_##name, \
+        logged_rv64i_##name, \
+        logged_rv32e_##name, \
+        logged_rv64e_##name});
+  #include "overlap_list.h"
+  #undef DECLARE_OVERLAP_INSN
+
+  // add all other instructions.  since they are non-overlapping, the order
+  // does not affect correctness, but more frequent instructions should
+  // appear earlier to improve search time on opcode_cache misses.
+  #define DEFINE_INSN(name) \
+    if (!name##_overlapping) \
+      register_base_insn((insn_desc_t) { \
+        name##_match, \
+        name##_mask, \
+        fast_rv32i_##name, \
+        fast_rv64i_##name, \
+        fast_rv32e_##name, \
+        fast_rv64e_##name, \
+        logged_rv32i_##name, \
+        logged_rv64i_##name, \
+        logged_rv32e_##name, \
+        logged_rv64e_##name});
+  #include "insn_list.h"
+  #undef DEFINE_INSN
+
+  // terminate instruction list with a catch-all
+  register_base_insn(insn_desc_t::illegal_instruction);
+
   build_opcode_map();
 }
 
@@ -1992,7 +1160,7 @@ bool processor_t::load(reg_t addr, size_t len, uint8_t* bytes)
     case 0:
       if (len <= 4) {
         memset(bytes, 0, len);
-        bytes[0] = get_field(state.mip, MIP_MSIP);
+        bytes[0] = get_field(state.mip->read(), MIP_MSIP);
         return true;
       }
       break;
@@ -2007,7 +1175,7 @@ bool processor_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   {
     case 0:
       if (len <= 4) {
-        state.mip = set_field(state.mip, MIP_MSIP, bytes[0]);
+        state.mip->write_with_mask(MIP_MSIP, bytes[0] << IRQ_M_SOFT);
         return true;
       }
       break;
@@ -2016,22 +1184,26 @@ bool processor_t::store(reg_t addr, size_t len, const uint8_t* bytes)
   return false;
 }
 
-void processor_t::trigger_updated()
+void processor_t::trigger_updated(const std::vector<triggers::trigger_t *> &triggers)
 {
   mmu->flush_tlb();
   mmu->check_triggers_fetch = false;
   mmu->check_triggers_load = false;
   mmu->check_triggers_store = false;
+  check_triggers_icount = false;
 
-  for (unsigned i = 0; i < state.num_triggers; i++) {
-    if (state.mcontrol[i].execute) {
+  for (auto trigger : triggers) {
+    if (trigger->get_execute()) {
       mmu->check_triggers_fetch = true;
     }
-    if (state.mcontrol[i].load) {
+    if (trigger->get_load()) {
       mmu->check_triggers_load = true;
     }
-    if (state.mcontrol[i].store) {
+    if (trigger->get_store()) {
       mmu->check_triggers_store = true;
+    }
+    if (trigger->icount_check_needed()) {
+      check_triggers_icount = true;
     }
   }
 }
