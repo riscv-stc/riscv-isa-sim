@@ -988,7 +988,7 @@
 
 // #define MTI_CHECK_LOAD(let_width, is_mask_ldst)
 
-#define MTU_LS_LEN(trans, ch) \
+#define MTU_LS_LEN(trans, ch, type_size) \
   require_matrix(false) \
   switch (ch) \
   { \
@@ -996,18 +996,18 @@
     height = trans? P.MU.tile_n->read() : P.MU.tile_m->read(); \
     width = trans? P.MU.tile_m->read() : P.MU.tile_n->read(); \
     rmax = P.MU.mrows; \
-    cmax = (P.MU.mcols / P.MU.msew); \
+    cmax = (P.MU.mrlenb / type_size); \
     break; \
   case 'a' : \
     height = trans? P.MU.tile_k->read() : P.MU.tile_m->read(); \
     width = trans? P.MU.tile_m->read() : P.MU.tile_k->read(); \
     rmax = P.MU.mrows; \
-    cmax = (P.MU.mcols / P.MU.msew); \
+    cmax = (P.MU.mrlenb / type_size); \
     break; \
   case 'b' : \
     height = trans? P.MU.tile_n->read() : P.MU.tile_k->read(); \
     width = trans? P.MU.tile_k->read() : P.MU.tile_n->read(); \
-    cmax = (P.MU.mcols / P.MU.msew); \
+    cmax = (P.MU.mrlenb / type_size); \
     rmax = P.MU.mrows; \
     break; \
   default : \
@@ -1046,7 +1046,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   require_align(td, lmul); \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0;\
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   WHOLE_MATRIX(is_max) \
   CLEAR_TILE(td); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1068,7 +1068,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   require_align(td, lmul); \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   WHOLE_MATRIX(is_max) \
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t m = 0; m < lmul; m++) {\
@@ -1087,7 +1087,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   const reg_t vd = insn.rd(); \
   reg_t height, width; \
   reg_t cmax = 0, rmax = 0; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < width; j++) { \
       elt_width##_t val = MMU.load<elt_width##_t>( \
@@ -1102,7 +1102,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   const reg_t vd = insn.rd(); \
   reg_t height, width; \
   reg_t cmax = 0, rmax = 0; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < width; j++) { \
       elt_width##_t val = P.VU.elt<elt_width##_t>(vd, i * width + j); \
@@ -1136,7 +1136,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   CLEAR_TILE(td); \
   PAD_TILE(td, elt_width, mpadv); \
   for (reg_t i = 0; i < height; ++i) { \
@@ -1183,7 +1183,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
-  MTU_LS_LEN(is_trans, dim); \
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
       for (reg_t j = 0; j < width; ++j) { \
@@ -1367,7 +1367,7 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 #define MTR_BROADCAST(dim, dir) \
   MB_PARAM_BASE \
-  MTU_LS_LEN(0, dim) \
+  MTU_LS_LEN(0, dim, (sew / 8)) \
   MB_PARAM_INIT \
   switch (sew) { \
     case e8: { \
