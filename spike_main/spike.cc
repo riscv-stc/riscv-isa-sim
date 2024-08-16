@@ -84,6 +84,16 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --dm-no-halt-groups   Debug module won't support halt groups\n");
   fprintf(stderr, "  --dm-no-impebreak     Debug module won't support implicit ebreak in program buffer\n");
   fprintf(stderr, "  --blocksz=<size>      Cache block size (B) for CMO operations(powers of 2) [default 64]\n");
+  fprintf(stderr, "BackDoor Options:\n");
+  fprintf(stderr, "  --load=<file1,...>    load files into memory\n");
+  fprintf(stderr, "                          file name: *@[ddr][<start>_<len>].<ext>\n");
+  fprintf(stderr, "                          example: aaa@0.bin, aaa@ddr.dat,\n");
+  fprintf(stderr, "                                   aaa@ddr.0x80000000_0x10000.dat\n");
+  fprintf(stderr, "  --init-dump=<m1,...>  Dump memory on init\n");
+  fprintf(stderr, "  --exit-dump=<m1,...>  Dump memory on exit\n");
+  fprintf(stderr, "                          memory range could be: ddr, <start>:<len>\n");
+  fprintf(stderr, "                          example: --exit-dump=0x80000000:0x10000 \n");
+  fprintf(stderr, "  --dump-path           Path for files to dump memory [default .]\n");
 
   exit(exit_code);
 }
@@ -323,6 +333,17 @@ static std::vector<size_t> parse_hartids(const char *s)
   return hartids;
 }
 
+static std::vector<std::string> make_strings(const char* arg)
+{
+  std::stringstream ss(arg);
+  std::string item;
+  std::vector<std::string> result;
+  while (std::getline(ss, item, ',')) {
+    result.push_back(std::move(item));
+  }
+  return result;
+}
+
 int main(int argc, char** argv)
 {
   bool debug = false;
@@ -350,6 +371,10 @@ int main(int argc, char** argv)
   reg_t blocksz = 64;
   debug_module_config_t dm_config;
   cfg_arg_t<size_t> nprocs(1);
+  std::vector<std::string> load_files;
+  std::vector<std::string> init_dump;
+  std::vector<std::string> exit_dump;
+  std::string dump_path = ".";
 
   cfg_t cfg;
 
@@ -462,6 +487,15 @@ int main(int argc, char** argv)
     }
   });
 
+  /* a backdoor for ncbet
+   * load-path is case input path
+   * dump-path is memory dump path, for ncbet get result
+   */
+  parser.option(0, "load", 1, [&](const char* s){load_files = make_strings(s);});
+  parser.option(0, "init-dump", 1, [&](const char* s){init_dump = make_strings(s);});
+  parser.option(0, "exit-dump", 1, [&](const char* s){exit_dump = make_strings(s);});
+  parser.option(0, "dump-path", 1, [&](const char* s){dump_path = s;});
+
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
 
@@ -553,7 +587,7 @@ int main(int argc, char** argv)
   s.configure_log(log, log_commits);
   s.set_histogram(histogram);
 
-  auto return_code = s.run();
+  auto return_code = s.run(load_files, init_dump, exit_dump, dump_path);
 
   for (auto& mem : mems)
     delete mem.second;
