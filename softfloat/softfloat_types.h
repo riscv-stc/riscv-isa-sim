@@ -47,9 +47,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 | the types below may, if desired, be defined as aliases for the native types
 | (typically 'float' and 'double', and possibly 'long double').
 *----------------------------------------------------------------------------*/
+typedef struct { uint8_t  v; } float8_t;
+typedef float8_t float8_e4m3_t;
+typedef float8_t float8_e5m2_t;
+typedef float8_t float8_e3m4_t;
 typedef struct { uint16_t v; } float16_t;
 typedef float16_t bfloat16_t;
 typedef struct { uint32_t v; } float32_t;
+typedef struct { uint32_t v; } tfloat32_t;
 typedef struct { uint64_t v; } float64_t;
 typedef struct { uint64_t v[2]; } float128_t;
 

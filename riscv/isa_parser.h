@@ -82,6 +82,19 @@ typedef enum {
   EXT_ZICFILP,
   EXT_ZICFISS,
   EXT_MATRIX,
+  EXT_MATRIX_ZMI4,
+  EXT_MATRIX_ZMI8,
+  EXT_MATRIX_ZMI16,
+  EXT_MATRIX_ZMI32,
+  EXT_MATRIX_ZMI64,
+  EXT_MATRIX_ZMF8E4M3,
+  EXT_MATRIX_ZMF8E5M2,
+  EXT_MATRIX_ZMF8E3M4,
+  EXT_MATRIX_ZMF16,
+  EXT_MATRIX_ZMBF16,
+  EXT_MATRIX_ZMFP32,
+  EXT_MATRIX_ZMTF32,
+  EXT_MATRIX_ZMF64,
   NUM_ISA_EXTENSIONS
 } isa_extension_t;
 
@@ -106,7 +119,11 @@ public:
   reg_t get_vlen() const { return vlen; }
   reg_t get_elen() const { return elen; }
   reg_t get_mlen() const { return mlen; }
+  reg_t get_amul() const { return mamul; }
   reg_t get_mrlen() const { return mrlen; }
+  void set_mlen(reg_t len) { mlen = len; }
+  void set_amul(reg_t amul) { mamul = amul; }
+  void set_mrlen(reg_t rlen) { mrlen = rlen; }
   bool get_zvf() const { return zvf; }
   bool get_zvd() const { return zvd; }
   bool extension_enabled(unsigned char ext) const {
@@ -128,6 +145,7 @@ protected:
   reg_t elen;
   reg_t mlen;
   reg_t mrlen;
+  reg_t mamul;
   bool zvf;
   bool zvd;
   std::bitset<NUM_ISA_EXTENSIONS> extension_table;

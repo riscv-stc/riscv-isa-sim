@@ -237,7 +237,21 @@ isa_parser_t::isa_parser_t(const char* str, const char *priv)
     } else if (ext_str == "matrix" || ext_str == "Matrix") {
       mlen = 1024;
       mrlen = 128;
+      mamul = 8;
       extension_table[EXT_MATRIX] = true;
+      extension_table[EXT_MATRIX_ZMI4] = true;
+      extension_table[EXT_MATRIX_ZMI8] = true;
+      extension_table[EXT_MATRIX_ZMI16] = true;
+      extension_table[EXT_MATRIX_ZMI32] = true;
+      extension_table[EXT_MATRIX_ZMI64] = true;
+      extension_table[EXT_MATRIX_ZMF8E4M3] = true;
+      extension_table[EXT_MATRIX_ZMF8E5M2] = true;
+      extension_table[EXT_MATRIX_ZMF8E3M4] = true;
+      extension_table[EXT_MATRIX_ZMF16] = true;
+      extension_table[EXT_MATRIX_ZMBF16] = true;
+      extension_table[EXT_MATRIX_ZMFP32] = true;
+      extension_table[EXT_MATRIX_ZMTF32] = true;
+      extension_table[EXT_MATRIX_ZMF64] = true;
     }else if (ext_str == "zfa") {
       extension_table[EXT_ZFA] = true;
     } else if (ext_str == "zicbom") {

@@ -1,0 +1,1 @@
+MXU_VFP_VV_LOOP_QUAD( 4, e8)

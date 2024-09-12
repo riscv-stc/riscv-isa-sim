@@ -1,6 +1,6 @@
 // require(P.MU.mstart == 0);
 
-MRM xrm = P.MU.get_mround_mode();
+VRM xrm = P.VU.get_vround_mode();
 uint64_t uint_max = UINT64_MAX >> (64 - P.MU.msew);
 
 MI_MM_LOOP
@@ -25,8 +25,8 @@ MI_MM_LOOP
   // saturation
   if (overflow) {
     // result = int_max;
-    P_SET_OM(1); 
+    P_SET_OV(1); 
   }
 
 //   td = result;
-}, XU2D, true)
+}, XU2D, true, P.MU.msew)

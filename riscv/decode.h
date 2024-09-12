@@ -22,9 +22,10 @@ typedef float128_t freg_t;
 const int NXPR = 32;
 const int NFPR = 32;
 const int NVPR = 32;
-const int NMPR = 8;
+const int NMTRPR = 8;
+const int NMACCPR = 8;
 const int NCSR = 4096;
-
+const int MAMUL_MAX = 8;
 #define X_RA 1
 #define X_SP 2
 #define X_T0 5
@@ -90,8 +91,9 @@ public:
   uint64_t rs1() { return x(15, 5); }
   uint64_t rs2() { return x(20, 5); }
   uint64_t rs3() { return x(27, 5); }
-  uint64_t td() { return x(7, 3); }
-  uint64_t ts1() { return x(15, 3); }
+  uint64_t td() { return x(7, 4); }
+  uint64_t ts1() { return x(15, 4); }
+  uint64_t ts2() { return x(20, 4); }
   uint64_t mlmul() { return x(10, 2); }
   uint64_t rm() { return x(12, 3); }
   uint64_t csr() { return x(20, 12); }
@@ -145,8 +147,8 @@ public:
   uint64_t v_vta() { return x(26, 1); }
   uint64_t v_vma() { return x(27, 1); }
   uint64_t v_mew() { return x(28, 1); }
-  uint64_t v_mimm13() { return x(15, 13); }
   uint64_t v_mimm3() { return x(15, 3); }
+  uint64_t v_mimm10() { return x(15, 10); }
 
   uint64_t m_simm5() { return x(20, 5); }
   uint64_t v_zimm6() { return x(15, 5) + (x(26, 1) << 5); }

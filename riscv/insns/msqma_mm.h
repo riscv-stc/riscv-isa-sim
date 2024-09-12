@@ -1,4 +1,4 @@
-MRM xrm = P.MU.get_mround_mode();
+VRM xrm = P.VU.get_vround_mode();
 int64_t int_max = INT64_MAX >> (64 - P.MU.msew * 4);
 int64_t int_min = INT64_MIN >> (64 - P.MU.msew * 4);
 MXU_MM_LOOP_QUEN
@@ -7,7 +7,7 @@ MXU_MM_LOOP_QUEN
     throw trap_illegal_instruction(insn.bits()); 
 
   bool overflow = false;
-  int128_t result = (int128_t)ts1 * (int128_t)ts2 + (int128_t)td;
+  int128_t result = (int128_t)ts1 * (int128_t)ts2 + (int128_t)accd;
 
   // rounding
   // INT_ROUNDING(result, xrm, sew - 1);
@@ -25,8 +25,8 @@ MXU_MM_LOOP_QUEN
   // max saturation
   if (overflow) {
     // result = int_max;
-    P_SET_OM(1);
+    P_SET_OV(1);
   }
 
-  td = result;
-}, MULX, 4)
+  accd = result;
+}, MULX, 4, P.MU.msew)

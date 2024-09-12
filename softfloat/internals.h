@@ -46,8 +46,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
+union ui8_f8e3m4 { uint8_t ui; float8_e3m4_t f; };
+union ui8_f8e4m3 { uint8_t ui; float8_e4m3_t f; };
+union ui8_f8e5m2 { uint8_t ui; float8_e5m2_t f; };
 union ui16_f16 { uint16_t ui; float16_t f; };
+union ui16_bf16 { uint16_t ui; bfloat16_t f; };
 union ui32_f32 { uint32_t ui; float32_t f; };
+union ui32_tf32 { uint32_t ui; tfloat32_t f; };
 union ui64_f64 { uint64_t ui; float64_t f; };
 
 #ifdef SOFTFLOAT_FAST_INT64
@@ -62,7 +67,18 @@ enum {
 
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
+
+INLINE uint_fast8_t softfloat_countLeadingZeros8_( uint8_t a ) __attribute__((always_inline));
+
+INLINE uint_fast8_t softfloat_countLeadingZeros8_( uint8_t a )
+    { return a ? __builtin_clz( a ) - 24 : 8; }
+
+uint_fast8_t softfloat_roundToUI8(bool, uint_fast64_t, uint_fast8_t, bool );
+
 uint_fast32_t softfloat_roundToUI32( bool, uint_fast64_t, uint_fast8_t, bool );
+uint_fast16_t softfloat_roundToUI16( bool sign, uint_fast64_t sig, uint_fast8_t roundingMode, bool exact );
+uint_fast8_t softfloat_roundToUI8( bool sign, uint_fast64_t sig, uint_fast8_t roundingMode, bool exact );
+int_fast8_t softfloat_roundToI8(bool sign, uint_fast64_t sig, uint_fast8_t roundingMode, bool exact );
 
 #ifdef SOFTFLOAT_FAST_INT64
 uint_fast64_t
@@ -72,6 +88,8 @@ uint_fast64_t
 uint_fast64_t softfloat_roundMToUI64( bool, uint32_t *, uint_fast8_t, bool );
 #endif
 
+int_fast8_t softfloat_roundToI8( bool, uint_fast64_t, uint_fast8_t, bool );
+int_fast16_t softfloat_roundToI16( bool, uint_fast64_t, uint_fast8_t, bool );
 int_fast32_t softfloat_roundToI32( bool, uint_fast64_t, uint_fast8_t, bool );
 
 #ifdef SOFTFLOAT_FAST_INT64
@@ -83,16 +101,80 @@ int_fast64_t softfloat_roundMToI64( bool, uint32_t *, uint_fast8_t, bool );
 #endif
 
 /*----------------------------------------------------------------------------
+*Stochastic rounding
+*----------------------------------------------------------------------------*/
+uint16_t softfloat_stochasticRound16( uint16_t, uint8_t );
+uint32_t softfloat_stochasticRound32( uint32_t, uint8_t );
+uint64_t softfloat_stochasticRound64( uint64_t, uint8_t );
+
+/*----------------------------------------------------------------------------
+*float8_e3m4_t
+*----------------------------------------------------------------------------*/
+#define signF8E3M4UI( a ) ((bool) ((uint8_t) (a)>>7))
+#define expF8E3M4UI( a ) ((int_fast8_t) ((a)>>4) & 0x7)
+#define fracF8E3M4UI( a ) ((a) & 0xF)
+#define packToF8E3M4UI( sign, exp, sig ) (((uint8_t) (sign)<<7) + ((uint8_t) (exp)<<4) + (sig))
+#define isNaNF8E3M4UI( a ) ( ((~a) & 0x7f) == 0 )
+
+struct exp8_sig8 { int_fast8_t exp; uint_fast8_t sig; };
+struct exp8_sig8 softfloat_normSubnormalF8e3m4Sig( uint_fast8_t );
+
+float8_e3m4_t softfloat_roundPackToF8e3m4( bool, int_fast8_t, uint_fast8_t );
+float8_e3m4_t softfloat_normRoundPackToF8e3m4( bool, int_fast8_t, uint_fast8_t );
+
+float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t, uint_fast8_t );
+float8_e3m4_t softfloat_subMagsF8e3m4( uint_fast8_t, uint_fast8_t );
+
+float8_e3m4_t softfloat_mulAddF8e3m4( uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+float32_t softfloat_mulAddF8e3m4F32( uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+
+/*----------------------------------------------------------------------------
+*float8_e4m3_t
+*----------------------------------------------------------------------------*/
+#define signF8E4M3UI( a ) ((bool) ((uint8_t) (a)>>7))
+#define expF8E4M3UI( a ) ((int_fast8_t) ((a)>>3) & 0xF)
+#define fracF8E4M3UI( a ) ((a) & 0x7)
+#define packToF8E4M3UI( sign, exp, sig ) (((uint8_t) (sign)<<7) + ((uint8_t) (exp)<<3) + (sig))
+#define isNaNF8E4M3UI( a ) ( ((~a) & 0x7f) == 0 )
+
+struct exp8_sig8 softfloat_normSubnormalF8e4m3Sig( uint_fast8_t );
+
+float8_e4m3_t softfloat_roundPackToF8e4m3( bool, int_fast8_t, uint_fast8_t );
+float8_e4m3_t softfloat_normRoundPackToF8e4m3( bool, int_fast8_t, uint_fast8_t );
+
+float8_e4m3_t softfloat_addMagsF8e4m3( uint_fast8_t, uint_fast8_t );
+float8_e4m3_t softfloat_subMagsF8e4m3( uint_fast8_t, uint_fast8_t );
+
+float8_e4m3_t softfloat_mulAddF8e4m3( uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+float32_t softfloat_mulAddF8e4m3F32( uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+
+
+/*----------------------------------------------------------------------------
+*fp8_e5m2_t
+*----------------------------------------------------------------------------*/
+#define signF8E5M2UI( a ) ((bool) ((uint8_t) (a)>>7))
+#define expF8E5M2UI( a ) ((int_fast8_t) ((a)>>2) & 0x1F)
+#define fracF8E5M2UI( a ) ((a) & 0x3)
+#define packToF8E5M2UI( sign, exp, sig ) (((uint8_t) (sign)<<7) + ((uint8_t) (exp)<<2) + (sig))
+#define isNaNF8E5M2UI( a ) (((~(a) & 0x7C) == 0) && ((a) & 0x03))
+
+struct exp8_sig8 softfloat_normSubnormalF8e5m2Sig( uint_fast8_t );
+
+float8_e5m2_t softfloat_roundPackToF8e5m2( bool, int_fast8_t, uint_fast8_t );
+float8_e5m2_t softfloat_normRoundPackToF8e5m2( bool, int_fast8_t, uint_fast8_t );
+
+float8_e5m2_t softfloat_addMagsF8e5m2( uint_fast8_t, uint_fast8_t );
+float8_e5m2_t softfloat_subMagsF8e5m2( uint_fast8_t, uint_fast8_t );
+
+float8_e5m2_t softfloat_mulAddF8e5m2(uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+float32_t softfloat_mulAddF8e5m2F32(uint_fast8_t, uint_fast8_t, uint_fast8_t, uint_fast8_t );
+
+/*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 #define signF16UI( a ) ((bool) ((uint16_t) (a)>>15))
 #define expF16UI( a ) ((int_fast8_t) ((a)>>10) & 0x1F)
 #define fracF16UI( a ) ((a) & 0x03FF)
 #define packToF16UI( sign, exp, sig ) (((uint16_t) (sign)<<15) + ((uint16_t) (exp)<<10) + (sig))
-
-#define signBF16UI( a ) ((bool) ((uint16_t) (a)>>15))
-#define expBF16UI( a ) ((int_fast16_t) ((a)>>7) & 0xFF)
-#define fracBF16UI( a ) ((a) & 0x07F)
-#define packToBF16UI( sign, exp, sig ) (((uint16_t) (sign)<<15) + ((uint16_t) (exp)<<7) + (sig))
 
 #define isNaNF16UI( a ) (((~(a) & 0x7C00) == 0) && ((a) & 0x03FF))
 
@@ -104,11 +186,31 @@ float16_t softfloat_normRoundPackToF16( bool, int_fast16_t, uint_fast16_t );
 
 float16_t softfloat_addMagsF16( uint_fast16_t, uint_fast16_t );
 float16_t softfloat_subMagsF16( uint_fast16_t, uint_fast16_t );
+
+bfloat16_t softfloat_addMagsBF16( uint_fast16_t, uint_fast16_t );
+bfloat16_t softfloat_subMagsBF16( uint_fast16_t, uint_fast16_t );
+
+bfloat16_t
+ softfloat_mulAddBF16(
+     uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast8_t );
 float16_t
  softfloat_mulAddF16(
      uint_fast16_t, uint_fast16_t, uint_fast16_t, uint_fast8_t );
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signBF16UI( a ) ((bool) ((uint16_t) (a)>>15))
+#define expBF16UI( a ) ((int_fast16_t) ((a)>>7) & 0xFF)
+#define fracBF16UI( a ) ((a) & 0x7F)
+#define packToBF16UI( sign, exp, sig ) (((uint16_t) (sign)<<15) + ((uint16_t) (exp)<<7) + (sig))
+
+#define isNaNBF16UI( a ) (((~(a) & 0x7f80) == 0) && ((a) & 0x07F))
+
+struct exp8_sig16 softfloat_normSubnormalBF16Sig( uint_fast16_t );
 
 bfloat16_t softfloat_roundPackToBF16( bool, int_fast16_t, uint_fast16_t );
+bfloat16_t softfloat_normRoundPackToBF16( bool, int_fast16_t, uint_fast16_t );
+
+
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 #define signF32UI( a ) ((bool) ((uint32_t) (a)>>31))
@@ -130,6 +232,25 @@ float32_t
  softfloat_mulAddF32(
      uint_fast32_t, uint_fast32_t, uint_fast32_t, uint_fast8_t );
 
+/*----------------------------------------------------------------------------
+*----------------------------------------------------------------------------*/
+#define signTF32UI( a ) ((bool) ((uint32_t) (a)>>18))
+#define expTF32UI( a ) ((int_fast16_t) ((a)>>10) & 0xFF)
+#define fracTF32UI( a ) ((a) & 0x3FF)
+#define packToTF32UI( sign, exp, sig ) (((uint32_t) (sign)<<18) + ((uint32_t) (exp)<<10) + (sig))
+
+#define isNaNTF32UI( a ) (((~(a) & 0x3fC00) == 0) && ((a) & 0x3FF))
+
+struct exp16_sig32 softfloat_normSubnormalTF32Sig( uint_fast32_t );
+
+tfloat32_t softfloat_roundPackToTF32( bool, int_fast16_t, uint_fast32_t );
+tfloat32_t softfloat_normRoundPackToTF32( bool, int_fast16_t, uint_fast32_t );
+
+tfloat32_t softfloat_addMagsTF32( uint_fast32_t, uint_fast32_t );
+tfloat32_t softfloat_subMagsTF32( uint_fast32_t, uint_fast32_t );
+tfloat32_t
+ softfloat_mulAddTF32(
+     uint_fast32_t, uint_fast32_t, uint_fast32_t, uint_fast8_t );
 /*----------------------------------------------------------------------------
 *----------------------------------------------------------------------------*/
 #define signF64UI( a ) ((bool) ((uint64_t) (a)>>63))
