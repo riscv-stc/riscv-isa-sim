@@ -77,7 +77,7 @@ reg_t matrixUnit_t::set_mtype(int rd, reg_t newType) {
 }
 
 reg_t matrixUnit_t::set_mtypei(int rd, reg_t newType){
-  reg_t type = ((mtype->read() & ~((1UL << 10) - 1)) | newType) ;
+  reg_t type = (((mtype->read() & 0x3FF ) & ~((1UL << 10) - 1)) | newType) ;
   return set_mtype(rd, type);
 }
 
