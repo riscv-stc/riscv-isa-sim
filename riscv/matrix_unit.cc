@@ -121,8 +121,8 @@ reg_t matrixUnit_t::set_ba(int rd, reg_t newType){
 
 reg_t matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
   
-  if (mlmax == 0)
-      return 0;
+  // if (mlmax == 0)
+  //     return 0;
 
   reg_t MMAX = mrows;
   reg_t NMAX = mcols / msew;
