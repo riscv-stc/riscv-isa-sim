@@ -1,2 +1,2 @@
 require_vector_novtype(false);
-WRITE_RD(P.MU.set_tsp(insn.rd(), insn.v_zimm5()));
+WRITE_RD(P.MU.set_tsp(insn.v_zimm5()));

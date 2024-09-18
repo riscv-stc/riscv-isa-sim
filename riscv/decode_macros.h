@@ -189,7 +189,7 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
 #define require_matrix(alu) \
   do { \
     require_vector_vs; \
-    require_extension('M'); \
+    require_extension(EXT_MATRIX); \
     if (alu) \
       require(P.MU.mstart->read() == 0); \
     require(!P.MU.mill); \

@@ -65,10 +65,11 @@ processor_t::processor_t(const isa_parser_t *isa, const cfg_t *cfg,
   MU.MLEN = isa->get_mlen();
   MU.RLEN = isa->get_mrlen();
   MU.mlenb = isa->get_mlen() / 8;
-
+  MU.mamul = isa->get_amul();
   MU.mrows = MU.MLEN / MU.RLEN;
   MU.mcols = MU.RLEN;
   MU.mrlenb = MU.RLEN / 8;
+  
 
   register_base_instructions();
   mmu = new mmu_t(sim, cfg->endianness, this);

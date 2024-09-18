@@ -31,8 +31,8 @@ void matrixUnit_t::reset(){
   csrmap[CSR_MPAD] = mpad = std::make_shared<matrix_csr_t>(p, CSR_MPAD, 0);
   csrmap[CSR_MINSK] = minsk = std::make_shared<matrix_csr_t>(p, CSR_MINSK, 0);
   csrmap[CSR_MOUTSK] = moutsk = std::make_shared<matrix_csr_t>(p, CSR_MOUTSK, 0);
-  csrmap[CSR_MPADVAL] = mamul = std::make_shared<matrix_csr_t>(p, CSR_MPADVAL, 0);
-  csrmap[CSR_MAMUL] = mpadval = std::make_shared<matrix_csr_t>(p, CSR_MAMUL, 1); // default value is 1
+  csrmap[CSR_MPADVAL] = mpadval = std::make_shared<matrix_csr_t>(p, CSR_MPADVAL, 0);
+  csrmap[CSR_MAMUL] = std::make_shared<matrix_csr_t>(p, CSR_MAMUL, 1); // default value is 1
   csrmap[CSR_MTSP] = mtsp = std::make_shared<matrix_csr_t>(p, CSR_MTSP, 0);
   csrmap[CSR_MDSP] = mdsp = std::make_shared<matrix_csr_t>(p, CSR_MDSP, 0);
   mtype->write_raw(0);
@@ -82,7 +82,8 @@ reg_t matrixUnit_t::set_mtypei(int rd, reg_t newType){
 }
 
 reg_t matrixUnit_t::set_mtypehi(int rd, reg_t newType){
-  reg_t type = ((mtype->read() & 0x3FF) | newType | ((mtype->read() >> 20) << 20));
+  reg_t type = ((mtype->read() & 0x3FF) | ((newType | (mtype->read() >> 10)) << 10));
+
   return set_mtype(rd, type);
 }
 
@@ -93,7 +94,7 @@ reg_t matrixUnit_t::set_msew(int rd, reg_t newType){
 
 reg_t matrixUnit_t::set_mint(int rd, reg_t newType, reg_t bit){
   reg_t type = 0;
-  if (newType){
+  if (newType & 0x1){
     type = mtype->read() | (1UL << bit);
   }
   else {
@@ -111,7 +112,7 @@ reg_t matrixUnit_t::set_fp(int rd, reg_t newType, reg_t bit){
   // clear old value;
   type &= ~mask;
   // set new value;
-  type |= (type << bit) & mask;
+  type |= ((newType & 0x3) << bit) & mask;
   return set_mtype(rd, type);
 }
 
@@ -208,11 +209,11 @@ reg_t matrixUnit_t::set_pad(int rd, int rs1) {
   return mpadval->read();
 }
 
-reg_t matrixUnit_t::set_tsp(int rd, int rs1) {
+reg_t matrixUnit_t::set_tsp(int rs1) {
   mtsp->write_raw(rs1 & 0xF);
   return mtsp->read();
 }
-reg_t matrixUnit_t::set_dsp(int rd, int rs1) {
+reg_t matrixUnit_t::set_dsp(int rs1) {
   mdsp->write_raw(rs1 & 0xF);
   return mdsp->read();
 }

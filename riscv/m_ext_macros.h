@@ -298,7 +298,7 @@
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / sew; \
   reg_t m = 0; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   if (i >mmax || j > nmax) \
     require(0); \
   BODY \
@@ -310,7 +310,7 @@
   reg_t ts1_num = num; \
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / sew; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t m = 0; \
   if (i >mmax || j > nmax) \
     require(0); \
@@ -323,7 +323,7 @@
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / sew; \
   reg_t height = P.MU.tile_m->read(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t width = P.MU.tile_n->read(); \
   reg_t lmul = 1; \
   if (ts1_num == td_num) \
@@ -335,7 +335,7 @@
   reg_t nmax = P.MU.mcols / sew; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t height = P.MU.tile_m->read(); \
   reg_t width = P.MU.tile_n->read(); \
   reg_t start_width = REG_VAL ; \
@@ -356,7 +356,7 @@
   reg_t ts1_num = num; \
   reg_t mmax = P.MU.mrows; \
   reg_t nmax = P.MU.mcols / sew; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t lmul = 1; \
   bool reg_rename = false; \
 
@@ -399,7 +399,7 @@
   reg_t start_height = RS2; \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t lmul = 1; \
   require_align(insn.rs1(), lmul); \
@@ -480,7 +480,7 @@
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
   reg_t ts2_num = insn.rs2(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t lmul = 1; \
   reg_t reg_sum = 1; \
@@ -513,7 +513,7 @@
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
   reg_t ts2_num = insn.rs2(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   bool reg_rename = false; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t lmul = 1; \
@@ -597,7 +597,7 @@
   if (td_num == ts1_num || td_num == ts2_num){ \
     reg_rename = true; \
   } \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   for (reg_t i = 0; i < tile_m; ++i) { \
     for (reg_t m = 0 ; m < lmul; m++) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
@@ -625,7 +625,7 @@
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t reg_sum = 1; \
   reg_t lmul = 1; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   /* if (ins && insn.mlmul() != LMUL_RESERVE) \
     lmul = (1 << insn.mlmul()); */ \
   bool reg_rename = false; \
@@ -657,7 +657,7 @@
   reg_t tile_n = P.MU.tile_n->read() * lmul;\
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / sew;\
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
   reg_t ts2_num = insn.rs2(); \
@@ -741,7 +741,7 @@
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / sew;\
   type_t res; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   bool reg_rename = false; \
   if (td_num == ts1_num || td_num == ts2_num){ \
     reg_rename = true; \
@@ -970,7 +970,7 @@
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
   reg_t ts2_num = insn.rs2(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t lmul = 1; \
   /* if (ins && insn.mlmul() != LMUL_RESERVE) \
@@ -1016,7 +1016,7 @@
   reg_t kmax = std::min(nmax, P.MU.mrows);\
   /* reg_t lmul = P.MU.mlmul; */ \
   reg_t lmul = 1; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   require_align(td_num, lmul); \
   require_align(ts1_num, lmul); \
   require_align(ts2_num, lmul); \
@@ -1101,7 +1101,7 @@
   reg_t nmax = P.MU.mcols / sew; \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
   require_align(insn.rs2(), lmul); \
@@ -1215,7 +1215,7 @@
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.rs1(); \
   reg_t ts2_num = insn.rs2(); \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
   require_align(insn.td(), lmul); \
@@ -1578,6 +1578,13 @@ for (reg_t m = 0; m < lmul; m++) {\
   } \
 }\
 
+#define CLEAR_ACC(accd) \
+  for (reg_t i = 0; i < P.MU.mrows; i++) { \
+    for (reg_t j = 0; j < P.MU.mcols * P.MU.mamul / 8; j++) { \
+      P.MU.acc_elt<int8_t>(accd, 0, i, j, P.MU.mrows, (P.MU.mcols >> 3) * P.MU.mamul, false, true) = 0; \
+    } \
+  } \
+
 #define PAD_TILE(td, elt_width, val) \
 for (reg_t m = 0; m < lmul; m++) {\
   for (reg_t i = 0; i < height; i++) { \
@@ -1621,6 +1628,24 @@ for (reg_t m = 0; m < lmul; m++) {\
     } \
   } \
 
+  #define MTU_ACC_LD(is_trans, dim, elt_width, is_max) \
+  const reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t accd = insn.rd(); \
+  reg_t height, width; \
+  reg_t amul = P.MU.mamul; \
+  reg_t rmax = 0, cmax = 0;\
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
+  WHOLE_MATRIX(is_trans, is_max) \
+  CLEAR_ACC(accd); \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+        elt_width##_t val = MMU.load<elt_width##_t>( \
+                  baseAddr + i * stride2 + j * sizeof(elt_width##_t)); \
+        P.MU.acc_elt<elt_width##_t>(accd, is_trans, i, j, rmax, cmax * amul, false, true) = val; \
+    } \
+  } \
+
 #define MTU_TR_ST(is_trans, dim, elt_width, is_max) \
   const reg_t baseAddr = RS1; \
   const reg_t stride2 = RS2; \
@@ -1628,10 +1653,10 @@ for (reg_t m = 0; m < lmul; m++) {\
   /*reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; \*/ \
   reg_t lmul = 1; \
   require_align(td, lmul); \
-  reg_t height, width; \
+  reg_t height = 0, width = 0; \
   reg_t rmax = 0, cmax = 0; \
   MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
-  WHOLE_MATRIX(is_max, is_trans) \
+  WHOLE_MATRIX(is_trans, is_max) \
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t m = 0; m < lmul; m++) {\
       for (reg_t j = 0; j < width; ++j) { \
@@ -1640,6 +1665,24 @@ for (reg_t m = 0; m < lmul; m++) {\
                     baseAddr + i * stride2 + j * sizeof(elt_width##_t) + \
                     m * (width * sizeof(elt_width##_t)), val); \
       } \
+    } \
+  } \
+
+
+#define MTU_ACC_ST(is_trans, dim, elt_width, is_max) \
+  const reg_t baseAddr = RS1; \
+  const reg_t stride2 = RS2; \
+  const reg_t accd = insn.td(); \
+  reg_t height = 0, width = 0; \
+  reg_t amul = P.MU.mamul; \
+  reg_t rmax = 0, cmax = 0;\
+  MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
+  WHOLE_MATRIX(is_trans, is_max) \
+  for (reg_t i = 0; i < height; ++i) { \
+    for (reg_t j = 0; j < width; ++j) { \
+        elt_width##_t val = P.MU.acc_elt<elt_width##_t>(accd, is_trans, i, j, rmax, cmax * amul, false, false); \
+        MMU.store<elt_width##_t>( \
+                  baseAddr + i * stride2 + j * sizeof(elt_width##_t), val); \
     } \
   } \
 
@@ -1783,7 +1826,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     reg_rename = true; \
   } \
   reg_t reg_sum = 1; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t des_nmax = nmax / wide; \
   for (reg_t i = 0; i < tile_m; ++i) { \
     for (reg_t m = 0; m < lmul; m++) { \
@@ -1880,7 +1923,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   } \
   reg_t reg_sum = 1; \
   reg_t des_nmax = nmax / wide; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   for (reg_t i = 0; i < tile_m; ++i) { \
     for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j = 0; j < tile_n; ++j) { \
@@ -2087,7 +2130,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t rmax = 0; \
   reg_t cmax = 0; \
   reg_t height, width; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t td_num = insn.rd(); \
   reg_t ts1_num = insn.rs1(); \
   char *tr_elt_start = NULL; \
@@ -2242,7 +2285,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   if (td_num == ts1_num || td_num == ts2_num){ \
     reg_rename = true; \
   } \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   reg_t reg_sum = 1; \
   bool only_one_fix_reg_sum = false; \
   reg_t td_num_lmul = 0; \
@@ -2332,7 +2375,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t ts1_num = insn.ts1(); \
   reg_t rmax = 0, cmax = 0; \
   reg_t height = 0, width = 0; \
-  reg_t amul = P.MU.mamul->read(); \
+  reg_t amul = P.MU.mamul; \
   MTU_LS_LEN(0, dim, sizeof(elt_width##_t)) \
   /* mba not 0 must copy agnoic date to dest reg*/ \
   reg_t square_min = std::min(height, width); \

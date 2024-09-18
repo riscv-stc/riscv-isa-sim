@@ -1204,10 +1204,10 @@ riscv_insn_ext_matrix_load_store = \
 	mlce16_m \
 	mlce32_m \
 	mlce64_m \
-	mlre8_m \
-	mlre16_m \
-	mlre32_m \
-	mlre64_m \
+	mltre8_m \
+	mltre16_m \
+	mltre32_m \
+	mltre64_m \
 	mlate8_m \
 	mlate16_m \
 	mlate32_m \
@@ -1220,10 +1220,10 @@ riscv_insn_ext_matrix_load_store = \
 	mlcte16_m \
 	mlcte32_m \
 	mlcte64_m \
-	mlrte8_m \
-	mlrte16_m \
-	mlrte32_m \
-	mlrte64_m \
+	mlacce8_m \
+	mlacce16_m \
+	mlacce32_m \
+	mlacce64_m \
 	msae8_m \
 	msae16_m \
 	msae32_m \
@@ -1236,10 +1236,10 @@ riscv_insn_ext_matrix_load_store = \
 	msce16_m \
 	msce32_m \
 	msce64_m \
-	msre8_m \
-	msre16_m \
-	msre32_m \
-	msre64_m \
+	mstre8_m \
+	mstre16_m \
+	mstre32_m \
+	mstre64_m \
 	msate8_m \
 	msate16_m \
 	msate32_m \
@@ -1252,10 +1252,10 @@ riscv_insn_ext_matrix_load_store = \
 	mscte16_m \
 	mscte32_m \
 	mscte64_m \
-	msrte8_m \
-	msrte16_m \
-	msrte32_m \
-	msrte64_m \
+	msacce8_m \
+	msacce16_m \
+	msacce32_m \
+	msacce64_m \
 	mlae8_v \
 	mlae16_v \
 	mlae32_v \

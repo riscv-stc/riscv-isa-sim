@@ -2077,12 +2077,12 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
     DEFINE_R1TYPE(msettilem);
     DEFINE_LTYPE2(msettilemi);
     DEFINE_R1TYPE(msettilek);
-    DEFINE_R1TYPE(msettileki);
+    DEFINE_LTYPE2(msettileki);
     DEFINE_R1TYPE(msettilen);
     DEFINE_LTYPE2(msettileni);
-    DEFINE_LTYPE2(msettsp);
+    DEFINE_R1TYPE(msettsp);
     DEFINE_LTYPE3(msettspi);
-    DEFINE_LTYPE2(msetdsp);
+    DEFINE_R1TYPE(msetdsp);
     DEFINE_LTYPE3(msetdspi);
     // DEFINE_R1TYPE(msettile); code inflact with msetoutsh
 
@@ -2114,8 +2114,8 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
     DISASM_MMEM_TR_INSN(ms, tr_st_unit, a);
     DISASM_MMEM_TR_INSN(ms, tr_st_unit, b);
     DISASM_MMEM_TR_INSN(ms, tr_st_unit, c);
-    DISASM_MMEM_TR_INSN(ml, tr_ld_unit, r);
-    DISASM_MMEM_TR_INSN(ms, tr_st_unit, r);
+    DISASM_MMEM_TR_INSN(mlt, tr_ld_unit, r);
+    DISASM_MMEM_TR_INSN(mst, tr_st_unit, r);
 
     DISASM_MMEM_TR_INSN_TE(ml, tr_ld_unit, a);
     DISASM_MMEM_TR_INSN_TE(ml, tr_ld_unit, b);

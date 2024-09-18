@@ -19,7 +19,7 @@ class matrixUnit_t {
       void *tr_renamefile;
       void *acc_renamefile;
       char tr_renamefile2[2048];
-      reg_t MLEN, mlenb, RLEN;
+      reg_t MLEN, mlenb, RLEN, mamul;
       reg_t msew, mba;
       reg_t mfp16, mfp32, mfp64, mfp8, mint4, mint8, mint16, mint32, mint64;
       reg_t mrows, mcols;
@@ -27,7 +27,7 @@ class matrixUnit_t {
       reg_t mlmul;
       reg_t mlmax;
       // csr_t_p mxsat;
-      matrix_csr_t_p mtype, mstart, mcsr, tile_m, tile_k, tile_n, mtsp, mdsp, mamul;
+      matrix_csr_t_p mtype, mstart, mcsr, tile_m, tile_k, tile_n, mtsp, mdsp;
       // im2col register
 
       matrix_csr_t_p moutshape, minshape, mstdi, mpad, minsk, moutsk, mpadval;
@@ -72,7 +72,7 @@ class matrixUnit_t {
 #endif
           char *regStart = NULL;
           if (is_acc)
-            regStart = ((char*)acc_file) + td * elts_per_slice * mamul->read() * rows * msew / 8;
+            regStart = ((char*)acc_file) + td * elts_per_slice * mamul * rows * msew / 8;
           else
             regStart = ((char*)tr_file) + td * elts_per_slice * rows * msew / 8;
           return regStart;
@@ -105,7 +105,7 @@ class matrixUnit_t {
           if (is_write)
             p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
 #endif
-          T *regStart = (T *)((char*)acc_file + td * mlenb * mamul->read());
+          T *regStart = (T *)((char*)acc_file + td * rows * elts_per_slice);
           if (tt & 1) { // col
             // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
             return *(regStart + elts_per_slice * n + slice);
@@ -143,9 +143,8 @@ class matrixUnit_t {
       reg_t set_msk(int rd, int rs1, int rs2);
       reg_t set_pad(int rd, int rs1);
       reg_t get_mlen() {return MLEN;}
-      reg_t set_tsp(int rd, int rs1);
-      reg_t set_dsp(int rd, int rs1);
-      reg_t set_tdi(int rd, int rs1);
+      reg_t set_tsp(int rs1);
+      reg_t set_dsp(int rs1);
       
       // matrix 0.5 del mxrm
       // MRM get_mround_mode() {

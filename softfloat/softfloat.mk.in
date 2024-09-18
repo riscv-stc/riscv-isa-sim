@@ -249,11 +249,7 @@ softfloat_c_srcs = \
 	s_normSubnormalF8e4m3Sig.c \
 	s_normSubnormalF8e5m2Sig.c \
 	s_normSubnormalTF32Sig.c \
-	s_roundPackToF8e5m2.c \
-	s_roundPackToF8e3m4.c \
 	s_roundPackToTF32.c \
-	s_roundToI16.c \
-	s_roundToUI8.c \
 	s_normRoundPackToF128.c \
 	s_normRoundPackToF16.c \
 	s_normRoundPackToF32.c \
@@ -335,7 +331,6 @@ softfloat_c_srcs = \
 	ui64_to_f32.c \
 	ui64_to_tf32.c \
 	ui64_to_f64.c \
-	f8e3m4_add.c \
 	f8e3m4_sub.c \
 	f8e3m4_to_bf16.c \
 	f8e3m4_to_f16.c \
