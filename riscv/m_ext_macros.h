@@ -358,6 +358,7 @@
   reg_t nmax = P.MU.mcols / sew; \
   reg_t amul = P.MU.mamul; \
   reg_t lmul = 1; \
+  reg_t m = 0; \
   bool reg_rename = false; \
 
 #define MMV_TR_ACC_FPR(BODY, num, sew) \

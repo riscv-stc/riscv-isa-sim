@@ -2165,10 +2165,10 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 #undef DISASM_MMEM_TR_IM2COL_INSN
 
   #define DISASM_REG_DATA_MV_INSN(name, fmt, src, dst) \
-    add_insn(new disasm_insn_t(#name "e8."  #src #dst ,    match_##name##e8_##src##_##dst,      mask_##name##e8_##src##_##dst,   fmt)); \
-    add_insn(new disasm_insn_t(#name "e16." #src #dst ,    match_##name##e8_##src##_##dst,      mask_##name##e8_##src##_##dst,   fmt)); \
-    add_insn(new disasm_insn_t(#name "e32." #src #dst ,    match_##name##e8_##src##_##dst,      mask_##name##e8_##src##_##dst,   fmt)); \
-    add_insn(new disasm_insn_t(#name "e64." #src #dst ,    match_##name##e8_##src##_##dst,      mask_##name##e8_##src##_##dst,   fmt)); \
+    add_insn(new disasm_insn_t(#name "e8."  #dst "." #src ,    match_##name##e8_##dst##_##src,      mask_##name##e8_##dst##_##src,   fmt)); \
+    add_insn(new disasm_insn_t(#name "e16." #dst "." #src ,    match_##name##e16_##dst##_##src,     mask_##name##e16_##dst##_##src,   fmt)); \
+    add_insn(new disasm_insn_t(#name "e32." #dst "." #src ,    match_##name##e32_##dst##_##src,     mask_##name##e32_##dst##_##src,   fmt)); \
+    add_insn(new disasm_insn_t(#name "e64." #dst "." #src ,    match_##name##e64_##dst##_##src,     mask_##name##e64_##dst##_##src,   fmt)); \
 
     std::vector<const arg_t *> tr_to_acc_unit = {&accdl, &ms1, &xrs2};
     std::vector<const arg_t *> tr_to_acc_imm_unit = {&accdl, &ms1, &mimm5};
