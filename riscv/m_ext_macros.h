@@ -1580,7 +1580,7 @@ for (reg_t m = 0; m < lmul; m++) {\
 }\
 
 #define CLEAR_ACC(accd) \
-  for (reg_t i = 0; i < P.MU.mrows; i++) { \
+  for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < P.MU.mcols * P.MU.mamul / 8; j++) { \
       P.MU.acc_elt<int8_t>(accd, 0, i, j, P.MU.mrows, (P.MU.mcols >> 3) * P.MU.mamul, false, true) = 0; \
     } \
@@ -1591,6 +1591,15 @@ for (reg_t m = 0; m < lmul; m++) {\
   for (reg_t i = 0; i < height; i++) { \
     for (reg_t j = 0; j < width; j++) { \
       P.MU.tr_elt<elt_width##_t>(td + m, 0, i, j, rmax, cmax, false, true) = (elt_width##_t)val; \
+    } \
+  } \
+}\
+
+#define PAD_ACC(td, elt_width, val) \
+for (reg_t m = 0; m < lmul; m++) {\
+  for (reg_t i = 0; i < height; i++) { \
+    for (reg_t j = 0; j < width; j++) { \
+      P.MU.acc_elt<elt_width##_t>(td + m, 0, i, j, rmax, cmax * P.MU.mamul, false, true) = (elt_width##_t)val; \
     } \
   } \
 }\
@@ -1632,7 +1641,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   #define MTU_ACC_LD(is_trans, dim, elt_width, is_max) \
   const reg_t baseAddr = RS1; \
   const reg_t stride2 = RS2; \
-  const reg_t accd = insn.rd(); \
+  const reg_t accd = insn.td(); \
   reg_t height, width; \
   reg_t amul = P.MU.mamul; \
   reg_t rmax = 0, cmax = 0;\
@@ -1718,10 +1727,10 @@ for (reg_t m = 0; m < lmul; m++) {\
   } \
 
 
-#define MTU_UF_TR_LD(is_trans, elt_width, dim) \
+#define MTU_UF_TR_ACC_LD(is_trans, elt_width, dim) \
   reg_t baseAddr = RS1; \
   const reg_t stride2 = RS2; \
-  const reg_t td = insn.rd(); \
+  const reg_t td = insn.td(); \
   reg_t sh = P.MU.mstr_h; \
   reg_t sw = P.MU.mstr_w; \
   reg_t dh = P.MU.mdil_h; \
@@ -1742,15 +1751,24 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
+  reg_t amul = P.MU.mamul; \
   MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
-  CLEAR_TILE(td); \
-  PAD_TILE(td, elt_width, mpadv); \
+  if (dim == 'c') {\
+    CLEAR_ACC(td); \
+    PAD_ACC(td, elt_width, mpadv); \
+  } else {\
+    CLEAR_TILE(td); \
+    PAD_TILE(td, elt_width, mpadv); \
+  } \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
       for (reg_t j = 0; j < width; ++j) { \
         elt_width##_t val = MMU.load<elt_width##_t>( \
                       baseAddr + j * sizeof(elt_width##_t)); \
-        P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, false, true) = val; \
+        if (dim == 'c') \
+          P.MU.acc_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax * amul, false, true) = val; \
+        else \
+          P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, false, true) = val; \
       } \
     } \
     outposw++; \
@@ -1766,10 +1784,10 @@ for (reg_t m = 0; m < lmul; m++) {\
   } \
 
 
-#define MTU_UF_TR_SD(is_trans, elt_width, dim) \
+#define MTU_UF_TR_ACC_SD(is_trans, elt_width, dim) \
   reg_t baseAddr = RS1; \
   const reg_t stride2 = RS2; \
-  const reg_t td = insn.rd(); \
+  const reg_t td = insn.td(); \
   reg_t sh = P.MU.mstr_h; \
   reg_t sw = P.MU.mstr_w; \
   reg_t dh = P.MU.mdil_h; \
@@ -1789,13 +1807,20 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
   reg_t lmul = 1; \
+  reg_t amul = P.MU.mamul; \
   MTU_LS_LEN(is_trans, dim, sizeof(elt_width##_t)); \
   for (reg_t i = 0; i < height; ++i) { \
     if (inposh >= 0 && (reg_t)inposh < inh && inposw >= 0 && (reg_t)inposw < inw) { \
       for (reg_t j = 0; j < width; ++j) { \
-        auto val = P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, false, true); \
-        MMU.store<elt_width##_t>( \
+        if (dim == 'c') { \
+          auto val = P.MU.acc_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax * amul, false, true); \
+          MMU.store<elt_width##_t>( \
                       baseAddr + j * sizeof(elt_width##_t), val); \
+        } else { \
+          auto val = P.MU.tr_elt<elt_width##_t>(td, is_trans, i, j, rmax, cmax, false, true); \
+          MMU.store<elt_width##_t>( \
+                      baseAddr + j * sizeof(elt_width##_t), val); \
+        } \
       } \
     } \
     outposw++; \

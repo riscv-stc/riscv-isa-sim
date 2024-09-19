@@ -1,1 +1,1 @@
-MTU_UF_TR_SD(0, uint32, 'a')
+MTU_UF_TR_ACC_SD(0, uint32, 'a')

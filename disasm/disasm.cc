@@ -2154,13 +2154,15 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 
   std::vector<const arg_t *> tr_ld_unit_md = {&md, &v_address, &xrs2};
   std::vector<const arg_t *> tr_sd_unit_md = {&md, &v_address, &xrs2};
+  std::vector<const arg_t *> acc_ld_unit_md = {&accd, &v_address, &xrs2};
+  std::vector<const arg_t *> acc_sd_unit_md = {&accd, &v_address, &xrs2};
   // mluf{a-c}e{8-64}.m --mlufae8.m
   DISASM_MMEM_TR_IM2COL_INSN(mluf, tr_ld_unit_md, a);
   DISASM_MMEM_TR_IM2COL_INSN(mluf, tr_ld_unit_md, b);
-  DISASM_MMEM_TR_IM2COL_INSN(mluf, tr_ld_unit_md, c);
+  DISASM_MMEM_TR_IM2COL_INSN(mluf, acc_ld_unit_md, c);
   DISASM_MMEM_TR_IM2COL_INSN(msfd, tr_sd_unit_md, a);
   DISASM_MMEM_TR_IM2COL_INSN(msfd, tr_sd_unit_md, b);
-  DISASM_MMEM_TR_IM2COL_INSN(msfd, tr_sd_unit_md, c);
+  DISASM_MMEM_TR_IM2COL_INSN(msfd, acc_sd_unit_md, c);
   
 #undef DISASM_MMEM_TR_IM2COL_INSN
 
