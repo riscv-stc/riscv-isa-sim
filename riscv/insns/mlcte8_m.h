@@ -1,1 +1,1 @@
-MTU_TR_LD(1, 'c', uint8, false);
+MTU_ACC_LD(1, 'c', uint8, false);

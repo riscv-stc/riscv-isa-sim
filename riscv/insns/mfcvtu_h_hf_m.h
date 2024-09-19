@@ -1,0 +1,22 @@
+MXU_MFP_CVT
+(
+{
+    ;
+},
+{
+    if (P.MU.mfp16 == MTYPE_FP16) {
+        auto ts1 = P.MU.acc_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+        P.MU.acc_elt<uint16_t>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true) = f16_to_ui16(ts1, softfloat_roundingMode, true);
+    } else if (P.MU.mfp16 == MTYPE_BF16) {
+        auto ts1 = P.MU.acc_elt<bfloat16_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+        P.MU.acc_elt<uint16_t>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true) = bf16_to_ui16(ts1, softfloat_roundingMode, true);
+    } else {
+        require(0);
+    }
+},
+{
+    ;
+}, 
+{
+   ;
+}, 1, e16)

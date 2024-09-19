@@ -1,4 +1,4 @@
 MXU_MM_LOOP
 ({
-    td = ts2 * ts1 + td;
-}, X)
+    accd = ts2 * ts1 + accd;
+}, X, P.MU.msew)

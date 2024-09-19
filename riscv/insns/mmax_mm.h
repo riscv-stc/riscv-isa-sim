@@ -3,4 +3,4 @@ MI_MM_LOOP({
         td = ts2;
     else
         td = ts1;
-}, X2D, true)
+}, X2D, true, P.MU.msew)

@@ -1,1 +1,1 @@
-MXU_MM_ADD(+, +, type_usew_t, uint128_t, uint, true)
+MXU_MM_ADD(+, +, type_usew_t, uint128_t, uint, true, P.MU.msew)

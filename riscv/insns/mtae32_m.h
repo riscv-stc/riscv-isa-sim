@@ -1,0 +1,1 @@
+MTRANSPOSE('a', uint32)

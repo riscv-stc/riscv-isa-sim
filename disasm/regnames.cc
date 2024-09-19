@@ -27,6 +27,10 @@ const char* tr_name[] = {
   "tr0", "tr1", "tr2", "tr3", "tr4", "tr5", "tr6", "tr7"
 };
 
+const char* acc_name[] = {
+  "acc0", "acc1", "acc2", "acc3", "acc4", "acc5", "acc6", "acc7",
+};
+
 const char* csr_name(int which) {
   switch (which) {
     #define DECLARE_CSR(name, number)  case number: return #name;

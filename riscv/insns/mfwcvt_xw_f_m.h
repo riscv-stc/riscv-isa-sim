@@ -1,22 +1,39 @@
   MXU_MFP_CVT_SCALE
   ({
-    ;
+    if (P.MU.mfp8 == MTYPE_FP8E4M3) {
+      auto ts1 = P.MU.acc_elt<float8_e4m3_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = f8e4m3_to_i16(ts1, softfloat_roundingMode, true);
+    } else if (P.MU.mfp8 == MTYPE_FP8E5M2) {
+      auto ts1 = P.MU.acc_elt<float8_e5m2_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = f8e5m2_to_i16(ts1, softfloat_roundingMode, true);
+    } else if (P.MU.mfp8 == MTYPE_FP8E3M4) {
+      auto ts1 = P.MU.acc_elt<float8_e3m4_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = f8e3m4_to_i16(ts1, softfloat_roundingMode, true);
+    } else {
+      require(0);
+    }
   },
   {
-    if (!only_one_fix_reg_sum){
-      reg_sum += (tile_n - 1) / des_nmax;
-      only_one_fix_reg_sum = true;
+    if (P.MU.mfp16 == MTYPE_FP16) {
+      auto ts1 = P.MU.acc_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = f16_to_i32(ts1, softfloat_roundingMode, true);
+    } else if (P.MU.mfp16 == MTYPE_BF16) {
+      auto ts1 = P.MU.acc_elt<bfloat16_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = bf16_to_i32(ts1, softfloat_roundingMode, true);
+    } else {
+      require(0);
     }
-    auto ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, j, mmax, nmax, false, false);
-    P.MU.tr_elt<int32_t>(td_num + m + td_num_lmul + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, reg_rename, true) = f16_to_i32(ts1, softfloat_roundingMode, true);
   },
   {
-    if (!only_one_fix_reg_sum){
-      reg_sum += (tile_n - 1) / des_nmax;
-      only_one_fix_reg_sum = true;
+    if (P.MU.mfp32 == MTYPE_FP32) {
+      auto ts1 = P.MU.acc_elt<float32_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = f32_to_i64(ts1, softfloat_roundingMode, true);
+    } else if (P.MU.mfp32 ==MTYPE_TFP32) {
+      auto ts1 = P.MU.acc_elt<tfloat32_t>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false);
+      P.MU.acc_elt<int64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = tf32_to_i64(ts1, softfloat_roundingMode, true);
+    } else {
+      require(0);
     }
-    auto ts1 = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, j, mmax, nmax, false, false);
-    P.MU.tr_elt<int64_t>(td_num + m + td_num_lmul + j / des_nmax, 0, i, j % des_nmax, mmax, des_nmax, reg_rename, true) = f32_to_i64(ts1, softfloat_roundingMode, true);
   },
   {
     ;
@@ -33,4 +50,4 @@
   {
     ;
   },
-  2, (P.MU.msew >= 16))
+  2, {require(P.MU.msew >= 8 && P.MU.msew <= 32);}, P.MU.msew)

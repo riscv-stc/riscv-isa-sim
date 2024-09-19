@@ -1,0 +1,1 @@
+MMV_VREG_FROM_TR(0, 'a', e64, TR)

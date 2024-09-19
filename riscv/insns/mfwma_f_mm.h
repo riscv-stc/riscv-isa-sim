@@ -1,0 +1,1 @@
+MXU_VFP_VV_LOOP_WIDE(2, e32)

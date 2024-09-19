@@ -1,0 +1,1 @@
+MMV_TR_FROM_VREG(1, 'c', e32, ACC)

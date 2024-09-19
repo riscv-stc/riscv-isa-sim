@@ -1,14 +1,31 @@
 softfloat_subproject_deps =
 
 softfloat_c_srcs = \
+	bf16_classify.c \
 	bf16_add.c \
 	bf16_div.c \
 	bf16_mul.c \
 	bf16_mulAdd.c \
 	bf16_sqrt.c \
 	bf16_sub.c \
+	bf16_le.c \
+	bf16_lt_quiet.c \
+	bf16_maxmin.c \
+	bf16_eq.c \
 	bf16_to_f32.c \
 	bf16_to_f64.c \
+	bf16_to_f8e3m4.c \
+	bf16_to_f8e4m3.c \
+	bf16_to_f8e5m2.c \
+	bf16_to_f16.c \
+	bf16_to_i4.c \
+	bf16_to_i8.c \
+	bf16_to_i16.c \
+	bf16_to_i32.c \
+	bf16_to_ui4.c \
+	bf16_to_ui8.c \
+	bf16_to_ui16.c \
+	bf16_to_ui32.c \
 	f128_add.c \
 	f128_classify.c \
 	f128_div.c \
@@ -55,18 +72,24 @@ softfloat_c_srcs = \
 	f16_to_f128.c \
 	f16_to_f32.c \
 	f16_to_f64.c \
+	f16_to_i4.c \
 	f16_to_i8.c \
 	f16_to_i16.c \
 	f16_to_i32.c \
 	f16_to_i32_r_minMag.c \
 	f16_to_i64.c \
 	f16_to_i64_r_minMag.c \
+	f16_to_ui4.c \
 	f16_to_ui8.c \
 	f16_to_ui16.c \
 	f16_to_ui32.c \
 	f16_to_ui32_r_minMag.c \
 	f16_to_ui64.c \
 	f16_to_ui64_r_minMag.c \
+	f16_to_bf16.c \
+	f16_to_f8e4m3.c \
+	f16_to_f8e5m2.c \
+	f16_to_f8e3m4.c \
 	f32_add.c \
 	f32_classify.c \
 	f32_div.c \
@@ -84,14 +107,22 @@ softfloat_c_srcs = \
 	f32_sqrt.c \
 	f32_sub.c \
 	f32_to_bf16.c \
+	f32_to_tf32.c \
 	f32_to_f128.c \
+	f32_to_f8e4m3.c \
+	f32_to_f8e5m2.c \
+	f32_to_f8e3m4.c \
 	f32_to_f16.c \
 	f32_to_f64.c \
+	f32_to_i4.c \
+	f32_to_i8.c \
 	f32_to_i16.c \
 	f32_to_i32.c \
 	f32_to_i32_r_minMag.c \
 	f32_to_i64.c \
 	f32_to_i64_r_minMag.c \
+	f32_to_ui4.c \
+	f32_to_ui8.c \
 	f32_to_ui16.c \
 	f32_to_ui32.c \
 	f32_to_ui32_r_minMag.c \
@@ -117,38 +148,69 @@ softfloat_c_srcs = \
 	f64_to_f128.c \
 	f64_to_f16.c \
 	f64_to_f32.c \
+	f64_to_tf32.c \
+	f64_to_f8e4m3.c \
+	f64_to_f8e5m2.c \
+	f64_to_f8e3m4.c \
+	f64_to_i8.c \
+	f64_to_i16.c \
 	f64_to_i32.c \
 	f64_to_i32_r_minMag.c \
 	f64_to_i64.c \
 	f64_to_i64_r_minMag.c \
+	f64_to_ui8.c \
+	f64_to_ui16.c \
 	f64_to_ui32.c \
 	f64_to_ui32_r_minMag.c \
 	f64_to_ui64.c \
 	f64_to_ui64_r_minMag.c \
 	fall_maxmin.c \
 	fall_reciprocal.c \
+	i16_to_f8e4m3.c \
+	i16_to_f8e5m2.c \
+	i16_to_f8e3m4.c \
+	i16_to_bf16.c \
+	i16_to_f16.c \
+	i32_to_f8e4m3.c \
+	i32_to_f8e5m2.c \
+	i32_to_f8e3m4.c \
+	i32_to_bf16.c \
 	i32_to_f128.c \
 	i32_to_f16.c \
 	i32_to_f32.c \
+	i32_to_tf32.c \
 	i32_to_f64.c \
+	i64_to_f8e4m3.c \
+	i64_to_f8e5m2.c \
+	i64_to_f8e3m4.c \
 	i64_to_f128.c \
 	i64_to_f16.c \
 	i64_to_f32.c \
+	i64_to_tf32.c \
 	i64_to_f64.c \
 	s_add128.c \
 	s_add256M.c \
 	s_addCarryM.c \
 	s_addComplCarryM.c \
+	s_addMagsF8e4m3.c \
+	s_addMagsF8e5m2.c \
+	s_addMagsF8e3m4.c \
 	s_addMagsF128.c \
+	s_addMagsBF16.c \
 	s_addMagsF16.c \
 	s_addMagsF32.c \
+	s_addMagsTF32.c \
 	s_addMagsF64.c \
 	s_addM.c \
 	s_approxRecip_1Ks.c \
+	s_approxRecip_8b.c \
 	s_approxRecip32_1.c \
+	s_approxRecipSqrt_8b.c \
 	s_approxRecipSqrt_1Ks.c \
 	s_approxRecipSqrt32_1.c \
+	s_commonNaNToBF16UI.c \
 	s_commonNaNToF32UI.c \
+	s_commonNaNToTF32UI.c \
 	s_commonNaNToF64UI.c \
 	s_compare128M.c \
 	s_compare96M.c \
@@ -157,10 +219,15 @@ softfloat_c_srcs = \
 	s_countLeadingZeros64.c \
 	s_countLeadingZeros8.c \
 	s_eq128.c \
+	s_bf16UIToCommonNaN.c \
 	s_f32UIToCommonNaN.c \
 	s_f64UIToCommonNaN.c \
 	s_le128.c \
 	s_lt128.c \
+	s_mulAddBF16.c \
+	s_mulAddF8e4m3.c \
+	s_mulAddF8e5m2.c \
+	s_mulAddF8e3m4.c \
 	s_mul128By32.c \
 	s_mul128MTo256M.c \
 	s_mul128To256M.c \
@@ -171,7 +238,18 @@ softfloat_c_srcs = \
 	s_mulAddF16.c \
 	s_mulAddF32.c \
 	s_mulAddF64.c \
+	s_mulAddTF32.c \
 	s_negXM.c \
+	s_normRoundPackToBF16.c \
+	s_normRoundPackToF8e4m3.c \
+	s_normRoundPackToF8e5m2.c \
+	s_normRoundPackToTF32.c \
+	s_normSubnormalBF16Sig.c \
+	s_normSubnormalF8e3m4Sig.c \
+	s_normSubnormalF8e4m3Sig.c \
+	s_normSubnormalF8e5m2Sig.c \
+	s_normSubnormalTF32Sig.c \
+	s_roundPackToTF32.c \
 	s_normRoundPackToF128.c \
 	s_normRoundPackToF16.c \
 	s_normRoundPackToF32.c \
@@ -182,6 +260,9 @@ softfloat_c_srcs = \
 	s_normSubnormalF64Sig.c \
 	softfloat_raiseFlags.c \
 	softfloat_state.c \
+	s_propagateNaNBF16UI.c \
+	s_propagateNaNF8e5m2UI.c \
+	s_propagateNaNTF32UI.c \
 	s_propagateNaNF16UI.c \
 	s_propagateNaNF32UI.c \
 	s_propagateNaNF64UI.c \
@@ -189,6 +270,9 @@ softfloat_c_srcs = \
 	s_remStepMBy32.c \
 	s_roundMToI64.c \
 	s_roundMToUI64.c \
+	s_roundPackToF8e3m4.c \
+	s_roundPackToF8e4m3.c \
+	s_roundPackToF8e5m2.c \
 	s_roundPackMToI64.c \
 	s_roundPackMToUI64.c \
 	s_roundPackToBF16.c \
@@ -200,8 +284,12 @@ softfloat_c_srcs = \
 	s_roundPackToI64.c \
 	s_roundPackToUI32.c \
 	s_roundPackToUI64.c \
+	s_roundToI8.c \
+	s_roundToI16.c \
 	s_roundToI32.c \
 	s_roundToI64.c \
+	s_roundToUI8.c \
+	s_roundToUI16.c \
 	s_roundToUI32.c \
 	s_roundToUI64.c \
 	s_shiftRightJam128.c \
@@ -219,22 +307,157 @@ softfloat_c_srcs = \
 	s_shortShiftRightJam64.c \
 	s_shortShiftRightJam64Extra.c \
 	s_shortShiftRightM.c \
+	s_stochasticRound.c \
 	s_sub128.c \
 	s_sub1XM.c \
 	s_sub256M.c \
 	s_subMagsF128.c \
+	s_subMagsTF32.c \
 	s_subMagsF16.c \
 	s_subMagsF32.c \
 	s_subMagsF64.c \
 	s_subM.c \
+	s_subMagsBF16.c \
+	s_subMagsF8e3m4.c \
+	s_subMagsF8e4m3.c \
+	s_subMagsF8e5m2.c \
 	ui32_to_f128.c \
 	ui32_to_f16.c \
+	ui32_to_tf32.c \
 	ui32_to_f32.c \
 	ui32_to_f64.c \
 	ui64_to_f128.c \
 	ui64_to_f16.c \
 	ui64_to_f32.c \
+	ui64_to_tf32.c \
 	ui64_to_f64.c \
+	f8e3m4_sub.c \
+	f8e3m4_to_bf16.c \
+	f8e3m4_to_f16.c \
+	f8e3m4_to_f32.c \
+	f8e3m4_to_f64.c \
+	f8e3m4_to_tf32.c \
+	f8e3m4_add.c \
+	f8e3m4_div.c \
+	f8e3m4_mul.c \
+	f8e3m4_sqrt.c \
+	f8e3m4_mulAdd.c \
+	f8e3m4_maxmin.c \
+	f8e3m4_to_i8.c \
+	f8e3m4_to_i16.c \
+	f8e3m4_to_i32.c \
+	f8e3m4_to_i64.c \
+	f8e3m4_to_ui8.c \
+	f8e3m4_to_ui16.c \
+	f8e3m4_to_ui32.c \
+	f8e3m4_to_ui64.c \
+	f8e4m3_add.c \
+	f8e4m3_sub.c \
+	f8e4m3_mul.c \
+	f8e4m3_div.c \
+	f8e4m3_sqrt.c \
+	f8e4m3_mul16.c \
+	f8e4m3_mul32.c \
+	f8e4m3_mulAdd.c \
+	f8e4m3_mulbf16.c \
+	f8e4m3_eq.c \
+	f8e4m3_eq_signaling.c \
+	f8e4m3_le.c \
+	f8e4m3_le_quiet.c \
+	f8e4m3_lt.c \
+	f8e4m3_lt_quiet.c \
+	f8e4m3_maxmin.c \
+	f8e4m3_to_bf16.c \
+	f8e4m3_to_f8e5m2.c \
+	f8e4m3_to_f16.c \
+	f8e4m3_to_f32.c \
+	f8e4m3_to_tf32.c \
+	f8e4m3_to_f64.c \
+	f8e4m3_to_i8.c \
+	f8e4m3_to_i16.c \
+	f8e4m3_to_i32.c \
+	f8e4m3_to_i64.c \
+	f8e4m3_to_ui8.c \
+	f8e4m3_to_ui16.c \
+	f8e4m3_to_ui32.c \
+	f8e4m3_to_ui64.c \
+	f8e5m2_add.c \
+	f8e5m2_mul.c \
+	f8e5m2_div.c \
+	f8e5m2_sqrt.c \
+	f8e5m2_mul32.c \
+	f8e5m2_mulAdd.c \
+	f8e5m2_mulbf16.c \
+	f8e5m2_rem.c \
+	f8e5m2_sub.c \
+	f8e5m2_eq.c \
+	f8e5m2_eq_signaling.c \
+	f8e5m2_le.c \
+	f8e5m2_le_quiet.c \
+	f8e5m2_lt.c \
+	f8e5m2_lt_quiet.c \
+	f8e5m2_maxmin.c \
+	f8e5m2_to_bf16.c \
+	f8e5m2_to_f8e4m3.c \
+	f8e5m2_to_f16.c \
+	f8e5m2_to_f32.c \
+	f8e5m2_to_tf32.c \
+	f8e5m2_to_f64.c \
+	f8e5m2_to_i8.c \
+	f8e5m2_to_i16.c \
+	f8e5m2_to_i32.c \
+	f8e5m2_to_i64.c \
+	f8e5m2_to_ui8.c \
+	f8e5m2_to_ui16.c \
+	f8e5m2_to_ui32.c \
+	f8e5m2_to_ui64.c \
+	i8_to_bf16.c \
+	i8_to_f16.c \
+	i8_to_f8e4m3.c \
+	i8_to_f8e5m2.c \
+	i8_to_f8e3m4.c \
+	s_tf32UIToCommonNaN.c \
+	tf32_add.c \
+	tf32_sub.c \
+	tf32_mul.c \
+	tf32_maxmin.c \
+	tf32_div.c \
+	tf32_sqrt.c \
+	tf32_mulAdd.c \
+	tf32_lt_quiet.c \
+	tf32_eq.c \
+	tf32_to_f32.c \
+	tf32_to_f16.c \
+	tf32_to_bf16.c \
+	tf32_to_i4.c \
+	tf32_to_i8.c \
+	tf32_to_i16.c \
+	tf32_to_i32.c \
+	tf32_to_i64.c \
+	tf32_to_ui4.c \
+	tf32_to_ui8.c \
+	tf32_to_ui16.c \
+	tf32_to_ui32.c \
+	tf32_to_ui64.c \
+	ui16_to_f8e3m4.c \
+	ui16_to_f8e4m3.c \
+	ui16_to_f8e5m2.c \
+	ui32_to_bf16.c \
+	ui32_to_f8e3m4.c \
+	ui32_to_f8e4m3.c \
+	ui32_to_f8e5m2.c \
+	ui64_to_f8e3m4.c \
+	ui64_to_f8e4m3.c \
+	ui64_to_f8e5m2.c \
+	ui8_to_bf16.c \
+	ui8_to_f16.c \
+	ui8_to_f8e3m4.c \
+	ui8_to_f8e4m3.c \
+	ui8_to_f8e5m2.c \
+	bf16_to_tf32.c \
+	f16_to_tf32.c \
+	tf32_to_f64.c \
+	
 
 softfloat_install_shared_lib = yes
 

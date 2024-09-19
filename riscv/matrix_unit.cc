@@ -5,13 +5,17 @@
 
 void matrixUnit_t::reset(){
   free(tr_file);
-  tr_file = malloc(mlenb * NMPR);
-  tr_renamefile = malloc(mlenb * NMPR);
-  memset(tr_file, 0, mlenb * NMPR);
-  memset(tr_renamefile, 0, mlenb * NMPR);
-  
+  tr_file = malloc(mlenb * NMTRPR);
+  acc_file = malloc(mlenb * NMTRPR * MAMUL_MAX);
+  tr_renamefile = malloc(mlenb * NMTRPR);
+  acc_renamefile = malloc(mlenb * NMACCPR * MAMUL_MAX);
+  memset(tr_file, 0, mlenb * NMTRPR);
+  memset(acc_file, 0, mlenb * NMACCPR * MAMUL_MAX);
+  memset(tr_renamefile, 0, mlenb * NMACCPR);
+  memset(acc_renamefile, 0, mlenb * NMACCPR * MAMUL_MAX);
   auto& csrmap = p->get_state()->csrmap;
-  csrmap[CSR_MXSAT] = mxsat = std::make_shared<vxsat_csr_t>(p, CSR_MXSAT);
+  // mstrix 0.5 del
+  // csrmap[CSR_MXSAT] = mxsat = std::make_shared<vxsat_csr_t>(p, CSR_MXSAT);
   csrmap[CSR_MTILEM] = tile_m = std::make_shared<matrix_csr_t>(p, CSR_MTILEM, 0, 0);
   csrmap[CSR_MTILEK] = tile_k = std::make_shared<matrix_csr_t>(p, CSR_MTILEK, /*mask*/ 0, 0);
   csrmap[CSR_MTILEN] = tile_n = std::make_shared<matrix_csr_t>(p, CSR_MTILEN, /*mask*/ 0, 0);
@@ -20,7 +24,7 @@ void matrixUnit_t::reset(){
   csrmap[CSR_MTYPE] = mtype = std::make_shared<matrix_csr_t>(p, CSR_MTYPE, /*mask*/ 0);
   csrmap[CSR_MSTART] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MSTART, /*mask*/ 0);
   csrmap[CSR_MCSR] = mstart = std::make_shared<matrix_csr_t>(p, CSR_MCSR, /*mask*/ 0);
-  csrmap[CSR_MXRM] = mxrm = std::make_shared<matrix_csr_t>(p, CSR_MXRM, /*mask*/ 0x3ul);
+  // csrmap[CSR_MXRM] = mxrm = std::make_shared<matrix_csr_t>(p, CSR_MXRM, /*mask*/ 0x3ul); // mtrix 0.5 del
   csrmap[CSR_MOUTSH] = moutshape = std::make_shared<matrix_csr_t>(p, CSR_MOUTSH, 0);
   csrmap[CSR_MINSH] = minshape = std::make_shared<matrix_csr_t>(p, CSR_MINSH, 0);
   csrmap[CSR_MSTDI] = mstdi = std::make_shared<matrix_csr_t>(p, CSR_MSTDI, 0);
@@ -28,6 +32,9 @@ void matrixUnit_t::reset(){
   csrmap[CSR_MINSK] = minsk = std::make_shared<matrix_csr_t>(p, CSR_MINSK, 0);
   csrmap[CSR_MOUTSK] = moutsk = std::make_shared<matrix_csr_t>(p, CSR_MOUTSK, 0);
   csrmap[CSR_MPADVAL] = mpadval = std::make_shared<matrix_csr_t>(p, CSR_MPADVAL, 0);
+  csrmap[CSR_MAMUL] = std::make_shared<matrix_csr_t>(p, CSR_MAMUL, 1); // default value is 1
+  csrmap[CSR_MTSP] = mtsp = std::make_shared<matrix_csr_t>(p, CSR_MTSP, 0);
+  csrmap[CSR_MDSP] = mdsp = std::make_shared<matrix_csr_t>(p, CSR_MDSP, 0);
   mtype->write_raw(0);
 
   set_mtype(0, -1);
@@ -36,24 +43,26 @@ void matrixUnit_t::reset(){
 reg_t matrixUnit_t::set_mtype(int rd, reg_t newType) {
   bool mfp64_ext = false;
   if (mtype->read() != newType){
-    mint4 = extract64(newType, 10, 1);
-    mfp8 = extract64(newType, 9, 1);
-    mtf32 = extract64(newType, 8, 1);
-    mbf16 = extract64(newType, 7, 1);
-    mfp64 = extract64(newType, 6, 1);
+    mint4 = extract64(newType, 3, 1);
+    mint8 = extract64(newType, 4, 1);
+    mint16 = extract64(newType, 5, 1);
+    mint32 = extract64(newType, 6, 1);
+    mint64 = extract64(newType, 7, 1);
+    mfp8 = extract64(newType, 8, 2);
+    mfp32 = extract64(newType, 12, 2);
+    mfp16 = extract64(newType, 10, 2);
+    mfp64 = extract64(newType, 14, 1);
     if (mfp64){
       if(!p->get_isa().extension_enabled('D'))
       {
         mfp64_ext = true;
       }
     }
-    mba = extract64(newType, 5, 1);
+    mba = extract64(newType, 15, 1);
+    // int4 in msew with 0x111
+    msew = 1 << ((extract64(newType, 0, 3) + 3) & 0x7);
 
-    msew = 1 << (extract64(newType, 2, 3) + 3);
-    mlmul = 1 << extract64(newType, 0, 2);
-    mlmax = (MLEN/msew) * mlmul;
-
-    mill = (newType >> 11) != 0 || mfp64_ext || msew > RLEN;
+    mill = (newType >> 16) != 0 || mfp64_ext || msew > RLEN;
 
     if (mill){
       mlmax = 0;
@@ -67,11 +76,54 @@ reg_t matrixUnit_t::set_mtype(int rd, reg_t newType) {
   return mtype->read();
 }
 
+reg_t matrixUnit_t::set_mtypei(int rd, reg_t newType){
+  reg_t type = (((mtype->read() & 0x3FF ) & ~((1UL << 10) - 1)) | newType) ;
+  return set_mtype(rd, type);
+}
+
+reg_t matrixUnit_t::set_mtypehi(int rd, reg_t newType){
+  reg_t type = ((mtype->read() & 0x3FF) | ((newType | (mtype->read() >> 10)) << 10));
+
+  return set_mtype(rd, type);
+}
+
+reg_t matrixUnit_t::set_msew(int rd, reg_t newType){
+  reg_t type = ((mtype->read() & ~((1UL << 2) - 1)) | newType);
+  return set_mtype(rd, type);
+}
+
+reg_t matrixUnit_t::set_mint(int rd, reg_t newType, reg_t bit){
+  reg_t type = 0;
+  if (newType & 0x1){
+    type = mtype->read() | (1UL << bit);
+  }
+  else {
+    type = mtype->read() & ~(1UL << bit);
+  }
+  
+  return set_mtype(rd, type);
+}
+
+reg_t matrixUnit_t::set_fp(int rd, reg_t newType, reg_t bit){
+  reg_t type = mtype->read();
+  if ( bit == 14 )
+    return set_mint(rd, newType, bit);
+  reg_t mask = 0x3UL << bit;
+  // clear old value;
+  type &= ~mask;
+  // set new value;
+  type |= ((newType & 0x3) << bit) & mask;
+  return set_mtype(rd, type);
+}
+
+reg_t matrixUnit_t::set_ba(int rd, reg_t newType){
+  return set_mint(rd, newType, 15); // bit15 used mba
+}
 
 reg_t matrixUnit_t::set_ml(int rd, int rs1, reg_t newMlen, char dim) {
   
-  if (mlmax == 0)
-      return 0;
+  // if (mlmax == 0)
+  //     return 0;
 
   reg_t MMAX = mrows;
   reg_t NMAX = mcols / msew;
@@ -155,5 +207,14 @@ reg_t matrixUnit_t::set_msk(int rd, int rs1, int rs2) {
 reg_t matrixUnit_t::set_pad(int rd, int rs1) {
   mpadval->write_raw(rs1 & 0xFFFFFFFF);
   return mpadval->read();
+}
+
+reg_t matrixUnit_t::set_tsp(int rs1) {
+  mtsp->write_raw(rs1 & 0xF);
+  return mtsp->read();
+}
+reg_t matrixUnit_t::set_dsp(int rs1) {
+  mdsp->write_raw(rs1 & 0xF);
+  return mdsp->read();
 }
 

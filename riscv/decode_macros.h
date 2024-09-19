@@ -90,16 +90,24 @@
 
 // FPU macros
 #define READ_ZDINX_REG(reg) (xlen == 32 ? f64(READ_REG_PAIR(reg)) : f64(STATE.XPR[reg] & (uint64_t)-1))
+#define READ_FREG_E3M4(reg) (p->extension_enabled(EXT_MATRIX) ? f8_e3m4(STATE.XPR[reg] & (uint8_t)-1) : f8_e3m4(READ_FREG(reg)))
+#define READ_FREG_E5M2(reg) (p->extension_enabled(EXT_MATRIX) ? f8_e5m2(STATE.XPR[reg] & (uint8_t)-1) : f8_e5m2(READ_FREG(reg)))
+#define READ_FREG_E4M3(reg) (p->extension_enabled(EXT_MATRIX) ? f8_e4m3(STATE.XPR[reg] & (uint8_t)-1) : f8_e4m3(READ_FREG(reg)))
 #define READ_FREG_H(reg) (p->extension_enabled(EXT_ZFINX) ? f16(STATE.XPR[reg] & (uint16_t)-1) : f16(READ_FREG(reg)))
 #define READ_FREG_BF(reg) (p->extension_enabled(EXT_ZFINX) ? bf16(STATE.XPR[reg] & (uint16_t)-1) : bf16(READ_FREG(reg)))
 #define READ_FREG_F(reg) (p->extension_enabled(EXT_ZFINX) ? f32(STATE.XPR[reg] & (uint32_t)-1) : f32(READ_FREG(reg)))
+#define READ_FREG_TF(reg) (p->extension_enabled(EXT_ZFINX) ? tf32(STATE.XPR[reg] & (uint32_t)-1) : tf32(READ_FREG(reg)))
 #define READ_FREG_D(reg) (p->extension_enabled(EXT_ZFINX) ? READ_ZDINX_REG(reg) : f64(READ_FREG(reg)))
 #define FRS1 READ_FREG(insn.rs1())
 #define FRS2 READ_FREG(insn.rs2())
 #define FRS3 READ_FREG(insn.rs3())
+#define FRS1_HF8_E3M4 READ_FREG_E3M4(insn.rs1())
+#define FRS1_HF8_E5M2 READ_FREG_E5M2(insn.rs1())
+#define FRS1_HF8_E4M3 READ_FREG_E4M3(insn.rs1())
 #define FRS1_H READ_FREG_H(insn.rs1())
 #define FRS1_BF READ_FREG_BF(insn.rs1())
 #define FRS1_F READ_FREG_F(insn.rs1())
+#define FRS1_TF READ_FREG_TF(insn.rs1())
 #define FRS1_D READ_FREG_D(insn.rs1())
 #define FRS2_H READ_FREG_H(insn.rs2())
 #define FRS2_F READ_FREG_F(insn.rs2())
@@ -177,14 +185,16 @@ static inline bool is_aligned(const unsigned val, const unsigned pos)
     WRITE_VSTATUS; \
     dirty_vs_state; \
   } while (0);
+
 #define require_matrix(alu) \
   do { \
     require_vector_vs; \
-    require_extension('M'); \
+    require_extension(EXT_MATRIX); \
     if (alu) \
       require(P.MU.mstart->read() == 0); \
     require(!P.MU.mill); \
   } while (0);
+
 #define require_vector_novtype(is_log) \
   do { \
     require_vector_vs; \
@@ -256,30 +266,48 @@ class wait_for_interrupt_t {};
 #define invalid_pc(pc) ((pc) & 1)
 
 /* Convenience wrappers to simplify softfloat code sequences */
+#define isBoxedF8(r)  (isBoxedF32(r) && ((uint64_t)((r.v[0] >> 8) + 1) == ((uint64_t)1 << 56)))
+#define unboxF8_e3m4(r)    (isBoxedF8(r) ? (uint8_t)r.v[0] : defaultNaNF8e3m4UI)
+#define unboxF8_e4m3(r)    (isBoxedF8(r) ? (uint8_t)r.v[0] : defaultNaNF8e4m3UI)
+#define unboxF8_e5m2(r)    (isBoxedF8(r) ? (uint8_t)r.v[0] : defaultNaNF8e5m2UI)
 #define isBoxedF16(r) (isBoxedF32(r) && ((uint64_t)((r.v[0] >> 16) + 1) == ((uint64_t)1 << 48)))
 #define unboxF16(r) (isBoxedF16(r) ? (uint16_t)r.v[0] : defaultNaNF16UI)
 #define isBoxedBF16(r) isBoxedF16(r)
 #define unboxBF16(r) (isBoxedBF16(r) ? (uint16_t)r.v[0] : defaultNaNBF16UI)
 #define isBoxedF32(r) (isBoxedF64(r) && ((uint32_t)((r.v[0] >> 32) + 1) == 0))
 #define unboxF32(r) (isBoxedF32(r) ? (uint32_t)r.v[0] : defaultNaNF32UI)
+#define isBoxedTF32(r) isBoxedF32(r)
+#define unboxTF32(r) (isBoxedTF32(r) ? (uint32_t)r.v[0] : defaultNaNTF32UI)
 #define isBoxedF64(r) ((r.v[1] + 1) == 0)
 #define unboxF64(r) (isBoxedF64(r) ? r.v[0] : defaultNaNF64UI)
+inline float8_e4m3_t f8_e4m3(uint8_t v) { return { v }; }
+inline float8_e5m2_t f8_e5m2(uint8_t v) { return { v }; }
+inline float8_e3m4_t f8_e3m4(uint8_t v) { return { v }; }
 inline float16_t f16(uint16_t v) { return { v }; }
 inline bfloat16_t bf16(uint16_t v) { return { v }; }
 inline float32_t f32(uint32_t v) { return { v }; }
+inline tfloat32_t tf32(uint32_t v) { return { v }; }
 inline float64_t f64(uint64_t v) { return { v }; }
+inline float8_e3m4_t f8_e3m4(freg_t r) { return f8_e3m4(unboxF8_e3m4(r)); }
+inline float8_e4m3_t f8_e4m3(freg_t r) { return f8_e4m3(unboxF8_e4m3(r)); }
+inline float8_e5m2_t f8_e5m2(freg_t r) { return f8_e5m2(unboxF8_e5m2(r)); }
 inline float16_t f16(freg_t r) { return f16(unboxF16(r)); }
 inline bfloat16_t bf16(freg_t r) { return bf16(unboxBF16(r)); }
 inline float32_t f32(freg_t r) { return f32(unboxF32(r)); }
+inline tfloat32_t tf32(freg_t r) { return tf32(unboxTF32(r)); }
 inline float64_t f64(freg_t r) { return f64(unboxF64(r)); }
 inline float128_t f128(freg_t r) { return r; }
+inline freg_t freg(float8_t f) { return { ((uint64_t)-1 << 8) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float16_t f) { return { ((uint64_t)-1 << 16) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float32_t f) { return { ((uint64_t)-1 << 32) | f.v, (uint64_t)-1 }; }
 inline freg_t freg(float64_t f) { return { f.v, (uint64_t)-1 }; }
 inline freg_t freg(float128_t f) { return f; }
+#define F8_SIGN  ((uint8_t)1 << 7)
 #define F16_SIGN ((uint16_t)1 << 15)
 #define F32_SIGN ((uint32_t)1 << 31)
 #define F64_SIGN ((uint64_t)1 << 63)
+#define fsgnj8(a, b, n, x) \
+  f8((f8(a).v & ~F8_SIGN) | ((((x) ? f8(a).v : (n) ? F8_SIGN : 0) ^ f8(b).v) & F8_SIGN))
 #define fsgnj16(a, b, n, x) \
   f16((f16(a).v & ~F16_SIGN) | ((((x) ? f16(a).v : (n) ? F16_SIGN : 0) ^ f16(b).v) & F16_SIGN))
 #define fsgnj32(a, b, n, x) \
@@ -318,6 +346,7 @@ inline double to_f(float64_t f) { double r; memcpy(&r, &f, sizeof(r)); return r;
 inline long double to_f(float128_t f) { long double r; memcpy(&r, &f, sizeof(r)); return r; }
 
 // Vector macros
+#define e4 4      // 4b elements
 #define e8 8      // 8b elements
 #define e16 16    // 16b elements
 #define e32 32    // 32b elements

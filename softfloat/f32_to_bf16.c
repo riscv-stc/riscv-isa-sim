@@ -57,14 +57,14 @@ bfloat16_t f32_to_bf16( float32_t a )
     *------------------------------------------------------------------------*/
     uA.f = a;
     uiA = uA.ui;
-    sign = signF32UI( uiA );
-    exp  = expF32UI( uiA );
-    frac = fracF32UI( uiA );
+    sign = signTF32UI( uiA );
+    exp  = expTF32UI( uiA );
+    frac = fracTF32UI( uiA );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     if ( exp == 0xFF ) {
         if ( frac ) {
-            softfloat_f32UIToCommonNaN( uiA, &commonNaN );
+            softfloat_tf32UIToCommonNaN( uiA, &commonNaN );
             uiZ = softfloat_commonNaNToBF16UI( &commonNaN );
         } else {
             uiZ = packToBF16UI( sign, 0xFF, 0 );
@@ -77,7 +77,7 @@ bfloat16_t f32_to_bf16( float32_t a )
         uiZ = packToBF16UI( sign, 0, 0 );
         goto uiZ;
     } else if ( !exp ) {
-        normExpSig = softfloat_normSubnormalF32Sig( frac );
+        normExpSig = softfloat_normSubnormalTF32Sig( frac );
         exp = normExpSig.exp;
         frac = normExpSig.sig;
     }

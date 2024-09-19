@@ -1,2 +1,2 @@
 require_vector_novtype(false);
-WRITE_RD(P.MU.set_ml(insn.rd(), 1, insn.v_mimm13(), 'n'));
+WRITE_RD(P.MU.set_ml(insn.rd(), 1, insn.v_mimm10(), 'n'));
