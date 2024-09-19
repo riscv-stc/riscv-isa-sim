@@ -39,7 +39,10 @@ public:
   ~sim_t();
 
   // run the simulation to completion
-  int run();
+  int run(std::vector<std::string> load_files,
+               std::vector<std::string> init_dump,
+               std::vector<std::string> exit_dump_,
+               std::string dump_path_);
   void set_debug(bool value);
   void set_histogram(bool value);
   void add_device(reg_t addr, std::shared_ptr<abstract_device_t> dev);
@@ -98,7 +101,9 @@ private:
   bool log;
   remote_bitbang_t* remote_bitbang;
   std::optional<std::function<void()>> next_interactive_action;
-
+  std::vector<std::string> exit_dump;
+  std::string dump_path;
+  
   // memory-mapped I/O routines
   virtual char* addr_to_mem(reg_t paddr) override;
   virtual bool mmio_load(reg_t paddr, size_t len, uint8_t* bytes) override;
@@ -150,6 +155,12 @@ private:
   virtual size_t chunk_align() override { return 8; }
   virtual size_t chunk_max_size() override { return 8; }
   virtual endianness_t get_target_endianness() const override;
+
+  void dump_mems();
+  void load_mems(std::vector<std::string> load_files);
+  void dump_mems(std::string prefix, std::vector<std::string> mems, std::string path);
+  void load_mem(const char *path, reg_t off, size_t len);
+  void dump_mem(const char *fname, reg_t addr, size_t len, bool space_end = false);
 
 public:
   // Initialize this after procs, because in debug_module_t::reset() we
