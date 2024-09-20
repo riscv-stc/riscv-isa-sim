@@ -393,11 +393,10 @@
   }; \
 
 
-#define MMV_GENERAL_LOOP_BASE(is_trans, dim, sew) \
+#define MMV_GENERAL_LOOP_BASE(is_trans, dim, sew, is_tr_to_v) \
   require(sew >= e8 && sew <= e64); \
-  require(P.VU.vsew >= e8 && P.VU.vsew <= e64); \
-  reg_t rd_num = insn.rd(); \
-  reg_t rs1_num = insn.rs1(); \
+  reg_t rd_num = is_tr_to_v ? insn.rd(): insn.td(); \
+  reg_t rs1_num = is_tr_to_v ? insn.ts1(): insn.rs1(); \
   reg_t start_height = RS2; \
   reg_t height, width; \
   reg_t rmax = 0, cmax = 0; \
@@ -436,7 +435,7 @@
 // vreg <-- tr
 #define MMV_VREG_FROM_TR(is_trans, dim, sew, REG) \
   /* require(P.MU.msew == P.VU.vsew); */ \
-  MMV_GENERAL_LOOP_BASE(is_trans, dim, sew) \
+  MMV_GENERAL_LOOP_BASE(is_trans, dim, sew, true) \
   if (sew == e8){ \
     MTU_VREG_##REG##_PARAMS(is_trans, e8); \
     vd = ts1; \
@@ -455,7 +454,7 @@
 // tr <-- vreg
 #define MMV_TR_FROM_VREG(is_trans, dim, sew, REG) \
   /* require(P.MU.msew == P.VU.vsew); */ \
-  MMV_GENERAL_LOOP_BASE(is_trans, dim, sew) \
+  MMV_GENERAL_LOOP_BASE(is_trans, dim, sew, false) \
   if (sew == e8){ \
     MTU_##REG##_VREG_PARAMS(is_trans, e8); \
     td = vs1; \
@@ -481,7 +480,7 @@
   reg_t kmax = std::min(nmax, P.MU.mrows);\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   reg_t amul = P.MU.mamul; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t lmul = 1; \
@@ -514,7 +513,7 @@
   reg_t kmax = std::min(nmax, P.MU.mrows);\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   reg_t amul = P.MU.mamul; \
   bool reg_rename = false; \
   /* reg_t lmul = P.MU.mlmul; \ */ \
