@@ -883,20 +883,20 @@
 #define MXU_WIDE_OP_AND_ASSIGN_MIX(var0, var1, var2, op0, op1, signd, sign_1, sign_2, sew) \
   switch(sew) { \
   case e8: { \
-    signd##16_t UNUSED td_w = P.MU.tr_elt<signd##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
-    P.MU.tr_elt<signd##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
+    signd##16_t UNUSED td_w = P.MU.acc_elt<signd##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
+    P.MU.acc_elt<signd##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign_1##16_t)(sign_1##8_t)var0 op0 (sign_2##16_t)(sign_2##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
     signd##32_t td_w = P.MU.acc_elt<signd##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
-    P.MU.tr_elt<signd##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
+    P.MU.acc_elt<signd##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign_1##32_t)(sign_1##16_t)var0 op0 (sign_2##32_t)(sign_2##16_t)var1) + var2; \
     } \
     break; \
   default: { \
-    signd##64_t td_w = P.MU.tr_elt<signd##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
-    P.MU.tr_elt<signd##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
+    signd##64_t td_w = P.MU.acc_elt<signd##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
+    P.MU.acc_elt<signd##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign_1##64_t)(sign_1##32_t) var0 op0 (sign_2##64_t)(sign_2##32_t)var1) + var2; \
     } \
     break; \
@@ -906,13 +906,13 @@
   switch(P.MU.msew) { \
   case e8: { \
     sign##32_t td_q = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.tr_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
       op1((sign##32_t)(sign##8_t)var0 op0 (sign##32_t)(sign##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
     sign##64_t td_q = P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.tr_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
       op1((sign##64_t)(sign##16_t)var0 op0 (sign##64_t)(sign##16_t)var1) + var2; \
     } \
     break; \
@@ -921,15 +921,15 @@
 #define MXU_OCT_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign) \
   switch(P.MU.msew) { \
   case e4: { \
-    sign##32_t td_o = P.MU.tr_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.tr_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    sign##32_t td_o = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
+    P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
       op1((sign##32_t)(sign##8_t)(var0 & 0xFF) op0 (sign##32_t)(sign##8_t)(var1 & 0xFF) op1 \
           (sign##32_t)(sign##8_t)(var0 >> 4) op0 (sign##32_t)(sign##8_t)(var1 >> 4)) + var2; \
     } \
     break; \
   case e8: { \
-    sign##64_t td_o = P.MU.tr_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.tr_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    sign##64_t td_o = P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
+    P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
       op1((sign##64_t)(sign##8_t)var0 op0 (sign##64_t)(sign##8_t)var1) + var2; \
     } \
     break; \

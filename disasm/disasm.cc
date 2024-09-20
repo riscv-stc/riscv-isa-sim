@@ -2106,23 +2106,25 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 
     std::vector<const arg_t *> tr_ld_unit = {&td, &v_address, &xrs2};
     std::vector<const arg_t *> tr_st_unit = {&td, &v_address, &xrs2};
+    std::vector<const arg_t *> acc_ld_unit = {&accdl, &v_address, &xrs2};
+    std::vector<const arg_t *> acc_st_unit = {&accdl, &v_address, &xrs2};
     
     // ml{a-c}{r/s}e{8-64}.m -- mlae8.m lsae8.m
     DISASM_MMEM_TR_INSN(ml, tr_ld_unit, a);
     DISASM_MMEM_TR_INSN(ml, tr_ld_unit, b);
-    DISASM_MMEM_TR_INSN(ml, tr_ld_unit, c);
+    DISASM_MMEM_TR_INSN(ml, acc_ld_unit, c);
     DISASM_MMEM_TR_INSN(ms, tr_st_unit, a);
     DISASM_MMEM_TR_INSN(ms, tr_st_unit, b);
-    DISASM_MMEM_TR_INSN(ms, tr_st_unit, c);
+    DISASM_MMEM_TR_INSN(ms, acc_st_unit, c);
     DISASM_MMEM_TR_INSN(mlt, tr_ld_unit, r);
     DISASM_MMEM_TR_INSN(mst, tr_st_unit, r);
 
     DISASM_MMEM_TR_INSN_TE(ml, tr_ld_unit, a);
     DISASM_MMEM_TR_INSN_TE(ml, tr_ld_unit, b);
-    DISASM_MMEM_TR_INSN_TE(ml, tr_ld_unit, c);
+    DISASM_MMEM_TR_INSN_TE(ml, acc_st_unit, c);
     DISASM_MMEM_TR_INSN_TE(ms, tr_st_unit, a);
     DISASM_MMEM_TR_INSN_TE(ms, tr_st_unit, b);
-    DISASM_MMEM_TR_INSN_TE(ms, tr_st_unit, c);
+    DISASM_MMEM_TR_INSN_TE(ms, acc_st_unit, c);
 
   #undef DISASM_MMEM_TR_INSN
   #undef DISASM_MMEM_TR_INSN_TE
