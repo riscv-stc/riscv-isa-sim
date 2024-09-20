@@ -1,6 +1,6 @@
 require_fp;
 MMV_TR_ACC_BASE({
-    MFU_PARAMS_TR1(e32);
+    MFU_PARAMS_TR1(32);
     WRITE_FRD(ts1);
 }
-, insn.rs1(), e32);
+, insn.rs1(), 32);

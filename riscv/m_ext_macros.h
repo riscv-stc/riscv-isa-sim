@@ -360,9 +360,10 @@
   reg_t lmul = 1; \
   reg_t m = 0; \
   bool reg_rename = false; \
+  BODY \
 
 #define MMV_TR_ACC_FPR(BODY, num, sew) \
-  MMV_TR_BASE(num, sew) \
+  MMV_TR_ACC_BASE(num, sew) \
   BODY; \
 
 
