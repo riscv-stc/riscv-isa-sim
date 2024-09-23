@@ -2111,7 +2111,7 @@ for (reg_t m = 0; m < lmul; m++) {\
         if (td_num == ts1_num) \
           continue; \
       } \
-      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 + ( m * rmax * cmax), tr_elt_start, parm_type * width / 8); \
+      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 * (dim == 'c' ? amul : 1) + ( m * rmax * cmax), tr_elt_start, parm_type * width / 8); \
       MB_GENERAL_LOOP_BASE_END \
       break; \
     case 'c' : \
@@ -2121,7 +2121,7 @@ for (reg_t m = 0; m < lmul; m++) {\
       else \
         val  = P.MU.acc_elt<type_sew_t<parm_type>::type>(ts1_num + m, 0, i, 0, rmax, cmax * amul, false, false); \
       temp.assign(width, val); \
-      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 + ( m * rmax * cmax), temp.data(), parm_type * width / 8); \
+      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 * (dim == 'c' ? amul : 1) + ( m * rmax * cmax), temp.data(), parm_type * width / 8); \
       MB_GENERAL_LOOP_BASE_END \
       break; \
     case 'f' : \
@@ -2133,7 +2133,7 @@ for (reg_t m = 0; m < lmul; m++) {\
           val  = P.MU.acc_elt<type_sew_t<parm_type>::type>(ts1_num, 0, 0, 0, rmax, cmax * amul, false, false); \
         temp.assign(width, val); \
       } \
-      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 + ( m * rmax * cmax), temp.data(), width * parm_type / 8); \
+      memcpy(tr_elt_td + (i * cmax) * parm_type / 8 * (dim == 'c' ? amul : 1) + ( m * rmax * cmax), temp.data(), width * parm_type / 8); \
       MB_GENERAL_LOOP_BASE_END \
       break; \
     default  :\
@@ -2142,10 +2142,10 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 #define MB_PARAM_INIT(dim) \
   if (ts1_num == td_num) { \
-    tr_elt_td = tr_elt_start = P.MU.board_elt(ts1_num, rmax, cmax, dim == 'c' ? true: false); \
+    tr_elt_td = tr_elt_start = P.MU.board_elt(ts1_num, rmax, cmax, dim == 'c'); \
   }else { \
-    tr_elt_start = P.MU.board_elt(ts1_num, rmax, cmax, dim == 'c' ? true: false); \
-    tr_elt_td = P.MU.board_elt(td_num, rmax, cmax, dim == 'c' ? true: false); \
+    tr_elt_start = P.MU.board_elt(ts1_num, rmax, cmax, dim == 'c'); \
+    tr_elt_td = P.MU.board_elt(td_num, rmax, cmax, dim == 'c'); \
   } \
 
 #define MB_PARAM_BASE(sew) \
