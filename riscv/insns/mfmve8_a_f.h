@@ -23,4 +23,4 @@ MMV_TR_ACC_BASE({
     }
    
 }
-, insn.rs1(), e8);
+, insn.rd(), e8);

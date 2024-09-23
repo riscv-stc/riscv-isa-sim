@@ -7,4 +7,4 @@ MMV_TR_ACC_BASE({
    else 
     require(0);
 }
-, insn.rs1(), 64);
+, insn.rd(), 64);

@@ -18,4 +18,4 @@ MMV_TR_ACC_BASE({
     }
    
 }
-, insn.rs1(), e32);
+, insn.rd(), e32);
