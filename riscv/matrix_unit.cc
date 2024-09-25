@@ -78,17 +78,19 @@ reg_t matrixUnit_t::set_mtype(int rd, reg_t newType) {
 
 reg_t matrixUnit_t::set_mtypei(int rd, reg_t newType){
   reg_t type = (((mtype->read() & 0x3FF ) & ~((1UL << 10) - 1)) | newType) ;
+  type &= ((1UL << (p->get_xlen() -1)) - 1);
   return set_mtype(rd, type);
 }
 
 reg_t matrixUnit_t::set_mtypehi(int rd, reg_t newType){
   reg_t type = ((mtype->read() & 0x3FF) | ((newType | (mtype->read() >> 10)) << 10));
-
+  type &= ((1UL << (p->get_xlen() -1)) - 1);
   return set_mtype(rd, type);
 }
 
 reg_t matrixUnit_t::set_msew(int rd, reg_t newType){
   reg_t type = ((mtype->read() & ~((1UL << 2) - 1)) | newType);
+  type &= ((1UL << (p->get_xlen() -1)) - 1);
   return set_mtype(rd, type);
 }
 
@@ -100,7 +102,7 @@ reg_t matrixUnit_t::set_mint(int rd, reg_t newType, reg_t bit){
   else {
     type = mtype->read() & ~(1UL << bit);
   }
-  
+  type &= ((1UL << (p->get_xlen() -1)) - 1);
   return set_mtype(rd, type);
 }
 
@@ -113,6 +115,7 @@ reg_t matrixUnit_t::set_fp(int rd, reg_t newType, reg_t bit){
   type &= ~mask;
   // set new value;
   type |= ((newType & 0x3) << bit) & mask;
+  type &= ((1UL << (p->get_xlen() -1)) - 1);
   return set_mtype(rd, type);
 }
 

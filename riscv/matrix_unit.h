@@ -105,7 +105,7 @@ class matrixUnit_t {
           if (is_write)
             p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
 #endif
-          T *regStart = (T *)((char*)acc_file + td * rows * elts_per_slice);
+          T *regStart = ((T *)acc_file) + td * rows * elts_per_slice;
           if (tt & 1) { // col
             // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
             return *(regStart + elts_per_slice * n + slice);
