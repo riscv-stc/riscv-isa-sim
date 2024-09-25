@@ -291,7 +291,7 @@
   } \
 
 #define MMV_TR_XPR(BODY, num, sew) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(sew >= e8 && sew <= e64); \
   reg_t i = RS2 & 0xFF; \
   reg_t j = (RS2 >> 16); \
   reg_t ts1_num = num; \
@@ -304,7 +304,7 @@
   BODY \
 
 #define MMV_ACC_XPR(BODY, num, sew) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(sew >= e8 && sew <= e64); \
   reg_t i = RS2 & 0xFF; \
   reg_t j = (RS2 >> 16); \
   reg_t ts1_num = num; \
@@ -317,7 +317,7 @@
   BODY \
 
 #define MMV_TR_AND_ACC(BODY, sew, is_acc) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(sew >= e8 && sew <= e64); \
   reg_t ts1_num = insn.rs1(); \
   reg_t td_num = insn.rd(); \
   reg_t mmax = P.MU.mrows; \
@@ -504,7 +504,7 @@
     MXU_LOOP_ELEMENT_SKIP();
 
 #define MXU_GENERAL_LOOP_BASE_WIDE(ins, wide, sew) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(sew >= e8 && sew <= e64); \
   reg_t tile_m = P.MU.tile_m->read();\
   reg_t tile_k = P.MU.tile_k->read();\
   reg_t tile_n = P.MU.tile_n->read();\
@@ -615,7 +615,7 @@
   } \
 
 #define MX_2D_GENERAL_LOOP_BASE_WIDE(ins, sew) \
-  require(P.MU.msew >= e8 && P.MU.msew <= e64); \
+  require(sew >= e8 && sew <= e64); \
   reg_t tile_m = P.MU.tile_m->read();\
   reg_t tile_n = P.MU.tile_n->read();\
   reg_t mmax = P.MU.mrows;\
@@ -648,7 +648,7 @@
   } \
 
 #define MXU_MM_ADD(opd, op0, sign, type_t, td_type, saturated, sew) \
-  require(P.MU.msew >= e4 && P.MU.msew <= e64); \
+  require(sew >= e4 && sew <= e64); \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
   require_align(insn.td(), lmul); \
@@ -728,7 +728,7 @@
   REGNAME_WRITE_BAKE(mmax, sew == e4 ? nmax * amul / 2: nmax * amul, 1, true); \
 
 #define MXU_W_MM_ADD(opd, op0, sign, type_t, td_type, saturated, sew) \
-  require(P.MU.msew >= e4 && P.MU.msew <= e32); \
+  require(sew >= e4 && sew <= e32); \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
   require_align(insn.td(), lmul); \
@@ -902,8 +902,8 @@
     break; \
   }
 
-#define MXU_QUAD_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign) \
-  switch(P.MU.msew) { \
+#define MXU_QUAD_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign, sew) \
+  switch(sew) { \
   case e8: { \
     sign##32_t td_q = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
     P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
@@ -918,8 +918,8 @@
     break; \
   }
 
-#define MXU_OCT_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign) \
-  switch(P.MU.msew) { \
+#define MXU_OCT_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign, sew) \
+  switch(sew) { \
   case e4: { \
     sign##32_t td_o = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
     P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
@@ -1001,9 +1001,9 @@
 
 #define MXU_VFP_COMMON(wide, sew) \
   require_fp; \
-  require((P.MU.msew == e16 && p->extension_enabled(EXT_ZFH)) || \
-          (P.MU.msew == e32 && p->extension_enabled('F')) || \
-          (P.MU.msew == e64 && p->extension_enabled('D'))); \
+  require((sew == e16 && p->extension_enabled(EXT_ZFH)) || \
+          (sew == e32 && p->extension_enabled('F')) || \
+          (sew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
   reg_t tile_m = P.MU.tile_m->read();\
@@ -1041,7 +1041,7 @@
 
 #define MXU_VFP_VV_LOOP(wide, sew) \
   MXU_VFP_LOOP_BASE(wide, sew) \
-  switch(P.MU.msew) { \
+  switch(sew) { \
     case e16: { \
       if ( P.MU.mfp16 == MTYPE_FP16 ) { /* fp16 */ \
         float16_t &td = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
@@ -1078,6 +1078,7 @@
       float64_t &td = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
       float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
       float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+      td = f64_mulAdd(ts1, ts2, td); \
       set_fp_exceptions; \
       break; \
     }\
@@ -1204,9 +1205,9 @@
 
 #define MXU_VFP_W_MM_ADD(BODY16, BODYB16, BODY32, BODYT32, BODY64, sew) \
   require_fp; \
-  require((P.MU.msew == e16 && p->extension_enabled(EXT_ZFH)) || \
-          (P.MU.msew == e32 && p->extension_enabled('F')) || \
-          (P.MU.msew == e64 && p->extension_enabled('D'))); \
+  require((sew == e16 && p->extension_enabled(EXT_ZFH)) || \
+          (sew == e32 && p->extension_enabled('F')) || \
+          (sew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
   reg_t tile_m = P.MU.tile_m->read();\
@@ -1345,7 +1346,7 @@
 
 #define MXU_VFP_VV_LOOP_WIDE(wide, sew) \
   MXU_VFP_LOOP_BASE(wide, sew) \
-  switch(P.MU.msew) { \
+  switch(sew) { \
     case e8: { \
       switch (P.MU.mfp8) { /*e4m3*/ \
         case MTYPE_FP8E4M3: { \
@@ -1463,7 +1464,7 @@
 
 #define MXU_VFP_VV_LOOP_QUAD(wide, sew) \
   MXU_VFP_LOOP_BASE(wide, sew) \
-  switch(P.MU.msew) { \
+  switch(sew) { \
     case e8: {\
       switch (P.MU.mfp8) { \
         case MTYPE_FP8E4M3: { /* fp8e4m3*/ \
@@ -2288,9 +2289,9 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 #define MI_2D_VFP_COMMON(widen, sew) \
   require_fp; \
-  require((P.MU.msew == e16 && p->extension_enabled(EXT_ZFH)) || \
-          (P.MU.msew == e32 && p->extension_enabled('F')) || \
-          (P.MU.msew == e64 && p->extension_enabled('D'))); \
+  require((sew == e16 && p->extension_enabled(EXT_ZFH)) || \
+          (sew == e32 && p->extension_enabled('F')) || \
+          (sew == e64 && p->extension_enabled('D'))); \
   require_matrix(true);\
   require(STATE.frm->read() < 0x5);\
   reg_t tile_m = P.MU.tile_m->read();\
