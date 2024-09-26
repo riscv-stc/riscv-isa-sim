@@ -738,7 +738,7 @@
   reg_t tile_n = P.MU.tile_n->read();\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / sew;\
   type_t res; \
@@ -753,8 +753,8 @@
       for (reg_t j = 0; j < tile_n; ++j) { \
         if (sew == e4) { \
           auto &td = P.MU.acc_elt<sign<e8>::type>(td_num + m, 0, i, j * 2, mmax, des_nmax * amul, reg_rename, true); \
-          auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
-          auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts1  = P.MU.acc_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts2  = P.MU.acc_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
           auto ts1_low = ts1 & 0xF; \
           auto ts2_low = ts2 & 0xF; \
           auto ts1_height = ts1 >> 0x4; \
@@ -776,8 +776,8 @@
           td2 = (td_type##16_t)res; \
         } else if (sew == e8){ \
           auto &td = P.MU.acc_elt<sign<e16>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
-          auto ts1  = P.MU.tr_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
-          auto ts2  = P.MU.tr_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts1  = P.MU.acc_elt<sign<e8>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts2  = P.MU.acc_elt<sign<e8>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           if (saturated) { \
             MXU_CHECK_OVERFLOW(td_type##16_t) \
@@ -785,8 +785,8 @@
           td = (td_type##16_t)res; \
         }else if(sew == e16){ \
           auto &td = P.MU.acc_elt<sign<e32>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
-          auto ts1  = P.MU.tr_elt<sign<e16>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
-          auto ts2  = P.MU.tr_elt<sign<e16>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts1  = P.MU.acc_elt<sign<e16>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts2  = P.MU.acc_elt<sign<e16>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           if (saturated) { \
             MXU_CHECK_OVERFLOW(td_type##32_t) \
@@ -794,8 +794,8 @@
           td = (td_type##32_t)res; \
         }else if(sew == e32){ \
           auto &td = P.MU.acc_elt<sign<e64>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
-          auto ts1  = P.MU.tr_elt<sign<e32>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
-          auto ts2  = P.MU.tr_elt<sign<e32>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts1  = P.MU.acc_elt<sign<e32>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+          auto ts2  = P.MU.acc_elt<sign<e32>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
           res = (type_t)ts1 op0 (type_t)ts2; \
           if (saturated) { \
             MXU_CHECK_OVERFLOW(td_type##64_t) \
