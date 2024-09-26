@@ -651,9 +651,6 @@
   require(sew >= e4 && sew <= e64); \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
-  require_align(insn.td(), lmul); \
-  require_align(insn.ts1(), lmul); \
-  require_align(insn.rs2(), lmul); \
   reg_t tile_m = P.MU.tile_m->read() * lmul;\
   reg_t tile_n = P.MU.tile_n->read() * lmul;\
   reg_t mmax = P.MU.mrows;\
@@ -661,7 +658,7 @@
   reg_t amul = P.MU.mamul; \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   type_t res; \
   bool reg_rename = false; \
   if (td_num == ts1_num || td_num == ts2_num){ \
@@ -731,9 +728,6 @@
   require(sew >= e4 && sew <= e32); \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
-  require_align(insn.td(), lmul); \
-  require_align(insn.ts1(), lmul); \
-  require_align(insn.rs2(), lmul); \
   reg_t tile_m = P.MU.tile_m->read();\
   reg_t tile_n = P.MU.tile_n->read();\
   reg_t td_num = insn.td(); \
