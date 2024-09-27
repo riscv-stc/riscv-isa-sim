@@ -588,7 +588,7 @@
   reg_t nmax = P.MU.mcols / sew;\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   /* reg_t lmul = P.MU.mlmul; \*/ \
   reg_t reg_sum = 1; \
   reg_t lmul = 1; \
@@ -622,7 +622,7 @@
   reg_t nmax = P.MU.mcols / sew;\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   /* reg_t lmul = P.MU.mlmul; \ */ \
   reg_t reg_sum = 1; \
   reg_t lmul = 1; \
