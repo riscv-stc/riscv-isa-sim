@@ -271,6 +271,8 @@ void sim_t::interactive()
   funcs["r"] = funcs["run"];
   funcs["rs"] = &sim_t::interactive_run_silent;
   funcs["vreg"] = &sim_t::interactive_vreg;
+  funcs["mtrreg"] = &sim_t::interactive_mtrreg;
+  funcs["maccreg"] = &sim_t::interactive_maccreg;
   funcs["reg"] = &sim_t::interactive_reg;
   funcs["freg"] = &sim_t::interactive_freg;
   funcs["fregh"] = &sim_t::interactive_fregh;
@@ -367,6 +369,8 @@ void sim_t::interactive_help(const std::string& cmd, const std::vector<std::stri
     "fregs <core> <reg>              # Display single precision <reg> in <core>\n"
     "fregd <core> <reg>              # Display double precision <reg> in <core>\n"
     "vreg <core> [reg]               # Display vector [reg] (all if omitted) in <core>\n"
+    "mtrreg <core> [reg]             # Display matrix tr [reg] (all if omitted) in <core>\n"
+    "maccreg <core> [reg]            # Display matrix acc [reg] (all if omitted) in <core>\n"
     "pc <core>                       # Show current PC in <core>\n"
     "insn <core>                     # Show current instruction corresponding to PC in <core>\n"
     "priv <core>                     # Show current privilege level in <core>\n"
@@ -594,6 +598,122 @@ void sim_t::interactive_vreg(const std::string& cmd, const std::vector<std::stri
             break;
           case 1:
             val = p->VU.elt<uint8_t>(r, e);
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (int)(uint8_t)val << "  ";
+            break;
+        }
+      }
+      out << std::endl;
+    }
+  } else {
+    out << "Processor selected does not support any vector extensions" << std::endl;
+  }
+}
+
+void sim_t::interactive_mtrreg(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if (args.size() < 1)
+    throw trap_interactive();
+
+  int rstart = 0;
+  int rend = NMTRPR;
+  if (args.size() >= 2) {
+    rstart = strtol(args[1].c_str(), NULL, 0);
+    if (!(rstart >= 0 && rstart < NMTRPR)) {
+      rstart = 0;
+    } else {
+      rend = rstart + 1;
+    }
+  }
+
+  std::ostream out(sout_.rdbuf());
+
+  // Show all the regs!
+  processor_t *p = get_core(args[0]);
+  if (p->any_matrix_extensions()) {
+    const int mlen = (int)(p->MU.RLEN);
+    const int elen = (int)(p->MU.msew);
+    const int num_elem = elen == 4 ? mlen / 8 : mlen/elen;
+
+    out << std::dec << "MLEN=" << (mlen) << " bits; ELEN=" << (elen == 0x7 ? 4 : elen) << " bits" << std::endl;
+
+    for (int r = rstart; r < rend; ++r) {
+      out << std::setfill (' ') << std::left << std::setw(4) << tr_name[r] << std::right << ": ";
+      for (int e = num_elem-1; e >= 0; --e) {
+        uint64_t val;
+        switch (elen) {
+          case 64:
+            val = p->MU.tr_elt<uint64_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 8));
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(16) << val << "  ";
+            break;
+          case 32:
+            val = p->MU.tr_elt<uint32_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 4));
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (uint32_t)val << "  ";
+            break;
+          case 16:
+            val = p->MU.tr_elt<uint16_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 2));
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (uint16_t)val << "  ";
+            break;
+          case 8:
+          case 4:
+            val = p->MU.tr_elt<uint8_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 1));
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (int)(uint8_t)val << "  ";
+            break;
+        }
+      }
+      out << std::endl;
+    }
+  } else {
+    out << "Processor selected does not support any vector extensions" << std::endl;
+  }
+}
+
+void sim_t::interactive_maccreg(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if (args.size() < 1)
+    throw trap_interactive();
+
+  int rstart = 0;
+  int rend = NMACCPR;
+  if (args.size() >= 2) {
+    rstart = strtol(args[1].c_str(), NULL, 0);
+    if (!(rstart >= 0 && rstart < NMACCPR)) {
+      rstart = 0;
+    } else {
+      rend = rstart + 1;
+    }
+  }
+
+  std::ostream out(sout_.rdbuf());
+
+  // Show all the regs!
+  processor_t *p = get_core(args[0]);
+  if (p->any_matrix_extensions()) {
+    const int mlen = (int)(p->MU.RLEN);
+    const int elen = (int)(p->MU.msew);
+    const int num_elem = (elen == 4) ? mlen / 8 : mlen/elen;
+
+    out << std::dec << "MLEN=" << (mlen) << " bits; ELEN=" << (elen == 0x7 ? 4 : elen) << " bits; MAMUL=" << p->MU.mamul << std::endl;
+
+    for (int r = rstart; r < rend; ++r) {
+      out << std::setfill (' ') << std::left << std::setw(4) << tr_name[r] << std::right << ": ";
+      for (int e = num_elem-1; e >= 0; --e) {
+        uint64_t val;
+        switch (elen) {
+          case 64:
+            val = p->MU.acc_elt<uint64_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 8) * p->MU.mamul);
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(16) << val << "  ";
+            break;
+          case 32:
+            val = p->MU.acc_elt<uint32_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 4) * p->MU.mamul);
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (uint32_t)val << "  ";
+            break;
+          case 16:
+            val = p->MU.acc_elt<uint16_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 2) * p->MU.mamul);
+            out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (uint16_t)val << "  ";
+            break;
+          case 8:
+          case 4:
+            val = p->MU.acc_elt<uint8_t>(r, 0, 0, e, p->MU.mrows, (p->MU.mrlenb / 1) * p->MU.mamul);
             out << std::dec << "[" << e << "]: 0x" << std::hex << std::setfill ('0') << std::setw(8) << (int)(uint8_t)val << "  ";
             break;
         }

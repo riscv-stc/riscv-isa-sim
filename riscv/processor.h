@@ -277,6 +277,11 @@ public:
   bool any_vector_extensions() const {
     return VU.VLEN > 0;
   }
+
+  bool any_matrix_extensions() const {
+    return MU.MLEN > 0;
+  }
+
   bool extension_enabled(unsigned char ext) const {
     return extension_enabled(isa_extension_t(ext));
   }
