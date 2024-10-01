@@ -847,28 +847,28 @@
 #define MXU_WIDE_OP_AND_ASSIGN(var0, var1, var2, op0, op1, sign, sew) \
   switch(sew) { \
   case e4: { \
-    sign##8_t td_w = P.MU.acc_elt<sign##8_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
+    sign##8_t td_w = P.MU.acc_elt<sign##8_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
     bit4_pair_t <sign##8_t> var0_bit4_pair = var0; \
     bit4_pair_t <sign##8_t> var1_bit4_pair = var1; \
-    P.MU.acc_elt<sign##8_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    P.MU.acc_elt<sign##8_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign##8_t)var0_bit4_pair op0 (sign##8_t)var1_bit4_pair) + var2; \
     } \
     break; \
   case e8: { \
-    sign##16_t td_w = P.MU.acc_elt<sign##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.acc_elt<sign##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    sign##16_t td_w = P.MU.acc_elt<sign##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
+    P.MU.acc_elt<sign##16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign##16_t)(sign##8_t)var0 op0 (sign##16_t)(sign##8_t)var1) + var2; \
     } \
     break; \
   case e16: { \
-    sign##32_t td_w = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    sign##32_t td_w = P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
+    P.MU.acc_elt<sign##32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign##32_t)(sign##16_t)var0 op0 (sign##32_t)(sign##16_t)var1) + var2; \
     } \
     break; \
   default: { \
-    sign##64_t td_w = P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, false); \
-    P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true) = \
+    sign##64_t td_w = P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, false); \
+    P.MU.acc_elt<sign##64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true) = \
       op1((sign##64_t)(sign##32_t) var0 op0 (sign##64_t)(sign##32_t)var1) + var2; \
     } \
     break; \
