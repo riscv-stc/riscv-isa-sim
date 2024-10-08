@@ -1005,7 +1005,7 @@
   reg_t tile_n = P.MU.tile_n->read();\
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts2_num = insn.ts2(); \
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / sew;\
   reg_t kmax = std::min(nmax, P.MU.mrows);\
@@ -1209,8 +1209,8 @@
   reg_t mmax = P.MU.mrows;\
   reg_t nmax = P.MU.mcols / sew;\
   reg_t td_num = insn.td(); \
-  reg_t ts1_num = insn.rs1(); \
-  reg_t ts2_num = insn.rs2(); \
+  reg_t ts1_num = insn.ts1(); \
+  reg_t ts2_num = insn.ts2(); \
   reg_t amul = P.MU.mamul; \
   /* reg_t lmul = insn.mlmul() != LMUL_RESERVE ? (1 << insn.mlmul()) : P.MU.mlmul; */ \
   reg_t lmul = 1; \
