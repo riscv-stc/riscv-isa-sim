@@ -116,10 +116,10 @@
   type_usew_t<x>::type acc1  = P.MU.acc_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
 
 #define MX_ACCD_USIGN_BASE(x) \
-  type_usew_t<x>::type &accd  = P.MU.acc_elt<type_usew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+  type_usew_t<x>::type &accd  = P.MU.acc_elt<type_usew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true); \
 
 #define MX_ACCD_SIGN_BASE(x) \
-  type_sew_t<x>::type &accd  = P.MU.acc_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+  type_sew_t<x>::type &accd  = P.MU.acc_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true); \
 
 #define MX_ACCD_USING_WIDE_BASE(x, mult) \
   type_usew_t<x * mult>::type &accd  = P.MU.acc_elt<type_usew_t<x * mult>::type>(td_num + m, \
