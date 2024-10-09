@@ -688,14 +688,14 @@ void sim_t::interactive_maccreg(const std::string& cmd, const std::vector<std::s
   // Show all the regs!
   processor_t *p = get_core(args[0]);
   if (p->any_matrix_extensions()) {
-    const int mlen = (int)(p->MU.RLEN);
+    const int mlen = (int)(p->MU.MLEN);
     const int elen = (int)(p->MU.msew);
-    const int num_elem = (elen == 4) ? mlen / 8 : mlen/elen;
+    const int num_elem = ((elen == 4) ? mlen / 8 : mlen/elen) * p->MU.mamul;
 
     out << std::dec << "MLEN=" << (mlen) << " bits; ELEN=" << (elen == 0x7 ? 4 : elen) << " bits; MAMUL=" << p->MU.mamul << std::endl;
 
     for (int r = rstart; r < rend; ++r) {
-      out << std::setfill (' ') << std::left << std::setw(4) << tr_name[r] << std::right << ": ";
+      out << std::setfill (' ') << std::left << std::setw(4) << acc_name[r] << std::right << ": ";
       for (int e = num_elem-1; e >= 0; --e) {
         uint64_t val;
         switch (elen) {

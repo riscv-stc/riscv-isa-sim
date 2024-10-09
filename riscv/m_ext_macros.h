@@ -271,9 +271,9 @@
   MTFU_PARAMS_ACC1(width) \
   MTFU_PARAMS_ACC2(width) \
 
-#define REGNAME_WRITE_BAKE(tr_mmax, tr_nmax, reg_sum, is_acc) \
+#define REGNAME_WRITE_BAKE(tr_mmax, tr_nmax, reg_sum, is_acc, sew) \
   if (reg_rename) { \
-    P.MU.reg_rename_write_back_elt(td_num, tr_mmax, tr_nmax, lmul, reg_sum, is_acc); \
+    P.MU.reg_rename_write_back_elt(td_num, tr_mmax, sew != e4 ? tr_nmax * sew / 8 : tr_nmax, lmul, reg_sum, is_acc); \
   } \
 
 #define MD2X_LOOP_BASE \
@@ -722,7 +722,7 @@
       } \
     } \
   } \
-  REGNAME_WRITE_BAKE(mmax, sew == e4 ? nmax * amul / 2: nmax * amul, 1, true); \
+  REGNAME_WRITE_BAKE(mmax, sew == e4 ? nmax * amul / 2: nmax * amul, 1, true, sew); \
 
 #define MXU_W_MM_ADD(opd, op0, sign, type_t, td_type, saturated, sew) \
   require(sew >= e4 && sew <= e32); \
@@ -799,7 +799,7 @@
       } \
     } \
   } \
-  REGNAME_WRITE_BAKE(mmax, sew == e4 ? nmax * amul / 2: nmax * amul , 1, true); \
+  REGNAME_WRITE_BAKE(mmax, sew == e4 ? nmax * amul / 2: nmax * amul , 1, true, sew); \
 
 #define MXU_Q_MM_ADD(opd, op0, sign, type, td_type) \
   require(P.MU.msew >= e8 && P.MU.msew <= e16); \
@@ -840,7 +840,7 @@
     } \
   } \
   } \
-  REGNAME_WRITE_BAKE(mmax, nmax, reg_sum, true); \
+  REGNAME_WRITE_BAKE(mmax, nmax, reg_sum, true, sew); \
 
 
 
@@ -1195,7 +1195,7 @@
       } \
     } \
   } \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true, sew) \
 
 #define MXU_VFP_W_MM_ADD(BODY16, BODYB16, BODY32, BODYT32, BODY64, sew) \
   require_fp; \
@@ -1336,7 +1336,7 @@
       } \
     } \
   } \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true, sew) \
 
 #define MXU_VFP_VV_LOOP_WIDE(wide, sew) \
   MXU_VFP_LOOP_BASE(wide, sew) \
@@ -1894,7 +1894,7 @@ for (reg_t m = 0; m < lmul; m++) {\
       break; \
   } \
   MU_MFP_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
 #define MXU_MFP_CVT(BODY8, BODY16, BODY32, BODY64, wide, sew) \
   MU_MFP_LOOP_SCALE_BASE(wide, sew) \
@@ -1924,7 +1924,7 @@ for (reg_t m = 0; m < lmul; m++) {\
       break; \
   } \
   MU_MFP_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
 #define MX_CVT_LOOP_BASE(wide, sew) \
   const reg_t ts1_num = insn.ts1(); \
@@ -1977,7 +1977,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
 #define MX_WCVT(BODY, CVT, wide, sew) \
   require(sew >= e4 && sew * wide <= e64); \
@@ -1999,7 +1999,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
 #define MX_WQCVT(BODY, CVT, wide, sew) \
   require(sew >= e4 && sew * wide <= e64); \
@@ -2018,7 +2018,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
   #define MX_WOCVT(BODY, CVT, wide, sew) \
   require(sew >= e4 && sew * wide <= e64); \
@@ -2034,7 +2034,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * wide, reg_sum, true, sew) \
 
 #define MX_NCVT(BODY, NCVT, narr, sew) \
   require(sew >= e8 && sew  <= e64); \
@@ -2055,7 +2055,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true, sew) \
 
 #define MX_NCVT_QUAD(BODY, NCVT, narr, sew) \
   require(sew >= e16 && sew  <= e64); \
@@ -2073,7 +2073,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true, sew) \
 
 #define MX_NCVT_OCT(BODY, NCVT, narr, sew) \
   require(sew >= e32 && sew  <= e64); \
@@ -2088,7 +2088,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_CVT_LOOP_BASE_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul * narr, reg_sum, true, sew) \
 
 #define MB_GENERAL_LOOP_BASE(for_num) \
   for (reg_t m = 0; m < lmul; m++) { \
@@ -2211,7 +2211,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     BODY \
   } \
   MX_2D_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true, sew) \
 
 #define MI_MM_LOOP_E4(BODY ,PARAMS, ins, sew) \
   MX_2D_LOOP_BASE(ins, sew) \
@@ -2219,7 +2219,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   M##PARAMS##_PARAMS(e8); \
   BODY \
   MX_2D_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true, sew) \
 
 #define MI_MM_LOOP_WIDEN(BODY ,PARAMS, ins, sew) \
   MX_2D_LOOP_BASE_WIDEN(ins, sew) \
@@ -2241,7 +2241,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     require(0); \
   } \
   MX_2D_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, reg_sum, true, sew) \
 
 #define MXU_MM_LOOP_QUEN(BODY, PARAMS, wide, sew) \
   MXU_GENERAL_LOOP_BASE_WIDE(false, wide, sew) \
@@ -2387,7 +2387,7 @@ for (reg_t m = 0; m < lmul; m++) {\
      } \
   } \
   MI_2D_VFP_LOOP_END \
-  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true) \
+  REGNAME_WRITE_BAKE(mmax, nmax * amul, 1, true, sew) \
 
 #define MTRANSPOSE_BASE(dim, elt_width) \
   require((sew >= e8 && sew <= e64)); \
@@ -2432,7 +2432,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     } \
   } \
   MD2X_LOOP_END \
-  REGNAME_WRITE_BAKE(td_num, is_acc ? cmax * amul: cmax, 1, is_acc) \
+  REGNAME_WRITE_BAKE(td_num, is_acc ? cmax * amul: cmax, 1, is_acc, sew) \
 
 
 #endif // _RISCV_M_EXT_MACROS_H
