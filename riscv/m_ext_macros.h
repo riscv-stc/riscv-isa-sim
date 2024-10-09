@@ -2300,7 +2300,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   reg_t wide = widen; \
   require_align(insn.td(), lmul); \
   require_align(insn.ts1(), lmul); \
-  require_align(insn.rs2(), lmul); \
+  require_align(insn.ts2(), lmul); \
   softfloat_roundingMode = STATE.frm->read(); \
   bool reg_rename = false; \
   if (td_num == ts1_num || td_num == ts2_num){ \
