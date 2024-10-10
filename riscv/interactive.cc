@@ -630,7 +630,7 @@ void sim_t::interactive_mtrreg(const std::string& cmd, const std::vector<std::st
   // Show all the regs!
   processor_t *p = get_core(args[0]);
   if (p->any_matrix_extensions()) {
-    const int mlen = (int)(p->MU.RLEN);
+    const int mlen = (int)(p->MU.MLEN);
     const int elen = (int)(p->MU.msew);
     const int num_elem = elen == 4 ? mlen / 8 : mlen/elen;
 

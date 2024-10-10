@@ -76,7 +76,7 @@
   type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, i, j, mmax, nmax, false, false); \
 
 #define MXU_ACC2_PARAMS(x) \
-  type_usew_t<x>::type acc2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
+  type_usew_t<x>::type acc2  = P.MU.acc_elt<type_usew_t<x>::type>(ts2_num + m, 0, i, j, mmax, nmax * amul, false, false); \
 
 #define MXU_PARAMS(x) \
   type_usew_t<x>::type &td  = P.MU.tr_elt<type_usew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax, reg_rename, true); \
@@ -2392,8 +2392,8 @@ for (reg_t m = 0; m < lmul; m++) {\
 #define MTRANSPOSE_BASE(dim, elt_width) \
   require((sew >= e8 && sew <= e64)); \
   require_matrix(true);\
-  reg_t td_num = insn.td(); \
-  reg_t ts1_num = insn.ts1(); \
+  reg_t td_num = insn.rd(); \
+  reg_t ts1_num = insn.rs1(); \
   reg_t rmax = 0, cmax = 0; \
   reg_t height = 0, width = 0; \
   reg_t amul = P.MU.mamul; \
@@ -2412,7 +2412,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   MTRANSPOSE_BASE(dim, elt_width) \
   MD2X_LOOP_BASE \
   if ( !is_acc ) { \
-    auto ts1 = P.MU.tr_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax, reg_rename, false); \
+    auto ts1 = P.MU.tr_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax, false, false); \
     if ((i >= square_min || j >= square_min) && !P.MU.mba){ \
       auto &td = P.MU.tr_elt<elt_width##_t>(td_num, 0, i, j, rmax, cmax, reg_rename, true); \
       td = ts1; \
@@ -2422,7 +2422,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     } \
   } \
   else { \
-    auto acc1 = P.MU.acc_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax * amul, reg_rename, false); \
+    auto acc1 = P.MU.acc_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax * amul, false, false); \
     if ((i >= square_min || j >= square_min) && !P.MU.mba){ \
       auto &accd = P.MU.acc_elt<elt_width##_t>(td_num, 0, i, j, rmax, cmax * amul, reg_rename, true); \
       accd = acc1; \
@@ -2432,7 +2432,7 @@ for (reg_t m = 0; m < lmul; m++) {\
     } \
   } \
   MD2X_LOOP_END \
-  REGNAME_WRITE_BAKE(td_num, is_acc ? cmax * amul: cmax, 1, is_acc, sew) \
+  REGNAME_WRITE_BAKE(rmax, is_acc ? cmax * amul: cmax, 1, is_acc, sew) \
 
 
 #endif // _RISCV_M_EXT_MACROS_H
