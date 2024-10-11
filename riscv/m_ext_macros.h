@@ -273,7 +273,7 @@
 
 #define REGNAME_WRITE_BAKE(tr_mmax, tr_nmax, reg_sum, is_acc, sew) \
   if (reg_rename) { \
-    P.MU.reg_rename_write_back_elt(td_num, tr_mmax, sew != e4 ? tr_nmax * sew / 8 : tr_nmax, lmul, reg_sum, is_acc); \
+    P.MU.reg_rename_write_back_elt(td_num, tr_mmax, (sew != e4 ? (tr_nmax) * sew / 8 : (tr_nmax)), lmul, reg_sum, is_acc); \
   } \
 
 #define MD2X_LOOP_BASE \
