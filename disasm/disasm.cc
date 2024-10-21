@@ -2466,7 +2466,108 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
   #undef DISASM_ARITHMETIC_LOGIC_ACC_FLOAT_INSN
   #undef DISASM_ARITHMETIC_LOGIC_ACC_WFLOAT_INSN
 
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.mm" ,    match_##name##_spa_mm,    mask_##name##_spa_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.mm" ,    match_##name##_spb_mm,    mask_##name##_spb_mm,   fmt)); \
 
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_H_W_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.h.mm" ,    match_##name##_spa_h_mm,    mask_##name##_spa_h_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.h.mm" ,    match_##name##_spb_h_mm,    mask_##name##_spb_h_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spa.w.mm" ,    match_##name##_spa_w_mm,    mask_##name##_spa_w_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.w.mm" ,    match_##name##_spb_w_mm,    mask_##name##_spb_w_mm,   fmt)); \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_D_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.d.mm" ,    match_##name##_spa_d_mm,    mask_##name##_spa_d_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.d.mm" ,    match_##name##_spb_d_mm,    mask_##name##_spb_d_mm,   fmt)); \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_DW_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.dw.mm" ,    match_##name##_spa_dw_mm,    mask_##name##_spa_dw_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.dw.mm" ,    match_##name##_spb_dw_mm,    mask_##name##_spb_dw_mm,   fmt)); \
+    
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_HF_F_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.hf.mm" ,    match_##name##_spa_hf_mm,    mask_##name##_spa_hf_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.hf.mm" ,    match_##name##_spb_hf_mm,    mask_##name##_spb_hf_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spa.f.mm" ,     match_##name##_spa_f_mm,     mask_##name##_spa_f_mm,    fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.f.mm" ,     match_##name##_spb_f_mm,     mask_##name##_spb_f_mm,    fmt)); \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_CF_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.cf.mm" ,    match_##name##_spa_cf_mm,    mask_##name##_spa_cf_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.cf.mm" ,    match_##name##_spb_cf_mm,    mask_##name##_spb_cf_mm,   fmt)); \
+    
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_B_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.b.mm" ,    match_##name##_spa_b_mm,    mask_##name##_spa_b_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.b.mm" ,    match_##name##_spb_b_mm,    mask_##name##_spb_b_mm,   fmt)); \
+    
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_HB_INSN(name, fmt) \
+    add_insn(new disasm_insn_t(#name ".spa.hb.mm" ,    match_##name##_spa_hb_mm,    mask_##name##_spa_hb_mm,   fmt)); \
+    add_insn(new disasm_insn_t(#name ".spb.hb.mm" ,    match_##name##_spb_hb_mm,    mask_##name##_spb_hb_mm,   fmt)); \
+    
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_H_W_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_DW_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_FLOAT_MMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_HF_F_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_D_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_H_W_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_WFLOAT_MMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_HF_F_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_B_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_QFLOAT_MMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_CF_INSN(name, fmt) \
+
+#define DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_HB_INSN(name, fmt) \
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN(mmau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN(msmau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN(mma, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN(msma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_FLOAT_MMA_INSN(mfma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN(mwmau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN(mswmau, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN(mwma, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN(mswma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_WFLOAT_MMA_INSN(mfwma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(mqmau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(msqmau, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(mqma, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(msqma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_QFLOAT_MMA_INSN(mfqma, mmu_acc_tr_unit)
+
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN(momau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN(msomau, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN(moma, mmu_acc_tr_unit)
+    DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN(msoma, mmu_acc_tr_unit)
+
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_MMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_FLOAT_MMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_WMMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_WFLOAT_MMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_QFLOAT_MMA_INSN
+  #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN
 
 
 #define DISASM_MXU_CVT(name, mname) \

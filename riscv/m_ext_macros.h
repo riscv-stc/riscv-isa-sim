@@ -109,6 +109,47 @@
   type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
   type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
 
+#define MXU_SPB_ROW_USIGN_PARAMS(x, wide) \
+  type_usew_t<x * wide>::type &accd  = P.MU.acc_elt<type_usew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+  type_usew_t<x>::type ts2  = spa_matrix_unfold[k][j]; \
+
+#define MXU_SPB_ROW_SIGN_PARAMS(x, wide) \
+  type_sew_t<x * wide>::type &accd  = P.MU.acc_elt<type_sew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+  type_sew_t<x>::type ts2  = spa_matrix_unfold[k][j]; \
+
+#define MXU_SPA_USIGN_PARAMS(x, wide) \
+  type_usew_t<x * wide>::type &accd  = P.MU.acc_elt<type_usew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+  type_usew_t<x>::type ts1  = spa_matrix_unfold[i][k]; \
+
+#define MXU_SPA_SIGN_PARAMS(x, wide) \
+  type_sew_t<x * wide>::type &accd  = P.MU.acc_elt<type_sew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+  type_sew_t<x>::type ts1  = spa_matrix_unfold[i][k]; \
+
+
+#define MXU_SPB_COL_USIGN_INDEX1_PRAMS(x, wide) \
+  type_usew_t<x * wide>::type &accd  = P.MU.acc_elt<type_usew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k + index1, mmax, nmax, false, false); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k / 2, j, mmax, nmax, false, false); \
+
+#define MXU_SPB_COL_SIGN_INDEX1_PRAMS(x, wide) \
+  type_sew_t<x * wide>::type &accd  = P.MU.acc_elt<type_sew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k + index1, mmax, nmax, false, false); \
+  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k / 2, j, mmax, nmax, false, false); \
+
+#define MXU_SPB_COL_USIGN_INDEX2_PRAMS(x, wide) \
+  type_usew_t<x * wide>::type &accd  = P.MU.acc_elt<type_usew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_usew_t<x>::type ts1  = P.MU.tr_elt<type_usew_t<x>::type>(ts1_num + m, 0, i, k + index2, mmax, nmax, false, false); \
+  type_usew_t<x>::type ts2  = P.MU.tr_elt<type_usew_t<x>::type>(ts2_num + m, 0, k / 2 + 1, j, mmax, nmax, false, false); \
+
+#define MXU_SPB_COL_SIGN_INDEX2_PRAMS(x, wide) \
+  type_sew_t<x * wide>::type &accd  = P.MU.acc_elt<type_sew_t<x * wide>::type>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+  type_sew_t<x>::type ts1  = P.MU.tr_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, k + index2, mmax, nmax, false, false); \
+  type_sew_t<x>::type ts2  = P.MU.tr_elt<type_sew_t<x>::type>(ts2_num + m, 0, k / 2 + 1, j, mmax, nmax, false, false); \
+
 #define MX_ACC1_SIGN_BASE(x) \
   type_sew_t<x>::type acc1  = P.MU.acc_elt<type_sew_t<x>::type>(ts1_num + m, 0, i, j, mmax, nmax * amul, false, false); \
 
@@ -121,27 +162,27 @@
 #define MX_ACCD_SIGN_BASE(x) \
   type_sew_t<x>::type &accd  = P.MU.acc_elt<type_sew_t<x>::type>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true); \
 
-#define MX_ACCD_USING_WIDE_BASE(x, mult) \
+#define MX_ACCD_USIGN_WIDE_BASE(x, mult) \
   type_usew_t<x * mult>::type &accd  = P.MU.acc_elt<type_usew_t<x * mult>::type>(td_num + m, \
         0, i, j, mmax, nmax / mult * amul, reg_rename, true); \
 
-#define MX_ACCD_SING_WIDE_BASE(x, mult) \
+#define MX_ACCD_SIGN_WIDE_BASE(x, mult) \
   type_sew_t<x * mult>::type &accd  = P.MU.acc_elt<type_sew_t<x * mult>::type>(td_num + m, \
         0, i, j, mmax, nmax / mult * amul, reg_rename, true); \
 
-#define MX_ACCD_USING_NARR_BASE(x, narr) \
+#define MX_ACCD_USIGN_NARR_BASE(x, narr) \
   type_usew_t<x / narr>::type &accd  = P.MU.acc_elt<type_usew_t<x / narr>::type>(td_num + m, \
         0, i, j, mmax, nmax * narr * amul, reg_rename, true); \
 
-#define MX_ACCD_SING_NARR_BASE(x, narr) \
+#define MX_ACCD_SIGN_NARR_BASE(x, narr) \
   type_sew_t<x / narr>::type &accd  = P.MU.acc_elt<type_sew_t<x / narr>::type>(td_num + m, \
         0, i, j, mmax, nmax * narr * amul, reg_rename, true); \
 
-#define MX_ACCD_USING_NARR_E4_BASE(x, narr) \
+#define MX_ACCD_USIGN_NARR_E4_BASE(x, narr) \
   type_usew_t<x / narr>::type &accd  = P.MU.acc_elt<type_usew_t<x / narr>::type>(td_num + m, \
         0, i, j / 2, mmax, nmax * narr * amul, reg_rename, true); \
 
-#define MX_ACCD_SING_NARR_E4_BASE(x, narr) \
+#define MX_ACCD_SIGN_NARR_E4_BASE(x, narr) \
   type_sew_t<x / narr>::type &accd  = P.MU.acc_elt<type_sew_t<x / narr>::type>(td_num + m, \
         0, i, j / 2, mmax, nmax * narr * amul, reg_rename, true); \
 
@@ -154,27 +195,27 @@
   MX_ACC1_SIGN_BASE(x) \
 
 #define MX_SSDS_WIDE_PARAMS(x, mult) \
-  MX_ACCD_SING_WIDE_BASE(x, mult) \
+  MX_ACCD_SIGN_WIDE_BASE(x, mult) \
   MX_ACC1_SIGN_BASE(x) \
   
 #define MX_SUDU_WIDE_PARAMS(x, mult) \
-  MX_ACCD_USING_WIDE_BASE(x, mult) \
+  MX_ACCD_USIGN_WIDE_BASE(x, mult) \
   MX_ACC1_USIGN_BASE(x) \
 
 #define MX_SSDS_NARR_PARAMS(x, narr) \
-  MX_ACCD_SING_NARR_BASE(x, narr) \
+  MX_ACCD_SIGN_NARR_BASE(x, narr) \
   MX_ACC1_SIGN_BASE(x) \
   
 #define MX_SUDU_NARR_PARAMS(x, narr) \
-  MX_ACCD_USING_NARR_BASE(x, narr) \
+  MX_ACCD_USIGN_NARR_BASE(x, narr) \
   MX_ACC1_USIGN_BASE(x) \
 
 #define MX_SSDS_NARR_E4_PARAMS(x, narr) \
-  MX_ACCD_SING_NARR_E4_BASE(x, narr) \
+  MX_ACCD_SIGN_NARR_E4_BASE(x, narr) \
   MX_ACC1_SIGN_BASE(x) \
   
 #define MX_SUDU_NARR_E4_PARAMS(x, narr) \
-  MX_ACCD_USING_NARR_E4_BASE(x, narr) \
+  MX_ACCD_USIGN_NARR_E4_BASE(x, narr) \
   MX_ACC1_USIGN_BASE(x) \
 
 #define MMULXU_PARAMS(x, mult) \
@@ -955,12 +996,12 @@
   
 
 #define MXU_GENERAL_LOOP_BASE_OCT(wide, sew) \
-  require(sew >= e8 && sew <= e64); \
+  require(sew >= e4 && sew <= e8); \
   reg_t tile_m = P.MU.tile_m->read();\
   reg_t tile_k = P.MU.tile_k->read();\
   reg_t tile_n = P.MU.tile_n->read();\
   reg_t mmax = P.MU.mrows;\
-  reg_t nmax = P.MU.mcols / sew; \
+  reg_t nmax = P.MU.mcols / 8; \
   reg_t kmax = std::min(nmax, P.MU.mrows); \
   reg_t td_num = insn.td(); \
   reg_t ts1_num = insn.ts1(); \
@@ -977,16 +1018,10 @@
         for (reg_t k = 0; k < tile_k; ++k) { \
 
 // widen operation loop
-#define MXU_VV_LOOP_OCT(BODY, wide, sew) \
+#define MXU_MM_LOOP_OCT(BODY, wide, sew) \
   MXU_GENERAL_LOOP_BASE_OCT(wide, sew) \
-  if (sew == e8){ \
+  if (sew == e8 || sew == e4){ \
     MX_ACCD_PARAMS(e8); \
-    BODY; \
-  }else if(sew == e4){ \
-    MX_ACCD_PARAMS(e8); \
-    BODY; \
-  } else if(sew == e32){ \
-    MX_ACCD_PARAMS(e32); \
     BODY; \
   } else { /* type not support*/ \
     require(0); \
@@ -1044,8 +1079,8 @@
         td = f16_mulAdd(ts1, ts2, td); \
       } else if (P.MU.mfp16 == MTYPE_BF16 ) { /* bf16*/ \
         bfloat16_t &td = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
-        float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
-        float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+        bfloat16_t ts1 = P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+        bfloat16_t ts2 = P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
         td = bf16_mulAdd(ts1, ts2, td); \
       } else {\
         require(0); /* type not supoort*/ \
@@ -2434,5 +2469,1007 @@ for (reg_t m = 0; m < lmul; m++) {\
   MD2X_LOOP_END \
   REGNAME_WRITE_BAKE(rmax, is_acc ? cmax * amul: cmax, 1, is_acc, sew) \
 
+#define MXU_SP_BASE(wide, sew) \
+  require(sew >= e4 && sew <= e64); \
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_k = P.MU.tile_k->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
+  reg_t mmax = P.MU.mrows;\
+  reg_t nmax = (sew == e4 ? (P.MU.mcols / e8) : (P.MU.mcols / sew)) ; \
+  reg_t kmax = std::min(nmax, P.MU.mrows);\
+  reg_t td_num = insn.td(); \
+  reg_t ts1_num = insn.ts1(); \
+  reg_t ts2_num = insn.ts2(); \
+  reg_t amul = P.MU.mamul; \
+  /* reg_t lmul = P.MU.mlmul; \ */ \
+  reg_t lmul = 1; \
+  reg_t reg_sum = 1; \
+  reg_t spa_tr_index = P.MU.mtsp->read(); \
+  reg_t spa_direction = P.MU.mdsp->read(); \
+  reg_t des_nmax = nmax / wide; \
+  /* if (ins && insn.mlmul() != LMUL_RESERVE) \
+    lmul = (1 << insn.mlmul()); */ \
+  bool reg_rename = false; \
+  if (td_num == ts1_num || td_num == ts2_num){ \
+    reg_rename = true; \
+  } \
+  bool only_one_fix_reg_sum = false; \
+
+#define MXU_SP_LOOP_BASE \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
+        for (reg_t k = 0; k < tile_k; k+=4) { \
+
+#define  MXU_SPB_COL_CAL(BODY, SIGN, wide, sew) \
+          /* k/8 tow group and every has 4 elements */ \
+          uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k/8, j , mmax, nmax * amul, false, false); \
+          uint8_t index1 = (spa_index_val >> ((k % 8) ? 2 : 6)) & 0x3; \
+          uint8_t index2 = (spa_index_val >> ((k % 8) ? 0 : 4)) & 0x3; \
+          { \
+            MXU_SPB_COL_##SIGN##_INDEX1_PRAMS(sew, wide) \
+            BODY; \
+          } \
+          \
+          { \
+            MXU_SPB_COL_##SIGN##_INDEX2_PRAMS(sew, wide) \
+            BODY; \
+          } \
+            
+            
+#define SP_MATRIX_UNFLOD_USIGN(x, row, col) \
+  std::vector<std::vector<type_usew_t<x>::type>> spa_matrix_unfold(row, std::vector<type_usew_t<x>::type>(col, 0)); \
+
+#define SP_MATRIX_UNFLOD_SIGN(x, row, col) \
+  std::vector<std::vector<type_sew_t<x>::type>> spa_matrix_unfold(row, std::vector<type_sew_t<x>::type>(col, 0)); \
+
+#define SP_MATRIX_ROW_FLOD_VAL_USIGN_USIGN(x, ts_num) \
+  auto val = P.MU.tr_elt<type_usew_t<x>::type>(ts_num, 0, k , j, mmax, nmax, false, false); \
+
+#define SP_MATRIX_ROW_FLOD_VAL_USIGN_SIGN(x, ts_num) \
+  auto val = P.MU.tr_elt<type_sew_t<x>::type>(ts_num, 0, k , j, mmax, nmax, false, false); \
+
+
+#define SP_MATRIX_COL_FLOD_VAL_USIGN_USIGN(x, ts_num) \
+  auto val = P.MU.tr_elt<type_usew_t<x>::type>(ts_num, 0,  j, i, mmax, nmax, false, false); \
+
+#define SP_MATRIX_COL_FLOD_VAL_USIGN_SIGN(x, ts_num) \
+  auto val = P.MU.tr_elt<type_sew_t<x>::type>(ts_num, 0,  j, i, mmax, nmax, false, false); \
+
+#define MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, sew, row, col, ts_num) \
+  SP_MATRIX_UNFLOD_##SIGN(sew, row, col) \
+  reg_t l = 0; \
+  /* right matrix is k n */ \
+  for (reg_t k = 0 ; k < row; k++){ \
+    l = 0; \
+    for(reg_t j = 0; j < col / 2 ; j++){ \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, nmax, false, false); \
+      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
+      SP_MATRIX_ROW_FLOD_VAL_USIGN_##SIGN(sew, ts_num) \
+      spa_matrix_unfold[k][index + (j / 2) * 4] = val; \
+      l == 4 ? l = 0 : l++; \
+    } \
+  } \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
+        for (reg_t k = 0; k < tile_k; k++) { \
+
+#define MXU_SP_LOOP_END \
+        } \
+      } \
+    } \
+  } \
+
+#define MXU_SPB_MM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    if (sew == e8 || sew == e8){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e8) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e16) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e32){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e32) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e64){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e64) \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+  else { \
+    if (sew == e8){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e8, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e16, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e16, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e32){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e32, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e32, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e64){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e64, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e64, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+
+#define MXU_SPB_WMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    if (sew == e8 || sew == e8){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e8) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e16) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e32){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e32) \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+  else { \
+    if (sew == e8){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e8, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e16, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e16, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e32){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e32, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e32, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+
+#define MXU_SPB_QMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    if (sew == e8 || sew == e8){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e8) \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e16) \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+  else { \
+    if (sew == e8){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e8, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    }else if(sew == e16){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e16, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e16, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+
+#define MXU_SPB_OMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    if (sew == e8 || sew == e8){ \
+      MXU_SP_LOOP_BASE \
+      MXU_SPB_COL_CAL(BODY, SIGN, wide, e8) \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+  else { \
+    if (sew == e8){ \
+      MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, e8, tile_k, tile_n, ts2_num) \
+      MXU_SPB_ROW_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } \
+  } \
+  
+#define MXU_SP_COL_UNFLOD_LOOP_BASE( SIGN, sew, row, col, ts_num) \
+  SP_MATRIX_UNFLOD_##SIGN(sew, row, col) \
+  reg_t l = 0; \
+  for (reg_t i = 0 ; i < row / 2; i++) { \
+    l = 0; \
+    for (reg_t j = 0 ; j < col ; j++) { \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, nmax, false, false ); \
+      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
+      SP_MATRIX_COL_FLOD_VAL_USIGN_##SIGN(sew, ts_num) \
+      spa_matrix_unfold[index + (i / 2) * 4][j] = val; \
+      l++; \
+    } \
+  } \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
+        for (reg_t k = 0; k < tile_k; k++) { \
+
+#define MXU_SPA_MM(DIRECTION, BODY, SIGN, wide, sew) \
+  if (sew == e8) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e8, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e16) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e16, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e16 ,wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e32) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e32, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e32, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e64) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e64, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e64, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else { \
+      require(0); \
+    } \
+
+#define MXU_SPA_MM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    MXU_SPA_MM(COL, BODY, SIGN, wide, sew) \
+  } else { \
+    MXU_SPA_MM(ROW, BODY, SIGN, wide, sew) \
+  } \
+
+#define MXU_SPA_WMM(DIRECTION, BODY, SIGN, wide, sew) \
+  if (sew == e8) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e8, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e16) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e16, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e16 ,wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e32) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e32, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e32, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else { \
+      require(0); \
+    } \
+
+#define MXU_SPA_WMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    MXU_SPA_WMM(COL, BODY, SIGN, wide, sew) \
+  } else { \
+    MXU_SPA_WMM(ROW, BODY, SIGN, wide, sew) \
+  } \
+
+#define MXU_SPA_QMM(DIRECTION, BODY, SIGN, wide, sew) \
+  if (sew == e8) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e8, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } else if (sew == e16) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e16, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e16 ,wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } { \
+      require(0); \
+    } \
+
+#define MXU_SPA_QMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    MXU_SPA_QMM(COL, BODY, SIGN, wide, sew) \
+  } else { \
+    MXU_SPA_QMM(ROW, BODY, SIGN, wide, sew) \
+  } \
+
+#define MXU_SPA_OMM(DIRECTION, BODY, SIGN, wide, sew) \
+  if (sew == e8 || sew == e4) { \
+      MXU_SP_##DIRECTION##_UNFLOD_LOOP_BASE(SIGN, e8, tile_m, tile_k, ts1_num); \
+      MXU_SPA_##SIGN##_PARAMS(e8, wide); \
+      BODY; \
+      MXU_SP_LOOP_END \
+    } { \
+      require(0); \
+    } \
+
+#define MXU_SPA_OMM_LOOP(BODY, SIGN, wide, sew) \
+  MXU_SP_BASE(wide, sew) \
+  if (spa_direction) { \
+    MXU_SPA_OMM(COL, BODY, SIGN, wide, sew) \
+  } else { \
+    MXU_SPA_OMM(ROW, BODY, SIGN, wide, sew) \
+  } \
+
+
+#define MXU_MFP_SP_MM_BASE(wide, sew) \
+  require_fp; \
+  require((sew == e16 && p->extension_enabled(EXT_ZFH)) || \
+          (sew == e32 && p->extension_enabled('F')) || \
+          (sew == e64 && p->extension_enabled('D'))); \
+  require_matrix(true);\
+  require(STATE.frm->read() < 0x5);\
+  reg_t tile_m = P.MU.tile_m->read();\
+  reg_t tile_k = P.MU.tile_k->read();\
+  reg_t tile_n = P.MU.tile_n->read();\
+  reg_t td_num = insn.td(); \
+  reg_t ts1_num = insn.ts1(); \
+  reg_t ts2_num = insn.ts2(); \
+  reg_t mmax = P.MU.mrows;\
+  reg_t nmax = P.MU.mcols / sew;\
+  reg_t kmax = std::min(nmax, P.MU.mrows);\
+  /* reg_t lmul = P.MU.mlmul; */ \
+  reg_t lmul = 1; \
+  reg_t amul = P.MU.mamul; \
+  require_align(td_num, lmul); \
+  require_align(ts1_num, lmul); \
+  require_align(ts2_num, lmul); \
+  softfloat_roundingMode = STATE.frm->read(); \
+  bool reg_rename = false; \
+  if (td_num == ts1_num || td_num == ts2_num){ \
+    reg_rename = true; \
+  } \
+  reg_t reg_sum = 1; \
+  bool only_one_fix_reg_sum = false; \
+  reg_t des_nmax = nmax / wide; \
+  reg_t td_num_lmul = 0; \
+  reg_t spa_tr_index = P.MU.mtsp->read(); \
+  reg_t spa_direction = P.MU.mdsp->read(); \
+
+#define MXU_SP_MFP_ROW_UNFLOD_LOOP_BASE(elt_width, sew, row, col, ts_num) \
+  std::vector<std::vector<elt_width##_t>> spa_matrix_unfold(row, std::vector<elt_width##_t>(col)); \
+  reg_t l = 0; \
+  /* right matrix is k n */ \
+  for (reg_t k = 0 ; k < row; k++){ \
+    l = 0; \
+    for(reg_t j = 0; j < col / 2 ; j++){ \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, nmax , false, false); \
+      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
+      auto val = P.MU.tr_elt<elt_width##_t>(ts_num, 0, k , j, mmax, nmax, false, false); \
+      spa_matrix_unfold[k][index + (j / 2) * 4] = val; \
+      l == 4 ? l = 0 : l++; \
+    } \
+  } \
+  for (reg_t i = 0; i < tile_m; ++i) { \
+    for (reg_t m = 0 ; m < lmul; m++) { \
+      for (reg_t j = 0; j < tile_n; ++j) { \
+        for (reg_t k = 0; k < tile_k; k++) { \
+
+#define MXU_SP_MFP_COL_UNFLOD_LOOP_BASE( elt_width , sew, row, col, ts_num) \
+  std::vector<std::vector<elt_width##_t>> spa_matrix_unfold(row, std::vector<elt_width##_t>(col)); \
+  reg_t l = 0; \
+  for (reg_t i = 0 ; i < row / 2; i++) { \
+    l = 0; \
+    for (reg_t j = 0 ; j < col ; j++) { \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, nmax, false, false ); \
+      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
+      auto val = P.MU.tr_elt<elt_width##_t>(ts_num, 0, j, i, mmax, nmax, false, false); \
+      spa_matrix_unfold[index + (i / 2) * 4][j] = val; \
+      l++; \
+    } \
+  } \
+    for (reg_t i = 0; i < tile_m; ++i) { \
+      for (reg_t m = 0 ; m < lmul; m++) { \
+        for (reg_t j = 0; j < tile_n; ++j) { \
+          for (reg_t k = 0; k < tile_k; k++) { \
+
+#define MXU_SPB_MFP_MM(DIRCTION, sew) \
+  switch(sew) { \
+    case e16: { \
+      if ( P.MU.mfp16 == MTYPE_FP16 ) { /* fp16 */ \
+        MXU_SP_MFP_##DIRCTION##_UNFLOD_LOOP_BASE(float16, e16, tile_k, tile_n, ts2_num) \
+        float16_t &td = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        float16_t ts1 = P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+        float16_t ts2 = spa_matrix_unfold[k][j]; \
+        td = f16_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else if (P.MU.mfp16 == MTYPE_BF16 ) { /* bf16*/ \
+        MXU_SP_MFP_##DIRCTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_k, tile_n, ts2_num) \
+        bfloat16_t &td = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        bfloat16_t ts1 = P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+        bfloat16_t ts2 = spa_matrix_unfold[k][j]; \
+        td = bf16_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else {\
+        require(0); /* type not supoort*/ \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    case e32: {\
+      if ( P.MU.mfp32 == MTYPE_FP32 ) { /* fp32 */ \
+        MXU_SP_MFP_##DIRCTION##_UNFLOD_LOOP_BASE(float32, e32, tile_k, tile_n, ts2_num) \
+        float32_t &td = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        float32_t ts1 = P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+        float32_t ts2 = spa_matrix_unfold[k][j]; \
+        td = f32_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else if ( P.MU.mfp32 == MTYPE_TFP32 ) { /*tfp32*/ \
+        MXU_SP_MFP_##DIRCTION##_UNFLOD_LOOP_BASE(tfloat32, e32, tile_k, tile_n, ts2_num) \
+        tfloat32_t &td = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        tfloat32_t ts1 = P.MU.tr_elt<tfloat32_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+        tfloat32_t ts2 = spa_matrix_unfold[k][j]; \
+        td = tf32_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    case e64: {\
+      MXU_SP_MFP_##DIRCTION##_UNFLOD_LOOP_BASE(float64, e64, tile_k, tile_n, ts2_num) \
+      float64_t &td = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+      float64_t ts1 = P.MU.tr_elt<float64_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false); \
+      float64_t ts2 = spa_matrix_unfold[k][j]; \
+      td = f64_mulAdd(ts1, ts2, td); \
+      MXU_SP_LOOP_END \
+      set_fp_exceptions; \
+      break; \
+    }\
+    default: \
+      require(0); \
+      break; \
+  }; \
+
+#define MXU_SPB_VFP_LOOP(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+   MXU_SPB_MFP_MM(COL, sew) \
+  } else { \
+    MXU_SPB_MFP_MM(ROW, sew) \
+  } \
+
+#define MXU_SPA_MFP_MM(DIRECTION, sew) \
+  switch(sew) { \
+    case e16: { \
+      if ( P.MU.mfp16 == MTYPE_FP16 ) { /* fp16 */ \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_m, tile_k, ts1_num) \
+        float16_t &td = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        float16_t ts1 = spa_matrix_unfold[i][k]; \
+        float16_t ts2 = P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+        td = f16_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else if (P.MU.mfp16 == MTYPE_BF16 ) { /* bf16*/ \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_m, tile_k, ts1_num) \
+        bfloat16_t &td = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        bfloat16_t ts1 = spa_matrix_unfold[i][k]; \
+        bfloat16_t ts2 = P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+        td = bf16_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else {\
+        require(0); /* type not supoort*/ \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    case e32: {\
+      if ( P.MU.mfp32 == MTYPE_FP32 ) { /* fp32 */ \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float32, e32, tile_m, tile_k, ts1_num) \
+        float32_t &td = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        float32_t ts1 = spa_matrix_unfold[i][k]; \
+        float32_t ts2 = P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+        td = f32_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } else if ( P.MU.mfp32 == MTYPE_TFP32 ) { /*tfp32*/ \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(tfloat32, e32, tile_m, tile_k, ts1_num) \
+        tfloat32_t &td = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+        tfloat32_t ts1 = spa_matrix_unfold[i][k]; \
+        tfloat32_t ts2 = P.MU.tr_elt<tfloat32_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+        td = tf32_mulAdd(ts1, ts2, td); \
+        MXU_SP_LOOP_END \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    case e64: {\
+      MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float64, e64, tile_m, tile_k, ts1_num) \
+      float64_t &td = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, nmax * amul, false, true); \
+      float64_t ts1 = spa_matrix_unfold[i][k]; \
+      float64_t ts2 = P.MU.tr_elt<float64_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false); \
+      td = f64_mulAdd(ts1, ts2, td); \
+      MXU_SP_LOOP_END \
+      set_fp_exceptions; \
+      break; \
+    }\
+    default: \
+      require(0); \
+      break; \
+  }; \
+
+#define MXU_SPA_MFP_LOOP(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+    MXU_SPA_MFP_MM(COL, sew) \
+  } else { \
+    MXU_SPA_MFP_MM(ROW, sew) \
+  } \
+
+#define MXU_SPB_DEL_WIDEN(DRIECTION, sew) \
+  switch(sew) { \
+      case e8: { \
+        switch (P.MU.mfp8) { /*e4m3*/ \
+          case MTYPE_FP8E4M3: { \
+            MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e4m3, e8, tile_k, tile_n, ts2_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+              float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float16_t ts1 = f8e4m3_to_f16(P.MU.tr_elt<float8_e4m3_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              float16_t ts2 = f8e4m3_to_f16(spa_matrix_unfold[k][j]); \
+              td_w = f16_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+              bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              bfloat16_t ts1 = f8e4m3_to_bf16(P.MU.tr_elt<float8_e4m3_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              bfloat16_t ts2 = f8e4m3_to_bf16(spa_matrix_unfold[k][j]); \
+              td_w = bf16_mulAdd(ts1, ts2, td_w); \
+            } else { \
+              require(0); /*mfp16*/ \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+          case MTYPE_FP8E5M2: { /*m5e2*/ \
+            MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e5m2, e8, tile_k, tile_n, ts2_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+                float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                float16_t ts1 = f8e5m2_to_f16(P.MU.tr_elt<float8_e5m2_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+                float16_t ts2 = f8e5m2_to_f16(spa_matrix_unfold[k][j]); \
+                td_w = f16_mulAdd(ts1, ts2, td_w); \
+              } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+                bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                bfloat16_t ts1 = f8e5m2_to_bf16(P.MU.tr_elt<float8_e5m2_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+                bfloat16_t ts2 = f8e5m2_to_bf16(spa_matrix_unfold[k][j]); \
+                td_w = bf16_mulAdd(ts1, ts2, td_w); \
+              } else { \
+                require(0); /*mfp16*/ \
+              } \
+              MXU_SP_LOOP_END \
+              break; \
+          } \
+          case MTYPE_FP8E3M4: { /* e3m4*/ \
+            MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e3m4, e8, tile_k, tile_n, ts2_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+                float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                float16_t ts1 = f8e3m4_to_f16(P.MU.tr_elt<float8_e3m4_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+                float16_t ts2 = f8e3m4_to_f16(spa_matrix_unfold[k][j]); \
+                td_w = f16_mulAdd(ts1, ts2, td_w); \
+              } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+                bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                bfloat16_t ts1 = f8e3m4_to_bf16(P.MU.tr_elt<float8_e3m4_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+                bfloat16_t ts2 = f8e3m4_to_bf16(spa_matrix_unfold[k][j]); \
+                td_w = bf16_mulAdd(ts1, ts2, td_w); \
+              } else { \
+                require(0); /*mfp16*/ \
+              } \
+              MXU_SP_LOOP_END \
+              break; \
+          } \
+        } \
+        set_fp_exceptions; \
+      } \
+      case e16: {\
+        switch(P.MU.mfp16){ \
+          case MTYPE_FP16: { /*fp16*/ \
+            MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_k, tile_n, ts2_num) \
+            if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+              float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float32_t ts1 = f16_to_f32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              float32_t ts2 = f16_to_f32(spa_matrix_unfold[k][j]); \
+              td_w = f32_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp32 == MTYPE_TFP32 ) { /*tf32*/ \
+              tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              tfloat32_t ts1 = f16_to_tf32(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              tfloat32_t ts2 = f16_to_tf32(spa_matrix_unfold[k][j]); \
+              td_w = tf32_mulAdd(ts1, ts2, td_w); \
+            } else { /* type not support */ \
+              require(0); \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+          case MTYPE_BF16: { /*bf16*/ \
+            MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_k, tile_n, ts2_num) \
+            if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+              float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float32_t ts1 = bf16_to_f32(P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              float32_t ts2 = bf16_to_f32(spa_matrix_unfold[k][j]); \
+              td_w = f32_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp32 == MTYPE_TFP32 ) { /*tf32*/ \
+              tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              tfloat32_t ts1 = bf16_to_tf32(P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+              tfloat32_t ts2 = bf16_to_tf32(spa_matrix_unfold[k][j]); \
+              td_w = tf32_mulAdd(ts1, ts2, td_w); \
+            } else { /* type not support */ \
+              require(0); \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+        } \
+        set_fp_exceptions; \
+        break; \
+      }\
+      case e32: {\
+        if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+           MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float32, e32, tile_k, tile_n, ts2_num) \
+          float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+          float64_t ts1 = f32_to_f64(P.MU.tr_elt<float32_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+          float64_t ts2 = f32_to_f64(spa_matrix_unfold[k][j]); \
+          td_w = f64_mulAdd(ts1, ts2, td_w); \
+          MXU_SP_LOOP_END \
+        } else if (P.MU.mfp32 == MTYPE_TFP32) { /*tf32*/ \
+           MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(tfloat32, e32, tile_k, tile_n, ts2_num) \
+          float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+          float64_t ts1 = tf32_to_f64(P.MU.tr_elt<tfloat32_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+          float64_t ts2 = tf32_to_f64(spa_matrix_unfold[k][j]); \
+          td_w = f64_mulAdd(ts1, ts2, td_w); \
+          MXU_SP_LOOP_END \
+        } else { /* type not support*/ \
+          require(0); \
+        } \
+        set_fp_exceptions; \
+        break; \
+      }\
+      default: \
+        require(0); \
+        break; \
+    }; \
+
+
+#define MXU_SPB_MFP_LOOP_WIDEN(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+    MXU_SPB_DEL_WIDEN(COL, sew) \
+  } else { \
+    MXU_SPB_DEL_WIDEN(ROW, sew) \
+  } \
+
+#define MXU_SPA_DEL_WIDEN(DIRECTION, sew) \
+  switch(sew) { \
+      case e8: { \
+        switch (P.MU.mfp8) { /*e4m3*/ \
+          case MTYPE_FP8E4M3: { \
+            MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e4m3, e8, tile_m, tile_k, ts1_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+              float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float16_t ts1 = f8e4m3_to_f16(spa_matrix_unfold[i][k]); \
+              float16_t ts2 = f8e4m3_to_f16(P.MU.tr_elt<float8_e4m3_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = f16_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+              bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              bfloat16_t ts1 = f8e4m3_to_bf16(spa_matrix_unfold[i][k]); \
+              bfloat16_t ts2 = f8e4m3_to_bf16(P.MU.tr_elt<float8_e4m3_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = bf16_mulAdd(ts1, ts2, td_w); \
+            } else { \
+              require(0); /*mfp16*/ \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+          case MTYPE_FP8E5M2: { /*m5e2*/ \
+            MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e5m2, e8, tile_m, tile_k, ts1_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+                float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                float16_t ts1 = f8e5m2_to_f16(spa_matrix_unfold[i][k]); \
+                float16_t ts2 = f8e5m2_to_f16(P.MU.tr_elt<float8_e5m2_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+                td_w = f16_mulAdd(ts1, ts2, td_w); \
+              } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+                bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                bfloat16_t ts1 = f8e5m2_to_bf16(spa_matrix_unfold[i][k]); \
+                bfloat16_t ts2 = f8e5m2_to_bf16(P.MU.tr_elt<float8_e5m2_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+                td_w = bf16_mulAdd(ts1, ts2, td_w); \
+              } else { \
+                require(0); /*mfp16*/ \
+              } \
+              MXU_SP_LOOP_END \
+              break; \
+          } \
+          case MTYPE_FP8E3M4: { /* e3m4*/ \
+            MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e3m4, e8, tile_m, tile_k, ts1_num) \
+            if (P.MU.mfp16 == MTYPE_FP16) {  /* 0x1 fp16 */ \
+                float16_t &td_w = P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                float16_t ts1 = f8e3m4_to_f16(spa_matrix_unfold[i][k]); \
+                float16_t ts2 = f8e3m4_to_f16(P.MU.tr_elt<float8_e3m4_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+                td_w = f16_mulAdd(ts1, ts2, td_w); \
+              } else if (P.MU.mfp16 == MTYPE_BF16) { /* 0x2 bf16*/ \
+                bfloat16_t &td_w = P.MU.acc_elt<bfloat16_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+                bfloat16_t ts1 = f8e3m4_to_bf16(spa_matrix_unfold[i][k]); \
+                bfloat16_t ts2 = f8e3m4_to_bf16(P.MU.tr_elt<float8_e3m4_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+                td_w = bf16_mulAdd(ts1, ts2, td_w); \
+              } else { \
+                require(0); /*mfp16*/ \
+              } \
+              MXU_SP_LOOP_END \
+              break; \
+          } \
+        } \
+        set_fp_exceptions; \
+      } \
+      case e16: {\
+        switch(P.MU.mfp16){ \
+          case MTYPE_FP16: { /*fp16*/ \
+            MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_m, tile_k, ts1_num) \
+            if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+              float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float32_t ts1 = f16_to_f32(spa_matrix_unfold[i][k]); \
+              float32_t ts2 = f16_to_f32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = f32_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp32 == MTYPE_TFP32 ) { /*tf32*/ \
+              tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              tfloat32_t ts1 = f16_to_tf32(spa_matrix_unfold[i][k]); \
+              tfloat32_t ts2 = f16_to_tf32(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = tf32_mulAdd(ts1, ts2, td_w); \
+            } else { /* type not support */ \
+              require(0); \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+          case MTYPE_BF16: { /*bf16*/ \
+            MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_m, tile_k, ts1_num) \
+            if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+              float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              float32_t ts1 = bf16_to_f32(spa_matrix_unfold[i][k]); \
+              float32_t ts2 = bf16_to_f32(P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = f32_mulAdd(ts1, ts2, td_w); \
+            } else if (P.MU.mfp32 == MTYPE_TFP32 ) { /*tf32*/ \
+              tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+              tfloat32_t ts1 = bf16_to_tf32(spa_matrix_unfold[i][k]); \
+              tfloat32_t ts2 = bf16_to_tf32(P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+              td_w = tf32_mulAdd(ts1, ts2, td_w); \
+            } else { /* type not support */ \
+              require(0); \
+            } \
+            MXU_SP_LOOP_END \
+            break; \
+          } \
+        } \
+        set_fp_exceptions; \
+        break; \
+      }\
+      case e32: {\
+        if (P.MU.mfp32 == MTYPE_FP32) { /*fp32*/ \
+           MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float32, e32, tile_m, tile_k, ts1_num) \
+          float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+          float64_t ts1 = f32_to_f64(spa_matrix_unfold[i][k]); \
+          float64_t ts2 = f32_to_f64(P.MU.tr_elt<float32_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+          td_w = f64_mulAdd(ts1, ts2, td_w); \
+          MXU_SP_LOOP_END \
+        } else if (P.MU.mfp32 == MTYPE_TFP32) { /*tf32*/ \
+           MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(tfloat32, e32, tile_m, tile_k, ts1_num) \
+          float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, false, true); \
+          float64_t ts1 = tf32_to_f64(spa_matrix_unfold[i][k]); \
+          float64_t ts2 = tf32_to_f64(P.MU.tr_elt<tfloat32_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+          td_w = f64_mulAdd(ts1, ts2, td_w); \
+          MXU_SP_LOOP_END \
+        } else { /* type not support*/ \
+          require(0); \
+        } \
+        set_fp_exceptions; \
+        break; \
+      }\
+      default: \
+        require(0); \
+        break; \
+    }; \
+
+#define MXU_SPA_MFP_LOOP_WIDEN(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+    MXU_SPA_DEL_WIDEN(COL, sew) \
+  } else { \
+    MXU_SPA_DEL_WIDEN(ROW, sew) \
+  } \
+
+#define MXU_SPB_MFP_QUAD(DRIECTION, sew) \
+  switch(sew) { \
+    case e8: {\
+      switch (P.MU.mfp8) { \
+        case MTYPE_FP8E4M3: { /* fp8e4m3*/ \
+          MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e4m3, e8, tile_k, tile_n, ts2_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e4m3_to_f32(P.MU.tr_elt<float8_e4m3_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            float32_t ts2 = f8e4m3_to_f32(spa_matrix_unfold[k][j]); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e4m3_to_tf32(P.MU.tr_elt<float8_e4m3_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            tfloat32_t ts2 = f8e4m3_to_tf32(spa_matrix_unfold[k][j]); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+        case MTYPE_FP8E5M2: { /* fp8e5m2 */ \
+          MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e5m2, e8, tile_k, tile_n, ts2_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e5m2_to_f32(P.MU.tr_elt<float8_e5m2_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            float32_t ts2 = f8e5m2_to_f32(spa_matrix_unfold[k][j]); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e5m2_to_tf32(P.MU.tr_elt<float8_e5m2_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            tfloat32_t ts2 = f8e5m2_to_tf32(spa_matrix_unfold[k][j]); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+        case MTYPE_FP8E3M4: { /* fp8e3m4 */ \
+          MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float8_e3m4, e8, tile_k, tile_n, ts2_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e3m4_to_f32(P.MU.tr_elt<float8_e3m4_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            float32_t ts2 = f8e3m4_to_f32(spa_matrix_unfold[k][j]); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e3m4_to_tf32(P.MU.tr_elt<float8_e3m4_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+            tfloat32_t ts2 = f8e3m4_to_tf32(spa_matrix_unfold[k][j]); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } else { \
+            require(0); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+      } \
+      break; \
+    }\
+    case e16: {\
+      if (P.MU.mfp16 == MTYPE_FP16) { \
+        MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_k, tile_n, ts2_num) \
+        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t ts1 = f16_to_f64(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+        float64_t ts2 = f16_to_f64(spa_matrix_unfold[k][j]); \
+        td_w = f64_mulAdd(ts1, ts2, td_w); \
+        MXU_SP_LOOP_END \
+      } else if (P.MU.mfp16 == MTYPE_BF16) { \
+        MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_k, tile_n, ts2_num) \
+        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t ts1 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
+        float64_t ts2 = bf16_to_f64(spa_matrix_unfold[k][j]); \
+        td_w = f64_mulAdd(ts1, ts2, td_w); \
+        MXU_SP_LOOP_END \
+      } else {\
+        require(0); \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    default: \
+      require(0); \
+      break; \
+  }; \
+
+#define MXU_SPB_MFP_LOOP_QUAD(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+    MXU_SPB_MFP_QUAD(COL, sew) \
+  } else { \
+    MXU_SPB_MFP_QUAD(ROW, sew) \
+  } \
+
+#define MXU_SPA_MFP_QUAD(DIRECTION, sew) \
+  switch(sew) { \
+    case e8: {\
+      switch (P.MU.mfp8) { \
+        case MTYPE_FP8E4M3: { /* fp8e4m3*/ \
+          MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e4m3, e8, tile_m, tile_k, ts1_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e4m3_to_f32(spa_matrix_unfold[i][k]); \
+            float32_t ts2 = f8e4m3_to_f32(P.MU.tr_elt<float8_e4m3_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e4m3_to_tf32(spa_matrix_unfold[i][k]); \
+            tfloat32_t ts2 = f8e4m3_to_tf32(P.MU.tr_elt<float8_e4m3_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+        case MTYPE_FP8E5M2: { /* fp8e5m2 */ \
+          MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e5m2, e8, tile_m, tile_k, ts1_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e5m2_to_f32(spa_matrix_unfold[i][k]); \
+            float32_t ts2 = f8e5m2_to_f32(P.MU.tr_elt<float8_e5m2_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e5m2_to_tf32(spa_matrix_unfold[i][k]); \
+            tfloat32_t ts2 = f8e5m2_to_tf32(P.MU.tr_elt<float8_e5m2_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+        case MTYPE_FP8E3M4: { /* fp8e3m4 */ \
+          MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float8_e3m4, e8, tile_m, tile_k, ts1_num) \
+          if (P.MU.mfp32 == MTYPE_FP32) { \
+            float32_t &td_w = P.MU.acc_elt<float32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            float32_t ts1 = f8e3m4_to_f32(spa_matrix_unfold[i][k]); \
+            float32_t ts2 = f8e3m4_to_f32(P.MU.tr_elt<float8_e3m4_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = f32_mulAdd(ts1, ts2, td_w); \
+          } else if (P.MU.mfp32 == MTYPE_TFP32) { \
+            tfloat32_t &td_w = P.MU.acc_elt<tfloat32_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+            tfloat32_t ts1 = f8e3m4_to_tf32(spa_matrix_unfold[i][k]); \
+            tfloat32_t ts2 = f8e3m4_to_tf32(P.MU.tr_elt<float8_e3m4_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+            td_w = tf32_mulAdd(ts1, ts2, td_w); \
+          } else { \
+            require(0); \
+          } \
+          MXU_SP_LOOP_END \
+          break; \
+        } \
+      } \
+      break; \
+    }\
+    case e16: {\
+      if (P.MU.mfp16 == MTYPE_FP16) { \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_m, tile_k, ts1_num) \
+        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t ts1 = f16_to_f64(spa_matrix_unfold[i][k]); \
+        float64_t ts2 = f16_to_f64(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+        td_w = f64_mulAdd(ts1, ts2, td_w); \
+        MXU_SP_LOOP_END \
+      } else if (P.MU.mfp16 == MTYPE_BF16) { \
+        MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_m, tile_k, ts1_num) \
+        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t ts1 = bf16_to_f64(spa_matrix_unfold[i][k]); \
+        float64_t ts2 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
+        td_w = f64_mulAdd(ts1, ts2, td_w); \
+        MXU_SP_LOOP_END \
+      } else {\
+        require(0); \
+      } \
+      set_fp_exceptions; \
+      break; \
+    }\
+    default: \
+      require(0); \
+      break; \
+  }; \
+
+#define MXU_SPA_MFP_LOOP_QUAD(wide, sew) \
+  MXU_MFP_SP_MM_BASE(wide, sew) \
+  if (spa_direction) { \
+    /* for col*/ \
+    MXU_SPA_MFP_QUAD(COL, sew) \
+  } else { \
+    MXU_SPA_MFP_QUAD(ROW, sew) \
+  } \
 
 #endif // _RISCV_M_EXT_MACROS_H

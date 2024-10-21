@@ -1,7 +1,7 @@
 VRM xrm = P.VU.get_vround_mode();
 uint64_t int_max = UINT64_MAX >> 32;
 
-MXU_MM_LOOP_QUEN
+MXU_MM_LOOP_OCT
 ({
   if (P.MU.msew > e16)
     throw trap_illegal_instruction(insn.bits()); 
@@ -30,4 +30,4 @@ MXU_MM_LOOP_QUEN
   // remove guard bits
   // result = result >> (sew - 1);
 
-}, MULXU, 4, e8)
+}, 8, P.MU.msew)
