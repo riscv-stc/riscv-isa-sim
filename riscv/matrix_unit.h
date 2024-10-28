@@ -80,7 +80,7 @@ class matrixUnit_t {
 
         void reg_rename_write_back_elt(reg_t td, reg_t rows, reg_t elts_per_slice, reg_t lmul, reg_t reg_sum, bool is_acc = false) {
           assert(msew != 0);
-          reg_t reg_byte_len = elts_per_slice * rows * msew / 8;
+          reg_t reg_byte_len = elts_per_slice * rows;
           // char *regStart = ((char*)tr_file) + td * elts_per_slice * rows;
           char *regReNameStart = NULL;
           char *regStart = NULL;
@@ -105,7 +105,7 @@ class matrixUnit_t {
           if (is_write)
             p->get_state()->log_reg_write[((td) << 4) | 4] = {0, 0};
 #endif
-          T *regStart = (T *)((char*)acc_file + td * rows * elts_per_slice);
+          T *regStart = reg_rename ? ((T*)acc_renamefile) +  td * rows * elts_per_slice : ((T *)acc_file) + td * rows * elts_per_slice;
           if (tt & 1) { // col
             // reg_t new_slice = slice > (elts_per_slice-1)? (slice % elts_per_slice): slice;
             return *(regStart + elts_per_slice * n + slice);

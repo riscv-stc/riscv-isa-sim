@@ -2195,6 +2195,7 @@ riscv_insn_list = \
 	$(riscv_insn_ext_matrix_mma) \
 	$(riscv_insn_ext_matrix_calcu) \
 	$(riscv_insn_ext_matrix_cvt) \
+	$(riscv_insn_ext_matrix_zmsp) \
 	$(riscv_insn_ext_matrix_im2col) \
 	$(riscv_insn_smrnmi) \
 	$(riscv_insn_svinval) \
