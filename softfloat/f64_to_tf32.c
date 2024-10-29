@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO only copy from f64_to_f32
 tfloat32_t f64_to_tf32( float64_t a )
 {
     union ui64_f64 uA;
@@ -73,14 +72,15 @@ tfloat32_t f64_to_tf32( float64_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    frac32 = softfloat_shortShiftRightJam64( frac, 22 );
+    // 35 = 52 - 10 + 1 - 8, 52 is fp64 frac, 10 is tf32 frac, 1 is imp bit 8 is tf32 exp
+    frac32 = softfloat_shortShiftRightJam64( frac, 35 );
     if ( ! (exp | frac32) ) {
         uiZ = packToTF32UI( sign, 0, 0 );
         goto uiZ;
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    return softfloat_roundPackToTF32( sign, exp - 0x381, frac32 | 0x40000000 );
+    return softfloat_roundPackToTF32( sign, exp - 0x381, frac32 | 0x10000 );
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

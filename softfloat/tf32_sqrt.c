@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO copy from f32 only , need fix
 tfloat32_t tf32_sqrt( tfloat32_t a )
 {
     union ui32_tf32 uA;
@@ -90,7 +89,7 @@ tfloat32_t tf32_sqrt( tfloat32_t a )
     *------------------------------------------------------------------------*/
     expZ = ((expA - 0x7F)>>1) + 0x7E;
     expA &= 1;
-    sigA = (sigA | 0x00800000)<<8;
+    sigA = (sigA | 0x00000400)<<(8 + 13);
     sigZ =
         ((uint_fast64_t) sigA * softfloat_approxRecipSqrt32_1( expA, sigA ))
             >>32;

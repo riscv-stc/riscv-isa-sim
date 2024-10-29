@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO only copy from f32_div 
 tfloat32_t tf32_div( tfloat32_t a, tfloat32_t b )
 {
     union ui32_tf32 uA;
@@ -115,8 +114,8 @@ tfloat32_t tf32_div( tfloat32_t a, tfloat32_t b )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     expZ = expA - expB + 0x7E;
-    sigA |= 0x00800000;
-    sigB |= 0x00800000;
+    sigA |= 0x00000400;
+    sigB |= 0x00000400;
 #ifdef SOFTFLOAT_FAST_DIV64TO32
     if ( sigA < sigB ) {
         --expZ;

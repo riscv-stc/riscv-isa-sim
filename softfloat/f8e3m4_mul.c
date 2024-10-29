@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO only copy from f8e4m3
 float8_e3m4_t f8e3m4_mul( float8_e3m4_t a, float8_e3m4_t b )
 {
     union ui8_f8e3m4 uA;
@@ -62,6 +61,7 @@ float8_e3m4_t f8e3m4_mul( float8_e3m4_t a, float8_e3m4_t b )
     uint_fast8_t sigZ, uiZ;
     union ui8_f8e3m4 uZ;
     uint_fast8_t numRoundingBits;
+    int_fast8_t expDiff;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     uA.f = a;
@@ -75,6 +75,7 @@ float8_e3m4_t f8e3m4_mul( float8_e3m4_t a, float8_e3m4_t b )
     expB  = expF8E3M4UI( uiB );
     sigB  = fracF8E3M4UI( uiB );
     signZ = signA ^ signB;
+    
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     // if ( (expA == 0xf && sigA == 0x7) || (expB == 0xf && sigB == 0x7) ) goto propagateNaN;
@@ -108,22 +109,34 @@ float8_e3m4_t f8e3m4_mul( float8_e3m4_t a, float8_e3m4_t b )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     expZ = expA + expB - 0x3;
-    sigA = (sigA | 0x10)<<3;
-    sigB = (sigB | 0x10)<<4;
+    sigA = (sigA | 0x10)<<4;
+    sigB = (sigB | 0x10)<<5;
     sig16Z = (uint_fast16_t) sigA * sigB;
+    expDiff = expA - expB;
     if ( sig16Z < 0x4000 ) {
         --expZ;
         sig16Z <<= 1;
     }
     if(softfloat_stochasticRoundingFlag){
-            if( expZ <= -4 ){
-                uiZ = packToF8E3M4UI( signZ, 0, 0 );
-                goto uiZ;
-            }else if( expZ < 0 ) {
-                numRoundingBits = 11 - expZ;
+            if (expDiff < 0) {
+                // -5 = 1 - 6 ,expA as the min ,expB as the Max
+                if (expDiff <= -5){
+                    uiZ = packToF8E4M3UI( signZ, 0, 0 );
+                    goto uiZ;
+                }
+            } else {
+                if (expDiff >= 13) {
+                    uiZ = packToF8E4M3UI( signZ, 0, 0 );
+                    goto uiZ;
+                }
+            }
+            
+            if( expZ < 0 ) {
+                // expA expB only 3 bit but sign is 4 bit, so use 10 = 2 * 3 + 4
+                numRoundingBits = 10 - expZ;
                 sig16Z = softfloat_stochasticRound16(sig16Z, numRoundingBits);
             }else {
-                sig16Z = softfloat_stochasticRound16(sig16Z, 11);
+                sig16Z = softfloat_stochasticRound16(sig16Z, 10);
             }
         }
     sigZ = sig16Z>>8;

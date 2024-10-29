@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "internals.h"
 #include "softfloat.h"
 
-// TODO just copy from e4m3
 float8_e3m4_t
  softfloat_roundPackToF8e3m4( bool sign, int_fast8_t exp, uint_fast8_t sig )
 {
@@ -54,18 +53,18 @@ float8_e3m4_t
     *------------------------------------------------------------------------*/
     roundingMode = softfloat_roundingMode;
     roundNearEven = (roundingMode == softfloat_round_near_even);
-    roundIncrement = 0x4;
+    roundIncrement = 0x8;
     if ( ! roundNearEven && (roundingMode != softfloat_round_near_maxMag) ) {
         roundIncrement =
             (roundingMode
                  == (sign ? softfloat_round_min : softfloat_round_max))
-                ? 0x7
+                ? 0xF
                 : 0;
     }
-    roundBits = sig & 0x7;
+    roundBits = sig & 0xF;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if ( 0xE <= (unsigned int) exp ) {
+    if ( 0x6 <= (unsigned int) exp ) {
         if ( exp < 0 ) {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
@@ -74,33 +73,33 @@ float8_e3m4_t
                     || (exp < -1) || (sig + roundIncrement < 0x80);
             sig = softfloat_shiftRightJam32( sig, -exp );
             exp = 0;
-            roundBits = sig & 0x7;
+            roundBits = sig & 0xF;
             if ( isTiny && roundBits ) {
                 softfloat_raiseFlags( softfloat_flag_underflow );
             }
-        } else if ( (0xE < exp) || (0x78 <= sig + roundIncrement) ) {
+        } else if ( (0x6 < exp) || (0x70 <= sig + roundIncrement) ) {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
             softfloat_raiseFlags(
                 softfloat_flag_overflow | softfloat_flag_inexact );
-            uiZ = packToF8E4M3UI( sign, 0xF, 0x6 );
+            uiZ = packToF8E4M3UI( sign, 0x7, 0xE );
             goto uiZ;
         }
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    sig = (sig + roundIncrement)>>3;
+    sig = (sig + roundIncrement)>>4;
     if ( roundBits ) {
         softfloat_exceptionFlags |= softfloat_flag_inexact;
 #ifdef SOFTFLOAT_ROUND_ODD
         if ( roundingMode == softfloat_round_odd ) {
             sig |= 1;
-            if((exp == 0xe) && (sig == 0xf)) sig = 0xe;
+            if((exp == 0x6) && (sig == 0x1f)) sig = 0xe;
             goto packReturn;
         }
 #endif
     }
-    sig &= ~(uint_fast8_t) (! (roundBits ^ 4) & roundNearEven);
+    sig &= ~(uint_fast8_t) (! (roundBits ^ 8) & roundNearEven);
     if ( ! sig ) exp = 0;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

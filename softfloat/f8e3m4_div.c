@@ -43,7 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 extern const uint8_t softfloat_approxRecip_8b[];
 
-// TODO copy from f8e3m4 only
 float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
 {
     union ui8_f8e3m4 uA;
@@ -117,31 +116,31 @@ float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
 #ifdef SOFTFLOAT_FAST_DIV16TO8
     if ( sigA < sigB ) {
         --expZ;
-        sig16A = (uint_fast16_t) sigA<<8;
-    } else {
         sig16A = (uint_fast16_t) sigA<<7;
+    } else {
+        sig16A = (uint_fast16_t) sigA<<6;
     }
     sigZ = sig16A / sigB;
     if ( ! (sigZ & 3) ) sigZ |= ((uint_fast16_t) sigB * sigZ != sig16A);
 #else
     if ( sigA < sigB ) {
         --expZ;
-        sigA <<= 4;
-    } else {
         sigA <<= 3;
+    } else {
+        sigA <<= 2;
     }
-    index = sigB & 0x7;
+    index = sigB & 0xF;
     r0 = softfloat_approxRecip_8b[index];
     sigZ = ((uint_fast16_t) sigA * r0)>>8;
 
-    rem = (sigA<<3) - sigZ * sigB;
-    sigZ += (rem * (uint_fast16_t) r0)>>11;
+    rem = (sigA<<4) - sigZ * sigB;
+    sigZ += (rem * (uint_fast16_t) r0)>>12;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     ++sigZ;
     if ( ! (sigZ & 3) ) {
         sigZ &= ~1;
-        rem = (sigA<<3) - sigZ * sigB;
+        rem = (sigA<<4) - sigZ * sigB;
         if ( rem & 0x80 ) {
             sigZ -= 1;
         }
@@ -163,7 +162,7 @@ float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
  clamp:
-    uiZ = packToF8E3M4UI( signZ, 0x7, 0xF );
+    uiZ = packToF8E3M4UI( signZ, 0x7, 0xE );
     goto uiZ;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

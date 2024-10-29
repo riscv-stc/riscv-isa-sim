@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO this func only copy from f8e4m3 
 float8_e3m4_t softfloat_mulAddF8e3m4(
      uint_fast8_t uiA, uint_fast8_t uiB, uint_fast8_t uiC, uint_fast8_t op )
 {
@@ -84,15 +83,15 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
     *------------------------------------------------------------------------*/
     if ( expA == 0x7 ) {
     if ( (sigA == 0xF) || ((expB == 0x7) && (sigB == 0xF)) ) goto propagateNaN;
-    if ( (sigA == 0x6) && (expB >= 0x7) && (signProd == signC) ) goto clamp;
+    if ( (sigA == 0xE) && (expB >= 0xF) && (signProd == signC) ) goto clamp;
     }
-    if ( expB == 0xF ) {
-        if ( sigB == 0x7 ) goto propagateNaN;
-        if ( (sigB == 0x6) && (expA >= 0x7) && (signProd == signC) ) goto clamp;
+    if ( expB == 0x7 ) {
+        if ( sigB == 0xF ) goto propagateNaN;
+        if ( (sigB == 0xE) && (expA >= 0x7F && (signProd == signC) ) goto clamp;
     }
-    if ( expC == 0xF ) {
-        if (sigC == 0x7) goto propagateNaN;
-        if( (sigC == 0x6) && (signProd == signC) ) goto clamp;
+    if ( expC == 0x7 ) {
+        if (sigC == 0xF) goto propagateNaN;
+        if( (sigC == 0xE) && (signProd == signC) ) goto clamp;
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
@@ -110,9 +109,9 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    expProd = expA + expB - 0x6;
-    sigA = (sigA | 0x08)<<3;
-    sigB = (sigB | 0x08)<<3;
+    expProd = expA + expB - 0x2;
+    sigA = (sigA | 0x10)<<2;
+    sigB = (sigB | 0x10)<<2;
     sigProd = (uint_fast32_t) sigA * sigB << 16;
     if ( sigProd < 0x20000000 ) {
         --expProd;
@@ -129,7 +128,7 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
         expC = normExpSig.exp;
         sigC = normExpSig.sig;
     }
-    sig32C = (sigC | 0x08) << 26;
+    sig32C = (sigC | 0x10) << 25;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     expDiff = expProd - expC;
@@ -177,14 +176,14 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
     }
  roundPack:
     if(softfloat_stochasticRoundingFlag){
-            if( expZ <= -4 ){
+            if( expZ <= -5 ){
                 uiZ = packToF8E3M4UI( signZ, 0, 0 );
                 goto uiZ;
             }else if( expZ < 0 ) {
-                numRoundingBits = 27 - expZ;
+                numRoundingBits = 26 - expZ;
                 sig32Z = softfloat_stochasticRound32(sig32Z, numRoundingBits);
             }else {
-                sig32Z = softfloat_stochasticRound32(sig32Z, 27);
+                sig32Z = softfloat_stochasticRound32(sig32Z, 26);
             }
     }
     sigZ = (sig32Z>>24) | ((sig32Z & 0xFFFFFF) != 0 );
@@ -192,8 +191,8 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
  clamp:
-    if( (expC == 0xF) && (sigC == 0x7) ) goto propagateNaN;
-    uiZ = packToF8E3M4UI( signProd, 0x7, 0 );
+    if( (expC == 0x7) && (sigC == 0xF) ) goto propagateNaN;
+    uiZ = packToF8E3M4UI( signProd, 0x7, 0x2 );
     goto uiZ;
  propagateNaN:
     uiZ = defaultNaNF8e3m4UI;
