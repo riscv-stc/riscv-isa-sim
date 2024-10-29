@@ -93,7 +93,7 @@ float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
     *------------------------------------------------------------------------*/
     expZ = ((expA - 0x3)>>1) + 0xE;
     expA &= 1;
-    sigA |= 0x10
+    sigA |= 0x10;
     index = (sigA & 0xE) + expA;
     recipSqrt8 = softfloat_approxRecipSqrt_8b[index];
     sigZ = ((uint_fast16_t) (sigA<<3) * recipSqrt8)>>8;

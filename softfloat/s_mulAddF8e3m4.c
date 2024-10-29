@@ -87,7 +87,7 @@ float8_e3m4_t softfloat_mulAddF8e3m4(
     }
     if ( expB == 0x7 ) {
         if ( sigB == 0xF ) goto propagateNaN;
-        if ( (sigB == 0xE) && (expA >= 0x7F && (signProd == signC) ) goto clamp;
+        if ( (sigB == 0xE) && (expA >= 0x7F && (signProd == signC) )) goto clamp;
     }
     if ( expC == 0x7 ) {
         if (sigC == 0xF) goto propagateNaN;
