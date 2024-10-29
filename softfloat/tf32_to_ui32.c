@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO copy from f32_to_ui32 , need to fix
 uint_fast32_t tf32_to_ui32( tfloat32_t a, uint_fast8_t roundingMode, bool exact )
 {
     union ui32_tf32 uA;
@@ -75,9 +74,9 @@ uint_fast32_t tf32_to_ui32( tfloat32_t a, uint_fast8_t roundingMode, bool exact 
 #endif
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if ( exp ) sig |= 0x00000800;
-    sig64 = (uint_fast64_t) sig<<32;
-    shiftDist = 0xAA - exp;
+    if ( exp ) sig |= 0x00000400;
+    sig64 = (uint_fast64_t) sig<<(32 + 13);
+    shiftDist = (0xAA - exp + 13 );
     if ( 0 < shiftDist ) sig64 = softfloat_shiftRightJam64( sig64, shiftDist );
     return softfloat_roundToUI32( sign, sig64, roundingMode, exact );
 

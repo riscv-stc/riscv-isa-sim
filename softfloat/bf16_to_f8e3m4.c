@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "internals.h"
 #include "specialize.h"
 #include "softfloat.h"
-// TODO only copy from bf16_to_f8e4m3 ,that's need fix 
+
 float8_e3m4_t bf16_to_f8e3m4( bfloat16_t a )
 {
     union ui16_bf16 uA;
@@ -67,7 +67,7 @@ float8_e3m4_t bf16_to_f8e3m4( bfloat16_t a )
             softfloat_bf16UIToCommonNaN( uiA, &commonNaN );
             uiZ = softfloat_commonNaNToF8e3m4UI( &commonNaN );
         } else {
-            uiZ = packToF8E3M4UI( sign, 0xF, 0x7 );
+            uiZ = packToF8E3M4UI( sign, 0x7, 0xF );
         }
         goto uiZ;
     }
@@ -79,14 +79,17 @@ float8_e3m4_t bf16_to_f8e3m4( bfloat16_t a )
         }
    if(softfloat_stochasticRoundingFlag){
         frac16 = (frac << 7) | 0x4000;
-        if( exp < 117 ){
+        // 121 = (127 - 3) + 1 - 5 , 127 is bf16 deviation value, 3 is f8e3m4 deviation value, 5 = 4(frac) + 1(implict bit)
+        if( exp < 120 ){
             uiZ = packToF8E3M4UI( sign, 0, 0 );
             goto uiZ;
-        }else if( exp < 121 ) {
-            numRoundingBits = 132 - exp;
+        }else if( exp < 125 ) { // 126 = (127 - 3) + 1
+            // bf16 data is 15 bit ,so 136 = 121 + 15
+            numRoundingBits = 135 - exp;
             frac16 = softfloat_stochasticRound16(frac16, numRoundingBits);
         }else {
-            frac16 = softfloat_stochasticRound16(frac16, 11);
+            // bf16 frac is 7bit , f8e3m4 exp is 3bit 10 = 7 + 3
+            frac16 = softfloat_stochasticRound16(frac16, 10);
         }
         frac8 = frac16 >> 8;
     } else{
@@ -96,7 +99,8 @@ float8_e3m4_t bf16_to_f8e3m4( bfloat16_t a )
     
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    return softfloat_roundPackToF8e3m4( sign, exp - 0x79, frac8 );
+    // 7D = 127 - 3 + 1
+    return softfloat_roundPackToF8e3m4( sign, exp - 0x7D, frac8 );
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

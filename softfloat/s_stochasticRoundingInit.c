@@ -2,10 +2,10 @@
 /*============================================================================
 
 This C source file is part of the SoftFloat IEEE Floating-Point Arithmetic
-Package, Release 3d, by John R. Hauser.
+Package, Release 3e, by John R. Hauser.
 
-Copyright 2011, 2012, 2013, 2014, 2015, 2016, 2017 The Regents of the
-University of California.  All rights reserved.
+Copyright 2011, 2012, 2013, 2014, 2015, 2017 The Regents of the University of
+California.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -33,48 +33,26 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =============================================================================*/
-
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "platform.h"
 #include "internals.h"
-#include "specialize.h"
 #include "softfloat.h"
+#include <time.h>
 
-tfloat32_t bf16_to_tf32( bfloat16_t a )
-{
-    union ui16_f16 uA;
-    uint_fast16_t uiA;
-    bool sign;
-    int_fast16_t exp;
-    uint_fast16_t frac;
-    struct commonNaN commonNaN;
-    uint_fast32_t uiZ;
-    union ui32_tf32 uZ;
+void softfloat_stochasticRoundingInit(){
+    srand(time(NULL));
+}
 
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uA.f = a;
-    uiA = uA.ui;
-    sign = signBF16UI( uiA );
-    exp  = expBF16UI( uiA );
-    frac = fracBF16UI( uiA );
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    if ( exp == 0xFF ) {
-        if ( frac ) {
-            softfloat_bf16UIToCommonNaN( uiA, &commonNaN );
-            uiZ = softfloat_commonNaNToTF32UI( &commonNaN );
-        } else {
-            uiZ = packToTF32UI( sign, 0xFF, 0 );
-        }
-        goto uiZ;
-    }
-    /*------------------------------------------------------------------------
-    *------------------------------------------------------------------------*/
-    uiZ = packToTF32UI( sign, exp, (uint_fast32_t) frac<<16 );
- uiZ:
-    uZ.ui = uiZ;
-    return uZ.f;
+void softfloat_stocasticRound_ON(){
+   softfloat_stochasticRoundingFlag = 1;
 
 }
+
+void softfloat_stocasticRound_OFF(){
+   softfloat_stochasticRoundingFlag = 0;
+}
+
+

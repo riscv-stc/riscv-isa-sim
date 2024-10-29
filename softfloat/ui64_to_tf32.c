@@ -39,18 +39,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "internals.h"
 #include "softfloat.h"
 
-// TODO only copy from ui64_to_f32, need fix 
 tfloat32_t ui64_to_tf32( uint64_t a )
 {
     int_fast8_t shiftDist;
     union ui32_tf32 u;
     uint_fast32_t sig;
 
-    shiftDist = softfloat_countLeadingZeros64( a ) - 40;
+    shiftDist = softfloat_countLeadingZeros64( a ) - (40 + 13);
     if ( 0 <= shiftDist ) {
         u.ui =
             a ? packToTF32UI(
-                    0, 0x95 - shiftDist, (uint_fast32_t) a<<shiftDist )
+                    0, 0x88 - shiftDist, (uint_fast32_t) a<<shiftDist )
                 : 0;
         return u.f;
     } else {
@@ -58,7 +57,7 @@ tfloat32_t ui64_to_tf32( uint64_t a )
         sig =
             (shiftDist < 0) ? softfloat_shortShiftRightJam64( a, -shiftDist )
                 : (uint_fast32_t) a<<shiftDist;
-        return softfloat_roundPackToTF32( 0, 0x9C - shiftDist, sig );
+        return softfloat_roundPackToTF32( 0, 0x8F - shiftDist, sig );
     }
 
 }

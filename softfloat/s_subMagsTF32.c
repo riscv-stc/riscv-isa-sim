@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO COPY from s_subMagsF32 only , need to fix
 tfloat32_t softfloat_subMagsTF32( uint_fast32_t uiA, uint_fast32_t uiB )
 {
     int_fast16_t expA;
@@ -100,8 +99,8 @@ tfloat32_t softfloat_subMagsTF32( uint_fast32_t uiA, uint_fast32_t uiB )
         /*--------------------------------------------------------------------
         *--------------------------------------------------------------------*/
         signZ = signTF32UI( uiA );
-        sigA <<= 7;
-        sigB <<= 7;
+        sigA <<= 20;
+        sigB <<= 20;
         if ( expDiff < 0 ) {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
@@ -129,7 +128,7 @@ tfloat32_t softfloat_subMagsTF32( uint_fast32_t uiA, uint_fast32_t uiB )
         }
         return
             softfloat_normRoundPackToTF32(
-                signZ, expZ, sigX - softfloat_shiftRightJam32( sigY, expDiff )
+                signZ, expZ, sigX - softfloat_shiftRightJam32( sigY, expDiff)
             );
     }
     /*------------------------------------------------------------------------

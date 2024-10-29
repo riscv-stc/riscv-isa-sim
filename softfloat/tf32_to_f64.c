@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-// TODO only copy from f32_to_f64
 float64_t tf32_to_f64( tfloat32_t a )
 {
     union ui32_tf32 uA;
@@ -65,7 +64,7 @@ float64_t tf32_to_f64( tfloat32_t a )
     *------------------------------------------------------------------------*/
     if ( exp == 0xFF ) {
         if ( frac ) {
-            softfloat_f32UIToCommonNaN( uiA, &commonNaN );
+            softfloat_tf32UIToCommonNaN( uiA, &commonNaN );
             uiZ = softfloat_commonNaNToF64UI( &commonNaN );
         } else {
             uiZ = packToF64UI( sign, 0x7FF, 0 );
@@ -79,13 +78,13 @@ float64_t tf32_to_f64( tfloat32_t a )
             uiZ = packToF64UI( sign, 0, 0 );
             goto uiZ;
         }
-        normExpSig = softfloat_normSubnormalF32Sig( frac );
+        normExpSig = softfloat_normSubnormalTF32Sig( frac );
         exp = normExpSig.exp - 1;
         frac = normExpSig.sig;
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uiZ = packToF64UI( sign, exp + 0x380, (uint_fast64_t) frac<<29 );
+    uiZ = packToF64UI( sign, exp + 0x380, (uint_fast64_t) frac<<(29 + 13));
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

@@ -43,7 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 extern const uint8_t softfloat_approxRecipSqrt_8b[];
 
-// TODO copy from f8e4m3 only
 float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
 {
     union ui8_f8e3m4 uA;
@@ -94,17 +93,16 @@ float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
     *------------------------------------------------------------------------*/
     expZ = ((expA - 0x3)>>1) + 0xE;
     expA &= 1;
-    sigA |= 0x10;
-    // TODO should fix value for e3m4
-    index = (sigA<<1 & 0xE) + expA;
+    sigA |= 0x10
+    index = (sigA & 0xE) + expA;
     recipSqrt8 = softfloat_approxRecipSqrt_8b[index];
-    sigZ = ((uint_fast16_t) (sigA<<4) * recipSqrt8)>>8;
+    sigZ = ((uint_fast16_t) (sigA<<3) * recipSqrt8)>>8;
   
     if ( expA ) sigZ  >>= 1;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     ++sigZ;
-    if ( ! (sigZ & 7) ) {
+    if ( ! (sigZ & 3) ) {
         shiftedSigZ = sigZ>>1;
         negRem = shiftedSigZ * shiftedSigZ;
         if ( negRem & 0x40 ) {

@@ -308,6 +308,7 @@ softfloat_c_srcs = \
 	s_shortShiftRightJam64Extra.c \
 	s_shortShiftRightM.c \
 	s_stochasticRound.c \
+	s_stochasticRoundingInit.c \
 	s_sub128.c \
 	s_sub1XM.c \
 	s_sub256M.c \

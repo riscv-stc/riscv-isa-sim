@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "internals.h"
 #include "softfloat.h"
 
-// TODO only copy from i64_to_tf32.c, need to fix
 tfloat32_t i64_to_tf32( int64_t a )
 {
     bool sign;
@@ -51,11 +50,13 @@ tfloat32_t i64_to_tf32( int64_t a )
 
     sign = (a < 0);
     absA = sign ? -(uint_fast64_t) a : (uint_fast64_t) a;
-    shiftDist = softfloat_countLeadingZeros64( absA ) - 40;
+    // 53 = 63 - 10
+    shiftDist = softfloat_countLeadingZeros64( absA ) - 53;
+    // 0x88 = 127 + 10 - 1 , 10 is tf32 frac, 1 is impl
     if ( 0 <= shiftDist ) {
         u.ui =
             a ? packToTF32UI(
-                    sign, 0x95 - shiftDist, (uint_fast32_t) absA<<shiftDist )
+                    sign, 0x88 - shiftDist, (uint_fast32_t) absA<<shiftDist )
                 : 0;
         return u.f;
     } else {
@@ -64,7 +65,7 @@ tfloat32_t i64_to_tf32( int64_t a )
             (shiftDist < 0)
                 ? softfloat_shortShiftRightJam64( absA, -shiftDist )
                 : (uint_fast32_t) absA<<shiftDist;
-        return softfloat_roundPackToTF32( sign, 0x9C - shiftDist, sig );
+        return softfloat_roundPackToTF32( sign, 0x8F - shiftDist, sig );
     }
 
 }
