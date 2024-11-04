@@ -321,10 +321,7 @@
   for (reg_t i = 0; i < height; ++i) { \
     for (reg_t m = 0; m < lmul; m++) { \
       for (reg_t j = 0; j < width; ++j) { \
-
-#define MD2X_LOOP(type, SRC, DST) \
-  MX_##SRC##1_##DST##D_PARAMS(type) \
-  MD2X_LOOP_BASE \
+  
 
 #define MD2X_LOOP_END \
       } \
@@ -357,18 +354,12 @@
     require(0); \
   BODY \
 
-#define MMV_TR_AND_ACC(BODY, sew, is_acc) \
-  require(sew >= e8 && sew <= e64); \
+#define MMV_TR_AND_ACC(sew, is_acc) \
   reg_t ts1_num = insn.rs1(); \
   reg_t td_num = insn.rd(); \
-  reg_t mmax = P.MU.mrows; \
-  reg_t nmax = P.MU.mcols / sew; \
-  reg_t height = P.MU.tile_m->read(); \
-  reg_t amul = P.MU.mamul; \
-  reg_t width = P.MU.tile_n->read(); \
-  reg_t lmul = 1; \
   if (ts1_num == td_num) \
     return 0; \
+  P.MU.reg_copy_whole(td_num, ts1_num, is_acc); \
 
 #define MMV_TR_ACC_INTERTRANS_BASE(REG_VAL, sew) \
   require(sew >= e8 && sew <= e64); \
@@ -2448,9 +2439,8 @@ for (reg_t m = 0; m < lmul; m++) {\
   MD2X_LOOP_BASE \
   if ( !is_acc ) { \
     auto ts1 = P.MU.tr_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax, false, false); \
-    if ((i >= square_min || j >= square_min) && !P.MU.mba){ \
-      auto &td = P.MU.tr_elt<elt_width##_t>(td_num, 0, i, j, rmax, cmax, reg_rename, true); \
-      td = ts1; \
+    if ((i >= square_min || j >= square_min) ){ \
+      break; \
     } else { \
       auto &td = P.MU.tr_elt<elt_width##_t>(td_num, 0, j, i, rmax, cmax, reg_rename, true); \
       td = ts1; \
@@ -2459,8 +2449,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   else { \
     auto acc1 = P.MU.acc_elt<elt_width##_t>(ts1_num, 0, i, j, rmax, cmax * amul, false, false); \
     if ((i >= square_min || j >= square_min) && !P.MU.mba){ \
-      auto &accd = P.MU.acc_elt<elt_width##_t>(td_num, 0, i, j, rmax, cmax * amul, reg_rename, true); \
-      accd = acc1; \
+      break; \
     } else { \
       auto &accd = P.MU.acc_elt<elt_width##_t>(td_num, 0, j, i, rmax, cmax * amul, reg_rename, true); \
       accd = acc1; \

@@ -81,7 +81,7 @@ class matrixUnit_t {
         void reg_rename_write_back_elt(reg_t td, reg_t rows, reg_t elts_per_slice, reg_t lmul, reg_t reg_sum, bool is_acc = false) {
           assert(msew != 0);
           reg_t reg_byte_len = elts_per_slice * rows;
-          // char *regStart = ((char*)tr_file) + td * elts_per_slice * rows;
+
           char *regReNameStart = NULL;
           char *regStart = NULL;
           if (!is_acc){
@@ -94,6 +94,26 @@ class matrixUnit_t {
           }
 
           memcpy(regStart, regReNameStart, reg_byte_len * reg_sum * lmul);
+        }
+
+        void reg_copy_whole(reg_t td, reg_t ts1, bool is_acc = false) {
+          assert(msew != 0);
+          reg_t reg_byte_len = 0;
+
+          char *regSrcStart = NULL;
+          char *regDstStart = NULL;
+          if (!is_acc){
+            reg_byte_len = mrows * mcols / 8;
+            regSrcStart = ((char*)tr_file) + ts1 * reg_byte_len;
+            regDstStart = ((char*)tr_file) + td * reg_byte_len;
+          }
+          else{
+            reg_byte_len = mrows * mcols / 8 * mamul;
+            regSrcStart = ((char*)acc_file) + ts1 * reg_byte_len;
+            regDstStart = ((char*)acc_file) + td * reg_byte_len;
+          }
+
+          memcpy(regDstStart, regSrcStart, reg_byte_len);
         }
 
         template<class T>
