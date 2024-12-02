@@ -1,6 +1,6 @@
 VRM xrm = P.VU.get_vround_mode();
-int64_t int_max = INT64_MAX >> 32;
-int64_t int_min = INT64_MIN >> 32;
+int64_t int_max = INT64_MAX >> (64 - e32);
+int64_t int_min = INT64_MIN >>  (64 - e32);
 MXU_MM_LOOP_QUEN
 ({
   if (P.MU.msew > e16)

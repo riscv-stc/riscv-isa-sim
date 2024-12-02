@@ -1536,12 +1536,12 @@
     }\
     case e16: {\
       if (P.MU.mfp16 == MTYPE_FP16) { \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = f16_to_f64(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
         float64_t ts2 = f16_to_f64(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \
       } else if (P.MU.mfp16 == MTYPE_BF16) { \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
         float64_t ts2 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \
@@ -2479,9 +2479,6 @@ for (reg_t m = 0; m < lmul; m++) {\
   /* if (ins && insn.mlmul() != LMUL_RESERVE) \
     lmul = (1 << insn.mlmul()); */ \
   bool reg_rename = false; \
-  if (td_num == ts1_num || td_num == ts2_num){ \
-    reg_rename = true; \
-  } \
   bool only_one_fix_reg_sum = false; \
 
 #define MXU_SP_LOOP_BASE \
@@ -2492,9 +2489,10 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 #define  MXU_SPB_COL_CAL(BODY, SIGN, wide, sew) \
           /* k/8 tow group and every has 4 elements */ \
-          uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k/8, j , mmax, nmax * amul, false, false); \
-          uint8_t index1 = (spa_index_val >> ((k % 8) ? 2 : 6)) & 0x3; \
-          uint8_t index2 = (spa_index_val >> ((k % 8) ? 0 : 4)) & 0x3; \
+          uint8_t spa_index_val1 = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k/2, j / 4 , mmax, P.MU.mcols / e8, false, false); \
+          uint8_t spa_index_val2 = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k/2 + 1, j / 4 , mmax, P.MU.mcols / e8, false, false); \
+          uint8_t index1 = (spa_index_val1 >> ((3 - (j % 4)) * 2) & 0x3); \
+          uint8_t index2 = (spa_index_val2 >> ((3 - (j % 4)) * 2) & 0x3); \
           { \
             MXU_SPB_COL_##SIGN##_INDEX1_PRAMS(sew, wide) \
             BODY; \
@@ -2520,10 +2518,10 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 
 #define SP_MATRIX_COL_FLOD_VAL_USIGN_USIGN(x, ts_num) \
-  auto val = P.MU.tr_elt<type_usew_t<x>::type>(ts_num, 0,  j, i, mmax, nmax, false, false); \
+  auto val = P.MU.tr_elt<type_usew_t<x>::type>(ts_num, 0,  i, j, mmax, nmax, false, false); \
 
 #define SP_MATRIX_COL_FLOD_VAL_USIGN_SIGN(x, ts_num) \
-  auto val = P.MU.tr_elt<type_sew_t<x>::type>(ts_num, 0,  j, i, mmax, nmax, false, false); \
+  auto val = P.MU.tr_elt<type_sew_t<x>::type>(ts_num, 0,  i, j, mmax, nmax, false, false); \
 
 #define MXU_SP_ROW_UNFLOD_LOOP_BASE(SIGN, sew, row, col, ts_num) \
   SP_MATRIX_UNFLOD_##SIGN(sew, row, col) \
@@ -2532,7 +2530,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   for (reg_t k = 0 ; k < row; k++){ \
     l = 0; \
     for(reg_t j = 0; j < col / 2 ; j++){ \
-      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, nmax, false, false); \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, P.MU.mcols / e8, false, false); \
       uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
       SP_MATRIX_ROW_FLOD_VAL_USIGN_##SIGN(sew, ts_num) \
       spa_matrix_unfold[k][index + (j / 2) * 4] = val; \
@@ -2678,15 +2676,12 @@ for (reg_t m = 0; m < lmul; m++) {\
   
 #define MXU_SP_COL_UNFLOD_LOOP_BASE( SIGN, sew, row, col, ts_num) \
   SP_MATRIX_UNFLOD_##SIGN(sew, row, col) \
-  reg_t l = 0; \
-  for (reg_t i = 0 ; i < row / 2; i++) { \
-    l = 0; \
-    for (reg_t j = 0 ; j < col ; j++) { \
-      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, nmax, false, false ); \
-      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
+  for (reg_t j = 0 ; j < col ; j++) { \
+    for (reg_t i = 0 ; i < row / 2 ; i++) { \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, P.MU.mcols / e8, false, false ); \
+      uint8_t index = (spa_index_val >> ((3 - j % 4) * 2)) & 0x3; \
       SP_MATRIX_COL_FLOD_VAL_USIGN_##SIGN(sew, ts_num) \
       spa_matrix_unfold[index + (i / 2) * 4][j] = val; \
-      l++; \
     } \
   } \
   for (reg_t i = 0; i < tile_m; ++i) { \
@@ -2766,7 +2761,7 @@ for (reg_t m = 0; m < lmul; m++) {\
       MXU_SPA_##SIGN##_PARAMS(e16 ,wide); \
       BODY; \
       MXU_SP_LOOP_END \
-    } { \
+    } else { \
       require(0); \
     } \
 
@@ -2821,9 +2816,6 @@ for (reg_t m = 0; m < lmul; m++) {\
   require_align(ts2_num, lmul); \
   softfloat_roundingMode = STATE.frm->read(); \
   bool reg_rename = false; \
-  if (td_num == ts1_num || td_num == ts2_num){ \
-    reg_rename = true; \
-  } \
   reg_t reg_sum = 1; \
   bool only_one_fix_reg_sum = false; \
   reg_t des_nmax = nmax / wide; \
@@ -2838,7 +2830,7 @@ for (reg_t m = 0; m < lmul; m++) {\
   for (reg_t k = 0 ; k < row; k++){ \
     l = 0; \
     for(reg_t j = 0; j < col / 2 ; j++){ \
-      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, nmax , false, false); \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, k, j / 4 , mmax, P.MU.mcols / e8 , false, false); \
       uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
       auto val = P.MU.tr_elt<elt_width##_t>(ts_num, 0, k , j, mmax, nmax, false, false); \
       spa_matrix_unfold[k][index + (j / 2) * 4] = val; \
@@ -2852,15 +2844,12 @@ for (reg_t m = 0; m < lmul; m++) {\
 
 #define MXU_SP_MFP_COL_UNFLOD_LOOP_BASE( elt_width , sew, row, col, ts_num) \
   std::vector<std::vector<elt_width##_t>> spa_matrix_unfold(row, std::vector<elt_width##_t>(col)); \
-  reg_t l = 0; \
-  for (reg_t i = 0 ; i < row / 2; i++) { \
-    l = 0; \
-    for (reg_t j = 0 ; j < col ; j++) { \
-      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, nmax, false, false ); \
-      uint8_t index = (spa_index_val >> ((3 - l) * 2)) & 0x3; \
-      auto val = P.MU.tr_elt<elt_width##_t>(ts_num, 0, j, i, mmax, nmax, false, false); \
+  for (reg_t j = 0 ; j < col ; j++) { \
+    for (reg_t i = 0 ; i < row / 2 ; i++) { \
+      uint8_t spa_index_val = P.MU.tr_elt<uint8_t>(spa_tr_index, 0, i , j / 4 , mmax, P.MU.mcols / e8, false, false ); \
+      uint8_t index = (spa_index_val >> ((3 - j % 4) * 2)) & 0x3; \
+      auto val = P.MU.tr_elt<elt_width##_t>(ts_num, 0, i, j, mmax, nmax, false, false); \
       spa_matrix_unfold[index + (i / 2) * 4][j] = val; \
-      l++; \
     } \
   } \
     for (reg_t i = 0; i < tile_m; ++i) { \
@@ -3337,14 +3326,14 @@ for (reg_t m = 0; m < lmul; m++) {\
     case e16: {\
       if (P.MU.mfp16 == MTYPE_FP16) { \
         MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_k, tile_n, ts2_num) \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = f16_to_f64(P.MU.tr_elt<float16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
         float64_t ts2 = f16_to_f64(spa_matrix_unfold[k][j]); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \
         MXU_SP_LOOP_END \
       } else if (P.MU.mfp16 == MTYPE_BF16) { \
         MXU_SP_MFP_##DRIECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_k, tile_n, ts2_num) \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts1_num + m, 0, i, k, mmax, nmax, false, false)); \
         float64_t ts2 = bf16_to_f64(spa_matrix_unfold[k][j]); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \
@@ -3429,14 +3418,14 @@ for (reg_t m = 0; m < lmul; m++) {\
     case e16: {\
       if (P.MU.mfp16 == MTYPE_FP16) { \
         MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(float16, e16, tile_m, tile_k, ts1_num) \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = f16_to_f64(spa_matrix_unfold[i][k]); \
         float64_t ts2 = f16_to_f64(P.MU.tr_elt<float16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \
         MXU_SP_LOOP_END \
       } else if (P.MU.mfp16 == MTYPE_BF16) { \
         MXU_SP_MFP_##DIRECTION##_UNFLOD_LOOP_BASE(bfloat16, e16, tile_m, tile_k, ts1_num) \
-        float64_t &td_w = P.MU.tr_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
+        float64_t &td_w = P.MU.acc_elt<float64_t>(td_num + m, 0, i, j, mmax, des_nmax * amul, reg_rename, true); \
         float64_t ts1 = bf16_to_f64(spa_matrix_unfold[i][k]); \
         float64_t ts2 = bf16_to_f64(P.MU.tr_elt<bfloat16_t>(ts2_num + m, 0, k, j, mmax, nmax, false, false)); \
         td_w = f64_mulAdd(ts1, ts2, td_w); \

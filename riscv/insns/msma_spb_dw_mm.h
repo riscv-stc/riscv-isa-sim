@@ -1,6 +1,6 @@
 VRM xrm = P.VU.get_vround_mode();
-int64_t int_max = INT64_MAX >> (64 - P.MU.msew);
-int64_t int_min = INT64_MIN >> (64 - P.MU.msew);
+int64_t int_max = INT64_MAX;
+int64_t int_min = INT64_MIN;
 
 MXU_SPB_MM_LOOP
 ({
@@ -30,4 +30,4 @@ MXU_SPB_MM_LOOP
     
   }
 
-}, SIGN, 1, e32)
+}, SIGN, 1, e64)

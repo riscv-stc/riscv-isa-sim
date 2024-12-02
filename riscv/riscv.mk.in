@@ -1677,11 +1677,11 @@ riscv_insn_ext_matrix_calcu = \
 	mand_mm \
 	mor_mm \
 	mxor_mm \
-	mfsqrt_mm \
-	mfsqrt_hf_mm \
-	mfsqrt_f_mm \
-	mfsqrt_d_mm \
-	mfsqrt_cf_mm \
+	mfsqrt_m \
+	mfsqrt_hf_m \
+	mfsqrt_f_m \
+	mfsqrt_d_m \
+	mfsqrt_cf_m \
 	msll_mm \
 	msll_b_mm \
 	msll_h_mm \

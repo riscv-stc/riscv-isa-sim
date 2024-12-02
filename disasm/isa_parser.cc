@@ -78,7 +78,7 @@ isa_parser_t::isa_parser_t(const char* str, const char *priv)
     }
 
     switch (*p) {
-      case 'v': vlen = 128; elen = 64; zvf = true; zvd = true;
+      case 'v': vlen = 1024; elen = 64; zvf = true; zvd = true;
                 
                 // even rv32iv implies double float
       case 'q': extension_table['D'] = true;

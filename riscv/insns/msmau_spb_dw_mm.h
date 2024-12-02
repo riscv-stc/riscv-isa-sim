@@ -1,5 +1,5 @@
 VRM xrm = P.VU.get_vround_mode();
-uint64_t uint_max = UINT64_MAX >> (64 - P.MU.msew);
+uint64_t uint_max = UINT64_MAX;
 MXU_SPB_MM_LOOP
 ({
   bool overflow = false;

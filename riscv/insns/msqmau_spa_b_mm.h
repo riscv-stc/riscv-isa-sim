@@ -1,5 +1,5 @@
 VRM xrm = P.VU.get_vround_mode();
-uint64_t int_max = UINT64_MAX >> (64 - P.MU.msew * 4);
+uint64_t int_max = UINT64_MAX >> (64 - e8 * 4);
 
 MXU_SPA_QMM_LOOP
 ({

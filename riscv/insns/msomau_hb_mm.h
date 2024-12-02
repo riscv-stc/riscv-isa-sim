@@ -1,9 +1,9 @@
 VRM xrm = P.VU.get_vround_mode();
-uint64_t int_max = UINT64_MAX >> 32;
+uint64_t int_max = UINT64_MAX >> (64 - e4 * 8);
 
 MXU_MM_LOOP_OCT
 ({
-  if (P.MU.msew > e16)
+  if (P.MU.msew >= e16)
     throw trap_illegal_instruction(insn.bits()); 
   bool overflow = false;
   

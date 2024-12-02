@@ -2436,7 +2436,6 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
     DISASM_ARITHMETIC_LOGIC_ACC_WSCAL_INSN(mwmulsu, mbase_calc_acc_all_unit)
 
     DISASM_ARITHMETIC_LOGIC_ACC_WFLOAT_INSN(mfwmul, mbase_calc_acc_all_unit)
-    DISASM_ARITHMETIC_LOGIC_ACC_FLOAT_INSN(mfsqrt, mbase_calc_acc_all_unit)
 
     DISASM_ARITHMETIC_LOGIC_BASE_INSN(mand, mbase_calc_acc_all_unit)
     DISASM_ARITHMETIC_LOGIC_BASE_INSN(mor, mbase_calc_acc_all_unit)
@@ -2569,6 +2568,16 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
   #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_QFLOAT_MMA_INSN
   #undef DISASM_ARITHMETIC_SPARSITY_LOGIC_OMMA_INSN
 
+#define DISASM_MXU_MFSQRT(name, mname) \
+  add_insn(new disasm_insn_t(#name,  match_##mname,    mask_##mname,   {&accdl, &acc1l})); \
+
+  DISASM_MXU_MFSQRT("mfsqrt.m", mfsqrt_m);
+  DISASM_MXU_MFSQRT("mfsqrt.hf.m", mfsqrt_hf_m);
+  DISASM_MXU_MFSQRT("mfsqrt.f.m", mfsqrt_f_m);
+  DISASM_MXU_MFSQRT("mfsqrt.d.m", mfsqrt_d_m);
+  DISASM_MXU_MFSQRT("mfsqrt.cf.m", mfsqrt_cf_m);
+
+#undef DISASM_MXU_MFSQRT
 
 #define DISASM_MXU_CVT(name, mname) \
   add_insn(new disasm_insn_t(#name,  match_##mname,    mask_##mname,   {&accdl, &acc1l})); \
