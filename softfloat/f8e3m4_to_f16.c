@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 float16_t f8e3m4_to_f16( float8_e3m4_t a )
 {
-    union ui8_f8e4m3 uA;
+    union ui8_f8e3m4 uA;
     uint_fast8_t uiA;
     bool sign;
     int_fast8_t exp;
@@ -63,7 +63,7 @@ float16_t f8e3m4_to_f16( float8_e3m4_t a )
     frac = fracF8E3M4UI( uiA );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if ( exp == 0xF && frac == 0x7) {
+    if ( exp == 0xF && frac == 0xf) {
         uiZ = softfloat_commonNaNToF16UI( &commonNaN );
         goto uiZ;
     }
@@ -80,7 +80,7 @@ float16_t f8e3m4_to_f16( float8_e3m4_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uiZ = packToF16UI( sign, exp + 0xC, (uint_fast16_t) frac<< 0xf );
+    uiZ = packToF16UI( sign, exp + 0xC, (uint_fast16_t) frac<< 0x6 );
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

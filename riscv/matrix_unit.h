@@ -37,7 +37,7 @@ class matrixUnit_t {
       reg_t mdil_h, mdil_w, mstr_h, mstr_w;
       sreg_t mskin[2];
       reg_t mskout[2];
-      bool mill;
+      bool mill = false;
       /* matrix element for varies eew
         td: tile reg num
         tt: read row 6 or col 7
@@ -218,16 +218,38 @@ struct bit4_t {
         return result;
     }
 
+    T saturate_unsign(T result) const {
+        int8_t re = (int8_t)result;
+        if (saturation_enabled) {
+            if (re > 7) return 7;     // int4_t 最大值
+            if (re < -8) return -8;   // int4_t 最小值
+        }
+        return result;
+    }
+
     // 运算符重载：加法
     bit4_t operator+(const bit4_t& other) const {
         T result = toValue() + other.toValue();
         return bit4_t(saturate(result), saturation_enabled);
     }
 
+    // 运算符重载：比较
+    bool operator>(const bit4_t& other) const {
+        return toValue() > other.toValue();
+    }
+
+    // 运算符重载：比较
+    bool operator<(const bit4_t& other) const {
+        return toValue() < other.toValue();
+    }
+
     // 运算符重载：减法
     bit4_t operator-(const bit4_t& other) const {
         T result = toValue() - other.toValue();
-        return bit4_t(saturate(result), saturation_enabled);
+        if (std::is_signed<T>::value)
+            return bit4_t(saturate(result), saturation_enabled);
+        else
+            return bit4_t(saturate_unsign(result), saturation_enabled);
     }
 
     // 运算符重载：乘法
@@ -242,7 +264,7 @@ struct bit4_t {
             throw std::overflow_error("Division by zero");  // 处理除以零的情况
         }
         T result = toValue() / other.toValue();
-        return bit4_t(saturate(result), saturation_enabled);
+        return bit4_t(saturate(result), false);
     }
 
     // 运算符重载：取模
@@ -276,6 +298,12 @@ struct bit4_t {
         os << +b.toValue(); // +号用于确保打印的是整数而不是字符
         return os;
     }
+
+    // 强制类型转换：转换为 int8_t
+    operator T() const {
+        return static_cast<T>(toValue());
+    }
+
 };
 
 // 处理两个 4 位数值

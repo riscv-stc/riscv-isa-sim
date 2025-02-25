@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 float32_t bf16_to_f32( bfloat16_t a )
 {
-    union ui16_f16 uA;
+    union ui16_bf16 uA;
     uint_fast16_t uiA;
     bool sign;
     int_fast16_t exp;
@@ -69,6 +69,14 @@ float32_t bf16_to_f32( bfloat16_t a )
             uiZ = packToF32UI( sign, 0xFF, 0 );
         }
         goto uiZ;
+    }
+    /*------------------------------------------------------------------------
+    *------------------------------------------------------------------------*/
+    if ( ! exp ) {
+        if ( ! frac ) {
+            uiZ = packToF32UI( sign, 0, 0 );
+            goto uiZ;
+        }
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

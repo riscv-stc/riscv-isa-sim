@@ -2519,6 +2519,7 @@ void disassembler_t::add_instructions(const isa_parser_t* isa)
 #define DISASM_ARITHMETIC_SPARSITY_LOGIC_WFLOAT_MMA_INSN(name, fmt) \
       DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \
       DISASM_ARITHMETIC_SPARSITY_LOGIC_HF_F_INSN(name, fmt) \
+      DISASM_ARITHMETIC_SPARSITY_LOGIC_CF_INSN(name, fmt) \
 
 #define DISASM_ARITHMETIC_SPARSITY_LOGIC_QMMA_INSN(name, fmt) \
       DISASM_ARITHMETIC_SPARSITY_LOGIC_BASE_INSN(name, fmt) \

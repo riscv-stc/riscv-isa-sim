@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "softfloat.h"
 
 extern const uint8_t softfloat_approxRecipSqrt_8b[];
-
+extern const uint8_t softfloat_approxRecipSqrt_8b0s[];
 float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
 {
     union ui8_f8e3m4 uA;
@@ -91,11 +91,11 @@ float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    expZ = ((expA - 0x3)>>1) + 0xE;
+    expZ = ((expA - 0x3)>>1) + 0x2;
     expA &= 1;
     sigA |= 0x10;
     index = (sigA & 0xE) + expA;
-    recipSqrt8 = softfloat_approxRecipSqrt_8b[index];
+    recipSqrt8 = softfloat_approxRecipSqrt_8b0s[index];
     sigZ = ((uint_fast16_t) (sigA<<3) * recipSqrt8)>>8;
   
     if ( expA ) sigZ  >>= 1;
@@ -105,7 +105,7 @@ float8_e3m4_t f8e3m4_sqrt( float8_e3m4_t a )
     if ( ! (sigZ & 3) ) {
         shiftedSigZ = sigZ>>1;
         negRem = shiftedSigZ * shiftedSigZ;
-        if ( negRem & 0x40 ) {
+        if ( negRem & 0x20 ) {
             sigZ |= 1;
         } else {
             if ( negRem ) --sigZ;

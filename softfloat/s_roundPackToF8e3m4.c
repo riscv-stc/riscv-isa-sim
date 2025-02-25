@@ -53,15 +53,15 @@ float8_e3m4_t
     *------------------------------------------------------------------------*/
     roundingMode = softfloat_roundingMode;
     roundNearEven = (roundingMode == softfloat_round_near_even);
-    roundIncrement = 0x8;
+    roundIncrement = 0x2;
     if ( ! roundNearEven && (roundingMode != softfloat_round_near_maxMag) ) {
         roundIncrement =
             (roundingMode
                  == (sign ? softfloat_round_min : softfloat_round_max))
-                ? 0xF
+                ? 0x2
                 : 0;
     }
-    roundBits = sig & 0xF;
+    roundBits = sig & 0x3;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     if ( 0x6 <= (unsigned int) exp ) {
@@ -77,18 +77,24 @@ float8_e3m4_t
             if ( isTiny && roundBits ) {
                 softfloat_raiseFlags( softfloat_flag_underflow );
             }
-        } else if ( (0x6 < exp) || (0x70 <= sig + roundIncrement) ) {
+        } else if ( (0x6 < exp) && (0x70 <= sig + roundIncrement) ) {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
             softfloat_raiseFlags(
                 softfloat_flag_overflow | softfloat_flag_inexact );
-            uiZ = packToF8E4M3UI( sign, 0x7, 0xE );
+            uiZ = packToF8E3M4UI( sign, 0x7, 0x4 ); // NaN
+            goto uiZ;
+        } else if (0x6 <= exp && 0xf <= sig + roundIncrement){
+            softfloat_raiseFlags(
+                softfloat_flag_overflow | softfloat_flag_inexact );
+            uiZ = packToF8E3M4UI( sign, 0x7, 0 ); // inf
             goto uiZ;
         }
+        
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    sig = (sig + roundIncrement)>>4;
+    sig = (sig + roundIncrement)>>2;
     if ( roundBits ) {
         softfloat_exceptionFlags |= softfloat_flag_inexact;
 #ifdef SOFTFLOAT_ROUND_ODD
@@ -99,7 +105,7 @@ float8_e3m4_t
         }
 #endif
     }
-    sig &= ~(uint_fast8_t) (! (roundBits ^ 8) & roundNearEven);
+    sig &= ~(uint_fast8_t) (! (roundBits ^ 2) & roundNearEven);
     if ( ! sig ) exp = 0;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

@@ -3,6 +3,9 @@
   ;
   },
   {
+  ;
+  },
+  {
     auto rs1 = P.MU.acc_elt<uint16_t>(ts1_num + m , 0, i, j, mmax, nmax * amul, false, false);
     if (P.MU.mfp16 == MTYPE_FP16){
         P.MU.acc_elt<float16_t>(td_num + m, 0, i, j, mmax, nmax * amul, reg_rename, true) = ui32_to_f16((uint32_t)rs1);
@@ -14,6 +17,9 @@
   },
   {
     ;
+  },
+  {
+  ;
   },
   {
     ;

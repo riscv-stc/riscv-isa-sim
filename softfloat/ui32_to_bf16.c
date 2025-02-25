@@ -48,7 +48,7 @@ bfloat16_t ui32_to_bf16( uint32_t a )
     shiftDist = softfloat_countLeadingZeros32( a ) - 24;
     if ( 0 <= shiftDist ) {
         u.ui =
-            a ? packToF16UI(
+            a ? packToBF16UI(
                     0, 0x85 - shiftDist, (uint_fast16_t) a<<shiftDist )
                 : 0;
         return u.f;

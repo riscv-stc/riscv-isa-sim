@@ -48,21 +48,23 @@ bfloat16_t
     uint_fast8_t roundIncrement, roundBits;
     bool isTiny;
     uint_fast16_t uiZ;
-    union ui16_f16 uZ;
+    union ui16_bf16 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     roundingMode = softfloat_roundingMode;
     roundNearEven = (roundingMode == softfloat_round_near_even);
-    roundIncrement = 0x40;
+    // 这个函数要求输入左移4位了，这里的0x8作为舍入计算完，再右移4位
+    roundIncrement = 0x8;
     if ( ! roundNearEven && (roundingMode != softfloat_round_near_maxMag) ) {
         roundIncrement =
             (roundingMode
                  == (sign ? softfloat_round_min : softfloat_round_max))
-                ? 0x7F
+                ? 0xF
                 : 0;
     }
-    roundBits = sig & 0x7F;
+    // 对应于低四位的舍入位
+    roundBits = sig & 0xF;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     if ( 0xFD <= (unsigned int) exp ) {
@@ -70,15 +72,15 @@ bfloat16_t
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
             isTiny =
-                (softfloat_detectTininess == softfloat_tininess_beforeRounding)
-                    || (exp < -1) || (sig + roundIncrement < 0x8000);
+                 (softfloat_detectTininess == softfloat_tininess_beforeRounding)
+                    || (exp < -1) || (sig + roundIncrement < 0x1000);
             sig = softfloat_shiftRightJam32( sig, -exp );
             exp = 0;
-            roundBits = sig & 0x7F;
+            roundBits = sig & 0xF;
             if ( isTiny && roundBits ) {
                 softfloat_raiseFlags( softfloat_flag_underflow );
             }
-        } else if ( (0xFD < exp) || (0x8000 <= sig + roundIncrement) ) {
+        } else if ( (0xFD < exp) || (0x1000 <= sig + roundIncrement) ) {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
             softfloat_raiseFlags(
@@ -89,7 +91,8 @@ bfloat16_t
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    sig = (sig + roundIncrement)>>7;
+    // 移去舍入位
+    sig = (sig + roundIncrement)>>4;
     if ( roundBits ) {
         softfloat_exceptionFlags |= softfloat_flag_inexact;
 #ifdef SOFTFLOAT_ROUND_ODD
@@ -99,7 +102,7 @@ bfloat16_t
         }
 #endif
     }
-    sig &= ~(uint_fast16_t) (! (roundBits ^ 0x40) & roundNearEven);
+    sig &= ~(uint_fast16_t) (! (roundBits ^ 8) & roundNearEven);
     if ( ! sig ) exp = 0;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

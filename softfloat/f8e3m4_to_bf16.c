@@ -80,7 +80,7 @@ bfloat16_t f8e3m4_to_bf16( float8_e3m4_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    uiZ = packToBF16UI( sign, exp + 0x7C, (uint_fast16_t)frac<<4 );
+    uiZ = packToBF16UI( sign, exp + 0x7C, (uint_fast16_t)frac<<3 );
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

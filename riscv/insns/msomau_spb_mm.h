@@ -8,12 +8,23 @@ MXU_SPB_OMM_LOOP
   bool overflow = false;
   
   uint128_t result = 0;
-  
-  for (uint8_t i = 0 ; i < 2; i++){
-        if (!i)
-            result = (uint128_t)(ts1 & 0xF) * (uint128_t)(ts2 & 0xF) + (uint128_t)accd;
-        else
-            result = (uint128_t)(ts1 >> 4) * (uint128_t)(ts2 >> 4) + (uint128_t)accd;
+  if (P.MU.msew != e4) {
+    result = (uint128_t)ts1 * (uint128_t)ts2 + (uint128_t)accd;
+  } else {
+    uint4_bit_pair ts2_bit4(ts2); 
+    uint4_bit_pair ts1_bit4(ts1); 
+    if (temp % 2 == 0 && j % 2 == 0) {
+      result = ((uint128_t)ts2_bit4.high * (uint128_t)ts1_bit4.high) + (uint128_t)accd; 
+
+    }else if (temp % 2 == 0 && j % 2 != 0) {
+      result = ((uint128_t)ts2_bit4.low * (uint128_t)ts1_bit4.high) + (uint128_t)accd;
+    }else if (temp % 2 != 0 && j % 2 == 0) {
+      result = ((uint128_t)ts2_bit4.high * (uint128_t)ts1_bit4.low) + (uint128_t)accd;
+    }else {
+      result = ((uint128_t)ts2_bit4.low * (uint128_t)ts1_bit4.low) + (uint128_t)accd;
+    }
+  }
+
         if (result >= int_max)
         overflow = true;
 
@@ -23,7 +34,7 @@ MXU_SPB_OMM_LOOP
             P_SET_OV(1);
         }
         accd = result;
-  }
+  
   // rounding
   // INT_ROUNDING(result, xrm, sew - 1);
 

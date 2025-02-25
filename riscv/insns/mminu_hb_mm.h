@@ -1,16 +1,22 @@
-MI_MM_LOOP_E4({
-    uint8_t ts1_low = ts1 & 0xF;
-    uint8_t ts2_low = ts2 & 0xF;
-    uint8_t ts1_height = ts1 >> 0x4;
-    uint8_t ts2_height = ts2 >> 0x4;
-    uint8_t temp;
-    if (ts1_low <= ts2_low)
-        temp = ts1_low;
-    else
-        temp = ts2_low;
-    
-    if (ts1_height <= ts2_height)
-        td = (uint8_t)(ts1_height << 0x4 | temp);
-    else
-        td = (uint8_t)(ts2_height << 0x4 | temp);
+MI_MM_LOOP({
+    bit4_pair_t<uint8_t> bit4_pair_ts1; 
+    bit4_pair_t<uint8_t> bit4_pair_ts2; 
+        
+    bit4_pair_ts1 = ts1; 
+    bit4_pair_ts2 = ts2; 
+        
+    if (j % 2 == 0) { 
+        if (bit4_pair_ts1.high <= bit4_pair_ts2.high){
+            td = (bit4_pair_ts1.high << 4) | (td & 0); 
+        } else {
+            td = (bit4_pair_ts2.high << 4) | (td & 0); 
+        }
+    } else { 
+        if (bit4_pair_ts1.low <= bit4_pair_ts2.low) {
+            td = (bit4_pair_ts1.low & 0xF) | (td & 0xF0); 
+        } else {
+            td = (bit4_pair_ts2.low & 0xF) | (td & 0xF0); 
+        }
+    } 
 }, XU2D, true, e4)
+

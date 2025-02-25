@@ -82,7 +82,7 @@ float8_e4m3_t
             *----------------------------------------------------------------*/
             softfloat_raiseFlags(
                 softfloat_flag_overflow | softfloat_flag_inexact );
-            uiZ = packToF8E4M3UI( sign, 0xF, 0x6 );
+            uiZ = packToF8E4M3UI( sign, 0xF, 0x7 );
             goto uiZ;
         }
     }

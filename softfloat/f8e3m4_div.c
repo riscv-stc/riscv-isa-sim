@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "specialize.h"
 #include "softfloat.h"
 
-extern const uint8_t softfloat_approxRecip_8b[];
+extern const uint8_t softfloat_approxRecip_8b[], softfloat_approxRecip_8b_8s[], softfloat_approxRecip_8b_0s[], softfloat_approxRecip_8b_1s[];
 
 float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
 {
@@ -130,7 +130,12 @@ float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
         sigA <<= 2;
     }
     index = sigB & 0xF;
-    r0 = softfloat_approxRecip_8b[index];
+    r0 = softfloat_approxRecip_8b_0s[index];
+    // r0 = softfloat_approxRecip_8b_0s[index] - 
+    //         (((uint_fast16_t) softfloat_approxRecip_8b_8s[index] * (sigB & 0x1)) >> 4);
+    // index = (sigB >> 1) & 0x7;
+    // r0 = softfloat_approxRecip_8b[index] - 
+    //         (((uint_fast16_t) softfloat_approxRecip_8b_1s[index] * (sigB & 0x1)) >> 4);
     sigZ = ((uint_fast16_t) sigA * r0)>>8;
 
     rem = (sigA<<4) - sigZ * sigB;
@@ -138,10 +143,10 @@ float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     ++sigZ;
-    if ( ! (sigZ & 3) ) {
+    if ( ! (sigZ & 1) ) {
         sigZ &= ~1;
         rem = (sigA<<4) - sigZ * sigB;
-        if ( rem & 0x80 ) {
+        if ( rem & 0x20 ) {
             sigZ -= 1;
         }
     }
@@ -162,7 +167,7 @@ float8_e3m4_t f8e3m4_div( float8_e3m4_t a, float8_e3m4_t b )
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
  clamp:
-    uiZ = packToF8E3M4UI( signZ, 0x7, 0xE );
+    uiZ = packToF8E3M4UI( signZ, 0x7, 0 );
     goto uiZ;
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/

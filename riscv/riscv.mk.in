@@ -1900,6 +1900,8 @@ riscv_insn_ext_matrix_zmsp = \
 	mfwma_spb_hf_mm \
 	mfwma_spa_f_mm \
 	mfwma_spb_f_mm \
+	mfwma_spa_cf_mm \
+	mfwma_spb_cf_mm \
 	mqmau_spa_mm \
 	mqmau_spb_mm \
 	mqmau_spa_b_mm \

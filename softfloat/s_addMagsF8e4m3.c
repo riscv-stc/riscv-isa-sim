@@ -102,7 +102,7 @@ float8_e4m3_t softfloat_addMagsF8e4m3( uint_fast8_t uiA, uint_fast8_t uiB )
             if ( expDiff <= -5 ) {
                 uiZ = packToF8E4M3UI( signZ, expB, sigB );
                 if(!(expA | sigA)) goto uiZ;
-                if( (!softfloat_stochasticRoundingFlag) || (expDiff < -26) ) { 
+                if( (!softfloat_stochasticRoundingFlag) || (expDiff < -12) ) { 
                     goto addEpsilon;
                 }
             }
@@ -120,7 +120,7 @@ float8_e4m3_t softfloat_addMagsF8e4m3( uint_fast8_t uiA, uint_fast8_t uiB )
             }
             if ( 5 <= expDiff ) {
                 if(!(expB | sigB)) goto uiZ;
-                if( (!softfloat_stochasticRoundingFlag) || (expDiff > 26) ) { 
+                if( (!softfloat_stochasticRoundingFlag) || (expDiff > 12) ) { 
                     goto addEpsilon;
                 }
             }

@@ -108,10 +108,10 @@ float8_e3m4_t softfloat_subMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
             signZ = ! signZ;
             if ( expB == 0x7 && sigB == 0xF) goto propagateNaN;
 
-            if ( expDiff <= -6 ) {
+            if ( expDiff <= -4 ) {
                 uiZ = packToF8E3M4UI( signZ, expB, sigB );
                 if(!(expA | sigA)) goto uiZ;
-                if( (!softfloat_stochasticRoundingFlag) || (expDiff < -27) ) {
+                if( (!softfloat_stochasticRoundingFlag) || (expDiff < -12) ) {
                     goto subEpsilon;
                 }
             }
@@ -125,9 +125,9 @@ float8_e3m4_t softfloat_subMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
             uiZ = uiA;
             if ( expA == 0x7 && sigA == 0xF) goto propagateNaN;
 
-            if ( 2 <= expDiff ) {
+            if ( 4 <= expDiff ) {
                 if(!(expB | sigB)) goto uiZ;
-                if( (!softfloat_stochasticRoundingFlag) || (expDiff > 27) ) {
+                if( (!softfloat_stochasticRoundingFlag) || (expDiff > 4) ) {
                     goto subEpsilon;
                 }
             }
@@ -156,8 +156,8 @@ float8_e3m4_t softfloat_subMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
         if ( sig32Z & 0xFFFFFF ) {
             sigZ |= 1;
         } else {
-            if ( ! (sigZ & 0x7) && ((unsigned int) expZ < 0xE) ) {
-                sigZ >>= 3;
+            if ( ! (sigZ & 0x3) && ((unsigned int) expZ < 0x6) ) {
+                sigZ >>= 2;
                 goto pack;
             }
         }

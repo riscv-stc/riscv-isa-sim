@@ -352,6 +352,8 @@ softfloat_c_srcs = \
 	f8e3m4_to_ui16.c \
 	f8e3m4_to_ui32.c \
 	f8e3m4_to_ui64.c \
+	f8e3m4_lt_quiet.c \
+	f8e3m4_eq.c \
 	f8e4m3_add.c \
 	f8e4m3_sub.c \
 	f8e4m3_mul.c \

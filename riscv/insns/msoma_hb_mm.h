@@ -7,7 +7,7 @@ MXU_MM_LOOP_OCT
     throw trap_illegal_instruction(insn.bits()); 
 
   bool overflow = false;
-  int128_t result = (int128_t)ts1 * (int128_t)ts2 + (int128_t)accd;
+  int128_t result = 0;
 
   // rounding
   // INT_ROUNDING(result, xrm, sew - 1);
@@ -15,25 +15,32 @@ MXU_MM_LOOP_OCT
   // remove guard bits
   // result = result >> (sew - 1);
 
-  for (uint8_t i = 0; i < 2; i++) {
-        if (!i)
-            result = (int128_t)(ts1 & 0xF) * (int128_t)(ts2 & 0xF) + (int128_t)accd;
-        else
-            result = (int128_t)(ts1 >> 0x4)* (int128_t)(ts2 >> 0x4) + (int128_t)accd;
-        if (result > int_max){
-            overflow = true;
-            result = int_max;
-        } else if (result < int_min){
-            overflow = true;
-            result = int_min;
-        }
-        // max saturation
-        if (overflow) {
-            // result = int_max;
-            P_SET_OV(1);
-        }
+  int4_bit_pair ts2_bit4(ts2); 
+  int4_bit_pair ts1_bit4(ts1); 
+    if (k%2 == 0 && j % 2 == 0) {
+      result = ((int128_t)ts2_bit4.high * (int128_t)ts1_bit4.high) + (int128_t)accd; 
 
-        accd = result;
-        }
+    }else if (k%2 == 0 && j % 2 != 0) {
+      result = ((int128_t)ts2_bit4.low * (int128_t)ts1_bit4.high) + (int128_t)accd;
+    }else if (k%2 != 0 && j % 2 == 0) {
+      result = ((int128_t)ts2_bit4.high * (int128_t)ts1_bit4.low) + (int128_t)accd;
+    }else {
+      result = ((int128_t)ts2_bit4.low * (int128_t)ts1_bit4.low) + (int128_t)accd;
+    }
+    
+  if (result > int_max){
+        overflow = true;
+        result = int_max;
+    } else if (result < int_min){
+        overflow = true;
+        result = int_min;
+    }
+    // max saturation
+    if (overflow) {
+        // result = int_max;
+        P_SET_OV(1);
+    }
 
-}, 8, e4)
+    accd = result;
+
+}, 8, e4, SIGN)

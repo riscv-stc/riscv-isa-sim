@@ -23,4 +23,4 @@ MI_VFP_MM_LOOP(
 },
 {
     td = f64_min(ts1, ts2);
-}, 1, e16)
+}, 1, e8)

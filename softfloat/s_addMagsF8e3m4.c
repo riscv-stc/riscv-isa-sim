@@ -100,7 +100,7 @@ float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
             }
             // 2 − 2^(w−1) ≤ e ≤ 2^(w−1) − 1, w = 3 , -2 <= e <= 3, 1 <= exp <= 6
             // -2 = 1 - 3, exp min is 1 , exp 0 is 3
-            if ( expDiff <= -2 ) {
+            if ( expDiff <= -4 ) {
                 uiZ = packToF8E3M4UI( signZ, expB, sigB );
                 if(!(expA | sigA)) goto uiZ;
                 if( (!softfloat_stochasticRoundingFlag) ) { 
@@ -110,7 +110,7 @@ float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
             expZ = expB;
             sigX = sigB | 0x10;  //Implicit mantissa bit in exp
             sigY = sigA + (expA ? 0x10 : sigA);
-            shiftDist = 30 + expDiff;   
+            shiftDist = 25 + expDiff;   
         } else {
             /*----------------------------------------------------------------
             *----------------------------------------------------------------*/
@@ -119,7 +119,7 @@ float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
                 if ( sigA == 0xF ) goto propagateNaN;
                 if (sigA == 0xE) goto clampMaxMag;
             }
-            if ( 2 <= expDiff ) {
+            if ( 4 <= expDiff ) {
                 if(!(expB | sigB)) goto uiZ;
                 if( (!softfloat_stochasticRoundingFlag) ) { 
                     goto addEpsilon;
@@ -128,10 +128,10 @@ float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
             expZ = expA;
             sigX = sigA | 0x10;
             sigY = sigB + (expB ? 0x10 : sigB);
-            shiftDist = 30 - expDiff;
+            shiftDist = 25 - expDiff;
         }
         sig32Z =
-            ((uint_fast16_t) sigX<<30) + ((uint_fast16_t) sigY<<shiftDist);
+            ((uint_fast16_t) sigX<<25) + ((uint_fast16_t) sigY<<shiftDist);
         if ( sig32Z < 0x40000000 ) {
             --expZ;
             sig32Z <<= 1;
@@ -151,8 +151,8 @@ float8_e3m4_t softfloat_addMagsF8e3m4( uint_fast8_t uiA, uint_fast8_t uiB )
         if ( sig32Z & 0xFFFFFF ) {
             sigZ |= 1;
         } else {
-            if ( ! (sigZ & 0xF) && (expZ < 0x6) ) {
-                sigZ >>= 4;
+            if ( ! (sigZ & 0x3) && (expZ < 0x6) ) {
+                sigZ >>= 2;
                 goto pack;
             }
         }

@@ -1,5 +1,9 @@
-MI_MM_LOOP_E4({
+MI_MM_LOOP({
     bit4_pair_t<int8_t> ts1_bit4_pair = ts1;
     bit4_pair_t<uint8_t> ts2_bit4_pair = ts2;
-    td = ts1_bit4_pair.arithmetic_right_shift(ts2_bit4_pair);
+    if (j %2 == 0) {
+        td = (ts1_bit4_pair.high >> ts2_bit4_pair.high) << 4;
+    } else {
+        td = ((ts1_bit4_pair.low >> ts2_bit4_pair.low) & 0xF) | (td & 0xF0);
+    }
 }, XSU, true, e4)

@@ -49,22 +49,21 @@ bfloat16_t f32_to_bf16( float32_t a )
     int_fast16_t exp;
     uint_fast32_t frac;
     struct commonNaN commonNaN;
-    struct exp16_sig32 normExpSig;
     uint_fast16_t uiZ, frac16;
-    union ui16_f16 uZ;
+    union ui16_bf16 uZ;
 
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     uA.f = a;
     uiA = uA.ui;
-    sign = signTF32UI( uiA );
-    exp  = expTF32UI( uiA );
-    frac = fracTF32UI( uiA );
+    sign = signF32UI( uiA );
+    exp  = expF32UI( uiA );
+    frac = fracF32UI( uiA );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
     if ( exp == 0xFF ) {
         if ( frac ) {
-            softfloat_tf32UIToCommonNaN( uiA, &commonNaN );
+            softfloat_f32UIToCommonNaN( uiA, &commonNaN );
             uiZ = softfloat_commonNaNToBF16UI( &commonNaN );
         } else {
             uiZ = packToBF16UI( sign, 0xFF, 0 );
@@ -73,18 +72,17 @@ bfloat16_t f32_to_bf16( float32_t a )
     }
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    if ( ! (exp | frac) ) {
+    frac16 = frac>>12 | ((frac & 0xFFF) != 0);
+    if ( ! (exp | frac16) ) {
         uiZ = packToBF16UI( sign, 0, 0 );
         goto uiZ;
-    } else if ( !exp ) {
-        normExpSig = softfloat_normSubnormalTF32Sig( frac );
-        exp = normExpSig.exp;
-        frac = normExpSig.sig;
     }
-    frac16 = frac>>9 | ((frac & 0x1FF) != 0);
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
-    return softfloat_roundPackToBF16( sign, exp - 1, frac16 | 0x4000 );
+    if (exp)
+        return softfloat_roundPackToBF16( sign, exp - 1, frac16 | 0x800 );
+    else
+        return softfloat_roundPackToBF16( sign, exp, frac16);
  uiZ:
     uZ.ui = uiZ;
     return uZ.f;

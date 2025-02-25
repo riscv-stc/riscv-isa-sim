@@ -71,7 +71,7 @@ uint_fast32_t bf16_to_ui32( bfloat16_t a, uint_fast8_t roundingMode, bool exact 
     sig32 = frac;
     if ( exp ) {
         sig32 |= 0x0080;
-        shiftDist = exp - 0x85;
+        shiftDist = exp - 0x86;
         if ( (0 <= shiftDist) && ! sign ) {
             return sig32<<shiftDist;
         }

@@ -1,5 +1,8 @@
   MXU_MFP_CVT_SCALE
   ({
+  ;
+  },
+  {
     ;
   },
   {
@@ -14,6 +17,9 @@
   },
   {
     ;
+  },
+  {
+  ;
   },
   {
     require(p->extension_enabled(EXT_ZFH));

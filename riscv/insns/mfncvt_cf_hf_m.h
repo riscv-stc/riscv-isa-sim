@@ -1,5 +1,8 @@
   MXU_MFP_CVT_SCALE
   ({
+  ;
+  },
+  {
     ;
   },
   {
@@ -37,11 +40,15 @@
       } else {
         require(0);
       }
+      break;
     default:
       require(0);
       break;
     }
   
+  },
+  {
+  ;
   },
   {
     ;

@@ -46,7 +46,7 @@ uint_fast8_t f16_to_ui4( float16_t a, uint_fast8_t roundingMode, bool exact )
 
     if (sig32 > UINT4_MAX) {
         softfloat_exceptionFlags = old_flags | softfloat_flag_invalid;
-        return ui8_fromPosOverflow;
+        return ui4_fromPosOverflow;
     } else {
         return sig32;
     }

@@ -114,7 +114,7 @@ struct commonNaN { char _unused; };
 /*----------------------------------------------------------------------------
 | The bit pattern for a default generated 8-bit floating-point e3m4 NaN.
 *----------------------------------------------------------------------------*/
-#define defaultNaNF8e3m4UI (0x7f)
+#define defaultNaNF8e3m4UI (0x74)
 
 /*----------------------------------------------------------------------------
 | Converts the common NaN pointed to by 'aPtr' into a 8-bit E3M4 floating-point
